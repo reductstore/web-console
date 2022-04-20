@@ -12,7 +12,7 @@ jobs:
       - name: Install modules
         run: npm install
       - name: Run ESLint
-        run: npm run eslint
+        run: npm run lint
       - name: Run Tests
         run: npm test -- --watchAll=false
 
