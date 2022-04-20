@@ -1,26 +1,19 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import "./App.css";
+import Dashboard from "./Views/Dashboard";
+import {Client} from "reduct-js";
+
+import {Container} from "semantic-ui-react";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const client = new Client("http://localhost:8383");
+    return (
+        <div className="App">
+            <Container>
+                <Dashboard client={client}/>
+            </Container>
+        </div>
+    );
 }
 
 export default App;

@@ -1,0 +1,50 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "no-var": "error",
+    "@typescript-eslint/no-unused-vars": [
+      2,
+      {
+        "args": "none"
+      }
+    ],
+    "prefer-const": "error",
+    "prefer-arrow-callback": "error",
+    "prefer-destructuring": "error",
+    "prefer-rest-params": "error",
+    "space-in-parens": [
+      "error",
+      "never"
+    ],
+    "object-curly-spacing": [
+      "error",
+      "never"
+    ],
+    "linebreak-style": [
+      "error",
+      "unix"
+    ],
+    "quotes": [
+      "error",
+      "double"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "dot-location": [
+      "error",
+      "property"
+    ],
+    "@typescript-eslint/ban-ts-comment": "off"
+  }
+}
