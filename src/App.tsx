@@ -13,9 +13,7 @@ function App() {
         url = `${window.location.protocol}//${window.location.host}${path}`;
     }
 
-    console.log(url);
     const client = new Client(url);
-
     return (
         <div className="App">
             <Container>
