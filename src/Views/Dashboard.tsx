@@ -16,6 +16,9 @@ interface State {
     buckets: BucketInfo[];
 }
 
+/**
+ * Dashboard with information about the server and list of buckets
+ */
 export default class Dashboard extends React.Component<Props, State> {
     constructor(props: Readonly<Props>) {
         super(props);
@@ -48,14 +51,14 @@ export default class Dashboard extends React.Component<Props, State> {
         };
 
         const renderBucket = () => {
-            return buckets.map((bucket) => {
-                return <Card fluid>
+            return buckets.map((bucket, index) => {
+                return <Card fluid key={index} id={bucket.name}>
                     <Card.Content>
                         <Card.Header>{bucket.name}</Card.Header>
                         <Card.Meta> Size: {prettierBytes(n(bucket.size))}</Card.Meta>
                         <Card.Meta> Entries: {n(bucket.entryCount)}</Card.Meta>
                         <Card.Meta>History
-                            for: {humanizeDuration(n(bucket.latestRecord.valueOf() - info.oldestRecord.valueOf()) * 1000, {largest: 2})}</Card.Meta>
+                            for: {humanizeDuration(n(bucket.latestRecord.valueOf() - info.oldestRecord.valueOf()) / 1000, {largest: 2})}</Card.Meta>
                     </Card.Content>
                 </Card>;
             });
@@ -70,7 +73,7 @@ export default class Dashboard extends React.Component<Props, State> {
                     <Card.Meta>Uptime: {humanizeDuration(n(info.uptime) * 1000, {largest: 2})} </Card.Meta>
                     <Card.Meta>Usage: {prettierBytes(n(info.usage))}</Card.Meta>
                     <Card.Meta>History
-                        for: {humanizeDuration(n(info.latestRecord.valueOf() - info.oldestRecord.valueOf()) * 1000, {largest: 2})}</Card.Meta>
+                        for: {humanizeDuration(n(info.latestRecord.valueOf() - info.oldestRecord.valueOf()) / 1000, {largest: 2})}</Card.Meta>
                 </Card.Content>
             </Card>
             <Card.Group>
