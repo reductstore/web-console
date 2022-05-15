@@ -11,5 +11,5 @@ export const mockJSDOM = () => {
             removeEventListener: jest.fn(),
             dispatchEvent: jest.fn(),
         })),
-    })
+    });
 };
