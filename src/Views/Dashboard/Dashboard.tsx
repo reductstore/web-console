@@ -3,8 +3,11 @@ import {Client, ServerInfo, BucketInfo} from "reduct-js";
 import humanizeDuration from "humanize-duration";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import {Button, Card, Col, Divider, Row, Statistic} from "antd";
+import {Card, Col, Divider, Modal, Row, Statistic, Typography} from "antd";
 import "./Dashboard.css";
+import BucketCard from "../../Components/Bucket/BucketCard";
+import {PlusOutlined} from "@ant-design/icons";
+import CreateBucket from "../../Components/Bucket/CreateBucket";
 
 interface Props {
     client: Client;
@@ -27,9 +30,16 @@ export default class Dashboard extends React.Component<Props, State> {
             creatingBucket: false,
             buckets: []
         };
+
+        this.getInfo = this.getInfo.bind(this);
+        this.removeBucket = this.removeBucket.bind(this);
     }
 
     async componentDidMount(): Promise<void> {
+        await this.getInfo();
+    }
+
+    private async getInfo() {
         try {
             const info = await this.props.client.getInfo();
             const buckets = await this.props.client.getBucketList();
@@ -39,8 +49,18 @@ export default class Dashboard extends React.Component<Props, State> {
         }
     }
 
+    private async removeBucket(name: string) {
+        try {
+            const bucket = await this.props.client.getBucket(name);
+            await bucket.remove();
+            await this.getInfo();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
     render() {
-        const {info, buckets} = this.state;
+        const {info, buckets, creatingBucket} = this.state;
         if (info === undefined) {
             return <Card bordered className="Panel" id="ServerInfo" title="Server (no connection)">
             </Card>;
@@ -50,44 +70,45 @@ export default class Dashboard extends React.Component<Props, State> {
             return Number(big.valueOf());
         };
 
-        const renderBucket = () => {
-            return buckets.map((bucket, index) => {
-                return <Card key={index} id={bucket.name} title={bucket.name}>
-                    <Row gutter={16}>
-                        <Col span={8}>
-                            <Statistic title="Size" value={prettierBytes(n(bucket.size))}/>
-                        </Col>
-                        <Col span={8}>
-                            <Statistic title="Entries" value={n(bucket.entryCount)}/>
-                        </Col>
-                        <Col span={8}>
-                            <Statistic title="History" value={humanizeDuration(
-                                n(bucket.latestRecord.valueOf() - bucket.oldestRecord.valueOf()) / 1000,
-                                {largest: 1})}/>
-                        </Col>
-                    </Row>
-                </Card>;
-            });
-        };
+        const renderBucket = (numberInRow = 3) => {
+            const fillRow = (row: number) => {
+                const cards = [];
+                for (let j = 0; j < numberInRow; ++j) {
+                    const index = row * numberInRow + j;
+                    if (index >= buckets.length) {
+                        break;
+                    }
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const createBucketButton = () => {
-            return (
-                <Button>
-                    Add
-                </Button>
-            );
-        };
+                    cards.push(
+                        <Col span={24 / numberInRow}>
+                            <BucketCard bucket={buckets[index]} index={index} onRemove={this.removeBucket}/>
+                        </Col>);
+                }
+                return cards;
+            };
 
+            const rows = [];
+            for (let i = 0; i < buckets.length / numberInRow; ++i) {
+                rows.push(
+                    <Row> {fillRow(i)}</Row>
+                );
+            }
+            return rows;
+        };
         return <div className="Panel">
-            <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}>
-                {/*<Modal trigger={createBucketButton()} open={this.state.creatingBucket}*/}
-                {/*       onOpen={() => this.setState({creatingBucket: true})}>*/}
-                {/*    <CreateBucket client={this.props.client}*/}
-                {/*                  onCreated={() => this.setState({creatingBucket: false})}*/}
-                {/*                  onCanceled={() => this.setState({creatingBucket: false})}/>*/}
-                {/*</Modal>*/}
+            <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
+                  actions={[
+                      <PlusOutlined title="Add a new bucket" onClick={() => this.setState({creatingBucket: true})}/>
+                  ]}>
 
+                <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
+                       onCancel={() => this.setState({creatingBucket: false})}>
+                    <CreateBucket client={this.props.client}
+                                  onCreated={async () => {
+                                      this.setState({creatingBucket: false});
+                                      await this.getInfo();
+                                  }}/>
+                </Modal>
                 <Row gutter={16}>
                     <Col span={8}>
                         <Statistic title="Usage" value={prettierBytes(n(info.usage))}/>
@@ -101,7 +122,9 @@ export default class Dashboard extends React.Component<Props, State> {
                 </Row>
             </Card>
             <Divider/>
+            <Typography.Title level={3}>Buckets</Typography.Title>
             {renderBucket()}
         </div>;
     }
 }
+

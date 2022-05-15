@@ -18,24 +18,22 @@ function App() {
     const client = new Client(url);
     return (
         <div className="App">
-            <Layout style={{height: "100%"}}>
-                <Layout>
-                    <Layout.Sider>
-                        <Menu mode="inline" style={{display: "flex", flexDirection: "column", height: "100%"}}
-                              theme="dark">
-                            <a href="https://reduct-storage.dev">
-                                <Image src={logo} preview={false}/>
-                            </a>
-                            <Menu.Item style={{marginTop: "auto", display: "hidden"}}
-                            >
-                                <a href="https://docs.reduct-storage.dev/http-api">API Documentation</a>
-                            </Menu.Item>
-                        </Menu>
-                    </Layout.Sider>
-                    <Layout.Content>
-                        <Dashboard client={client}/>
-                    </Layout.Content>
-                </Layout>
+            <Layout>
+                <Layout.Sider>
+                    <Menu mode="inline" style={{display: "flex", flexDirection: "column", height: "100%"}}
+                          theme="dark">
+                        <a href="https://reduct-storage.dev">
+                            <Image src={logo} preview={false}/>
+                        </a>
+                        <Menu.Item style={{marginTop: "auto", display: "hidden"}}
+                        >
+                            <a href="https://docs.reduct-storage.dev/http-api">API Documentation</a>
+                        </Menu.Item>
+                    </Menu>
+                </Layout.Sider>
+                <Layout.Content>
+                    <Dashboard client={client}/>
+                </Layout.Content>
             </Layout>
         </div>
     );

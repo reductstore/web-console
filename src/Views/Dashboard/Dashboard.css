@@ -1,5 +1,7 @@
 .Panel {
   text-align: left;
-  width: 30em;
+  width: 80em;
   margin: 1em;
+  min-height: 96vh;
+
 }
