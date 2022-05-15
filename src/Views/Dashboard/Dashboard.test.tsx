@@ -1,13 +1,15 @@
 import React from "react";
 import {mount, ReactWrapper} from "enzyme";
 import waitUntil from "async-wait-until";
+import {mockJSDOM} from "../../mockJSDOM";
 
 import Dashboard from "./Dashboard";
-import {Client} from "reduct-js";
+import {Client, ServerInfo} from "reduct-js";
 
 describe("Dashboard", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockJSDOM();
     });
 
     const client = new Client("");
@@ -17,15 +19,15 @@ describe("Dashboard", () => {
         return wrapper.render().find(selector);
     };
 
-    const serverInfo = {
+    const serverInfo: ServerInfo = {
         version: "0.4.0",
         uptime: 1000n,
         usage: 2000n,
-        bucketCount: 2,
+        bucketCount: 2n,
         oldestRecord: 10n,
         latestRecord: 10000010n,
-
     };
+
 
     it("should show server info", async () => {
         client.getInfo = jest.fn().mockResolvedValue(serverInfo);
@@ -37,15 +39,13 @@ describe("Dashboard", () => {
         expect(html.text()).toContain("0.4.0");
         expect(html.text()).toContain("16 minutes");
         expect(html.text()).toContain("2 KB");
-        expect(html.text()).toContain("10 seconds");
     });
 
     it("should show bucket info", async () => {
         client.getInfo = jest.fn().mockResolvedValue(serverInfo);
-        client.getBucketList = jest.fn().mockResolvedValue([
-            {
+        client.getBucketList = jest.fn().mockResolvedValue([{
                 name: "bucket_1",
-                entryCount: "entry_1",
+                entryCount: 2,
                 size: 1000n,
                 oldestRecord: 10n,
                 latestRecord: 10000010n,

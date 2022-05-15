@@ -62,8 +62,7 @@ export default class Dashboard extends React.Component<Props, State> {
     render() {
         const {info, buckets, creatingBucket} = this.state;
         if (info === undefined) {
-            return <Card bordered className="Panel" id="ServerInfo" title="Server (no connection)">
-            </Card>;
+            return <Card bordered title="Server (no connection)"/>;
         }
 
         const n = (big: BigInt) => {
@@ -90,7 +89,7 @@ export default class Dashboard extends React.Component<Props, State> {
             const rows = [];
             for (let i = 0; i < buckets.length / numberInRow; ++i) {
                 rows.push(
-                    <Row> {fillRow(i)}</Row>
+                    <Row key={i}> {fillRow(i)}</Row>
                 );
             }
             return rows;
