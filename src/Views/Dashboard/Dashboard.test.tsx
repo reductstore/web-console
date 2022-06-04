@@ -26,6 +26,9 @@ describe("Dashboard", () => {
         bucketCount: 2n,
         oldestRecord: 10n,
         latestRecord: 10000010n,
+        defaults: {
+            bucket: {}
+        }
     };
 
 
@@ -44,12 +47,12 @@ describe("Dashboard", () => {
     it("should show bucket info", async () => {
         client.getInfo = jest.fn().mockResolvedValue(serverInfo);
         client.getBucketList = jest.fn().mockResolvedValue([{
-                name: "bucket_1",
-                entryCount: 2,
-                size: 1000n,
-                oldestRecord: 10n,
-                latestRecord: 10000010n,
-            }
+            name: "bucket_1",
+            entryCount: 2,
+            size: 1000n,
+            oldestRecord: 10n,
+            latestRecord: 10000010n,
+        }
         ]);
 
         const wrapper = mount(<Dashboard client={client}/>);
