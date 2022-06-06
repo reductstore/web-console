@@ -1,5 +1,9 @@
 ## Release 0.2.0 (in progress)
 
+**Features**:
+
+* Use Reduct's colours for UI, [PR-7](https://github.com/reduct-storage/web-console/pull/7)
+
 **Other**:
 
 * Update reduct-js to 0.4.0, [PR-6](https://github.com/reduct-storage/web-console/pull/6)

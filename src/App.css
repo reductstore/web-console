@@ -1,3 +1,11 @@
 .App {
-  height: 100vh;
+}
+
+.Sider {
+  min-height: 100vh;
+  background-color: #231b49;
+}
+
+.MenuItem {
+  background-color: #231b49;
 }

@@ -4,8 +4,17 @@ import {Client} from "reduct-js";
 import {Image, Layout, Menu} from "antd";
 
 import logo from "./main_logo.png";
-import "antd/dist/antd.css";
+import "antd/dist/antd.variable.min.css";
 import "./App.css";
+
+import {ConfigProvider} from "antd";
+
+ConfigProvider.config({
+    theme: {
+        primaryColor: "#231b49",
+    },
+});
+
 
 function App() {
     let url = process.env.REACT_APP_STORAGE_URL;
@@ -19,21 +28,17 @@ function App() {
     return (
         <div className="App">
             <Layout>
-                <Layout.Sider>
-                    <Menu mode="inline" style={{display: "flex", flexDirection: "column", height: "100%"}}
-                          theme="dark">
+                <Layout.Sider className="Sider">
+                    <Menu className="MenuItem">
                         <a href="https://reduct-storage.dev">
                             <Image src={logo} preview={false}/>
                         </a>
-                        <Menu.Item style={{marginTop: "auto", display: "hidden"}}
-                        >
-                            <a href="https://docs.reduct-storage.dev/http-api">API Documentation</a>
-                        </Menu.Item>
                     </Menu>
                 </Layout.Sider>
                 <Layout.Content>
                     <Dashboard client={client}/>
                 </Layout.Content>
+
             </Layout>
         </div>
     );
