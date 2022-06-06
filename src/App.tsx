@@ -4,8 +4,17 @@ import {Client} from "reduct-js";
 import {Image, Layout, Menu} from "antd";
 
 import logo from "./main_logo.png";
-import "antd/dist/antd.css";
+import "antd/dist/antd.variable.min.css";
 import "./App.css";
+
+import {ConfigProvider} from "antd";
+
+ConfigProvider.config({
+    theme: {
+        primaryColor: "#231b49",
+    },
+});
+
 
 function App() {
     let url = process.env.REACT_APP_STORAGE_URL;
