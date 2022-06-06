@@ -7,7 +7,7 @@ import {Card, Col, Divider, Modal, Row, Statistic, Typography} from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
 import {PlusOutlined} from "@ant-design/icons";
-import CreateBucket from "../../Components/Bucket/CreateBucket";
+import Create from "../../Components/Bucket/Create";
 
 interface Props {
     client: Client;
@@ -102,11 +102,12 @@ export default class Dashboard extends React.Component<Props, State> {
 
                 <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
                        onCancel={() => this.setState({creatingBucket: false})}>
-                    <CreateBucket client={this.props.client}
-                                  onCreated={async () => {
-                                      this.setState({creatingBucket: false});
-                                      await this.getInfo();
-                                  }}/>
+                    <Create client={this.props.client}
+                            defaults={info ? info.defaults.bucket : {}}
+                            onCreated={async () => {
+                                this.setState({creatingBucket: false});
+                                await this.getInfo();
+                            }}/>
                 </Modal>
                 <Row gutter={16}>
                     <Col span={8}>

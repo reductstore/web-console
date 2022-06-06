@@ -7,6 +7,7 @@ const {Option} = Select;
 interface Props {
     client: Client;
     onCreated: () => void;
+    defaults: BucketSettings;
 }
 
 interface State {
@@ -17,7 +18,7 @@ interface State {
 
 const DEFAULT_FACTOR = "20";
 
-export default class CreateBucket extends React.Component<Props, State> {
+export default class Create extends React.Component<Props, State> {
     constructor(props: Readonly<Props>) {
         super(props);
         this.state = {maxBlockSizeFactor: DEFAULT_FACTOR, quotaSizeFactor: DEFAULT_FACTOR};
@@ -54,6 +55,11 @@ export default class CreateBucket extends React.Component<Props, State> {
         );
 
         const {error} = this.state;
+        const {defaults} = this.props;
+        const initValueFromDefault = (value?: bigint) => value !== undefined ?
+            (value / 2n ** BigInt(DEFAULT_FACTOR)).toString() : "";
+
+        console.log(defaults);
         return <Form onFinish={this.onFinish}>
             {error ? <Alert message={error} type="error" closable onClose={() => this.setState({error: undefined})}/> :
                 <div/>}
@@ -65,6 +71,7 @@ export default class CreateBucket extends React.Component<Props, State> {
                 </Form.Item>
                 <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)", margin: "0 8px"}}
                            label="Max. Block Size"
+                           initialValue={initValueFromDefault(defaults.maxBlockSize)}
                            name="maxBlockSize">
                     <InputNumber controls={false} precision={0} stringMode
                                  addonAfter={sizeSelector((value) => this.setState({maxBlockSizeFactor: value}))}/>
@@ -73,13 +80,14 @@ export default class CreateBucket extends React.Component<Props, State> {
             <Input.Group compact>
                 <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)"}}
                            label="Quota Type" name="quotaType">
-                    <Select defaultValue="NONE">
+                    <Select defaultValue={defaults.quotaType ? defaults.quotaType : "NONE"}>
                         <Option value="NONE">NONE</Option>
                         <Option value="FIFO">FIFO</Option>
                     </Select>
                 </Form.Item>
                 <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)", margin: "0 8px"}}
                            label="Quota Size"
+                           initialValue={initValueFromDefault(defaults.quotaSize)}
                            name="quotaSize">
                     <InputNumber controls={false} stringMode
                                  addonAfter={sizeSelector((value) => this.setState({quotaSizeFactor: value}))}/>
