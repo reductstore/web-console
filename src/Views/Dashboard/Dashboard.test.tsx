@@ -6,6 +6,8 @@ import {mockJSDOM} from "../../mockJSDOM";
 import Dashboard from "./Dashboard";
 import {Client, ServerInfo} from "reduct-js";
 
+
+
 describe("Dashboard", () => {
     beforeEach(() => {
         jest.clearAllMocks();
