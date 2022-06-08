@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function BucketCard(props: Readonly<Props>) {
-    const [confirm, setConfirm] = useState(false);
+    const [visible, setVisible] = useState(false);
     const {bucket, index} = props;
 
     const n = (big: BigInt) => {
@@ -27,9 +27,14 @@ export default function BucketCard(props: Readonly<Props>) {
             {largest: 1});
     };
 
+    const onOk = () => {
+        props.onRemove(bucket.name);
+        setVisible(false);
+    };
+
     return (<Card key={index} id={bucket.name} title={bucket.name} style={{margin: "0.5em"}}
                   actions={[
-                      <DeleteOutlined title="Remove" onClick={() => setConfirm(true)}/>
+                      <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>
                   ]}>
         <Row gutter={16}>
             <Col span={8}>
@@ -42,7 +47,8 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Statistic title="History" value={bucket.entryCount > 0n ? getHistory() : "---"}/>
             </Col>
         </Row>
-        <Modal visible={confirm} onOk={()=> props.onRemove(bucket.name)} onCancel={() => setConfirm(false)} closable={false} okText="remove" okType="danger">Remove <b>{bucket.name}</b>?</Modal>
+        <Modal visible={visible} onOk={onOk} onCancel={() => setVisible(false)} closable={false} okText="remove"
+               okType="danger">Remove <b>{bucket.name}</b>?</Modal>
     </Card>);
 
 }
