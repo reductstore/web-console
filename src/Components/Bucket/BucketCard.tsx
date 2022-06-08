@@ -5,12 +5,13 @@ import {BucketInfo} from "reduct-js";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import {DeleteOutlined} from "@ant-design/icons";
+import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 
 interface Props {
     bucket: BucketInfo;
     index: number;
     onRemove: (name: string) => void;
+    onSettings: (name: string) => void;
 }
 
 export default function BucketCard(props: Readonly<Props>) {
@@ -34,7 +35,10 @@ export default function BucketCard(props: Readonly<Props>) {
 
     return (<Card key={index} id={bucket.name} title={bucket.name} style={{margin: "0.5em"}}
                   actions={[
-                      <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>
+                      <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>,
+                      <SettingOutlined title="Settings" onClick={() => {
+                          props.onSettings(bucket.name);
+                      }}/>
                   ]}>
         <Row gutter={16}>
             <Col span={8}>
@@ -47,7 +51,7 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Statistic title="History" value={bucket.entryCount > 0n ? getHistory() : "---"}/>
             </Col>
         </Row>
-        <Modal visible={visible} onOk={onOk} onCancel={() => setVisible(false)} closable={false} okText="remove"
+        <Modal visible={visible} onOk={onOk} onCancel={() => setVisible(false)} closable={false} okText="Remove"
                okType="danger">Remove <b>{bucket.name}</b>?</Modal>
     </Card>);
 

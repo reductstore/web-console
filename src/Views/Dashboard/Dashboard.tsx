@@ -6,8 +6,9 @@ import prettierBytes from "prettier-bytes";
 import {Card, Col, Divider, Modal, Row, Statistic, Typography} from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
-import {PlusOutlined} from "@ant-design/icons";
 import Create from "../../Components/Bucket/Create";
+
+import {PlusOutlined} from "@ant-design/icons";
 
 interface Props {
     client: Client;
@@ -80,7 +81,8 @@ export default class Dashboard extends React.Component<Props, State> {
 
                     cards.push(
                         <Col span={24 / numberInRow}>
-                            <BucketCard bucket={buckets[index]} index={index} onRemove={this.removeBucket}/>
+                            <BucketCard bucket={buckets[index]} index={index} onRemove={this.removeBucket}
+                                        onSettings={() => null}/>
                         </Col>);
                 }
                 return cards;
