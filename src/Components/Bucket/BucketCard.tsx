@@ -35,10 +35,11 @@ export default function BucketCard(props: Readonly<Props>) {
 
     return (<Card key={index} id={bucket.name} title={bucket.name} style={{margin: "0.5em"}}
                   actions={[
-                      <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>,
                       <SettingOutlined title="Settings" onClick={() => {
                           props.onSettings(bucket.name);
-                      }}/>
+                      }}/>,
+                      <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>,
+
                   ]}>
         <Row gutter={16}>
             <Col span={8}>
