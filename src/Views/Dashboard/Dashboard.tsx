@@ -6,8 +6,9 @@ import prettierBytes from "prettier-bytes";
 import {Card, Col, Divider, Modal, Row, Statistic, Typography} from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
+import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
+
 import {PlusOutlined} from "@ant-design/icons";
-import Create from "../../Components/Bucket/Create";
 
 interface Props {
     client: Client;
@@ -16,6 +17,7 @@ interface Props {
 interface State {
     info?: ServerInfo;
     creatingBucket: boolean;
+    changingBucketName?: string;
     buckets: BucketInfo[];
 }
 
@@ -60,7 +62,8 @@ export default class Dashboard extends React.Component<Props, State> {
     }
 
     render() {
-        const {info, buckets, creatingBucket} = this.state;
+        console.log(this.state);
+        const {info, buckets, creatingBucket, changingBucketName} = this.state;
         if (info === undefined) {
             return <Card bordered title="Server (no connection)"/>;
         }
@@ -78,9 +81,12 @@ export default class Dashboard extends React.Component<Props, State> {
                         break;
                     }
 
+                    const bucket = buckets[index];
                     cards.push(
-                        <Col span={24 / numberInRow}>
-                            <BucketCard bucket={buckets[index]} index={index} onRemove={this.removeBucket}/>
+                        <Col span={24 / numberInRow} key={index}>
+                            <BucketCard bucket={bucket} index={index} key={index}
+                                        onRemove={this.removeBucket}
+                                        onSettings={() => this.setState({changingBucketName: bucket.name})}/>
                         </Col>);
                 }
                 return cards;
@@ -94,6 +100,7 @@ export default class Dashboard extends React.Component<Props, State> {
             }
             return rows;
         };
+
         return <div className="Panel">
             <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
                   actions={[
@@ -102,12 +109,19 @@ export default class Dashboard extends React.Component<Props, State> {
 
                 <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
                        onCancel={() => this.setState({creatingBucket: false})}>
-                    <Create client={this.props.client}
-                            defaults={info ? info.defaults.bucket : {}}
-                            onCreated={async () => {
-                                this.setState({creatingBucket: false});
-                                await this.getInfo();
-                            }}/>
+                    <CreateOrUpdate client={this.props.client}
+                                    onCreated={async () => {
+                                        this.setState({creatingBucket: false});
+                                        await this.getInfo();
+                                    }}/>
+                </Modal>
+                <Modal title="Settings" visible={changingBucketName !== undefined} footer={null}
+                       onCancel={() => this.setState({changingBucketName: undefined})}>
+                    <CreateOrUpdate client={this.props.client} key={changingBucketName}
+                                    bucketName={changingBucketName}
+                                    onCreated={async () => {
+                                        this.setState({changingBucketName: undefined});
+                                    }}/>
                 </Modal>
                 <Row gutter={16}>
                     <Col span={8}>
