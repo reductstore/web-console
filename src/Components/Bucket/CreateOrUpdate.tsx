@@ -18,7 +18,13 @@ interface State {
 
 }
 
-const DEFAULT_FACTOR = "20";
+const DEFAULT_FACTOR = "MB";
+const FACTOR_MAP: Record<string, bigint> = {
+    "B": 1n,
+    "KB": 1024n,
+    "MB": 1048576n,
+    "GB": 1073741824n
+};
 
 export default class CreateOrUpdate extends React.Component<Props, State> {
     constructor(props: Readonly<Props>) {
@@ -30,14 +36,14 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
     async onFinish(values: any): Promise<void> {
         let maxBlockSize = undefined;
         if (values.maxBlockSize) {
-            maxBlockSize = BigInt(values.maxBlockSize) * (2n ** BigInt(this.state.maxBlockSizeFactor));
+            maxBlockSize = BigInt(values.maxBlockSize) * FACTOR_MAP[this.state.maxBlockSizeFactor];
         }
 
         const {quotaType} = values;
 
         let quotaSize = undefined;
         if (values.quotaSize) {
-            quotaSize = BigInt(values.quotaSize) * (2n ** BigInt(this.state.quotaSizeFactor));
+            quotaSize = BigInt(values.quotaSize) * FACTOR_MAP[this.state.quotaSizeFactor];
         }
 
         const settings: BucketSettings = {maxBlockSize, quotaType, quotaSize};
@@ -74,25 +80,26 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
                 quotaSizeFactor: this.calcBestFactor(settings.quotaSize)
             });
         } catch (err: any) {
+            console.error(err);
             this.setState({error: err.message});
         }
 
     }
 
-    calcBestFactor(value?: bigint) {
+    calcBestFactor(value?: bigint): string {
         let result = DEFAULT_FACTOR;
         if (!value) {
             return result;
         }
 
-        ["1", "10", "20", "30"].forEach((factor) => {
-            const divisor = 2n ** BigInt(factor);
+        for (const factor in FACTOR_MAP) {
+            const divisor = FACTOR_MAP[factor];
             if (value / divisor * divisor == value) {
                 result = factor;
             } else {
-                return;
+                break;
             }
-        });
+        }
 
         return result;
     }
@@ -111,16 +118,16 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
 
         const sizeSelector = (initValue: string, onChange?: (value: string) => void) => (
             <Select defaultValue={initValue} style={{width: 70}} onChange={onChange}>
-                <Option value="1">B</Option>
-                <Option value="10">KB</Option>
-                <Option value="20">MB</Option>
-                <Option value="30">GB</Option>
+                <Option value="B">B</Option>
+                <Option value="KB">KB</Option>
+                <Option value="MB">MB</Option>
+                <Option value="GB">GB</Option>
             </Select>
         );
 
         const {bucketName} = this.props;
         const initValueFromDefault = (factor: string, value?: bigint) => value !== undefined ?
-            (value / 2n ** BigInt(factor)).toString() : "";
+            (value / FACTOR_MAP[factor]).toString() : "";
 
         console.log(this.state);
         return <Form onFinish={this.onFinish}>
