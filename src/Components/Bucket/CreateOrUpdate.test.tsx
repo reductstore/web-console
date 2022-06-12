@@ -49,7 +49,6 @@ describe("Bucket::Create", () => {
 
         const wrapper = mount(<CreateOrUpdate client={client} bucketName="bucket" onCreated={() => console.log("")}/>);
 
-
         await waitUntil(() => wrapper.update().find({name: "maxBlockSize"}).length > 0);
         expect(wrapper.find({name: "maxBlockSize"}).at(0).props().initialValue).toEqual("64");
         expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("FIFO");
