@@ -56,4 +56,11 @@ describe("Bucket::Create", () => {
         expect(wrapper.find({name: "quotaSize"}).at(0).props().initialValue).toEqual("1");
     });
 
+    it("should show error if don't get settings", async () => {
+        client.getInfo = jest.fn().mockRejectedValue({status: 500, message: "Oops"});
+        const wrapper = mount(<CreateOrUpdate client={client} onCreated={() => console.log("")}/>);
+
+        await waitUntil(() => wrapper.update().find({type: "error"}).length > 0);
+        expect(wrapper.render().text()).toContain("Oops");
+    });
 });

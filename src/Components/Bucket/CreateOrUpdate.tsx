@@ -100,7 +100,12 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
     render() {
         const {error, settings, maxBlockSizeFactor, quotaSizeFactor} = this.state;
         if (settings === undefined) {
-            return <Spin size="large"/>;
+            return <>
+                {error ?
+                    <Alert message={error} type="error" onClose={() => this.setState({error: undefined})}/> :
+                    <div/>}
+                <Spin size="large"/>
+            </>;
         }
 
 

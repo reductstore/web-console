@@ -4,6 +4,8 @@
 
 * Use Reduct's colours for UI, [PR-7](https://github.com/reduct-storage/web-console/pull/7)
 * Implement changing bucket settings, [PR-9](https://github.com/reduct-storage/web-console/pull/9)
+* Show error in CreateOrUpdate form if don't get settings, [PR-10](https://github.com/reduct-storage/web-console/pull/10)
+
 **Other**:
 
 * Update reduct-js to 0.4.0, [PR-6](https://github.com/reduct-storage/web-console/pull/6)
