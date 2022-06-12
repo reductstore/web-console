@@ -102,7 +102,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         if (settings === undefined) {
             return <>
                 {error ?
-                    <Alert message={error} type="error" closable onClose={() => this.setState({error: undefined})}/> :
+                    <Alert message={error} type="error" onClose={() => this.setState({error: undefined})}/> :
                     <div/>}
                 <Spin size="large"/>
             </>;
