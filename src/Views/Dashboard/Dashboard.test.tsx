@@ -5,6 +5,8 @@ import {mockJSDOM} from "../../mockJSDOM";
 
 import Dashboard from "./Dashboard";
 import {Client, ServerInfo} from "reduct-js";
+import {BackendAPI} from "../../BackendAPI";
+import fn = jest.fn;
 
 
 
@@ -15,6 +17,12 @@ describe("Dashboard", () => {
     });
 
     const client = new Client("");
+    const backend = {
+        get client() { return client; },
+        login: jest.fn(),
+        logout: jest.fn(),
+        isAllowed: jest.fn(),
+    };
 
     const waitFor = async (wrapper: ReactWrapper, selector: string) => {
         await waitUntil(() => wrapper.update().find(selector).hostNodes().length > 0);
@@ -38,7 +46,7 @@ describe("Dashboard", () => {
         client.getInfo = jest.fn().mockResolvedValue(serverInfo);
         client.getBucketList = jest.fn().mockResolvedValue([]);
 
-        const wrapper = mount(<Dashboard client={client}/>);
+        const wrapper = mount(<Dashboard backendApi={backend}/>);
         const html = await waitFor(wrapper, "#ServerInfo");
 
         expect(html.text()).toContain("0.4.0");
@@ -57,7 +65,7 @@ describe("Dashboard", () => {
         }
         ]);
 
-        const wrapper = mount(<Dashboard client={client}/>);
+        const wrapper = mount(<Dashboard backendApi={backend}/>);
         const html = await waitFor(wrapper, "#bucket_1");
         expect(html.text()).toContain("bucket_1");
         expect(html.text()).toContain("1 KB");

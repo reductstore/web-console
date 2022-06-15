@@ -1,13 +1,14 @@
 import React from "react";
-import Dashboard from "./Views/Dashboard/Dashboard";
-import {Client} from "reduct-js";
 import {Image, Layout, Menu} from "antd";
+import {RouteComponentProps, withRouter} from "react-router-dom";
 
 import logo from "./main_logo.png";
 import "antd/dist/antd.variable.min.css";
 import "./App.css";
 
 import {ConfigProvider} from "antd";
+import {IBackendAPI} from "./BackendAPI";
+import {Routes} from "./Components/Routes";
 
 ConfigProvider.config({
     theme: {
@@ -16,17 +17,31 @@ ConfigProvider.config({
 });
 
 
-function App() {
-    let url = process.env.REACT_APP_STORAGE_URL;
-    if (url === undefined) {
-        let path = window.location.pathname;
-        path = path.replace(process.env.PUBLIC_URL, "");
-        url = `${window.location.protocol}//${window.location.host}${path}`;
+interface Props extends RouteComponentProps {
+    backendApi: IBackendAPI;
+}
+
+type State = {
+    isAllowed?: boolean;
+}
+
+class App extends React.Component<Props, State> {
+    constructor(props: Props) {
+        super(props);
+        this.state = {};
     }
 
-    const client = new Client(url);
-    return (
-        <div className="App">
+    componentDidMount() {
+        this.props.backendApi.isAllowed()
+            .then((isAllowed) => this.setState({isAllowed}))
+            .catch((err) => console.error(err));
+    }
+
+    render() {
+        if (this.state.isAllowed === undefined) {
+            return <div/>;
+        }
+        return <div className="App">
             <Layout>
                 <Layout.Sider className="Sider">
                     <Menu className="MenuItem">
@@ -36,12 +51,13 @@ function App() {
                     </Menu>
                 </Layout.Sider>
                 <Layout.Content>
-                    <Dashboard client={client}/>
+                    <Routes {...this.props} isAllowed={this.state.isAllowed}/>
                 </Layout.Content>
 
             </Layout>
-        </div>
-    );
+        </div>;
+    }
 }
 
-export default App;
+// @ts-ignore
+export default withRouter(App);
