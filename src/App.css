@@ -8,4 +8,12 @@
 
 .MenuItem {
   background-color: #231b49;
+  color: #cccccc;
+  font-size: larger;
+  font-weight: bold;
+  padding: 10px;
+}
+
+.ant-menu-item-active {
+  background-color: #cccccc !important;
 }

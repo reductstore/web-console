@@ -1,5 +1,5 @@
 import React from "react";
-import {Image, Layout, Menu} from "antd";
+import {Divider, Image, Layout, Menu} from "antd";
 import {RouteComponentProps, withRouter} from "react-router-dom";
 
 import logo from "./main_logo.png";
@@ -9,6 +9,7 @@ import "./App.css";
 import {ConfigProvider} from "antd";
 import {IBackendAPI} from "./BackendAPI";
 import {Routes} from "./Components/Routes";
+import {BorderOuterOutlined, LogoutOutlined} from "@ant-design/icons";
 
 ConfigProvider.config({
     theme: {
@@ -41,17 +42,39 @@ class App extends React.Component<Props, State> {
         if (this.state.isAllowed === undefined) {
             return <div/>;
         }
+
+        const {backendApi, history} = this.props;
+        const onLogout = async () => {
+            backendApi.logout();
+            this.setState({isAllowed: false});
+        };
+
+        const onLogin = async () => {
+            this.setState({isAllowed: true});
+            this.props.history.push("/");
+        };
+
+        console.log(this.state.isAllowed);
+
         return <div className="App">
             <Layout>
                 <Layout.Sider className="Sider">
-                    <Menu className="MenuItem">
-                        <a href="https://reduct-storage.dev">
+                    <Menu className="MenuItem" selectable={false} triggerSubMenuAction="click">
+                        <a href="https://reduct-storage.dev" title="https://reduct-storage.dev">
                             <Image src={logo} preview={false}/>
                         </a>
+
+                        <Divider/>
+                        <Menu.Item icon={<BorderOuterOutlined/>} onClick={() => history.push("/dashboard")}>
+                            Dashboard
+                        </Menu.Item>
+                        <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
+                            Logout
+                        </Menu.Item>
                     </Menu>
                 </Layout.Sider>
                 <Layout.Content>
-                    <Routes {...this.props} isAllowed={this.state.isAllowed}/>
+                    <Routes {...this.props} isAllowed={this.state.isAllowed} onLogin={onLogin}/>
                 </Layout.Content>
 
             </Layout>

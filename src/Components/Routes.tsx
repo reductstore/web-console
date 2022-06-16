@@ -3,11 +3,12 @@ import {IBackendAPI} from "../BackendAPI";
 import {Redirect, Route, RouteComponentProps, Switch} from "react-router-dom";
 import Dashboard from "../Views/Dashboard/Dashboard";
 import NotFount from "../Views/NoFound";
-import TokenForm from "../Views/Auth/TokenForm";
+import Login from "../Views/Auth/Login";
 
 interface Props extends RouteComponentProps {
     backendApi: IBackendAPI;
     isAllowed: boolean;
+    onLogin: () => void;
 }
 
 
@@ -30,7 +31,7 @@ export function Routes(props: Props): JSX.Element {
             </Route>
 
             <Route exact path="/login">
-                <TokenForm {...props}/>
+                <Login {...props}/>
             </Route>
 
             <PrivateRoute exact path="/dashboard" isAllowed={isAllowed}>
