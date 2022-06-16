@@ -1,5 +1,6 @@
 import React from "react";
-import {Client, ServerInfo, BucketInfo} from "reduct-js";
+import {IBackendAPI} from "../../BackendAPI";
+import {ServerInfo, BucketInfo} from "reduct-js";
 import humanizeDuration from "humanize-duration";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -11,7 +12,7 @@ import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
 import {PlusOutlined} from "@ant-design/icons";
 
 interface Props {
-    client: Client;
+    backendApi: IBackendAPI;
 }
 
 interface State {
@@ -43,8 +44,9 @@ export default class Dashboard extends React.Component<Props, State> {
 
     private async getInfo() {
         try {
-            const info = await this.props.client.getInfo();
-            const buckets = await this.props.client.getBucketList();
+            const {client} = this.props.backendApi;
+            const info = await client.getInfo();
+            const buckets = await client.getBucketList();
             this.setState({info, buckets});
         } catch (err) {
             console.error(err);
@@ -53,7 +55,9 @@ export default class Dashboard extends React.Component<Props, State> {
 
     private async removeBucket(name: string) {
         try {
-            const bucket = await this.props.client.getBucket(name);
+            const {client} = this.props.backendApi;
+
+            const bucket = await client.getBucket(name);
             await bucket.remove();
             await this.getInfo();
         } catch (err) {
@@ -101,6 +105,7 @@ export default class Dashboard extends React.Component<Props, State> {
             return rows;
         };
 
+        const {client} = this.props.backendApi;
         return <div className="Panel">
             <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
                   actions={[
@@ -109,7 +114,7 @@ export default class Dashboard extends React.Component<Props, State> {
 
                 <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
                        onCancel={() => this.setState({creatingBucket: false})}>
-                    <CreateOrUpdate client={this.props.client}
+                    <CreateOrUpdate client={client}
                                     onCreated={async () => {
                                         this.setState({creatingBucket: false});
                                         await this.getInfo();
@@ -117,7 +122,7 @@ export default class Dashboard extends React.Component<Props, State> {
                 </Modal>
                 <Modal title="Settings" visible={changingBucketName !== undefined} footer={null}
                        onCancel={() => this.setState({changingBucketName: undefined})}>
-                    <CreateOrUpdate client={this.props.client} key={changingBucketName}
+                    <CreateOrUpdate client={client} key={changingBucketName}
                                     bucketName={changingBucketName}
                                     onCreated={async () => {
                                         this.setState({changingBucketName: undefined});
