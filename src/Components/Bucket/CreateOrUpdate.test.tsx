@@ -1,6 +1,6 @@
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../mockJSDOM";
+import {mockJSDOM} from "../../Helpers/TestHelpers";
 
 
 import CreateOrUpdate from "./CreateOrUpdate";

@@ -1,13 +1,10 @@
 import React from "react";
 import {mount, ReactWrapper} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../mockJSDOM";
+import {mockJSDOM} from "../../Helpers/TestHelpers";
 
 import Dashboard from "./Dashboard";
 import {Client, ServerInfo} from "reduct-js";
-import {BackendAPI} from "../../BackendAPI";
-import fn = jest.fn;
-
 
 
 describe("Dashboard", () => {

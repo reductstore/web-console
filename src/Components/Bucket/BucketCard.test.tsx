@@ -1,4 +1,4 @@
-import {mockJSDOM} from "../../mockJSDOM";
+import {mockJSDOM} from "../../Helpers/TestHelpers";
 
 mockJSDOM();
 
