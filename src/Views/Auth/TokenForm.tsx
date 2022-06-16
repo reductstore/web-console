@@ -1,7 +1,9 @@
 import React from "react";
-import {Form} from "antd";
+import {Button, Card, Form} from "antd";
 import Password from "antd/lib/input/Password";
 import {IBackendAPI} from "../../BackendAPI";
+
+import "./TokenForm.css" ;
 
 interface Props {
     backendApi: IBackendAPI;
@@ -15,10 +17,12 @@ export default function TokenForm(props: Readonly<Props>) {
         // }
     };
 
-    return <Form onFinish={onFinish}>
-        <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)"}} label="API Token" name="token"
-                   rules={[{required: true, message: "Can't be empty"}]}>
-            <Password/>
-        </Form.Item>
-    </Form>;
+    return <Card title="Enter API token for authentication" className="TokenForm" bordered>
+        <Form onFinish={onFinish}>
+            <Form.Item label="API Token" name="token">
+                <Password/>
+            </Form.Item>
+            <Button type="primary">Login</Button>
+        </Form>
+    </Card>;
 }
