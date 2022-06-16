@@ -17,4 +17,5 @@ Web console for [Reduct Storage](https://reduct-storage.dev) based on React.js a
 
 ## Demo
 
-You can explore it by using [play.reduct-storage.dev](https://play.reduct-storage.dev)
+You can explore it by using a demo server at [play.reduct-storage.dev](https://play.reduct-storage.dev).
+The API token is "reduct".
