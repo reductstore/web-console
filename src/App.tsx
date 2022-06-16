@@ -65,12 +65,17 @@ class App extends React.Component<Props, State> {
                         </a>
 
                         <Divider/>
-                        <Menu.Item icon={<BorderOuterOutlined/>} onClick={() => history.push("/dashboard")}>
-                            Dashboard
-                        </Menu.Item>
-                        <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
-                            Logout
-                        </Menu.Item>
+                        {this.state.isAllowed ? <>
+                            <Menu.Item icon={<BorderOuterOutlined/>} onClick={() => history.push("/dashboard")}>
+                                Dashboard
+                            </Menu.Item>
+
+
+                            <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
+                                Logout
+                            </Menu.Item> </> :
+                            <div/>
+                        }
                     </Menu>
                 </Layout.Sider>
                 <Layout.Content>
