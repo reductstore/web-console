@@ -21,7 +21,7 @@ describe("Bucket::Create", () => {
             {
                 defaults: {
                     bucket: {
-                        maxBlockSize: 67108864n,
+                        maxBlockSize: 64_000_000n,
                         quotaSize: 0n,
                         quotaType: QuotaType.NONE
                     }
@@ -40,8 +40,8 @@ describe("Bucket::Create", () => {
         client.getBucket = jest.fn().mockResolvedValue(
             {
                 getSettings: jest.fn().mockResolvedValue({
-                    maxBlockSize: 67108864n,
-                    quotaSize: 1024n,
+                    maxBlockSize: 64_000_001n,
+                    quotaSize: 1000n,
                     quotaType: QuotaType.FIFO
                 }),
             }
@@ -50,7 +50,7 @@ describe("Bucket::Create", () => {
         const wrapper = mount(<CreateOrUpdate client={client} bucketName="bucket" onCreated={() => console.log("")}/>);
 
         await waitUntil(() => wrapper.update().find({name: "maxBlockSize"}).length > 0);
-        expect(wrapper.find({name: "maxBlockSize"}).at(0).props().initialValue).toEqual("64");
+        expect(wrapper.find({name: "maxBlockSize"}).at(0).props().initialValue).toEqual("64000001");
         expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("FIFO");
         expect(wrapper.find({name: "quotaSize"}).at(0).props().initialValue).toEqual("1");
     });
