@@ -13,7 +13,7 @@ Web console for [Reduct Storage](https://reduct-storage.dev) based on React.js a
 
 * Embedded to Reduct Storage
 * Bucket Management
-
+* Token authentication
 
 ## Demo
 
