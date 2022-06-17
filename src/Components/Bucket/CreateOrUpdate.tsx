@@ -21,9 +21,9 @@ interface State {
 const DEFAULT_FACTOR = "MB";
 const FACTOR_MAP: Record<string, bigint> = {
     "B": 1n,
-    "KB": 1024n,
-    "MB": 1048576n,
-    "GB": 1073741824n
+    "KB": 1000n,
+    "MB": 1000_000n,
+    "GB": 1000_000_000n
 };
 
 export default class CreateOrUpdate extends React.Component<Props, State> {
