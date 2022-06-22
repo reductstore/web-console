@@ -1,3 +1,9 @@
+## Release 0.2.1 (in progress)
+
+**Bugs**:
+
+* Fix API and UI paths for embedded console, [PR-16](https://github.com/reduct-storage/web-console/pull/16)
+
 ## Release 0.2.0 (2022-06-17)
 
 **Features**:
