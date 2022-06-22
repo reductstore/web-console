@@ -6,19 +6,22 @@ import reportWebVitals from "./reportWebVitals";
 import {BackendAPI} from "./BackendAPI";
 import {BrowserRouter} from "react-router-dom";
 
-let url = process.env.REACT_APP_STORAGE_URL;
-if (url === undefined) {
-    let path = window.location.pathname;
-    path = path.replace(process.env.PUBLIC_URL, "");
-    url = `${window.location.protocol}//${window.location.host}${path}`;
+let apiUrl = process.env.REACT_APP_STORAGE_URL;
+let uiUrl = process.env.PUBLIC_URL;
+if (apiUrl === undefined) {
+    // kep only sub path for backend URL
+    const path = window.location.pathname.split("/");
+    const apiPath = path.slice(0, path.indexOf(process.env.PUBLIC_URL) - 1).join("/");
+    apiUrl = `${window.location.protocol}//${window.location.host}${apiPath}`;
+    uiUrl = apiPath + process.env.PUBLIC_URL;
 }
 
-const backendApi = new BackendAPI(url);
+const backendApi = new BackendAPI(apiUrl);
 
 ReactDOM.render(
     <React.StrictMode>
         {/* @ts-ignore*/}
-        <BrowserRouter basename="/ui">
+        <BrowserRouter basename={uiUrl}>
             <App backendApi={backendApi}/>
 
         </BrowserRouter>
