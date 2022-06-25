@@ -76,7 +76,7 @@ export default class Dashboard extends React.Component<Props, State> {
             return Number(big.valueOf());
         };
 
-        const renderBucket = (numberInRow = 3) => {
+        const renderBucket = (numberInRow = 2) => {
             const fillRow = (row: number) => {
                 const cards = [];
                 for (let j = 0; j < numberInRow; ++j) {
