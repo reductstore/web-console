@@ -25,7 +25,7 @@ export default function BucketCard(props: Readonly<Props>) {
     const getHistory = () => {
         return humanizeDuration(
             n(bucket.latestRecord.valueOf() - bucket.oldestRecord.valueOf()) / 1000,
-            {largest: 1});
+            {largest: 1, round: true});
     };
 
     const onOk = () => {
@@ -41,14 +41,14 @@ export default function BucketCard(props: Readonly<Props>) {
                       <DeleteOutlined title="Remove" onClick={() => setVisible(true)}/>,
 
                   ]}>
-        <Row gutter={16}>
+        <Row gutter={24}>
             <Col span={8}>
                 <Statistic title="Size" value={prettierBytes(n(bucket.size))}/>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
                 <Statistic title="Entries" value={n(bucket.entryCount)}/>
             </Col>
-            <Col span={8}>
+            <Col span={10}>
                 <Statistic title="History" value={bucket.entryCount > 0n ? getHistory() : "---"}/>
             </Col>
         </Row>
