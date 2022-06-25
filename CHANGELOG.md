@@ -3,7 +3,7 @@
 **Bugs**:
 
 * Fix API and UI paths for embedded console, [PR-16](https://github.com/reduct-storage/web-console/pull/16)
-* Fix different size of bucket card in dashboard, [PR-17] (https://github.com/reduct-storage/web-console/pull/17)
+* Fix different size of bucket card in dashboard, [PR-17](https://github.com/reduct-storage/web-console/pull/17)
 
 ## Release 0.2.0 (2022-06-17)
 
