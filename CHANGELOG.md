@@ -1,29 +1,43 @@
-## Release 0.2.1 (2022-06-25)
+# Changelog
 
-**Bugs**:
+All notable changes to this project will be documented in this file.
 
-* Fix API and UI paths for embedded console, [PR-16](https://github.com/reduct-storage/web-console/pull/16)
-* Fix different size of bucket card in dashboard, [PR-17](https://github.com/reduct-storage/web-console/pull/17)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Release 0.2.0 (2022-06-17)
+## [Unreleased]
 
-**Features**:
+## [0.2.1] - 2022-06-25
 
-* Use Reduct's colours for UI, [PR-7](https://github.com/reduct-storage/web-console/pull/7)
-* Implement changing bucket settings, [PR-9](https://github.com/reduct-storage/web-console/pull/9)
-* Show error in CreateOrUpdate form if don't get
+### Fixed:
+
+- API and UI paths for embedded console, [PR-16](https://github.com/reduct-storage/web-console/pull/16)
+- Different size of bucket card in dashboard, [PR-17](https://github.com/reduct-storage/web-console/pull/17)
+
+## [0.2.0] - 2022-06-17
+
+### Added:
+
+- Reduct's colours for UI, [PR-7](https://github.com/reduct-storage/web-console/pull/7)
+- Bucket settings, [PR-9](https://github.com/reduct-storage/web-console/pull/9)
+- Error message to CreateOrUpdate form if don't get
   settings, [PR-10](https://github.com/reduct-storage/web-console/pull/10)
-* Add Login Form for authentication with token, [PR0-13](https://github.com/reduct-storage/web-console/pull/13)
+- Login form for authentication with token, [PR0-13](https://github.com/reduct-storage/web-console/pull/13)
 
-**Bugs**:
+### Fixed:
 
-* Fix bigint conversions in bucket settings, [PR-11](https://github.com/reduct-storage/web-console/pull/11)
-* Use SI sizes for bucket settings, [PR0-13](https://github.com/reduct-storage/web-console/pull/13)
+- bigint conversions in bucket settings, [PR-11](https://github.com/reduct-storage/web-console/pull/11)
+- SI sizes for bucket settings, [PR0-13](https://github.com/reduct-storage/web-console/pull/13)
 
-**Other**:
+### Changed:
 
-* Update reduct-js to 0.4.0, [PR-6](https://github.com/reduct-storage/web-console/pull/6)
+- Update reduct-js to 0.4.0, [PR-6](https://github.com/reduct-storage/web-console/pull/6)
 
-## Release 0.1.0 (2022-05-15)
+## [0.1.0] - 2022-05-15
 
-* Initial Release
+- Initial Release
+
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/reduct-storage/web-console/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/reduct-storage/web-console/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/reduct-storageweb-consol/releases/tag/v0.1.0
