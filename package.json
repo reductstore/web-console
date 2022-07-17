@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "/ui",
   "devDependencies": {
+    "@ant-design/icons": "^4.7.0",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^13.5.0",
@@ -15,6 +16,7 @@
     "@types/react-dom": "^17.0.16",
     "@types/react-router-dom": "^5.3.3",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.6.7",
+    "antd": "^4.20.4",
     "async-wait-until": "^2.0.12",
     "babel-jest": "^27.5.1",
     "crypto-browserify": "^3.12.0",
@@ -23,19 +25,20 @@
     "jest": "^27.5.1",
     "prettier-bytes": "^1.0.4",
     "react": "^17.0.0",
+    "react-app-rewired": "^2.2.1",
     "react-dom": "^17.0.0",
     "react-router-dom": "^5.3.3",
     "react-scripts": "5.0.1",
-    "reduct-js": "^0.4.0",
+    "reduct-js": "^0.5.0",
     "ts-jest": "^27.1.4",
     "typescript": "^4.6.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-app-rewired eject",
     "lint": "eslint . --ext .ts"
   },
   "eslintConfig": {
@@ -57,7 +60,7 @@
     ]
   },
   "dependencies": {
-    "@ant-design/icons": "^4.7.0",
-    "antd": "^4.20.4"
+    "buffer": "^6.0.3",
+    "stream-browserify": "^3.0.0"
   }
 }

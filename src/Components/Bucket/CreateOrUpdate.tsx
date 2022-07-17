@@ -1,6 +1,6 @@
 import React from "react";
-import {Bucket, BucketSettings, Client, QuotaType, ServerInfo} from "reduct-js";
-import {Alert, Button, Form, Input, InputNumber, Select, Spin} from "antd";
+import {APIError, Bucket, BucketSettings, Client, QuotaType, ServerInfo} from "reduct-js";
+import {Alert, Button, Collapse, Form, Input, InputNumber, Select, Spin} from "antd";
 
 const {Option} = Select;
 
@@ -8,6 +8,7 @@ interface Props {
     client: Client;
     bucketName?: string;    // if set we update a bucket
     onCreated: () => void;
+    showAll?: boolean;       // show all settings
 }
 
 interface State {
@@ -26,6 +27,9 @@ const FACTOR_MAP: Record<string, bigint> = {
     "GB": 1000_000_000n
 };
 
+/**
+ * A form to create or update a bucket
+ */
 export default class CreateOrUpdate extends React.Component<Props, State> {
     constructor(props: Readonly<Props>) {
         super(props);
@@ -34,9 +38,15 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
     }
 
     async onFinish(values: any): Promise<void> {
+        console.log(values);
         let maxBlockSize = undefined;
         if (values.maxBlockSize) {
             maxBlockSize = BigInt(values.maxBlockSize) * FACTOR_MAP[this.state.maxBlockSizeFactor];
+        }
+
+        let maxBlockRecords = undefined;
+        if (values.maxBlockRecords) {
+            maxBlockRecords = BigInt(values.maxBlockRecords);
         }
 
         const {quotaType} = values;
@@ -45,8 +55,8 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         if (values.quotaSize) {
             quotaSize = BigInt(values.quotaSize) * FACTOR_MAP[this.state.quotaSizeFactor];
         }
-
-        const settings: BucketSettings = {maxBlockSize, quotaType, quotaSize};
+        const settings: BucketSettings = {maxBlockSize, quotaType, quotaSize, maxBlockRecords};
+        console.log(settings);
         const {bucketName, client} = this.props;
         try {
             if (bucketName === undefined) {
@@ -57,8 +67,12 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             }
             this.props.onCreated();
 
-        } catch (err: any) {
-            this.setState({error: err.message});
+        } catch (err) {
+            if (err instanceof APIError) {
+                this.setState({error: err.message});
+            } else {
+                console.error("Unexpected error: ", err);
+            }
         }
     }
 
@@ -67,6 +81,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         let settings = null;
 
         try {
+            // If bucket name isn't in props, then create a new bucket
             if (bucketName === undefined) {
                 const info: ServerInfo = await client.getInfo();
                 settings = info.defaults.bucket;
@@ -79,9 +94,13 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
                 maxBlockSizeFactor: this.calcBestFactor(settings.maxBlockSize),
                 quotaSizeFactor: this.calcBestFactor(settings.quotaSize)
             });
-        } catch (err: any) {
-            console.error(err);
-            this.setState({error: err.message});
+        } catch (err) {
+            if (err instanceof APIError) {
+                this.setState({error: err.message});
+            } else {
+                console.error("Unexpected error: ", err);
+            }
+
         }
 
     }
@@ -125,49 +144,59 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             </Select>
         );
 
-        const {bucketName} = this.props;
+        const {bucketName, showAll} = this.props;
         const initValueFromDefault = (factor: string, value?: bigint) => value !== undefined ?
             (value / FACTOR_MAP[factor]).toString() : "";
 
-        console.log(this.state);
-        return <Form onFinish={this.onFinish}>
+        return <Form
+            name="bucketForm"
+            labelCol={{span: 6}}
+            wrapperCol={{span: 15}}
+            onFinish={this.onFinish}>
             {error ? <Alert message={error} type="error" closable onClose={() => this.setState({error: undefined})}/> :
                 <div/>}
+            <Input.Group style={{padding: "15px"}} size="small">
 
-            <Input.Group compact>
-                <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)"}} label="Name" name="name"
+                <Form.Item label="Name" name="name"
                            rules={[{required: true, message: "Can't be empty"}]}
                            initialValue={bucketName}>
                     <Input disabled={bucketName !== undefined}/>
                 </Form.Item>
-                <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)", margin: "0 8px"}}
-                           label="Max. Block Size"
-                           initialValue={initValueFromDefault(maxBlockSizeFactor, settings.maxBlockSize)}
-                           name="maxBlockSize">
-                    <InputNumber controls={false} precision={0} stringMode
-                                 addonAfter={sizeSelector(maxBlockSizeFactor, (value) => this.setState({maxBlockSizeFactor: value}))}/>
-                </Form.Item>
-            </Input.Group>
-            <Input.Group compact>
-                <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)"}}
-                           label="Quota Type" name="quotaType"
+
+                <Form.Item label="Quota Type" name="quotaType"
                            initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "NONE"}>
                     <Select>
                         <Option value="NONE">NONE</Option>
                         <Option value="FIFO">FIFO</Option>
                     </Select>
                 </Form.Item>
-                <Form.Item style={{display: "inline-block", width: "calc(50% - 8px)", margin: "0 8px"}}
-                           label="Quota Size"
+                <Form.Item label="Quota Size"
                            initialValue={initValueFromDefault(quotaSizeFactor, settings.quotaSize)}
                            name="quotaSize">
                     <InputNumber controls={false} stringMode
                                  addonAfter={sizeSelector(quotaSizeFactor, (value) => this.setState({quotaSizeFactor: value}))}/>
                 </Form.Item>
             </Input.Group>
+            <Collapse bordered={true} ghost={true} style={{padding: "0px"}} defaultActiveKey={showAll ? ["1"] : []}>
+                <Collapse.Panel header="Advanced Settings" key="1">
+                    <Input.Group size="small">
+                        <Form.Item label="Max. Records"
+                                   initialValue={settings.maxBlockRecords}
+                                   name="maxBlockRecords">
+                            <InputNumber controls={false} precision={0} stringMode/>
+                        </Form.Item>
+                        <Form.Item label="Max. Block Size"
+                                   initialValue={initValueFromDefault(maxBlockSizeFactor, settings.maxBlockSize)}
+                                   name="maxBlockSize">
+                            <InputNumber controls={false} precision={0} stringMode
+                                         addonAfter={sizeSelector(maxBlockSizeFactor, (value) => this.setState({maxBlockSizeFactor: value}))}/>
+                        </Form.Item>
+                    </Input.Group>
+                </Collapse.Panel>
+            </Collapse>
 
-            <Form.Item wrapperCol={{offset: 0, span: 16}}>
-                <Button type="primary" htmlType="submit">
+            <Form.Item wrapperCol={{offset: 17, span: 17}}>
+                <Button type="primary" htmlType="submit" name="submit">
                     {bucketName ? "Update" : "Create"}
                 </Button>
             </Form.Item>
