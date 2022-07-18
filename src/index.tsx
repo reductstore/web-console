@@ -4,7 +4,7 @@ import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import {BackendAPI} from "./BackendAPI";
-import {BrowserRouter} from "react-router-dom";
+import {BrowserRouter, withRouter} from "react-router-dom";
 
 let apiUrl = process.env.REACT_APP_STORAGE_URL;
 let uiUrl = process.env.PUBLIC_URL;
@@ -17,12 +17,13 @@ if (apiUrl === undefined) {
 }
 
 const backendApi = new BackendAPI(apiUrl);
+const RoutableApp = withRouter(App);
 
 ReactDOM.render(
     <React.StrictMode>
         {/* @ts-ignore*/}
         <BrowserRouter basename={uiUrl}>
-            <App backendApi={backendApi}/>
+            <RoutableApp backendApi={backendApi}/>
 
         </BrowserRouter>
     </React.StrictMode>,

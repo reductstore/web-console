@@ -4,6 +4,7 @@ import {Redirect, Route, RouteComponentProps, Switch} from "react-router-dom";
 import Dashboard from "../Views/Dashboard/Dashboard";
 import NotFount from "../Views/NoFound";
 import Login from "../Views/Auth/Login";
+import BucketPanel from "../Views/BucketPanel/BucketPanel";
 
 interface Props extends RouteComponentProps {
     backendApi: IBackendAPI;
@@ -36,6 +37,10 @@ export function Routes(props: Props): JSX.Element {
 
             <PrivateRoute exact path="/dashboard" isAllowed={isAllowed}>
                 <Dashboard {...props}/>
+            </PrivateRoute>
+
+            <PrivateRoute exact path="/buckets" isAllowed={isAllowed}>
+                <BucketPanel {...props}/>
             </PrivateRoute>
 
             <Route>
