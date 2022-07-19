@@ -1,6 +1,5 @@
 import React from "react";
-import {screen} from "@testing-library/react";
-import {mount, ReactWrapper} from "enzyme";
+import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
 import {mockJSDOM} from "./Helpers/TestHelpers";
 import {MemoryRouter, RouteComponentProps} from "react-router-dom";

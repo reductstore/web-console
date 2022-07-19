@@ -40,7 +40,7 @@ export function Routes(props: Props): JSX.Element {
             </PrivateRoute>
 
             <PrivateRoute exact path="/buckets" isAllowed={isAllowed}>
-                <BucketPanel {...props}/>
+                <BucketPanel client={props.backendApi.client}/>
             </PrivateRoute>
 
             <Route>

@@ -14,6 +14,12 @@ interface Props {
     onSettings: (name: string) => void;
 }
 
+export const getHistory = (bucket: BucketInfo) => {
+    return humanizeDuration(
+        Number((bucket.latestRecord - bucket.oldestRecord) / 1000n),
+        {largest: 1, round: true});
+};
+
 export default function BucketCard(props: Readonly<Props>) {
     const [visible, setVisible] = useState(false);
     const {bucket, index} = props;
@@ -22,11 +28,6 @@ export default function BucketCard(props: Readonly<Props>) {
         return Number(big.valueOf());
     };
 
-    const getHistory = () => {
-        return humanizeDuration(
-            n(bucket.latestRecord.valueOf() - bucket.oldestRecord.valueOf()) / 1000,
-            {largest: 1, round: true});
-    };
 
     const onOk = () => {
         props.onRemove(bucket.name);
@@ -49,7 +50,7 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Statistic title="Entries" value={n(bucket.entryCount)}/>
             </Col>
             <Col span={10}>
-                <Statistic title="History" value={bucket.entryCount > 0n ? getHistory() : "---"}/>
+                <Statistic title="History" value={bucket.entryCount > 0n ? getHistory(bucket) : "---"}/>
             </Col>
         </Row>
         <Modal visible={visible} onOk={onOk} onCancel={() => setVisible(false)} closable={false} okText="Remove"
