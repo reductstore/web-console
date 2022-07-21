@@ -6,6 +6,7 @@ import prettierBytes from "prettier-bytes";
 
 import "../../App.css";
 import {getHistory} from "../../Components/Bucket/BucketCard";
+import {Link} from "react-router-dom";
 
 
 interface Props {
@@ -49,7 +50,7 @@ export default class BucketPanel extends React.Component<Props, State> {
         });
 
         const columns = [
-            {title: "Name", dataIndex: "name", key: "name"},
+            {title: "Name", dataIndex: "name", key: "name", render: (text: string) => <Link to={`buckets/${text}`}><b>{text}</b></Link>},
             {title: "Entries", dataIndex: "entryCount", key: "entryCount"},
             {title: "Size", dataIndex: "size", key: "size"},
             {title: "History", dataIndex: "history", key: "history"},
@@ -59,7 +60,7 @@ export default class BucketPanel extends React.Component<Props, State> {
 
         return <div style={{margin: "2em"}}>
             <Typography.Title level={3}>Buckets</Typography.Title>
-            <Table columns={columns} dataSource={data} loading={buckets.length == 0}/>;
+            <Table columns={columns} dataSource={data} loading={buckets.length == 0}/>
         </div>;
     }
 }

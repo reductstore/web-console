@@ -5,6 +5,7 @@ import Dashboard from "../Views/Dashboard/Dashboard";
 import NotFount from "../Views/NoFound";
 import Login from "../Views/Auth/Login";
 import BucketPanel from "../Views/BucketPanel/BucketPanel";
+import BucketDetail from "../Views/BucketPanel/BucketDetail";
 
 interface Props extends RouteComponentProps {
     backendApi: IBackendAPI;
@@ -41,6 +42,10 @@ export function Routes(props: Props): JSX.Element {
 
             <PrivateRoute exact path="/buckets" isAllowed={isAllowed}>
                 <BucketPanel client={props.backendApi.client}/>
+            </PrivateRoute>
+
+            <PrivateRoute exact path="/buckets/:name" isAllowed={isAllowed}>
+                <BucketDetail client={props.backendApi.client} {...props}/>
             </PrivateRoute>
 
             <Route>

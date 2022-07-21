@@ -1,5 +1,5 @@
 import React from "react";
-import {mount, ReactWrapper} from "enzyme";
+import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
 import {mockJSDOM} from "../../Helpers/TestHelpers";
 import BucketPanel from "./BucketPanel";

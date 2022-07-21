@@ -14,9 +14,9 @@ interface Props {
     onSettings: (name: string) => void;
 }
 
-export const getHistory = (bucket: BucketInfo) => {
+export const getHistory = (interval: { latestRecord: bigint, oldestRecord: bigint }) => {
     return humanizeDuration(
-        Number((bucket.latestRecord - bucket.oldestRecord) / 1000n),
+        Number((interval.latestRecord - interval.oldestRecord) / 1000n),
         {largest: 1, round: true});
 };
 
@@ -34,7 +34,7 @@ export default function BucketCard(props: Readonly<Props>) {
         setVisible(false);
     };
 
-    return (<Card key={index} id={bucket.name} title={bucket.name} style={{margin: "0.5em"}}
+    return (<Card className="BucketCard" key={index} id={bucket.name} title={bucket.name}
                   actions={[
                       <SettingOutlined title="Settings" onClick={() => {
                           props.onSettings(bucket.name);
