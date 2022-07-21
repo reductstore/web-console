@@ -1,7 +1,7 @@
 import React from "react";
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 import {Bucket, BucketInfo, Client, EntryInfo} from "reduct-js";
 
 jest.mock("react-router-dom", () => ({
@@ -55,24 +55,31 @@ describe("BucketDetail", () => {
 
     it("should show bucket card ", async () => {
         const detail = mount(<BucketDetail client={client}/>);
-        await waitUntil(() => detail.update().find(".BucketCard").length > 0);
+        const card = await waitUntilFind(detail, ".BucketCard");
 
         expect(client.getBucket).toBeCalledWith("testBucket");
-
-
-        const card = detail.find(".BucketCard");
         expect(card.hostNodes().render().text()).toEqual("BucketWithDataSize10 KBEntries2History0 seconds");
     });
 
     it("should show entry table ", async () => {
         const detail = mount(<BucketDetail client={client}/>);
-        await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+        const rows = await waitUntilFind(detail, ".ant-table-row");
 
-        const rows = detail.find(".ant-table-row");
         expect(rows.length).toEqual(2);
         expect(rows.at(0).render().text())
             .toEqual("EntryWithData100210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.000Z");
         expect(rows.at(1).render().text())
             .toEqual("EmptyEntry000 B---------");
     });
+
+
+    it("should remove bucket and redirect", async () => {
+        const detail = mount(<BucketDetail client={client}/>);
+        const removeButton = await waitUntilFind(detail, {title: "Remove"});
+
+        removeButton.hostNodes().props().onClick();
+        /* TODO: How to test model window? */
+
+    });
+
 });

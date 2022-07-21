@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {Bucket, BucketInfo, EntryInfo, Client} from "reduct-js";
-import {useParams} from "react-router-dom";
+import {useHistory, useParams} from "react-router-dom";
 import BucketCard, {getHistory} from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -13,6 +13,8 @@ interface Props {
 
 export default function BucketDetail(props: Readonly<Props>) {
     const {name} = useParams() as { name: string };
+    const history = useHistory();
+
     const [info, setInfo] = useState<BucketInfo>();
     const [entries, setEntries] = useState<EntryInfo[]>([]);
 
@@ -51,8 +53,8 @@ export default function BucketDetail(props: Readonly<Props>) {
     ];
 
     return <div style={{margin: "1.4em"}}>
-        {info ? <BucketCard bucket={info} index={0} onRemove={(txt) => console.log(txt)}
-                            onSettings={(txt) => console.log(txt)}/> : <div/>}
+        {info ? <BucketCard bucketInfo={info} index={0} client={props.client}
+                            onRemoved={() => history.push("/buckets")}/> : <div/>}
 
         <Typography.Title level={3}>Records</Typography.Title>
         <Table style={{margin: "0.6em"}} columns={columns} dataSource={data} loading={entries.length == 0}/>

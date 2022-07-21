@@ -1,7 +1,6 @@
 import React from "react";
-import {mount, ReactWrapper} from "enzyme";
-import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import {mount} from "enzyme";
+import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 
 import Dashboard from "./Dashboard";
 import {Client, ServerInfo} from "reduct-js";
@@ -21,10 +20,6 @@ describe("Dashboard", () => {
         isAllowed: jest.fn(),
     };
 
-    const waitFor = async (wrapper: ReactWrapper, selector: string) => {
-        await waitUntil(() => wrapper.update().find(selector).hostNodes().length > 0);
-        return wrapper.render().find(selector);
-    };
 
     const serverInfo: ServerInfo = {
         version: "0.4.0",
@@ -44,7 +39,7 @@ describe("Dashboard", () => {
         client.getBucketList = jest.fn().mockResolvedValue([]);
 
         const wrapper = mount(<Dashboard backendApi={backend}/>);
-        const html = await waitFor(wrapper, "#ServerInfo");
+        const html = (await waitUntilFind(wrapper, "#ServerInfo")).hostNodes();
 
         expect(html.text()).toContain("0.4.0");
         expect(html.text()).toContain("16 minutes");
@@ -63,7 +58,7 @@ describe("Dashboard", () => {
         ]);
 
         const wrapper = mount(<Dashboard backendApi={backend}/>);
-        const html = await waitFor(wrapper, "#bucket_1");
+        const html = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
         expect(html.text()).toContain("bucket_1");
         expect(html.text()).toContain("1 KB");
         expect(html.text()).toContain("10 seconds");

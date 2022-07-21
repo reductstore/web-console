@@ -4,6 +4,7 @@ import waitUntil from "async-wait-until";
 import {mockJSDOM} from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
 import {BucketInfo, Client} from "reduct-js";
+import {MemoryRouter} from "react-router-dom";
 
 describe("BucketPanel", () => {
     beforeEach(() => {
@@ -30,7 +31,7 @@ describe("BucketPanel", () => {
             } as BucketInfo,
         ]);
 
-        const panel = mount(<BucketList client={client}/>);
+        const panel = mount(<MemoryRouter><BucketList client={client}/></MemoryRouter>);
         await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
 
         const rows = panel.find(".ant-table-row");
