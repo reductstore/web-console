@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Max. Block Records` to bucket settings, [PR-20](https://github.com/reduct-storage/web-console/pull/20)
+- Bucket Panel, [PR-21](https://github.com/reduct-storage/web-console/pull/21)
 
 ## [0.2.1] - 2022-06-25
 
