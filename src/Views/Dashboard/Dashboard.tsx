@@ -18,7 +18,6 @@ interface Props {
 interface State {
     info?: ServerInfo;
     creatingBucket: boolean;
-    changingBucketName?: string;
     buckets: BucketInfo[];
 }
 
@@ -55,10 +54,6 @@ export default class Dashboard extends React.Component<Props, State> {
 
     private async removeBucket(name: string) {
         try {
-            const {client} = this.props.backendApi;
-
-            const bucket = await client.getBucket(name);
-            await bucket.remove();
             await this.getInfo();
         } catch (err) {
             console.error(err);
@@ -67,7 +62,7 @@ export default class Dashboard extends React.Component<Props, State> {
 
     render() {
         console.log(this.state);
-        const {info, buckets, creatingBucket, changingBucketName} = this.state;
+        const {info, buckets, creatingBucket} = this.state;
         if (info === undefined) {
             return <Card bordered title="Server (no connection)"/>;
         }
@@ -88,9 +83,9 @@ export default class Dashboard extends React.Component<Props, State> {
                     const bucket = buckets[index];
                     cards.push(
                         <Col span={24 / numberInRow} key={index}>
-                            <BucketCard bucket={bucket} index={index} key={index}
-                                        onRemove={this.removeBucket}
-                                        onSettings={() => this.setState({changingBucketName: bucket.name})}/>
+                            <BucketCard bucketInfo={bucket} index={index} key={index}
+                                        client={client}
+                                        onRemoved={this.removeBucket}/>
                         </Col>);
                 }
                 return cards;
@@ -120,14 +115,7 @@ export default class Dashboard extends React.Component<Props, State> {
                                         await this.getInfo();
                                     }}/>
                 </Modal>
-                <Modal title="Settings" visible={changingBucketName !== undefined} footer={null}
-                       onCancel={() => this.setState({changingBucketName: undefined})}>
-                    <CreateOrUpdate client={client} key={changingBucketName}
-                                    bucketName={changingBucketName}
-                                    onCreated={async () => {
-                                        this.setState({changingBucketName: undefined});
-                                    }}/>
-                </Modal>
+
                 <Row gutter={16}>
                     <Col span={8}>
                         <Statistic title="Usage" value={prettierBytes(n(info.usage))}/>
