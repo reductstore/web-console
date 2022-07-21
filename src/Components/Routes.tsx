@@ -4,7 +4,7 @@ import {Redirect, Route, RouteComponentProps, Switch} from "react-router-dom";
 import Dashboard from "../Views/Dashboard/Dashboard";
 import NotFount from "../Views/NoFound";
 import Login from "../Views/Auth/Login";
-import BucketPanel from "../Views/BucketPanel/BucketPanel";
+import BucketList from "../Views/BucketPanel/BucketList";
 import BucketDetail from "../Views/BucketPanel/BucketDetail";
 
 interface Props extends RouteComponentProps {
@@ -41,7 +41,7 @@ export function Routes(props: Props): JSX.Element {
             </PrivateRoute>
 
             <PrivateRoute exact path="/buckets" isAllowed={isAllowed}>
-                <BucketPanel client={props.backendApi.client}/>
+                <BucketList client={props.backendApi.client}/>
             </PrivateRoute>
 
             <PrivateRoute exact path="/buckets/:name" isAllowed={isAllowed}>

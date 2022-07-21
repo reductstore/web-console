@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {Bucket, BucketInfo, EntryInfo, Client} from "reduct-js";
 import {useParams} from "react-router-dom";
 import BucketCard, {getHistory} from "../../Components/Bucket/BucketCard";
@@ -16,12 +16,14 @@ export default function BucketDetail(props: Readonly<Props>) {
     const [info, setInfo] = useState<BucketInfo>();
     const [entries, setEntries] = useState<EntryInfo[]>([]);
 
-    props.client.getBucket(name)
-        .then(async (bucket: Bucket) => {
-            setInfo(await bucket.getInfo());
-            setEntries(await bucket.getEntryList());
-        })
-        .catch(err => console.error(err));
+    useEffect(() => {
+        props.client.getBucket(name)
+            .then(async (bucket: Bucket) => {
+                setInfo(await bucket.getInfo());
+                setEntries(await bucket.getEntryList());
+            })
+            .catch(err => console.error(err));
+    }, []);
 
     const data = entries.map(entry => {
         const printIsoDate = (timestamp: bigint) => entry.recordCount !== 0n ?

@@ -7,6 +7,8 @@ import {BucketInfo} from "reduct-js";
 import prettierBytes from "prettier-bytes";
 import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 
+import "./BucketCard.css";
+
 interface Props {
     bucket: BucketInfo;
     index: number;

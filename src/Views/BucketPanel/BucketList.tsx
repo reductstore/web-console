@@ -20,7 +20,7 @@ type State = {
 /**
  * Bucket View
  */
-export default class BucketPanel extends React.Component<Props, State> {
+export default class BucketList extends React.Component<Props, State> {
     constructor(props: Readonly<Props>) {
         super(props);
         this.state = {buckets: []};

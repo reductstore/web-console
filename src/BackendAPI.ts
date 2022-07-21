@@ -10,19 +10,22 @@ export interface IBackendAPI {
 export class BackendAPI implements IBackendAPI {
     private apiToken?: string;
     private readonly url: string;
+    private mClient: Client;
 
     constructor(url: string) {
         const apiToken = sessionStorage.getItem("apiToken");
         if (apiToken) {
             this.apiToken = apiToken;
+            this.mClient = new Client(url, {apiToken});
+        } else {
+            this.mClient = new Client(url);
         }
 
         this.url = url;
     }
 
     get client() {
-        const {url, apiToken} = this;
-        return new Client(url, {apiToken});
+        return this.mClient;
     }
 
     async login(apiToken: string) {
@@ -31,10 +34,14 @@ export class BackendAPI implements IBackendAPI {
 
         this.apiToken = apiToken;
         sessionStorage.setItem("apiToken", apiToken);
+        this.mClient = new Client(this.url, {apiToken});
+
     }
 
     logout() {
         sessionStorage.removeItem("apiToken");
+        this.mClient = new Client(this.url);
+
     }
 
     async isAllowed(): Promise<boolean> {

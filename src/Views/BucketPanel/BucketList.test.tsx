@@ -2,7 +2,7 @@ import React from "react";
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
 import {mockJSDOM} from "../../Helpers/TestHelpers";
-import BucketPanel from "./BucketPanel";
+import BucketList from "./BucketList";
 import {BucketInfo, Client} from "reduct-js";
 
 describe("BucketPanel", () => {
@@ -30,7 +30,7 @@ describe("BucketPanel", () => {
             } as BucketInfo,
         ]);
 
-        const panel = mount(<BucketPanel client={client}/>);
+        const panel = mount(<BucketList client={client}/>);
         await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
 
         const rows = panel.find(".ant-table-row");
