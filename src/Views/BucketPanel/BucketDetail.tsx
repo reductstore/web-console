@@ -29,7 +29,7 @@ export default function BucketDetail(props: Readonly<Props>) {
 
     const data = entries.map(entry => {
         const printIsoDate = (timestamp: bigint) => entry.recordCount !== 0n ?
-            new Date(Number(entry.oldestRecord / 1000n)).toISOString() :
+            new Date(Number(timestamp / 1000n)).toISOString() :
             "---";
         return {
             name: entry.name,

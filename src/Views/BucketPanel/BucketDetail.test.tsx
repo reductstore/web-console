@@ -67,7 +67,7 @@ describe("BucketDetail", () => {
 
         expect(rows.length).toEqual(2);
         expect(rows.at(0).render().text())
-            .toEqual("EntryWithData100210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.000Z");
+            .toEqual("EntryWithData100210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010Z");
         expect(rows.at(1).render().text())
             .toEqual("EmptyEntry000 B---------");
     });
