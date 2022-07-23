@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Timestamps for latest Bucket and Entry tables, [PR-24](https://github.com/reduct-storage/web-console/pull/24)
+- parsing `window.location`, [PR-25](https://github.com/reduct-storage/web-console/pull/25)
 
 ## [0.3.0]
 
