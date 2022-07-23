@@ -5,15 +5,12 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import {BackendAPI} from "./BackendAPI";
 import {BrowserRouter, withRouter} from "react-router-dom";
+import {parseLocation} from "./Helpers/ApiUrlParser";
 
 let apiUrl = process.env.REACT_APP_STORAGE_URL;
 let uiUrl = process.env.PUBLIC_URL;
 if (apiUrl === undefined) {
-    // kep only sub path for backend URL
-    const path = window.location.pathname.split("/");
-    const apiPath = path.slice(0, path.indexOf(process.env.PUBLIC_URL) - 1).join("/");
-    apiUrl = `${window.location.protocol}//${window.location.host}${apiPath}`;
-    uiUrl = apiPath + process.env.PUBLIC_URL;
+    [apiUrl, uiUrl] = parseLocation(window.location, process.env.PUBLIC_URL);
 }
 
 const backendApi = new BackendAPI(apiUrl);
