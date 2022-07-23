@@ -37,7 +37,7 @@ export default class BucketList extends React.Component<Props, State> {
         const {buckets} = this.state;
         const data = buckets.map(bucket => {
             const printIsoDate = (timestamp: bigint) => bucket.entryCount !== 0n ?
-                new Date(Number(bucket.oldestRecord / 1000n)).toISOString() :
+                new Date(Number(timestamp / 1000n)).toISOString() :
                 "---";
             return {
                 name: bucket.name,

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Timestamps for latest Bucket and Entry tables, [PR-24](https://github.com/reduct-storage/web-console/pull/24)
+
 ## [0.3.0]
 
 ### Added
