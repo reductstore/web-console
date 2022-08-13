@@ -19,7 +19,6 @@
     "antd": "^4.20.4",
     "async-wait-until": "^2.0.12",
     "babel-jest": "^27.5.1",
-    "crypto-browserify": "^3.12.0",
     "enzyme": "^3.11.0",
     "humanize-duration": "^3.27.1",
     "jest": "^27.5.1",
@@ -29,10 +28,12 @@
     "react-dom": "^17.0.0",
     "react-router-dom": "^5.3.3",
     "react-scripts": "5.0.1",
-    "reduct-js": "^0.5.1",
+    "reduct-js": "^0.6.0",
     "ts-jest": "^27.1.4",
     "typescript": "^4.6.3",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "buffer": "^6.0.3",
+    "stream-browserify": "^3.0.0"
   },
   "scripts": {
     "start": "react-app-rewired start",
@@ -58,9 +59,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "dependencies": {
-    "buffer": "^6.0.3",
-    "stream-browserify": "^3.0.0"
   }
 }
