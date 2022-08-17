@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import {IBackendAPI} from "../../BackendAPI";
 import {ServerInfo, BucketInfo} from "reduct-js";
 import humanizeDuration from "humanize-duration";
@@ -10,128 +10,118 @@ import BucketCard from "../../Components/Bucket/BucketCard";
 import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
 
 import {PlusOutlined} from "@ant-design/icons";
+import {useHistory} from "react-router-dom";
 
 interface Props {
     backendApi: IBackendAPI;
 }
 
-interface State {
-    info?: ServerInfo;
-    creatingBucket: boolean;
-    buckets: BucketInfo[];
-}
-
 /**
  * Dashboard with information about the server and list of buckets
  */
-export default class Dashboard extends React.Component<Props, State> {
-    constructor(props: Readonly<Props>) {
-        super(props);
+export default function Dashboard(props: Readonly<Props>) {
+    const [info, setInfo] = useState<ServerInfo | undefined>();
+    const [buckets, setBuckets] = useState<BucketInfo[]>([]);
+    const [creatingBucket, setCreatingBucket] = useState(false);
 
-        this.state = {
-            creatingBucket: false,
-            buckets: []
-        };
-
-        this.getInfo = this.getInfo.bind(this);
-        this.removeBucket = this.removeBucket.bind(this);
-    }
-
-    async componentDidMount(): Promise<void> {
-        await this.getInfo();
-    }
-
-    private async getInfo() {
+    const getInfo = async () => {
         try {
-            const {client} = this.props.backendApi;
-            const info = await client.getInfo();
-            const buckets = await client.getBucketList();
-            this.setState({info, buckets});
+            const {client} = props.backendApi;
+            setInfo(await client.getInfo());
+            setBuckets(await client.getBucketList());
         } catch (err) {
             console.error(err);
         }
-    }
+    };
 
-    private async removeBucket(name: string) {
+    useEffect(() => {
+        getInfo().catch(err => console.error(err));
+    }, []);
+
+
+    const removeBucket = async (name: string) => {
         try {
-            await this.getInfo();
+            await getInfo();
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const showBucket = async (name: string) => {
+        const history = useHistory();
+        history.push(`/buckets/${name}`);
+    };
+
+    console.log(info);
+    if (info === undefined) {
+        return <Card bordered title="Server (no connection)"/>;
     }
 
-    render() {
-        console.log(this.state);
-        const {info, buckets, creatingBucket} = this.state;
-        if (info === undefined) {
-            return <Card bordered title="Server (no connection)"/>;
-        }
+    const n = (big: BigInt) => {
+        return Number(big.valueOf());
+    };
 
-        const n = (big: BigInt) => {
-            return Number(big.valueOf());
-        };
-
-        const renderBucket = (numberInRow = 2) => {
-            const fillRow = (row: number) => {
-                const cards = [];
-                for (let j = 0; j < numberInRow; ++j) {
-                    const index = row * numberInRow + j;
-                    if (index >= buckets.length) {
-                        break;
-                    }
-
-                    const bucket = buckets[index];
-                    cards.push(
-                        <Col span={24 / numberInRow} key={index}>
-                            <BucketCard bucketInfo={bucket} index={index} key={index}
-                                        client={client}
-                                        onRemoved={this.removeBucket}/>
-                        </Col>);
+    const renderBucket = (numberInRow = 2) => {
+        const fillRow = (row: number) => {
+            const cards = [];
+            for (let j = 0; j < numberInRow; ++j) {
+                const index = row * numberInRow + j;
+                if (index >= buckets.length) {
+                    break;
                 }
-                return cards;
-            };
 
-            const rows = [];
-            for (let i = 0; i < buckets.length / numberInRow; ++i) {
-                rows.push(
-                    <Row key={i}> {fillRow(i)}</Row>
-                );
+                const bucket = buckets[index];
+                cards.push(
+                    <Col span={24 / numberInRow} key={index}>
+                        <BucketCard bucketInfo={bucket} index={index} key={index}
+                                    client={client}
+                                    onRemoved={removeBucket}
+                                    onShow={showBucket}/>
+                    </Col>);
             }
-            return rows;
+            return cards;
         };
 
-        const {client} = this.props.backendApi;
-        return <div className="Panel">
-            <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
-                  actions={[
-                      <PlusOutlined title="Add a new bucket" onClick={() => this.setState({creatingBucket: true})}/>
-                  ]}>
+        const rows = [];
+        for (let i = 0; i < buckets.length / numberInRow; ++i) {
+            rows.push(
+                <Row key={i}> {fillRow(i)}</Row>
+            );
+        }
+        return rows;
+    };
 
-                <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
-                       onCancel={() => this.setState({creatingBucket: false})}>
-                    <CreateOrUpdate client={client}
-                                    onCreated={async () => {
-                                        this.setState({creatingBucket: false});
-                                        await this.getInfo();
-                                    }}/>
-                </Modal>
+    const {client} = props.backendApi;
+    return <div className="Panel">
+        <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
+              actions={[
+                  <PlusOutlined title="Add a new bucket" onClick={() => setCreatingBucket(true)}/>
+              ]}>
 
-                <Row gutter={16}>
-                    <Col span={8}>
-                        <Statistic title="Usage" value={prettierBytes(n(info.usage))}/>
-                    </Col>
-                    <Col span={8}>
-                        <Statistic title="Buckets" value={buckets.length}/>
-                    </Col>
-                    <Col span={8}>
-                        <Statistic title="Uptime" value={humanizeDuration(n(info.uptime) * 1000, {largest: 1})}/>
-                    </Col>
-                </Row>
-            </Card>
-            <Divider/>
-            <Typography.Title level={3}>Buckets</Typography.Title>
-            {renderBucket()}
-        </div>;
-    }
+            <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
+                   onCancel={() => setCreatingBucket(false)}>
+                <CreateOrUpdate client={client}
+                                onCreated={async () => {
+                                    setCreatingBucket(false);
+                                    await getInfo();
+                                }}/>
+            </Modal>
+
+            <Row gutter={16}>
+                <Col span={8}>
+                    <Statistic title="Usage" value={prettierBytes(n(info.usage))}/>
+                </Col>
+                <Col span={8}>
+                    <Statistic title="Buckets" value={buckets.length}/>
+                </Col>
+                <Col span={8}>
+                    <Statistic title="Uptime" value={humanizeDuration(n(info.uptime) * 1000, {largest: 1})}/>
+                </Col>
+            </Row>
+        </Card>
+        <Divider/>
+        <Typography.Title level={3}>Buckets</Typography.Title>
+        {renderBucket()}
+    </div>;
 }
 

@@ -54,9 +54,10 @@ export default function BucketDetail(props: Readonly<Props>) {
 
     return <div style={{margin: "1.4em"}}>
         {info ? <BucketCard bucketInfo={info} index={0} client={props.client}
-                            onRemoved={() => history.push("/buckets")}/> : <div/>}
+                            onRemoved={() => history.push("/buckets")}
+                            onShow={() => null}/> : <div/>}
 
-        <Typography.Title level={3}>Records</Typography.Title>
+        <Typography.Title level={3}>Entries</Typography.Title>
         <Table style={{margin: "0.6em"}} columns={columns} dataSource={data} loading={entries.length == 0}/>
     </div>;
 }
