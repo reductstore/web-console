@@ -20,6 +20,8 @@ interface Props {
  * Dashboard with information about the server and list of buckets
  */
 export default function Dashboard(props: Readonly<Props>) {
+    const history = useHistory();
+
     const [info, setInfo] = useState<ServerInfo | undefined>();
     const [buckets, setBuckets] = useState<BucketInfo[]>([]);
     const [creatingBucket, setCreatingBucket] = useState(false);
@@ -47,8 +49,7 @@ export default function Dashboard(props: Readonly<Props>) {
         }
     };
 
-    const showBucket = async (name: string) => {
-        const history = useHistory();
+    const showBucket = async (name: string, history: any) => {
         history.push(`/buckets/${name}`);
     };
 
@@ -76,7 +77,7 @@ export default function Dashboard(props: Readonly<Props>) {
                         <BucketCard bucketInfo={bucket} index={index} key={index}
                                     client={client}
                                     onRemoved={removeBucket}
-                                    onShow={showBucket}/>
+                                    onShow={(name) => showBucket(name, history)}/>
                     </Col>);
             }
             return cards;

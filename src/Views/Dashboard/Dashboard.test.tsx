@@ -5,21 +5,23 @@ import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 import Dashboard from "./Dashboard";
 import {Client, ServerInfo} from "reduct-js";
 
+const mockPush = jest.fn();
+jest.mock("react-router-dom", () => ({
+    useHistory: () => ({
+        push: mockPush
+    }),
+}));
 
 describe("Dashboard", () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockJSDOM();
-    });
-
     const client = new Client("");
     const backend = {
-        get client() { return client; },
+        get client() {
+            return client;
+        },
         login: jest.fn(),
         logout: jest.fn(),
         isAllowed: jest.fn(),
     };
-
 
     const serverInfo: ServerInfo = {
         version: "0.4.0",
@@ -32,6 +34,21 @@ describe("Dashboard", () => {
             bucket: {}
         }
     };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockJSDOM();
+
+        client.getInfo = jest.fn().mockResolvedValue(serverInfo);
+        client.getBucketList = jest.fn().mockResolvedValue([{
+            name: "bucket_1",
+            entryCount: 2,
+            size: 1000n,
+            oldestRecord: 10n,
+            latestRecord: 10000010n,
+        }
+        ]);
+    });
 
 
     it("should show server info", async () => {
@@ -47,20 +64,18 @@ describe("Dashboard", () => {
     });
 
     it("should show bucket info", async () => {
-        client.getInfo = jest.fn().mockResolvedValue(serverInfo);
-        client.getBucketList = jest.fn().mockResolvedValue([{
-            name: "bucket_1",
-            entryCount: 2,
-            size: 1000n,
-            oldestRecord: 10n,
-            latestRecord: 10000010n,
-        }
-        ]);
-
         const wrapper = mount(<Dashboard backendApi={backend}/>);
-        const html = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
-        expect(html.text()).toContain("bucket_1");
-        expect(html.text()).toContain("1 KB");
-        expect(html.text()).toContain("10 seconds");
+        const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
+        expect(bucket.text()).toContain("bucket_1");
+        expect(bucket.text()).toContain("1 KB");
+        expect(bucket.text()).toContain("10 seconds");
+    });
+
+    it("should push to BucketDetail if user click on bucket card", async () => {
+        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
+        bucket.props().onClick();
+
+        expect(mockPush).toBeCalledWith("/buckets/bucket_1");
     });
 });
