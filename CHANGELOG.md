@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed:
 
-- Update reduct-js to 0.6.0, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
+- `reduct-js` version v0.6.0, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
 
 ### Removed:
 
