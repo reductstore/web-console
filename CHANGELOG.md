@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Make bucket card clickable to open bucket details, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
 
+
+### Changed:
+
+- Update reduct-js to 0.6.0, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
+
+### Removed:
+
+- `crypto-browserify` dependency, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
 ## [0.3.1]
 
 ### Fixed
