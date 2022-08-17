@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added:
 
 - Make bucket card clickable to open bucket details, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
-
+- Sorting buckets by latest record on dashboard, [PR-31](https://github.com/reduct-storage/web-console/pull/31)
 
 ### Changed:
 
