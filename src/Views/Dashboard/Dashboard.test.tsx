@@ -46,6 +46,12 @@ describe("Dashboard", () => {
             size: 1000n,
             oldestRecord: 10n,
             latestRecord: 10000010n,
+        }, {
+            name: "bucket_2",
+            entryCount: 2,
+            size: 1000n,
+            oldestRecord: 10n,
+            latestRecord: 10000030n,
         }
         ]);
     });
@@ -69,6 +75,15 @@ describe("Dashboard", () => {
         expect(bucket.text()).toContain("bucket_1");
         expect(bucket.text()).toContain("1 KB");
         expect(bucket.text()).toContain("10 seconds");
+    });
+
+    it("should order buckets by last records", async () => {
+        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        let bucket = (await waitUntilFind(wrapper, "#bucket_1"));
+        expect(bucket.at(0).key()).toEqual("1");
+
+        bucket = (await waitUntilFind(wrapper, "#bucket_2"));
+        expect(bucket.at(0).key()).toEqual("0");
     });
 
     it("should push to BucketDetail if user click on bucket card", async () => {

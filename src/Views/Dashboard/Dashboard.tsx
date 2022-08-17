@@ -11,6 +11,7 @@ import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
 
 import {PlusOutlined} from "@ant-design/icons";
 import {useHistory} from "react-router-dom";
+import {History} from "history";
 
 interface Props {
     backendApi: IBackendAPI;
@@ -30,7 +31,8 @@ export default function Dashboard(props: Readonly<Props>) {
         try {
             const {client} = props.backendApi;
             setInfo(await client.getInfo());
-            setBuckets(await client.getBucketList());
+            setBuckets((await client.getBucketList())
+                .sort((a, b) => Number(b.latestRecord - a.latestRecord)));
         } catch (err) {
             console.error(err);
         }
@@ -45,11 +47,11 @@ export default function Dashboard(props: Readonly<Props>) {
         try {
             await getInfo();
         } catch (err) {
-            console.error(err);
+            console.error("Failed to remove %s : %s", name, err);
         }
     };
 
-    const showBucket = async (name: string, history: any) => {
+    const showBucket = async (name: string, history: History<unknown>) => {
         history.push(`/buckets/${name}`);
     };
 
