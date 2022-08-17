@@ -15,6 +15,7 @@ interface Props {
     client: Client;
     index: number;
     onRemoved: (name: string) => void;
+    onShow: (name: string) => void;
 }
 
 export const getHistory = (interval: { latestRecord: bigint, oldestRecord: bigint }) => {
@@ -43,6 +44,8 @@ export default function BucketCard(props: Readonly<Props>) {
 
 
     return (<Card className="BucketCard" key={index} id={bucketInfo.name} title={bucketInfo.name}
+                  hoverable
+                  onClick={() => props.onShow(bucketInfo.name)}
                   actions={[
                       <SettingOutlined title="Settings" onClick={() => setChangeSettings(true)}/>,
                       <DeleteOutlined title="Remove" onClick={() => setConfirmRemove(true)}/>,

@@ -2,6 +2,7 @@ import {createMemoryHistory} from "history";
 import {RouteComponentProps} from "react-router-dom";
 import waitUntil from "async-wait-until";
 import {ReactWrapper} from "enzyme";
+import {act} from "@testing-library/react";
 
 export const makeRouteProps = (): RouteComponentProps => {
     return {
@@ -37,8 +38,10 @@ export const mockJSDOM = () => {
 export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
     let elements: string | any[] = [];
     await waitUntil(() => {
-        // @ts-ignore
-        elements = wrapper.update().find(predictor);
+        act(() => {
+            // @ts-ignore
+            elements = wrapper.update().find(predictor);
+        });
         return elements.length > 0;
     });
 
