@@ -11,14 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Make bucket card clickable to open bucket details, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
 - Sorting buckets by latest record on dashboard, [PR-31](https://github.com/reduct-storage/web-console/pull/31)
+- Button to Buckets page to create a new bucket, [PR-32](https://github.com/reduct-storage/web-console/pull/32)
 
 ### Changed:
 
 - `reduct-js` version v0.6.0, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
+- Disable control buttons of bucket card on Dashboard, [PR-32](https://github.com/reduct-storage/web-console/pull/32)
 
 ### Removed:
 
 - `crypto-browserify` dependency, [PR-30](https://github.com/reduct-storage/web-console/pull/30)
+
 ## [0.3.1]
 
 ### Fixed
