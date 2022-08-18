@@ -63,7 +63,7 @@ export default function BucketList(props: Readonly<Props>) {
         <Typography.Title level={3}>
             Buckets
             <Button style={{float: "right"}} icon={<PlusOutlined/>}
-                    onClick={() => setCreatingBucket(true)}>Add </Button>
+                    onClick={() => setCreatingBucket(true)} title="Add"/>
             <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
                    onCancel={() => setCreatingBucket(false)}>
                 <CreateOrUpdate client={props.client}
