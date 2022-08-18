@@ -54,6 +54,7 @@ export default function BucketDetail(props: Readonly<Props>) {
 
     return <div style={{margin: "1.4em"}}>
         {info ? <BucketCard bucketInfo={info} index={0} client={props.client}
+                            enablePanel
                             onRemoved={() => history.push("/buckets")}
                             onShow={() => null}/> : <div/>}
 

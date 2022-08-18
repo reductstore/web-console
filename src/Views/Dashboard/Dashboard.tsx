@@ -40,7 +40,7 @@ export default function Dashboard(props: Readonly<Props>) {
 
     useEffect(() => {
         getInfo().catch(err => console.error(err));
-    }, []);
+    }, [creatingBucket]);
 
 
     const removeBucket = async (name: string) => {
@@ -106,7 +106,6 @@ export default function Dashboard(props: Readonly<Props>) {
                 <CreateOrUpdate client={client}
                                 onCreated={async () => {
                                     setCreatingBucket(false);
-                                    await getInfo();
                                 }}/>
             </Modal>
 
