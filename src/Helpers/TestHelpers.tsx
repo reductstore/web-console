@@ -2,7 +2,7 @@ import {createMemoryHistory} from "history";
 import {RouteComponentProps} from "react-router-dom";
 import waitUntil from "async-wait-until";
 import {ReactWrapper} from "enzyme";
-import {act} from "@testing-library/react";
+import {act} from "react-dom/test-utils";
 
 export const makeRouteProps = (): RouteComponentProps => {
     return {

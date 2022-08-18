@@ -1,19 +1,18 @@
 import React from "react";
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
 import {BucketInfo, Client} from "reduct-js";
 import {MemoryRouter} from "react-router-dom";
+import {waitFor} from "@testing-library/react";
 
 describe("BucketPanel", () => {
+    const client = new Client("");
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockJSDOM();
-    });
-
-    it("should print table with information about buckets", async () => {
-        const client = new Client("");
         client.getBucketList = jest.fn().mockResolvedValue([
             {
                 name: "BucketWithData",
@@ -30,7 +29,9 @@ describe("BucketPanel", () => {
                 latestRecord: 0n
             } as BucketInfo,
         ]);
+    });
 
+    it("should print table with information about buckets", async () => {
         const panel = mount(<MemoryRouter><BucketList client={client}/></MemoryRouter>);
         await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
 
@@ -41,5 +42,13 @@ describe("BucketPanel", () => {
         expect(rows.at(1).render().text())
             .toEqual("EmptyBucket00 B---------");
 
+    });
+
+    it("should add a new bucket", async () => {
+        const panel = mount(<MemoryRouter><BucketList client={client}/></MemoryRouter>);
+        const button = await waitUntilFind(panel, {title: "Add"});
+        expect(button).toBeDefined();
+
+        // TODO: How to test modal?
     });
 });

@@ -14,6 +14,7 @@ interface Props {
     bucketInfo: BucketInfo;
     client: Client;
     index: number;
+    enablePanel?: boolean;
     onRemoved: (name: string) => void;
     onShow: (name: string) => void;
 }
@@ -42,14 +43,14 @@ export default function BucketCard(props: Readonly<Props>) {
         props.onRemoved(bucketInfo.name);
     };
 
-
+    const actions = props.enablePanel ? [
+        <SettingOutlined title="Settings" onClick={() => setChangeSettings(true)}/>,
+        <DeleteOutlined title="Remove" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>,
+    ] : [];
     return (<Card className="BucketCard" key={index} id={bucketInfo.name} title={bucketInfo.name}
-                  hoverable
+                  hoverable={props.enablePanel != true}
                   onClick={() => props.onShow(bucketInfo.name)}
-                  actions={[
-                      <SettingOutlined title="Settings" onClick={() => setChangeSettings(true)}/>,
-                      <DeleteOutlined title="Remove" onClick={() => setConfirmRemove(true)}/>,
-                  ]}>
+                  actions={actions}>
         <Row gutter={24}>
             <Col span={8}>
                 <Statistic title="Size" value={prettierBytes(n(bucketInfo.size))}/>
