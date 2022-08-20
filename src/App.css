@@ -1,19 +1,31 @@
 .App {
 }
 
+.Meta {
+    position: absolute;
+    bottom: 0;
+    color: #cccccc;
+    margin: 20px;
+
+}
+
+.MetaItem {
+    padding: 5px 0;
+}
+
 .Sider {
-  min-height: 100vh;
-  background-color: #231b49;
+    min-height: 100vh;
+    background-color: #231b49;
 }
 
 .MenuItem {
-  background-color: #231b49;
-  color: #cccccc;
-  font-size: larger;
-  font-weight: bold;
-  padding: 10px;
+    background-color: #231b49;
+    color: #cccccc;
+    font-size: larger;
+    font-weight: bold;
+    padding: 10px;
 }
 
 .ant-menu-item-active {
-  background-color: #cccccc !important;
+    background-color: #cccccc !important;
 }
