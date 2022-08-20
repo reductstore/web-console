@@ -11,8 +11,9 @@ Web console for [Reduct Storage](https://reduct-storage.dev) based on React.js a
 
 ## Features
 
-* Embedded to Reduct Storage
+* Embedded to Reduct Storage engine
 * Bucket Management
+* Data Browsing
 * Token authentication
 
 ## Demo
