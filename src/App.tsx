@@ -54,8 +54,7 @@ export default class App extends React.Component<Props, State> {
             this.props.history.push("/");
         };
 
-        console.log(this.state.isAllowed);
-
+        const version = process.env.REACT_APP_VERSION;
         return <div className="App">
             <Layout>
                 <Layout.Sider className="Sider">
@@ -76,16 +75,28 @@ export default class App extends React.Component<Props, State> {
 
                                 <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
                                     Logout
-                                </Menu.Item> </> :
-                            <div/>
+                                </Menu.Item>
+
+                            </>
+                            : <div/>
                         }
                     </Menu>
-                </Layout.Sider>
-                <Layout.Content>
-                    <Routes {...this.props} isAllowed={this.state.isAllowed} onLogin={onLogin}/>
-                </Layout.Content>
+                    <div className="Meta">
+                        <div className="MetaItem">
+                            Version: v{version}
+                        </div>
+                    </div>
 
+                </Layout.Sider>
+                <Layout>
+                    <Layout.Content>
+                        <Routes {...this.props} isAllowed={this.state.isAllowed} onLogin={onLogin}/>
+
+                    </Layout.Content>
+
+                </Layout>
             </Layout>
+
         </div>;
     }
 }
