@@ -148,6 +148,16 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         const initValueFromDefault = (factor: string, value?: bigint) => value !== undefined ?
             (value / FACTOR_MAP[factor]).toString() : "";
 
+        const validateBucketName = (name: string) => {
+            console.log(name);
+            name = name.trim();
+            if (!/^[A-Za-z0-9]*$/.test(name)) {
+                this.setState({error: "Bucket name can contain only letters and digests"});
+            } else {
+                this.setState({error: undefined});
+            }
+        };
+
         return <Form
             name="bucketForm"
             labelCol={{span: 6}}
@@ -158,9 +168,9 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             <Input.Group style={{padding: "15px"}} size="small">
 
                 <Form.Item label="Name" name="name"
-                           rules={[{required: true, message: "Can't be empty"}]}
+                           rules={[{required: true, message: "Can't be empty"}, ]}
                            initialValue={bucketName}>
-                    <Input disabled={bucketName !== undefined}/>
+                    <Input disabled={bucketName !== undefined} onChange={(event) => validateBucketName(event.target.value)}/>
                 </Form.Item>
 
                 <Form.Item label="Quota Type" name="quotaType"
