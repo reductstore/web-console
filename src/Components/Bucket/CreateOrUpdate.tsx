@@ -37,6 +37,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         this.onFinish = this.onFinish.bind(this);
     }
 
+    /**
+     * Called when Create/Update button is pressed
+     * @param values
+     */
     async onFinish(values: any): Promise<void> {
         console.log(values);
         let maxBlockSize = undefined;
@@ -59,6 +63,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
         console.log(settings);
         const {bucketName, client} = this.props;
         try {
+            // We create a new bucket if the bucket name wasn't set in properties
             if (bucketName === undefined) {
                 await client.createBucket(values.name, settings);
             } else {
@@ -149,9 +154,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             (value / FACTOR_MAP[factor]).toString() : "";
 
         const validateBucketName = (name: string) => {
-            console.log(name);
             name = name.trim();
-            if (!/^[A-Za-z0-9]*$/.test(name)) {
+            if (name.length == 0) {
+                this.setState({error: "Can't be empty"});
+            } else if (!/^[A-Za-z0-9_-]*$/.test(name)) {
                 this.setState({error: "Bucket name can contain only letters and digests"});
             } else {
                 this.setState({error: undefined});
@@ -168,9 +174,9 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             <Input.Group style={{padding: "15px"}} size="small">
 
                 <Form.Item label="Name" name="name"
-                           rules={[{required: true, message: "Can't be empty"}, ]}
-                           initialValue={bucketName}>
-                    <Input disabled={bucketName !== undefined} onChange={(event) => validateBucketName(event.target.value)}/>
+                           initialValue={bucketName ? bucketName : "new_bucket"}>
+                    <Input disabled={bucketName !== undefined}
+                           onChange={(event) => validateBucketName(event.target.value)}/>
                 </Form.Item>
 
                 <Form.Item label="Quota Type" name="quotaType"
@@ -206,7 +212,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             </Collapse>
 
             <Form.Item wrapperCol={{offset: 17, span: 17}}>
-                <Button type="primary" htmlType="submit" name="submit">
+                <Button type="primary" htmlType="submit" name="submit" disabled={error !== undefined}>
                     {bucketName ? "Update" : "Create"}
                 </Button>
             </Form.Item>

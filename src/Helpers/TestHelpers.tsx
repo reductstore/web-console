@@ -36,7 +36,7 @@ export const mockJSDOM = () => {
 };
 
 export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
-    let elements: string | any[] = [];
+    let elements: any = [];
     await waitUntil(() => {
         act(() => {
             // @ts-ignore
@@ -45,5 +45,5 @@ export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
         return elements.length > 0;
     });
 
-    return elements && elements.length === 1 ? elements[0] : elements;
+    return elements;
 };
