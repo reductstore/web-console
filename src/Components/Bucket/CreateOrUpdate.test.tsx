@@ -1,6 +1,6 @@
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 
 
 import CreateOrUpdate from "./CreateOrUpdate";
@@ -52,7 +52,7 @@ describe("Bucket::Create", () => {
 
     it("should collapse advanced settings", async () => {
         const wrapper = mount(<CreateOrUpdate client={client} onCreated={() => console.log("")}/>);
-        await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
+        await waitUntilFind(wrapper, {name: "quotaType"});
         expect(wrapper.find({name: "maxBlockRecords"}).length).toEqual(0);
         expect(wrapper.find({name: "maxBlockSize"}).length).toEqual(0);
     });
@@ -61,7 +61,7 @@ describe("Bucket::Create", () => {
         let closed = false;
         const wrapper = mount(<CreateOrUpdate showAll client={client} onCreated={() => closed = true}/>);
 
-        await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
+        await waitUntilFind(wrapper, {name: "quotaType"});
 
         const submit = wrapper.find({name: "bucketForm"}).at(0);
         submit.props().onFinish({
@@ -85,7 +85,7 @@ describe("Bucket::Create", () => {
         const wrapper = mount(<CreateOrUpdate showAll client={client} bucketName="bucket"
                                               onCreated={() => console.log("")}/>);
 
-        await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
+        await waitUntilFind(wrapper, {name: "quotaType"});
         expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("FIFO");
         expect(wrapper.find({name: "quotaSize"}).at(0).props().initialValue).toEqual("1");
         expect(wrapper.find({name: "maxBlockRecords"}).at(0).props().initialValue).toEqual(1024);
@@ -96,7 +96,7 @@ describe("Bucket::Create", () => {
         let closed = false;
         const wrapper = mount(<CreateOrUpdate showAll bucketName="bucket" client={client}
                                               onCreated={() => closed = true}/>);
-        await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
+        await waitUntilFind(wrapper, {name: "quotaType"});
 
         const submit = wrapper.find({name: "bucketForm"}).at(0);
         submit.props().onFinish({
@@ -121,7 +121,29 @@ describe("Bucket::Create", () => {
         client.getInfo = jest.fn().mockRejectedValue(err);
         const wrapper = mount(<CreateOrUpdate client={client} onCreated={() => console.log("")}/>);
 
-        await waitUntil(() => wrapper.update().find({type: "error"}).length > 0);
+        await waitUntilFind(wrapper, {type: "error"});
         expect(wrapper.render().text()).toContain(err.message);
     });
+
+    it("should validate name of bucket", async () => {
+        const wrapper = mount(<CreateOrUpdate showAll client={client}
+                                              onCreated={() => closed = true}/>);
+        const nameInput = await waitUntilFind(wrapper, {name: "name"});
+        const enter = (value: string) => {
+            nameInput.at(2).props().children.props.onChange({target: {value}});
+        };
+
+        enter("WRONG#NAME");
+        await waitUntilFind(wrapper, {type: "error"});
+        expect(wrapper.render().text()).toContain("Bucket name can contain only letters and digests");
+        const createButton = await waitUntilFind(wrapper, {type: "submit"});
+        expect(createButton.props().disabled).toBeTruthy();
+
+        enter("");
+        expect(wrapper.render().text()).toContain("Can't be empty");
+
+        enter("good_NAME-1000");
+        expect(createButton.update().props().disabled).toBeFalsy();
+    });
+
 });
