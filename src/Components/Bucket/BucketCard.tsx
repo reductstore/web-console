@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Card, Col, Modal, Row, Statistic} from "antd";
+import {Card, Col, Form, Input, Modal, Row, Statistic} from "antd";
 import humanizeDuration from "humanize-duration";
 import {Bucket, BucketInfo, Client} from "reduct-js";
 
@@ -27,6 +27,7 @@ export const getHistory = (interval: { latestRecord: bigint, oldestRecord: bigin
 
 export default function BucketCard(props: Readonly<Props>) {
     const [confirmRemove, setConfirmRemove] = useState(false);
+    const [confirmName, setConfirmName] = useState(false);
     const [changeSettings, setChangeSettings] = useState(false);
 
     const {client, bucketInfo, index} = props;
@@ -36,6 +37,9 @@ export default function BucketCard(props: Readonly<Props>) {
     };
 
 
+    const checkName = (bucketName: string) => {
+        setConfirmName(bucketName == bucketInfo.name);
+    };
     const onRemoved = async () => {
         const bucket: Bucket = await client.getBucket(bucketInfo.name);
         await bucket.remove();
@@ -47,6 +51,7 @@ export default function BucketCard(props: Readonly<Props>) {
         <SettingOutlined title="Settings" onClick={() => setChangeSettings(true)}/>,
         <DeleteOutlined title="Remove" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>,
     ] : [];
+
     return (<Card className="BucketCard" key={index} id={bucketInfo.name} title={bucketInfo.name}
                   hoverable={props.enablePanel != true}
                   onClick={() => props.onShow(bucketInfo.name)}
@@ -63,8 +68,17 @@ export default function BucketCard(props: Readonly<Props>) {
             </Col>
         </Row>
         <Modal visible={confirmRemove} onOk={onRemoved} onCancel={() => setConfirmRemove(false)} closable={false}
+               title={`Remove bucket "${bucketInfo.name}"?`}
                okText="Remove"
-               okType="danger">Remove <b>{bucketInfo.name}</b>?</Modal>
+               confirmLoading={!confirmName}
+               okType="danger">
+            <p>
+                For confirmation type <b>{bucketInfo.name}</b>
+            </p>
+            <Form.Item name="confirm">
+                <Input onChange={(e) => checkName(e.target.value)}></Input>
+            </Form.Item>
+        </Modal>
         <Modal title="Settings" visible={changeSettings} footer={null}
                onCancel={() => setChangeSettings(false)}>
             <CreateOrUpdate client={client} key={bucketInfo.name}
