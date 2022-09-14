@@ -7,12 +7,27 @@ on:
   pull_request:
     branches: [ main, stable ]
 jobs:
-  test:
+  build:
+    name: "Install dependencies"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
         run: npm install
+      - uses: actions/upload-artifact@master
+        with:
+          name: package
+          path: ./node_modules
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@master
+        with:
+          name: package
+          path: ./node_modules
+
       - name: Run ESLint
         run: npm run lint
       - name: Run Tests
