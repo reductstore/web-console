@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2022-10-03
+
 ### Changed:
 
 - Update `reduct-js` to 1.0.0, [PR-43](https://github.com/reduct-storage/web-console/pull/43)
@@ -85,7 +87,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.0.0...HEAD
+
+[1.0.0]: https://github.com/reduct-storage/web-console/compare/v0.5.0...v1.0.0
 
 [0.5.0]: https://github.com/reduct-storage/web-console/compare/v0.4.0...v0.5.0
 
