@@ -20,13 +20,13 @@ interface Props {
  * Bucket View
  */
 export default function BucketList(props: Readonly<Props>) {
-    const [buckets, setBucckets] = useState<BucketInfo[]>([]);
+    const [buckets, setBuckets] = useState<BucketInfo[]>([]);
     const [creatingBucket, setCreatingBucket] = useState(false);
 
     useEffect(() => {
         const {client} = props;
         client.getBucketList().then((buckets: BucketInfo[]) => {
-            setBucckets(buckets);
+            setBuckets(buckets);
         });
     }, [creatingBucket]);
 
