@@ -21,7 +21,12 @@ export default function TokenList(props: Readonly<Props>) {
         dataIndex: "name",
         key: "name",
         render: (text: string) => <Link to={`tokens/${text}`}><b>{text}</b></Link>
-    }, {title: "Created At", dataIndex: "createdAt", key: "createdAt"},];
+    }, {
+        title: "Created At",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        render: (time: number) => new Date(time).toISOString()
+    },];
 
     return <div style={{margin: "2em"}}>
         <Typography.Title level={3}>

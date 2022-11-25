@@ -7,6 +7,8 @@ import Login from "../Views/Auth/Login";
 import BucketList from "../Views/BucketPanel/BucketList";
 import BucketDetail from "../Views/BucketPanel/BucketDetail";
 import TokenList from "../Views/SecurityPanel/TokenList";
+import TokenDetail from "../Views/SecurityPanel/TokenDetail";
+
 interface Props extends RouteComponentProps {
     backendApi: IBackendAPI;
     isAllowed: boolean;
@@ -52,6 +54,9 @@ export function Routes(props: Props): JSX.Element {
                 <TokenList client={props.backendApi.client}/>
             </PrivateRoute>
 
+            <PrivateRoute exact path="/tokens/:name" isAllowed={isAllowed}>
+                <TokenDetail client={props.backendApi.client}/>
+            </PrivateRoute>
             <Route>
                 <NotFount/>
             </Route>

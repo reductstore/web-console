@@ -7,7 +7,7 @@ import "antd/dist/antd.variable.min.css";
 import "./App.css";
 import {IBackendAPI} from "./BackendAPI";
 import {Routes} from "./Components/Routes";
-import {BorderOuterOutlined, DatabaseOutlined, LogoutOutlined} from "@ant-design/icons";
+import {BorderOuterOutlined, DatabaseOutlined, LockOutlined, LogoutOutlined} from "@ant-design/icons";
 
 ConfigProvider.config({
     theme: {
@@ -71,7 +71,7 @@ export default class App extends React.Component<Props, State> {
                                     Buckets
                                 </Menu.Item>
 
-                                <Menu.Item id="Security" onClick={() => history.push("/tokens")}>
+                                <Menu.Item id="Security" icon={<LockOutlined/>} onClick={() => history.push("/tokens")}>
                                     Security
                                 </Menu.Item>
                                 <Divider style={{borderColor: "white"}}/>
