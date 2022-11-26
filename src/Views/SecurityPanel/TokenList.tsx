@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from "react";
 import {Client, Token} from "reduct-js";
-import {Link} from "react-router-dom";
-import {Table, Typography} from "antd";
+import {Link, useHistory} from "react-router-dom";
+import {Alert, Button, Table, Typography} from "antd";
+import {PlusOutlined} from "@ant-design/icons";
 
 interface Props {
     client: Client;
@@ -9,10 +10,15 @@ interface Props {
 
 export default function TokenList(props: Readonly<Props>) {
     const [tokens, setTokens] = useState<Token[]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    const history = useHistory();
 
     useEffect(() => {
         const {client} = props;
-        client.getTokenList().then(tokens => setTokens(tokens));
+        client.getTokenList()
+            .then(tokens => setTokens(tokens))
+            .catch(err => setError(err.message));
     });
 
 
@@ -31,17 +37,13 @@ export default function TokenList(props: Readonly<Props>) {
     return <div style={{margin: "2em"}}>
         <Typography.Title level={3}>
             Access Tokens
-            {/*            <Button style={{float: "right"}} icon={<PlusOutlined/>}
-                    onClick={() => setCreatingBucket(true)} title="Add"/>
-            <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
-                   onCancel={() => setCreatingBucket(false)}>
-                <CreateOrUpdate client={props.client}
-                                onCreated={async () => {
-                                    setCreatingBucket(false);
-                                }}/>
-            </Modal>*/}
+            <Button style={{float: "right"}} icon={<PlusOutlined/>}
+                    onClick={() => history.push("/tokens/new_token?isNew=true")} title="Add"/>
+
 
         </Typography.Title>
+        {error ? <Alert message={error} type="error" closable onClose={() => setError(null)}/> :
+            <div/>}
         <Table columns={columns} dataSource={tokens} loading={tokens.length == 0}/>
     </div>;
 }
