@@ -128,9 +128,9 @@ describe("Bucket::Create", () => {
     it("should validate name of bucket", async () => {
         const wrapper = mount(<CreateOrUpdate showAll client={client}
                                               onCreated={() => closed = true}/>);
-        const nameInput = await waitUntilFind(wrapper, {name: "name"});
+        const nameInput = await waitUntilFind(wrapper, "#InputName");
         const enter = (value: string) => {
-            nameInput.at(2).props().children.props.onChange({target: {value}});
+            nameInput.hostNodes().simulate("change", {target: {value}});
         };
 
         enter("WRONG#NAME");

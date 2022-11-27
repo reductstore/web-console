@@ -1,15 +1,13 @@
 import React from "react";
-import {Divider, Image, Layout, Menu} from "antd";
+import {ConfigProvider, Divider, Image, Layout, Menu} from "antd";
 import {RouteComponentProps} from "react-router-dom";
 
 import logo from "./main_logo.png";
 import "antd/dist/antd.variable.min.css";
 import "./App.css";
-
-import {ConfigProvider} from "antd";
 import {IBackendAPI} from "./BackendAPI";
 import {Routes} from "./Components/Routes";
-import {BorderOuterOutlined, DatabaseOutlined, LogoutOutlined} from "@ant-design/icons";
+import {BorderOuterOutlined, DatabaseOutlined, LockOutlined, LogoutOutlined} from "@ant-design/icons";
 
 ConfigProvider.config({
     theme: {
@@ -69,8 +67,13 @@ export default class App extends React.Component<Props, State> {
                                     Dashboard
                                 </Menu.Item>
                                 <Menu.Item id="Buckets" icon={<DatabaseOutlined/>}
-                                           onClick={() => history.push("/buckets")}>Buckets</Menu.Item>
+                                           onClick={() => history.push("/buckets")}>
+                                    Buckets
+                                </Menu.Item>
 
+                                <Menu.Item id="Security" icon={<LockOutlined/>} onClick={() => history.push("/tokens")}>
+                                    Security
+                                </Menu.Item>
                                 <Divider style={{borderColor: "white"}}/>
 
                                 <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>

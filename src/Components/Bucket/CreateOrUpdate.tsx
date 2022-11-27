@@ -175,10 +175,9 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
 
                 <Form.Item label="Name" name="name"
                            initialValue={bucketName ? bucketName : "new_bucket"}>
-                    <Input disabled={bucketName !== undefined}
+                    <Input id="InputName" disabled={bucketName !== undefined}
                            onChange={(event) => validateBucketName(event.target.value)}/>
                 </Form.Item>
-
                 <Form.Item label="Quota Type" name="quotaType"
                            initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "NONE"}>
                     <Select>

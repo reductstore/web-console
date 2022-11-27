@@ -1,27 +1,13 @@
 import React from "react";
 import {mount} from "enzyme";
 import waitUntil from "async-wait-until";
-import {mockJSDOM} from "./Helpers/TestHelpers";
-import {MemoryRouter, RouteComponentProps} from "react-router-dom";
-import {createLocation, createMemoryHistory} from "history";
+import {makeRouteProps, mockJSDOM, waitUntilFind} from "./Helpers/TestHelpers";
+import {MemoryRouter} from "react-router-dom";
 
 import App from "./App";
 import {IBackendAPI} from "./BackendAPI";
 import {Client} from "reduct-js";
 
-
-const makeRouteProps = (): RouteComponentProps => {
-    return {
-        match: {
-            isExact: false,
-            path: "",
-            url: "",
-            params: {id: "1"}
-        },
-        location: createLocation(""),
-        history: createMemoryHistory()
-    };
-};
 
 describe("App", () => {
     const client = new Client("");
@@ -46,9 +32,8 @@ describe("App", () => {
 
         const app = mount(<MemoryRouter><App {...routeProps}
                                              backendApi={backendAPI}/></MemoryRouter>);
-        await waitUntil(() => app.update().find("#Buckets").length > 0);
 
-        const bucketItem = app.find("#Buckets").hostNodes().at(0);
+        const bucketItem = (await waitUntilFind(app, "#Buckets")).hostNodes().at(0);
         // @ts-ignore
         bucketItem.props().onClick();
         expect(routeProps.history.push).toBeCalledWith("/buckets");
