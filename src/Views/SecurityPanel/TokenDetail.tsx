@@ -2,7 +2,6 @@ import React, {useEffect, useState} from "react";
 import {Client, Token} from "reduct-js";
 import {useHistory, useParams} from "react-router-dom";
 import {Alert, Button, Checkbox, Form, Input, Modal, Select, SelectProps, Space, Typography} from "antd";
-import TextArea from "antd/es/input/TextArea";
 
 interface Props {
     client: Client;
@@ -143,11 +142,9 @@ export default function TokenDetail(props: Readonly<Props>) {
                 <Space direction="vertical" size="large">
                     <Alert type="success"
                            message="This is your token value. Please, save it somewhere, because it will not be shown again."/>
-                    <TextArea value={tokenValue ? tokenValue : ""} readOnly={true} rows={4}></TextArea>
+                    <Input.TextArea value={tokenValue ? tokenValue : ""} readOnly={true} rows={4}></Input.TextArea>
                 </Space>
             </Modal>
-
-
         </Space>
     </Space>;
 }
