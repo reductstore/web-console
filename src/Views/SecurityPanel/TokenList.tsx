@@ -44,6 +44,6 @@ export default function TokenList(props: Readonly<Props>) {
         </Typography.Title>
         {error ? <Alert message={error} type="error" closable onClose={() => setError(null)}/> :
             <div/>}
-        <Table columns={columns} dataSource={tokens} loading={tokens.length == 0}/>
+        <Table id="TokenTable" columns={columns} dataSource={tokens} loading={tokens.length == 0}/>
     </div>;
 }

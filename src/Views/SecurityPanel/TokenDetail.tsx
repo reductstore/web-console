@@ -91,32 +91,32 @@ export default function TokenDetail(props: Readonly<Props>) {
     };
 
     return <Space direction={"vertical"} size={"large"} style={{margin: "2em", width: "80%"}}>
-        {error ? <Alert message={error} type="error" closable onClose={() => setError(undefined)}/> :
+        {error ? <Alert className="Alert" message={error} type="error" closable onClose={() => setError(undefined)}/> :
             <div/>}
 
         <Typography.Title level={3}>Access Token</Typography.Title>
 
-        <Input disabled={!isNew} value={token.name}
+        <Input name="name" disabled={!isNew} value={token.name}
                onChange={(event) => setToken({...token, name: event.target.value})}/>
-        <Checkbox disabled={!isNew} checked={token.permissions?.fullAccess}
+        <Checkbox name="fullAccess"  disabled={!isNew} checked={token.permissions?.fullAccess}
                   onChange={(event) => setPermissions({fullAccess: event.target.checked})}>
             Full Access
         </Checkbox>
         <Space.Compact block direction={"vertical"}>
             Read Access:
-            <Select disabled={!isNew} mode="multiple" value={token.permissions?.read} options={bucketOptions}
+            <Select id="ReadSelect" disabled={!isNew} mode="multiple" value={token.permissions?.read} options={bucketOptions}
                     onChange={value => setPermissions({read: value})}></Select>
         </Space.Compact>
         <Space.Compact block direction={"vertical"}>
             Write Access:
-            <Select disabled={!isNew} mode="multiple" value={token.permissions?.write} options={bucketOptions}
+            <Select id="WriteSelect" disabled={!isNew} mode="multiple" value={token.permissions?.write} options={bucketOptions}
                     onChange={value => setPermissions({write: value})}></Select>
         </Space.Compact>
         <Space>
             <Button onClick={() => history.push("/tokens")}>Back</Button>
             {isNew ?
                 <Button type={"primary"} onClick={() => createToken()}>Create</Button> :
-                <Button danger type="primary" onClick={() => setConfirmRemove(true)}>Remove</Button>}
+                <Button className="RemoveButton" danger type="primary" onClick={() => setConfirmRemove(true)}>Remove</Button>}
 
             <Modal open={confirmRemove} onOk={removeToken} onCancel={() => setConfirmRemove(false)} closable={false}
                    title={`Remove token "${token.name}"?`}

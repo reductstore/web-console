@@ -5,7 +5,6 @@ import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
 import {BucketInfo, Client} from "reduct-js";
 import {MemoryRouter} from "react-router-dom";
-import {waitFor} from "@testing-library/react";
 
 describe("BucketPanel", () => {
     const client = new Client("");
