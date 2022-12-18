@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2022-12-18
+
 ### Changed:
 
 - Rebranding: update logo and project name, [PR-46](https://github.com/reductstore/web-console/pull/46)
@@ -97,7 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.1.1...HEAD
+
+[1.1.1]: https://github.com/reduct-storage/web-console/compare/v1.1.0...v1.1.1
 
 [1.1.0]: https://github.com/reduct-storage/web-console/compare/v1.0.0...v1.1.0
 
