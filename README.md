@@ -11,7 +11,7 @@ Web console for [ReductStore](https://reduct.store) based on React.js and Ant De
 
 ## Features
 
-* Embedded to Reduct Store
+* Embedded to ReductStore
 * Bucket Management
 * Data Browsing
 * Token authentication
