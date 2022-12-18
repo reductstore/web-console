@@ -57,7 +57,7 @@ export default class App extends React.Component<Props, State> {
             <Layout>
                 <Layout.Sider className="Sider">
                     <Menu className="MenuItem" selectable={false} triggerSubMenuAction="click">
-                        <a href="https://reduct-storage.dev" title="https://reduct-storage.dev">
+                        <a href="https://reduct.store" title="https://reduct.store">
                             <Image src={logo} preview={false}/>
                         </a>
 
