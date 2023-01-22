@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {BucketInfo, Client} from "reduct-js";
+import {BucketInfo, Client, TokenPermissions} from "reduct-js";
 import {Button, Modal, Table, Typography} from "antd";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -13,6 +13,7 @@ import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
 
 interface Props {
     client: Client;
+    permissions?: TokenPermissions;
 }
 
 
@@ -63,8 +64,9 @@ export default function BucketList(props: Readonly<Props>) {
         <Typography.Title level={3}>
             Buckets
             <Button style={{float: "right"}} icon={<PlusOutlined/>}
+                    hidden={props.permissions === undefined || !props.permissions.fullAccess}
                     onClick={() => setCreatingBucket(true)} title="Add"/>
-            <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
+            <Modal title="Add a new bucket" open={creatingBucket} footer={null}
                    onCancel={() => setCreatingBucket(false)}>
                 <CreateOrUpdate client={props.client}
                                 onCreated={async () => {

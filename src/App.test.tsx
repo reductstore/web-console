@@ -16,6 +16,7 @@ describe("App", () => {
         logout: jest.fn(),
         login: jest.fn(),
         isAllowed: jest.fn(),
+        me: jest.fn(),
     };
 
     const routeProps = makeRouteProps();

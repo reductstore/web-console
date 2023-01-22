@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {IBackendAPI} from "../../BackendAPI";
-import {ServerInfo, BucketInfo} from "reduct-js";
+import {ServerInfo, BucketInfo, TokenPermissions} from "reduct-js";
 import humanizeDuration from "humanize-duration";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -15,6 +15,7 @@ import {History} from "history";
 
 interface Props {
     backendApi: IBackendAPI;
+    permissions?: TokenPermissions;
 }
 
 /**
@@ -94,12 +95,15 @@ export default function Dashboard(props: Readonly<Props>) {
         return rows;
     };
 
+    const allowedActions = [];
+    if (props.permissions && props.permissions.fullAccess) {
+        allowedActions.push(<PlusOutlined key="create" onClick={() => setCreatingBucket(true)}/>);
+    }
+
     const {client} = props.backendApi;
     return <div className="Panel">
         <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
-              actions={[
-                  <PlusOutlined title="Add a new bucket" onClick={() => setCreatingBucket(true)}/>
-              ]}>
+              actions={allowedActions}>
 
             <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
                    onCancel={() => setCreatingBucket(false)}>

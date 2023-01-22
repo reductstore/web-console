@@ -1,7 +1,7 @@
 import React, {useState} from "react";
 import {Card, Col, Form, Input, Modal, Row, Statistic} from "antd";
 import humanizeDuration from "humanize-duration";
-import {Bucket, BucketInfo, Client} from "reduct-js";
+import {Bucket, BucketInfo, Client, TokenPermissions} from "reduct-js";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -17,6 +17,7 @@ interface Props {
     enablePanel?: boolean;
     onRemoved: (name: string) => void;
     onShow: (name: string) => void;
+    permissions?: TokenPermissions
 }
 
 export const getHistory = (interval: { latestRecord: bigint, oldestRecord: bigint }) => {
@@ -47,10 +48,14 @@ export default function BucketCard(props: Readonly<Props>) {
         props.onRemoved(bucketInfo.name);
     };
 
-    const actions = props.enablePanel ? [
-        <SettingOutlined title="Settings" onClick={() => setChangeSettings(true)}/>,
-        <DeleteOutlined title="Remove" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>,
-    ] : [];
+    const actions = [];
+    if (props.enablePanel) {
+        actions.push(<SettingOutlined key="setting" onClick={() => setChangeSettings(true)}/>);
+
+        if (props.permissions?.fullAccess) {
+            actions.push(<DeleteOutlined key="delete" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>);
+        }
+    }
 
     return (<Card className="BucketCard" key={index} id={bucketInfo.name} title={bucketInfo.name}
                   hoverable={props.enablePanel != true}
@@ -67,7 +72,7 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Statistic title="History" value={bucketInfo.entryCount > 0n ? getHistory(bucketInfo) : "---"}/>
             </Col>
         </Row>
-        <Modal visible={confirmRemove} onOk={onRemoved} onCancel={() => setConfirmRemove(false)} closable={false}
+        <Modal open={confirmRemove} onOk={onRemoved} onCancel={() => setConfirmRemove(false)} closable={false}
                title={`Remove bucket "${bucketInfo.name}"?`}
                okText="Remove"
                confirmLoading={!confirmName}
@@ -79,7 +84,7 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Input onChange={(e) => checkName(e.target.value)}></Input>
             </Form.Item>
         </Modal>
-        <Modal title="Settings" visible={changeSettings} footer={null}
+        <Modal title="Settings" open={changeSettings} footer={null}
                onCancel={() => setChangeSettings(false)}>
             <CreateOrUpdate client={client} key={bucketInfo.name}
                             bucketName={bucketInfo.name}
