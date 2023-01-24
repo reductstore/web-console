@@ -8,53 +8,54 @@ import BucketList from "../Views/BucketPanel/BucketList";
 import BucketDetail from "../Views/BucketPanel/BucketDetail";
 import TokenList from "../Views/SecurityPanel/TokenList";
 import TokenDetail from "../Views/SecurityPanel/TokenDetail";
+import {TokenPermissions} from "reduct-js";
 
 interface Props extends RouteComponentProps {
     backendApi: IBackendAPI;
-    isAllowed: boolean;
     onLogin: () => void;
+    permissions?: TokenPermissions;
 }
 
 
 // @ts-ignore
-function PrivateRoute({children, isAllowed, ...rest}) {
+function PrivateRoute({children, authorized, ...rest}) {
     return (
         <Route {...rest} render={() => {
-            return isAllowed ? children : <Redirect to="/login"/>;
+            return authorized ? children : <Redirect to="/login"/>;
         }}/>
     );
 }
 
 export function Routes(props: Props): JSX.Element {
-    const {isAllowed} = props;
+    const authorized = props.permissions !== undefined;
 
     return (
         <Switch>
             <Route exact path="/">
-                {isAllowed ? <Redirect to="/dashboard"/> : <Redirect to="/login"/>}
+                {authorized ? <Redirect to="/dashboard"/> : <Redirect to="/login"/>}
             </Route>
 
             <Route exact path="/login">
                 <Login {...props}/>
             </Route>
 
-            <PrivateRoute exact path="/dashboard" isAllowed={isAllowed}>
+            <PrivateRoute exact path="/dashboard" authorized={authorized}>
                 <Dashboard {...props}/>
             </PrivateRoute>
 
-            <PrivateRoute exact path="/buckets" isAllowed={isAllowed}>
-                <BucketList client={props.backendApi.client}/>
+            <PrivateRoute exact path="/buckets" authorized={authorized}>
+                <BucketList client={props.backendApi.client} {...props}/>
             </PrivateRoute>
 
-            <PrivateRoute exact path="/buckets/:name" isAllowed={isAllowed}>
+            <PrivateRoute exact path="/buckets/:name" authorized={authorized}>
                 <BucketDetail client={props.backendApi.client} {...props}/>
             </PrivateRoute>
 
-            <PrivateRoute exact path="/tokens" isAllowed={isAllowed}>
+            <PrivateRoute exact path="/tokens" authorized={authorized && props.permissions?.fullAccess}>
                 <TokenList client={props.backendApi.client}/>
             </PrivateRoute>
 
-            <PrivateRoute exact path="/tokens/:name" isAllowed={isAllowed}>
+            <PrivateRoute exact path="/tokens/:name" authorized={authorized && props.permissions?.fullAccess}>
                 <TokenDetail client={props.backendApi.client}/>
             </PrivateRoute>
             <Route>

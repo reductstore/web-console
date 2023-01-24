@@ -37,13 +37,17 @@ export const mockJSDOM = () => {
 
 export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
     let elements: any = [];
-    await waitUntil(() => {
-        act(() => {
-            // @ts-ignore
-            elements = wrapper.update().find(predictor);
-        });
-        return elements.length > 0;
-    });
+    try {
+        await waitUntil(() => {
+            act(() => {
+                // @ts-ignore
+                elements = wrapper.update().find(predictor);
+            });
+            return elements.length > 0;
+        }, {timeout: 1000});
+    } catch (e) {
+        return undefined;
+    }
 
     return elements;
 };

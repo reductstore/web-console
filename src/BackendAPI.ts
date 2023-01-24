@@ -1,10 +1,12 @@
-import {APIError, Client} from "reduct-js";
+import {APIError, Client, Token} from "reduct-js";
 
 export interface IBackendAPI {
     client: Client;
     login: (token: string) => Promise<void>;
     logout: () => void;
     isAllowed: () => Promise<boolean>;
+
+    me: () => Promise<Token>;
 }
 
 export class BackendAPI implements IBackendAPI {
@@ -57,5 +59,18 @@ export class BackendAPI implements IBackendAPI {
             throw err;
         }
 
+    }
+
+    async me(): Promise<Token> {
+        try {
+            return this.client.me();
+        } catch (err) {
+            if (err instanceof APIError && err.status == 401) {
+                sessionStorage.removeItem("apiToken");
+                return {name: "anonymous", createdAt: Date.now(), permissions: {fullAccess: false}};
+            }
+
+            throw err;
+        }
     }
 }

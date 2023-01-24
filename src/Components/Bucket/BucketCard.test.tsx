@@ -17,7 +17,8 @@ describe("BucketCard", () => {
         const client = new Client("");
         const onRemove = jest.fn();
 
-        const wrapper = mount(<BucketCard bucketInfo={info} enablePanel client={client} index={0} onRemoved={onRemove} onShow={()=>null}/>);
+        const wrapper = mount(<BucketCard bucketInfo={info} permissions={{fullAccess: true}} enablePanel client={client}
+                                          index={0} onRemoved={onRemove} onShow={() => null}/>);
         const button = await waitUntilFind(wrapper, {title: "Settings"});
 
         button.hostNodes().simulate("click");

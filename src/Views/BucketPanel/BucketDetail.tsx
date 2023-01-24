@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {Bucket, BucketInfo, EntryInfo, Client} from "reduct-js";
+import {Bucket, BucketInfo, EntryInfo, Client, TokenPermissions} from "reduct-js";
 import {useHistory, useParams} from "react-router-dom";
 import BucketCard, {getHistory} from "../../Components/Bucket/BucketCard";
 // @ts-ignore
@@ -8,6 +8,7 @@ import {Table, Typography} from "antd";
 
 interface Props {
     client: Client;
+    permissions?: TokenPermissions;
 }
 
 
@@ -53,7 +54,7 @@ export default function BucketDetail(props: Readonly<Props>) {
     ];
 
     return <div style={{margin: "1.4em"}}>
-        {info ? <BucketCard bucketInfo={info} index={0} client={props.client}
+        {info ? <BucketCard bucketInfo={info} index={0} {...props}
                             enablePanel
                             onRemoved={() => history.push("/buckets")}
                             onShow={() => null}/> : <div/>}

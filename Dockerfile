@@ -1,6 +1,6 @@
-FROM node:17 AS builder
+FROM node:18 AS builder
 
-RUN npm install -g npm@8.12.2
+RUN npm install -g npm@9.3.1
 
 WORKDIR /app
 COPY package.json .

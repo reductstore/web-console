@@ -8,6 +8,7 @@ import "./App.css";
 import {IBackendAPI} from "./BackendAPI";
 import {Routes} from "./Components/Routes";
 import {BorderOuterOutlined, DatabaseOutlined, LockOutlined, LogoutOutlined} from "@ant-design/icons";
+import {TokenPermissions} from "reduct-js";
 
 ConfigProvider.config({
     theme: {
@@ -21,38 +22,39 @@ interface Props extends RouteComponentProps {
 }
 
 type State = {
-    isAllowed?: boolean;
+    permissions?: TokenPermissions
 }
 
 export default class App extends React.Component<Props, State> {
     constructor(props: Props) {
         super(props);
-        this.state = {};
+        this.state = {permissions: {fullAccess: false}};
     }
 
     componentDidMount() {
         this.props.backendApi.isAllowed()
-            .then((isAllowed) => this.setState({isAllowed}))
+            .then((isAllowed) => {
+                return isAllowed ? this.props.backendApi.me() : undefined;
+            })
+            .then((token) => this.setState({permissions: (token && token.permissions) ?? undefined}))
             .catch((err) => console.error(err));
     }
 
     render() {
-        if (this.state.isAllowed === undefined) {
-            return <div/>;
-        }
-
         const {backendApi, history} = this.props;
         const onLogout = async () => {
             backendApi.logout();
-            this.setState({isAllowed: false});
+            this.setState({permissions: undefined});
         };
 
         const onLogin = async () => {
-            this.setState({isAllowed: true});
+            this.setState({permissions: (await this.props.backendApi.me()).permissions});
             this.props.history.push("/");
         };
 
         const version = process.env.REACT_APP_VERSION;
+        const {permissions} = this.state;
+
         return <div className="App">
             <Layout>
                 <Layout.Sider className="Sider">
@@ -62,7 +64,7 @@ export default class App extends React.Component<Props, State> {
                         </a>
 
                         <Divider/>
-                        {this.state.isAllowed ? <>
+                        {permissions ? <>
                                 <Menu.Item icon={<BorderOuterOutlined/>} onClick={() => history.push("/dashboard")}>
                                     Dashboard
                                 </Menu.Item>
@@ -71,9 +73,12 @@ export default class App extends React.Component<Props, State> {
                                     Buckets
                                 </Menu.Item>
 
-                                <Menu.Item id="Security" icon={<LockOutlined/>} onClick={() => history.push("/tokens")}>
-                                    Security
-                                </Menu.Item>
+                                {permissions.fullAccess ?
+                                    <Menu.Item id="Security" icon={<LockOutlined/>}
+                                               onClick={() => history.push("/tokens")}>
+                                        Security
+                                    </Menu.Item>
+                                    : null}
                                 <Divider style={{borderColor: "white"}}/>
 
                                 <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
@@ -89,14 +94,13 @@ export default class App extends React.Component<Props, State> {
                             Version: v{version}
                         </div>
                     </div>
-
                 </Layout.Sider>
+
                 <Layout>
                     <Layout.Content>
-                        <Routes {...this.props} isAllowed={this.state.isAllowed} onLogin={onLogin}/>
-
+                        <Routes {...this.props} permissions={this.state.permissions}
+                                onLogin={onLogin}/>
                     </Layout.Content>
-
                 </Layout>
             </Layout>
 

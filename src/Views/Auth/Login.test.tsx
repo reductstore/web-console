@@ -21,6 +21,7 @@ describe("Auth::Login", () => {
         login: jest.fn(),
         logout: jest.fn(),
         isAllowed: jest.fn(),
+        me: jest.fn(),
     };
 
     const props = {

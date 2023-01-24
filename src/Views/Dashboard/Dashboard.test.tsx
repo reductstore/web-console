@@ -21,6 +21,7 @@ describe("Dashboard", () => {
         login: jest.fn(),
         logout: jest.fn(),
         isAllowed: jest.fn(),
+        me: jest.fn(),
     };
 
     const serverInfo: ServerInfo = {
@@ -61,7 +62,7 @@ describe("Dashboard", () => {
         client.getInfo = jest.fn().mockResolvedValue(serverInfo);
         client.getBucketList = jest.fn().mockResolvedValue([]);
 
-        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}}/>);
         const html = (await waitUntilFind(wrapper, "#ServerInfo")).hostNodes();
 
         expect(html.text()).toContain("0.4.0");
@@ -70,7 +71,7 @@ describe("Dashboard", () => {
     });
 
     it("should show bucket info", async () => {
-        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}}/>);
         const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
         expect(bucket.text()).toContain("bucket_1");
         expect(bucket.text()).toContain("1 KB");
@@ -78,7 +79,7 @@ describe("Dashboard", () => {
     });
 
     it("should order buckets by last records", async () => {
-        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}}/>);
         let bucket = (await waitUntilFind(wrapper, "#bucket_1"));
         expect(bucket.at(0).key()).toEqual("1");
 
@@ -87,7 +88,7 @@ describe("Dashboard", () => {
     });
 
     it("should push to BucketDetail if user click on bucket card", async () => {
-        const wrapper = mount(<Dashboard backendApi={backend}/>);
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}}/>);
         const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
         bucket.props().onClick();
 
