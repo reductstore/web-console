@@ -63,9 +63,10 @@ export default function BucketList(props: Readonly<Props>) {
     return <div style={{margin: "2em"}}>
         <Typography.Title level={3}>
             Buckets
-            <Button style={{float: "right"}} icon={<PlusOutlined/>}
-                    hidden={props.permissions === undefined || !props.permissions.fullAccess}
-                    onClick={() => setCreatingBucket(true)} title="Add"/>
+            {props.permissions?.fullAccess ?
+                <Button style={{float: "right"}} icon={<PlusOutlined/>}
+                        onClick={() => setCreatingBucket(true)} title="Add"/> : null}
+
             <Modal title="Add a new bucket" open={creatingBucket} footer={null}
                    onCancel={() => setCreatingBucket(false)}>
                 <CreateOrUpdate client={props.client}

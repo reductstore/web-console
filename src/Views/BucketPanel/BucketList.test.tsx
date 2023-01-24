@@ -44,10 +44,19 @@ describe("BucketPanel", () => {
     });
 
     it("should add a new bucket", async () => {
-        const panel = mount(<MemoryRouter><BucketList client={client}/></MemoryRouter>);
+        const panel = mount(<MemoryRouter>
+            <BucketList client={client} permissions={{fullAccess: true}}/>
+        </MemoryRouter>);
         const button = await waitUntilFind(panel, {title: "Add"});
         expect(button).toBeDefined();
 
         // TODO: How to test modal?
+    });
+
+    it("should hide button to add a new bucket if user has no permissions", async () => {
+        const panel = mount(<MemoryRouter><BucketList client={client}
+                                                      permissions={{fullAccess: false}}/></MemoryRouter>);
+        const button = await waitUntilFind(panel, {title: "Add"});
+        expect(button).toBeUndefined();
     });
 });

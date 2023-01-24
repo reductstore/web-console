@@ -73,10 +73,12 @@ export default class App extends React.Component<Props, State> {
                                     Buckets
                                 </Menu.Item>
 
-                                <Menu.Item hidden={!permissions.fullAccess} id="Security" icon={<LockOutlined/>}
-                                           onClick={() => history.push("/tokens")}>
-                                    Security
-                                </Menu.Item>
+                                {permissions.fullAccess ?
+                                    <Menu.Item id="Security" icon={<LockOutlined/>}
+                                               onClick={() => history.push("/tokens")}>
+                                        Security
+                                    </Menu.Item>
+                                    : null}
                                 <Divider style={{borderColor: "white"}}/>
 
                                 <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>

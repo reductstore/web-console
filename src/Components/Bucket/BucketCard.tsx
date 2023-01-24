@@ -50,10 +50,10 @@ export default function BucketCard(props: Readonly<Props>) {
 
     const actions = [];
     if (props.enablePanel) {
-        actions.push(<SettingOutlined key="setting" onClick={() => setChangeSettings(true)}/>);
+        actions.push(<SettingOutlined title="Settings" key="setting" onClick={() => setChangeSettings(true)}/>);
 
         if (props.permissions?.fullAccess) {
-            actions.push(<DeleteOutlined key="delete" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>);
+            actions.push(<DeleteOutlined title="Remove" key="delete" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>);
         }
     }
 

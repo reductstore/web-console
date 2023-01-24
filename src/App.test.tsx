@@ -6,7 +6,7 @@ import {MemoryRouter} from "react-router-dom";
 
 import App from "./App";
 import {IBackendAPI} from "./BackendAPI";
-import {Client} from "reduct-js";
+import {Client, Token} from "reduct-js";
 
 
 describe("App", () => {
@@ -38,5 +38,30 @@ describe("App", () => {
         // @ts-ignore
         bucketItem.props().onClick();
         expect(routeProps.history.push).toBeCalledWith("/buckets");
+    });
+
+    it("should have a link to security panel", async () => {
+        backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+        backendAPI.me = jest.fn().mockResolvedValue({permissions: {fullAccess: true}} as Token);
+        routeProps.history.push = jest.fn();
+
+        const app = mount(<MemoryRouter><App {...routeProps}
+                                             backendApi={backendAPI}/></MemoryRouter>);
+
+        const bucketItem = (await waitUntilFind(app, "#Security")).hostNodes().at(0);
+        // @ts-ignore
+        bucketItem.props().onClick();
+        expect(routeProps.history.push).toBeCalledWith("/tokens");
+    });
+
+    it("should hide security panel", async () => {
+        backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+        backendAPI.me = jest.fn().mockResolvedValue({permissions: {fullAccess: false}} as Token);
+
+        const app = mount(<MemoryRouter><App {...routeProps}
+                                             backendApi={backendAPI}/></MemoryRouter>);
+
+        const bucketItem = (await waitUntilFind(app, "#Security"));
+        expect(bucketItem).toBeUndefined();
     });
 });

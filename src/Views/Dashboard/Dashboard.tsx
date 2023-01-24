@@ -105,7 +105,7 @@ export default function Dashboard(props: Readonly<Props>) {
         <Card bordered={true} id="ServerInfo" title={`Server v${info.version}`}
               actions={allowedActions}>
 
-            <Modal title="Add a new bucket" visible={creatingBucket} footer={null}
+            <Modal title="Add a new bucket" open={creatingBucket} footer={null}
                    onCancel={() => setCreatingBucket(false)}>
                 <CreateOrUpdate client={client}
                                 onCreated={async () => {
