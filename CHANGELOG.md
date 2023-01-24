@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added:
+
+- Hiding admin control elements for token wihout full access, [PR-49](https://github.com/reductstore/web-console/pull/49)
+
 ## [1.1.1] - 2022-12-18
 
 ### Changed:
