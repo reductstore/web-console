@@ -24,11 +24,20 @@ export default function BucketList(props: Readonly<Props>) {
     const [buckets, setBuckets] = useState<BucketInfo[]>([]);
     const [creatingBucket, setCreatingBucket] = useState(false);
 
+    const getBuckets = async () => {
+        try {
+            const {client} = props;
+            const bucketList: BucketInfo[] = await client.getBucketList();
+            setBuckets(bucketList);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
-        const {client} = props;
-        client.getBucketList().then((buckets: BucketInfo[]) => {
-            setBuckets(buckets);
-        });
+        getBuckets().then();
+        const interval = setInterval(() => getBuckets(), 5000);
+        return () => clearInterval(interval);
     }, [creatingBucket]);
 
 

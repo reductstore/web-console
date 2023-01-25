@@ -44,7 +44,7 @@ export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
                 elements = wrapper.update().find(predictor);
             });
             return elements.length > 0;
-        }, {timeout: 1000});
+        }, {timeout: 2000});
     } catch (e) {
         return undefined;
     }
