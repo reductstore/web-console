@@ -19,13 +19,22 @@ export default function BucketDetail(props: Readonly<Props>) {
     const [info, setInfo] = useState<BucketInfo>();
     const [entries, setEntries] = useState<EntryInfo[]>([]);
 
+    const getEntries = async () => {
+        try {
+            const {client} = props;
+            const bucket: Bucket = await client.getBucket(name);
+            setInfo(await bucket.getInfo());
+            setEntries(await bucket.getEntryList());
+        } catch (err) {
+            console.error(err);
+        }
+
+    };
+
     useEffect(() => {
-        props.client.getBucket(name)
-            .then(async (bucket: Bucket) => {
-                setInfo(await bucket.getInfo());
-                setEntries(await bucket.getEntryList());
-            })
-            .catch(err => console.error(err));
+        getEntries().then();
+        const interval = setInterval(() => getEntries(), 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const data = entries.map(entry => {

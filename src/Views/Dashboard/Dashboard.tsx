@@ -16,6 +16,7 @@ import {History} from "history";
 interface Props {
     backendApi: IBackendAPI;
     permissions?: TokenPermissions;
+    autoRefresh?: boolean;
 }
 
 /**
@@ -40,7 +41,9 @@ export default function Dashboard(props: Readonly<Props>) {
     };
 
     useEffect(() => {
-        getInfo().catch(err => console.error(err));
+        getInfo().then();
+        const interval = setInterval(() => getInfo(), 5000);
+        return () => clearInterval(interval);
     }, [creatingBucket]);
 
 
@@ -56,7 +59,6 @@ export default function Dashboard(props: Readonly<Props>) {
         history.push(`/buckets/${name}`);
     };
 
-    console.log(info);
     if (info === undefined) {
         return <Card bordered title="Server (no connection)"/>;
     }

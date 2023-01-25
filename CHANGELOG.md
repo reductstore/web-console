@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added:
 
-- Hiding admin control elements for token wihout full access, [PR-49](https://github.com/reductstore/web-console/pull/49)
+- Hiding admin control elements for token without full access, [PR-49](https://github.com/reductstore/web-console/pull/49)
+- Update data each 5 seconds automatically, [PR-50](https://github.com/reductstore/web-console/pull/50)
 
 ## [1.1.1] - 2022-12-18
 
