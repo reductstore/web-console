@@ -18,4 +18,4 @@ Web console for [ReductStore](https://www.reduct.store) based on React.js and An
 ## Demo
 
 You can explore it by using a demo server at [play.reduct.store](https://play.reduct.store).
-The API token is "reduct".
+The API token is `demo-rw-45ab28842f2879ce02a8fcb3e7a2327dd6d8893ed1b68712c3469d1425a11a0`.
