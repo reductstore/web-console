@@ -73,7 +73,7 @@ jobs:
         env:
           CI: false
       - name: Tar built application
-        run: cd build && tar -czvf web-console.build.tar.gz *
+        run: cd build && zip -r web-console.build.zip *
       - name: Upload  artifact
         uses: actions/upload-release-asset@v1
         env:
