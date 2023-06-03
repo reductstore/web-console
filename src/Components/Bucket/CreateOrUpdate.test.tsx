@@ -77,7 +77,7 @@ describe("Bucket::Create", () => {
             "maxBlockRecords": 1024n,
             "maxBlockSize": 64000000n,
             "quotaSize": 0n,
-            "quotaType": "FIFO
+            "quotaType": "FIFO"
         } as unknown as BucketSettings);
     });
 
