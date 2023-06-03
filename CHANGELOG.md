@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2023-06--03
+
 ### Changed:
 
 - Distribute console as a `zip` archive, [PR-53](https://github.com/reductstore/web-console/pull/53)
@@ -111,7 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.2.1...HEAD
+
+[1.2.1]: https://github.com/reduct-storage/web-console/compare/v1.2.0...v1.2.1
+
+[1.2.0]: https://github.com/reduct-storage/web-console/compare/v1.1.1...v1.2.0
 
 [1.1.1]: https://github.com/reduct-storage/web-console/compare/v1.1.0...v1.1.1
 
