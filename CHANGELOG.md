@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed:
 
 - Distribute console as a `zip` archive, [PR-53](https://github.com/reductstore/web-console/pull/53)
+- Update `reduct-js` to 1.4.0, [PR-54](https://github.com/reductstore/web-console/pull/54)
 
 ## [1.2.0] - 2023-01-25
 
