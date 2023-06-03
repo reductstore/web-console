@@ -53,12 +53,13 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             maxBlockRecords = BigInt(values.maxBlockRecords);
         }
 
-        const quotaType = values.quotaType as QuotaType;
+        const quotaType = QuotaType[values.quotaType];
 
         let quotaSize = undefined;
         if (values.quotaSize) {
             quotaSize = BigInt(values.quotaSize) * FACTOR_MAP[this.state.quotaSizeFactor];
         }
+        // @ts-ignore
         const settings: BucketSettings = {maxBlockSize, quotaType, quotaSize, maxBlockRecords};
         console.log(settings);
         const {bucketName, client} = this.props;
@@ -179,10 +180,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
                            onChange={(event) => validateBucketName(event.target.value)}/>
                 </Form.Item>
                 <Form.Item label="Quota Type" name="quotaType"
-                           initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "0"}>
+                           initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "NONE"}>
                     <Select>
-                        <Option value="0">NONE</Option>
-                        <Option value="1">FIFO</Option>
+                        <Option value="NONE">NONE</Option>
+                        <Option value="FIFO">FIFO</Option>
                     </Select>
                 </Form.Item>
                 <Form.Item label="Quota Size"
