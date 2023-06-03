@@ -43,7 +43,7 @@ describe("Bucket::Create", () => {
         const wrapper = mount(<CreateOrUpdate showAll client={client} onCreated={() => console.log("")}/>);
 
         await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
-        expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("NONE");
+        expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("0");
         expect(wrapper.find({name: "quotaSize"}).at(0).props().initialValue).toEqual("0");
         expect(wrapper.find({name: "maxBlockRecords"}).at(0).props().initialValue).toEqual(1024);
         expect(wrapper.find({name: "maxBlockSize"}).at(0).props().initialValue).toEqual("64");
@@ -68,7 +68,7 @@ describe("Bucket::Create", () => {
             maxBlockSize: "64",
             maxBlockRecords: 1024,
             name: "NewBucket",
-            quotaType: "NONE",
+            quotaType: "1",
             quotaSize: "0"
         });
 
@@ -77,7 +77,7 @@ describe("Bucket::Create", () => {
             "maxBlockRecords": 1024n,
             "maxBlockSize": 64000000n,
             "quotaSize": 0n,
-            "quotaType": "NONE"
+            "quotaType": "1"
         } as unknown as BucketSettings);
     });
 
