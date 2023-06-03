@@ -72,8 +72,8 @@ jobs:
         run: npm run build
         env:
           CI: false
-      - name: Tar built application
-        run: cd build && zip web-console.build.zip *
+      - name: Zip built application
+        run: cd build && zip web-console.build.zip -r *
       - name: Upload  artifact
         uses: actions/upload-release-asset@v1
         env:
