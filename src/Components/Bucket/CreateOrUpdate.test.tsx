@@ -43,7 +43,7 @@ describe("Bucket::Create", () => {
         const wrapper = mount(<CreateOrUpdate showAll client={client} onCreated={() => console.log("")}/>);
 
         await waitUntil(() => wrapper.update().find({name: "quotaType"}).length > 0);
-        expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("0");
+        expect(wrapper.find({name: "quotaType"}).at(0).props().initialValue).toEqual("NONE");
         expect(wrapper.find({name: "quotaSize"}).at(0).props().initialValue).toEqual("0");
         expect(wrapper.find({name: "maxBlockRecords"}).at(0).props().initialValue).toEqual(1024);
         expect(wrapper.find({name: "maxBlockSize"}).at(0).props().initialValue).toEqual("64");
@@ -77,7 +77,7 @@ describe("Bucket::Create", () => {
             "maxBlockRecords": 1024n,
             "maxBlockSize": 64000000n,
             "quotaSize": 0n,
-            "quotaType": "1"
+            "quotaType": "FIFO
         } as unknown as BucketSettings);
     });
 
@@ -110,7 +110,7 @@ describe("Bucket::Create", () => {
         await waitUntil(() => closed);
         expect(bucket.setSettings).toBeCalledWith({
             "maxBlockRecords": 1024n, "maxBlockSize": 64n,
-            "quotaSize": 0n, "quotaType": "NONE"
+            "quotaSize": 0n, "quotaType": QuotaType.NONE
         } as unknown as BucketSettings);
     });
 
