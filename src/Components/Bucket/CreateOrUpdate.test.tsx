@@ -115,9 +115,7 @@ describe("Bucket::Create", () => {
     });
 
     it("should show error if don't get settings", async () => {
-        const err = new APIError();
-        err.message = "Oops";
-
+        const err = new APIError("Oops");
         client.getInfo = jest.fn().mockRejectedValue(err);
         const wrapper = mount(<CreateOrUpdate client={client} onCreated={() => console.log("")}/>);
 

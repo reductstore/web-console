@@ -53,7 +53,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             maxBlockRecords = BigInt(values.maxBlockRecords);
         }
 
-        const {quotaType} = values;
+        const quotaType = values.quotaType as QuotaType;
 
         let quotaSize = undefined;
         if (values.quotaSize) {
@@ -179,10 +179,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
                            onChange={(event) => validateBucketName(event.target.value)}/>
                 </Form.Item>
                 <Form.Item label="Quota Type" name="quotaType"
-                           initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "NONE"}>
+                           initialValue={settings.quotaType ? QuotaType[settings.quotaType] : "0"}>
                     <Select>
-                        <Option value="NONE">NONE</Option>
-                        <Option value="FIFO">FIFO</Option>
+                        <Option value="0">NONE</Option>
+                        <Option value="1">FIFO</Option>
                     </Select>
                 </Form.Item>
                 <Form.Item label="Quota Size"
