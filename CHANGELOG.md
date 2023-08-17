@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added:
+
+- Add a button to remove entry, [PR-58](https://github.com/reductstore/web-console/pull/58)
+
 ## [1.2.2] - 2023-06--03
 
 ### Fixed:
