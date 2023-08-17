@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Card, Col, Form, Input, Modal, Row, Statistic} from "antd";
+import {Card, Col, Modal, Row, Statistic} from "antd";
 import humanizeDuration from "humanize-duration";
 import {Bucket, BucketInfo, Client, TokenPermissions} from "reduct-js";
 
@@ -9,6 +9,7 @@ import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 
 import "./BucketCard.css";
 import CreateOrUpdate from "./CreateOrUpdate";
+import RemoveConfirmationByName from "../RemoveConfirmationByName";
 
 interface Props {
     bucketInfo: BucketInfo;
@@ -28,23 +29,16 @@ export const getHistory = (interval: { latestRecord: bigint, oldestRecord: bigin
 
 export default function BucketCard(props: Readonly<Props>) {
     const [confirmRemove, setConfirmRemove] = useState(false);
-    const [confirmName, setConfirmName] = useState(false);
     const [changeSettings, setChangeSettings] = useState(false);
-
     const {client, bucketInfo, index} = props;
 
     const n = (big: BigInt) => {
         return Number(big.valueOf());
     };
 
-
-    const checkName = (bucketName: string) => {
-        setConfirmName(bucketName == bucketInfo.name);
-    };
     const onRemoved = async () => {
         const bucket: Bucket = await client.getBucket(bucketInfo.name);
         await bucket.remove();
-        setConfirmRemove(false);
         props.onRemoved(bucketInfo.name);
     };
 
@@ -53,7 +47,8 @@ export default function BucketCard(props: Readonly<Props>) {
         actions.push(<SettingOutlined title="Settings" key="setting" onClick={() => setChangeSettings(true)}/>);
 
         if (props.permissions?.fullAccess) {
-            actions.push(<DeleteOutlined title="Remove" key="delete" style={{color: "red"}} onClick={() => setConfirmRemove(true)}/>);
+            actions.push(<DeleteOutlined title="Remove" key="delete" style={{color: "red"}}
+                                         onClick={() => setConfirmRemove(true)}/>);
         }
     }
 
@@ -72,18 +67,9 @@ export default function BucketCard(props: Readonly<Props>) {
                 <Statistic title="History" value={bucketInfo.entryCount > 0n ? getHistory(bucketInfo) : "---"}/>
             </Col>
         </Row>
-        <Modal open={confirmRemove} onOk={onRemoved} onCancel={() => setConfirmRemove(false)} closable={false}
-               title={`Remove bucket "${bucketInfo.name}"?`}
-               okText="Remove"
-               confirmLoading={!confirmName}
-               okType="danger">
-            <p>
-                For confirmation type <b>{bucketInfo.name}</b>
-            </p>
-            <Form.Item name="confirm">
-                <Input onChange={(e) => checkName(e.target.value)}></Input>
-            </Form.Item>
-        </Modal>
+        <RemoveConfirmationByName name={bucketInfo.name} onRemoved={onRemoved}
+                                  onCanceled={() => setConfirmRemove(false)} confirm={confirmRemove}
+                                  resourceType="bucket"/>
         <Modal title="Settings" open={changeSettings} footer={null}
                onCancel={() => setChangeSettings(false)}>
             <CreateOrUpdate client={client} key={bucketInfo.name}

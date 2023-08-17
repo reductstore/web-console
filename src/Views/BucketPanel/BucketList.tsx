@@ -66,7 +66,7 @@ export default function BucketList(props: Readonly<Props>) {
         {title: "Size", dataIndex: "size", key: "size"},
         {title: "History", dataIndex: "history", key: "history"},
         {title: "Oldest Record (UTC)", dataIndex: "oldestRecord", key: "oldestRecord"},
-        {title: "Latest Record (UTC)", dataIndex: "latestRecord", key: "latestRecord"}
+        {title: "Latest Record (UTC)", dataIndex: "latestRecord", key: "latestRecord"},
     ];
 
     return <div style={{margin: "2em"}}>
