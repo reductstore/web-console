@@ -79,10 +79,17 @@ export default function BucketDetail(props: Readonly<Props>) {
         {title: "Latest Record (UTC)", dataIndex: "latestRecord", key: "latestRecord"},
         {
             title: "",
-            render: (_: any, entry: { name: string; }) => <DeleteOutlined key={entry.name} style={{color: "red"}}
-                                                                          onClick={() => setEntryToRemove(entry.name)}/>
-        },
+            render: (_: any, entry: { name: string; }) => {
+                if (info && (props.permissions?.fullAccess || props.permissions?.write?.indexOf(info?.name) === -1)) {
+                    return <DeleteOutlined key={entry.name} style={{color: "red"}}
+                                           onClick={() => setEntryToRemove(entry.name)}
+                    />;
+                }
+                return <div/>;
+            }
+        }
     ];
+
 
     return <div style={{margin: "1.4em"}}>
         {info ? <BucketCard bucketInfo={info} index={0} {...props}
