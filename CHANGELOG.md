@@ -7,17 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2023-08-17
+
 ### Added:
 
 - Add a button to remove entry, [PR-58](https://github.com/reductstore/web-console/pull/58)
 
-## [1.2.2] - 2023-06--03
+## [1.2.2] - 2023-06-03
 
 ### Fixed:
 
 - Updating quota type, [PR-56](https://github.com/reductstore/web-console/pull/56)
 
-## [1.2.1] - 2023-06--03
+## [1.2.1] - 2023-06-03
 
 ### Changed:
 
