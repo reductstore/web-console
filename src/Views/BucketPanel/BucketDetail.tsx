@@ -80,8 +80,8 @@ export default function BucketDetail(props: Readonly<Props>) {
         {
             title: "",
             render: (_: any, entry: { name: string; }) => {
-                if (info && (props.permissions?.fullAccess || props.permissions?.write?.indexOf(info?.name) === -1)) {
-                    return <DeleteOutlined key={entry.name} style={{color: "red"}}
+                if (props.permissions?.fullAccess || (props.permissions?.write && info && props.permissions?.write?.indexOf(info?.name) !== -1)) {
+                    return <DeleteOutlined key={entry.name} style={{color: "red"}} title={"Remove entry"}
                                            onClick={() => setEntryToRemove(entry.name)}
                     />;
                 }

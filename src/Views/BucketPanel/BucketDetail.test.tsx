@@ -74,17 +74,33 @@ describe("BucketDetail", () => {
 
 
     it("should remove bucket and redirect", async () => {
-        const detail = mount(<BucketDetail client={client} permissions={{fullAccess :true}}/>);
+        const detail = mount(<BucketDetail client={client} permissions={{fullAccess: true}}/>);
         const removeButton = await waitUntilFind(detail, {title: "Remove"});
 
         removeButton.hostNodes().props().onClick();
-        /* TODO: How to test model window? */
+        /* TODO: How to test modal window? */
 
     });
 
-    it("should hide remove button if no permissions", async () => {
-        const detail = mount(<BucketDetail client={client} permissions={{fullAccess :false}}/>);
+    it("should hide remove bucket button if no permissions", async () => {
+        const detail = mount(<BucketDetail client={client} permissions={{fullAccess: false}}/>);
         const removeButton = await waitUntilFind(detail, {title: "Remove"});
+
+        expect(removeButton).toBeUndefined();
+    });
+
+    it("should remove entry and update table", async () => {
+        const detail = mount(<BucketDetail client={client}
+                                           permissions={{fullAccess: false, write: ["BucketWithData"]}}/>);
+        const removeButton = await waitUntilFind(detail, {title: "Remove entry"});
+
+        expect(removeButton.hostNodes().length).toEqual(2);
+        /* TODO: How to test modal window? */
+    });
+
+    it("should hide remove entry button if no permissions", async () => {
+        const detail = mount(<BucketDetail client={client} permissions={{fullAccess: false}}/>);
+        const removeButton = await waitUntilFind(detail, {title: "Remove entry"});
 
         expect(removeButton).toBeUndefined();
     });
