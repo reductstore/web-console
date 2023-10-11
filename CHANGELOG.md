@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added:
+
+- RS-11: Mark provisioned resources and disable its control components, [PR-59](https://github.com/reductstore/web-console/pull/59)
+
 ## [1.3.0] - 2023-08-17
 
 ### Added:
