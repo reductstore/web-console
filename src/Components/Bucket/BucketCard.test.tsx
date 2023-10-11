@@ -12,12 +12,13 @@ describe("BucketCard", () => {
             size: 50000n,
             oldestRecord: 0n,
             latestRecord: 1000000n,
+            isProvisioned: false,
         };
 
         const client = new Client("");
         const onRemove = jest.fn();
 
-        const wrapper = mount(<BucketCard bucketInfo={info} permissions={{fullAccess: true}} enablePanel client={client}
+        const wrapper = mount(<BucketCard bucketInfo={info} permissions={{fullAccess: true}} showPanel client={client}
                                           index={0} onRemoved={onRemove} onShow={() => null}/>);
         const button = await waitUntilFind(wrapper, {title: "Settings"});
 

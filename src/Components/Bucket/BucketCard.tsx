@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Card, Col, Modal, Row, Statistic} from "antd";
+import {Card, Col, Modal, Row, Statistic, Tag} from "antd";
 import humanizeDuration from "humanize-duration";
 import {Bucket, BucketInfo, Client, TokenPermissions} from "reduct-js";
 
@@ -15,7 +15,7 @@ interface Props {
     bucketInfo: BucketInfo;
     client: Client;
     index: number;
-    enablePanel?: boolean;
+    showPanel?: boolean;
     onRemoved: (name: string) => void;
     onShow: (name: string) => void;
     permissions?: TokenPermissions
@@ -43,39 +43,55 @@ export default function BucketCard(props: Readonly<Props>) {
     };
 
     const actions = [];
-    if (props.enablePanel) {
-        actions.push(<SettingOutlined title="Settings" key="setting" onClick={() => setChangeSettings(true)}/>);
+    const readOnly = !props.permissions?.fullAccess || bucketInfo.isProvisioned;
+    if (props.showPanel) {
+        actions.push(<SettingOutlined title="Settings"
+                                      key="setting"
+                                      onClick={() => setChangeSettings(true)}/>);
 
-        if (props.permissions?.fullAccess) {
-            actions.push(<DeleteOutlined title="Remove" key="delete" style={{color: "red"}}
+        if (!readOnly) {
+            actions.push(<DeleteOutlined title="Remove"
+                                         key="delete"
+                                         style={{color: "red"}}
                                          onClick={() => setConfirmRemove(true)}/>);
         }
     }
 
     return (<Card className="BucketCard" key={index} id={bucketInfo.name} title={bucketInfo.name}
-                  hoverable={props.enablePanel != true}
+                  extra={
+                      bucketInfo.isProvisioned ?
+                          <Tag color="processing">Provisioned</Tag>
+                          : <></>
+                  }
+                  hoverable={props.showPanel != true}
                   onClick={() => props.onShow(bucketInfo.name)}
                   actions={actions}>
-        <Row gutter={24}>
-            <Col span={8}>
-                <Statistic title="Size" value={prettierBytes(n(bucketInfo.size))}/>
-            </Col>
-            <Col span={6}>
-                <Statistic title="Entries" value={n(bucketInfo.entryCount)}/>
-            </Col>
-            <Col span={10}>
-                <Statistic title="History" value={bucketInfo.entryCount > 0n ? getHistory(bucketInfo) : "---"}/>
-            </Col>
-        </Row>
-        <RemoveConfirmationByName name={bucketInfo.name} onRemoved={onRemoved}
-                                  onCanceled={() => setConfirmRemove(false)} confirm={confirmRemove}
-                                  resourceType="bucket"/>
-        <Modal title="Settings" open={changeSettings} footer={null}
-               onCancel={() => setChangeSettings(false)}>
-            <CreateOrUpdate client={client} key={bucketInfo.name}
-                            bucketName={bucketInfo.name}
-                            onCreated={() => setChangeSettings(false)}/>
-        </Modal>
-    </Card>);
+            <Card.Meta>
+
+
+            </Card.Meta>
+            <Row gutter={24}>
+                <Col span={8}>
+                    <Statistic title="Size" value={prettierBytes(n(bucketInfo.size))}/>
+                </Col>
+                <Col span={6}>
+                    <Statistic title="Entries" value={n(bucketInfo.entryCount)}/>
+                </Col>
+                <Col span={10}>
+                    <Statistic title="History" value={bucketInfo.entryCount > 0n ? getHistory(bucketInfo) : "---"}/>
+                </Col>
+            </Row>
+            <RemoveConfirmationByName name={bucketInfo.name} onRemoved={onRemoved}
+                                      onCanceled={() => setConfirmRemove(false)} confirm={confirmRemove}
+                                      resourceType="bucket"/>
+            <Modal title="Settings" open={changeSettings} footer={null}
+                   onCancel={() => setChangeSettings(false)}>
+                <CreateOrUpdate client={client} key={bucketInfo.name}
+                                bucketName={bucketInfo.name}
+                                readOnly={readOnly}
+                                onCreated={() => setChangeSettings(false)}/>
+            </Modal>
+        </Card>
+    );
 
 }

@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {BucketInfo, Client, TokenPermissions} from "reduct-js";
-import {Button, Modal, Table, Typography} from "antd";
+import {Button, Modal, Table, Tag, Typography} from "antd";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 
@@ -47,6 +47,7 @@ export default function BucketList(props: Readonly<Props>) {
             "---";
         return {
             name: bucket.name,
+            provisioned: bucket.isProvisioned,
             entryCount: bucket.entryCount.toString(),
             size: prettierBytes(Number(bucket.size)),
             history: bucket.entryCount !== 0n ? getHistory(bucket) : "---",
@@ -62,11 +63,24 @@ export default function BucketList(props: Readonly<Props>) {
             key: "name",
             render: (text: string) => <Link to={`buckets/${text}`}><b>{text}</b></Link>
         },
+
         {title: "Entries", dataIndex: "entryCount", key: "entryCount"},
         {title: "Size", dataIndex: "size", key: "size"},
         {title: "History", dataIndex: "history", key: "history"},
         {title: "Oldest Record (UTC)", dataIndex: "oldestRecord", key: "oldestRecord"},
         {title: "Latest Record (UTC)", dataIndex: "latestRecord", key: "latestRecord"},
+        {
+            title: "",
+            dataIndex: "provisioned",
+            key: "provisioned",
+            render: (isProvisioned: boolean) => {
+                if (isProvisioned) {
+                    return <Tag color="processing">Provisioned</Tag>;
+                } else {
+                    return <div/>;
+                }
+            }
+        },
     ];
 
     return <div style={{margin: "2em"}}>

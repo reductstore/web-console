@@ -67,7 +67,7 @@ export class BackendAPI implements IBackendAPI {
         } catch (err) {
             if (err instanceof APIError && err.status == 401) {
                 sessionStorage.removeItem("apiToken");
-                return {name: "anonymous", createdAt: Date.now(), permissions: {fullAccess: false}};
+                return {name: "anonymous", createdAt: Date.now(), isProvisioned: false, permissions: {fullAccess: false}};
             }
 
             throw err;

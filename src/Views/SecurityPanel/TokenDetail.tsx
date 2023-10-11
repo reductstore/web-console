@@ -26,7 +26,7 @@ export default function TokenDetail(props: Readonly<Props>) {
     const {isNew} = useQueryParams();
 
     const [token, setToken] = useState<Token>({
-        createdAt: Date.now(), name: name, permissions: {fullAccess: false}
+        createdAt: Date.now(), name: name, isProvisioned: false, permissions: {fullAccess: false}
     });
     const [bucketOptions, setBucketOptions] = useState<SelectProps[]>([]);
     const [tokenValue, setTokenValue] = useState<string>();
@@ -116,7 +116,7 @@ export default function TokenDetail(props: Readonly<Props>) {
             <Button onClick={() => history.push("/tokens")}>Back</Button>
             {isNew ?
                 <Button type={"primary"} onClick={() => createToken()}>Create</Button> :
-                <Button className="RemoveButton" danger type="primary" onClick={() => setConfirmRemove(true)}>Remove</Button>}
+                <Button className="RemoveButton" danger disabled={token.isProvisioned} type="primary" onClick={() => setConfirmRemove(true)}>Remove</Button>}
 
             <Modal open={confirmRemove} onOk={removeToken} onCancel={() => setConfirmRemove(false)} closable={false}
                    title={`Remove token "${token.name}"?`}
