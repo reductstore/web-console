@@ -9,6 +9,7 @@ interface Props {
     bucketName?: string;    // if set we update a bucket
     onCreated: () => void;
     showAll?: boolean;       // show all settings
+    readOnly?: boolean;      // now allowed to change settings
 }
 
 interface State {
@@ -212,7 +213,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
             </Collapse>
 
             <Form.Item wrapperCol={{offset: 17, span: 17}}>
-                <Button type="primary" htmlType="submit" name="submit" disabled={error !== undefined}>
+                <Button type="primary" htmlType="submit" name="submit" disabled={error !== undefined || this.props.readOnly}>
                     {bucketName ? "Update" : "Create"}
                 </Button>
             </Form.Item>

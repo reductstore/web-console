@@ -99,7 +99,7 @@ export default function Dashboard(props: Readonly<Props>) {
 
     const allowedActions = [];
     if (props.permissions && props.permissions.fullAccess) {
-        allowedActions.push(<PlusOutlined key="create" onClick={() => setCreatingBucket(true)}/>);
+        allowedActions.push(<PlusOutlined title="Create bucket" key="create" onClick={() => setCreatingBucket(true)}/>);
     }
 
     const {client} = props.backendApi;

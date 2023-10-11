@@ -19,7 +19,9 @@ describe("TokenDetail", () => {
         mockJSDOM();
 
         client.getToken = jest.fn().mockResolvedValue({
-            name: "token-1", createdAt: 100000, permissions: {
+            name: "token-1",
+            createdAt: 100000,
+            permissions: {
                 fullAccess: true,
                 read: ["bucket-1"],
                 write: ["bucket-2"],
@@ -62,6 +64,16 @@ describe("TokenDetail", () => {
         const removeButton = await waitUntilFind(view, ".RemoveButton");
         removeButton.hostNodes().props().onClick();
 
-        // No idea how to tests modal with confirmation
+        // No idea how to test modal with confirmation
+    });
+
+    it("should disable remove button if provisioned", async () => {
+        client.getToken = jest.fn().mockResolvedValue({
+            name: "token-1", createdAt: 100000, isProvisioned: true
+        } as Token);
+        const view = mount(<TokenDetail client={client}/>);
+
+        const removeButton = await waitUntilFind(view, ".RemoveButton");
+        expect(removeButton.hostNodes().props().disabled).toBeTruthy();
     });
 });

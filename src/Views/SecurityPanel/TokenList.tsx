@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {Client, Token} from "reduct-js";
 import {Link, useHistory} from "react-router-dom";
-import {Alert, Button, Table, Typography} from "antd";
+import {Alert, Button, Table, Tag, Typography} from "antd";
 import {PlusOutlined} from "@ant-design/icons";
 
 interface Props {
@@ -22,17 +22,32 @@ export default function TokenList(props: Readonly<Props>) {
     });
 
 
-    const columns = [{
-        title: "Name",
-        dataIndex: "name",
-        key: "name",
-        render: (text: string) => <Link to={`tokens/${text}`}><b>{text}</b></Link>
-    }, {
-        title: "Created At",
-        dataIndex: "createdAt",
-        key: "createdAt",
-        render: (time: number) => new Date(time).toISOString()
-    },];
+    const columns = [
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+            render: (text: string) => <Link to={`tokens/${text}`}><b>{text}</b></Link>
+        },
+        {
+            title: "Created At",
+            dataIndex: "createdAt",
+            key: "createdAt",
+            render: (time: number) => new Date(time).toISOString()
+        },
+        {
+            title: "",
+            dataIndex: "isProvisioned",
+            key: "provisioned",
+            render: (isProvisioned: boolean) => {
+                if (isProvisioned) {
+                    return <Tag color="processing">Provisioned</Tag>;
+                } else {
+                    return <div/>;
+                }
+            }
+        },
+    ];
 
     return <div style={{margin: "2em"}}>
         <Typography.Title level={3}>
