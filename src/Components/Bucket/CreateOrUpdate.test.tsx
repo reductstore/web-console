@@ -7,7 +7,7 @@ import CreateOrUpdate from "./CreateOrUpdate";
 import {APIError, Bucket, BucketSettings, Client, QuotaType} from "reduct-js";
 
 
-describe("Bucket::Create", () => {
+describe("Bucket::CreateOrUpdate", () => {
     const client = new Client("");
     const bucket = {} as Bucket;
     beforeEach(() => {
@@ -142,6 +142,14 @@ describe("Bucket::Create", () => {
 
         enter("good_NAME-1000");
         expect(createButton.update().props().disabled).toBeFalsy();
+    });
+
+    it("should disable update button if readonly", async () => {
+        const wrapper = mount(<CreateOrUpdate showAll readOnly client={client} bucketName="bucket"
+                                              onCreated={() => console.log("")}/>);
+        await waitUntilFind(wrapper, {name: "quotaType"});
+        const submit = wrapper.find({type: "submit"}).at(0);
+        expect(submit.props().disabled).toBeTruthy();
     });
 
 });

@@ -6,7 +6,7 @@ import BucketList from "./BucketList";
 import {BucketInfo, Client} from "reduct-js";
 import {MemoryRouter} from "react-router-dom";
 
-describe("BucketPanel", () => {
+describe("BucketList", () => {
     const client = new Client("");
 
     beforeEach(() => {
@@ -18,7 +18,8 @@ describe("BucketPanel", () => {
                 entryCount: 2n,
                 size: 10220n,
                 oldestRecord: 0n,
-                latestRecord: 10000n
+                latestRecord: 10000n,
+                isProvisioned: true
             } as BucketInfo,
             {
                 name: "EmptyBucket",
@@ -37,7 +38,7 @@ describe("BucketPanel", () => {
         const rows = panel.find(".ant-table-row");
         expect(rows.length).toEqual(2);
         expect(rows.at(0).render().text())
-            .toEqual("BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010Z");
+            .toEqual("BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010ZProvisioned");
         expect(rows.at(1).render().text())
             .toEqual("EmptyBucket00 B---------");
 

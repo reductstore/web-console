@@ -13,7 +13,7 @@ describe("TokenList", () => {
         jest.clearAllMocks();
         mockJSDOM();
         client.getTokenList = jest.fn().mockResolvedValue([
-            {name: "token-1", createdAt: 100000} as Token,
+            {name: "token-1", createdAt: 100000, isProvisioned: true} as Token,
             {name: "token-2", createdAt: 200000} as Token,
         ]);
     });
@@ -25,7 +25,7 @@ describe("TokenList", () => {
 
         expect(rows.length).toEqual(2);
         expect(rows.at(0).render().text())
-            .toEqual("token-11970-01-01T00:01:40.000Z");
+            .toEqual("token-11970-01-01T00:01:40.000ZProvisioned");
         expect(rows.at(1).render().text())
             .toEqual("token-21970-01-01T00:03:20.000Z");
     });
