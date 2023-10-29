@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed:
+
+- RS-41: Remount entry confirmation component, [PR-61](https://github.com/reductstore/web-console/pull/61)
+
 ## [1.4.0] - 2023-10-11
 
 ### Added:
