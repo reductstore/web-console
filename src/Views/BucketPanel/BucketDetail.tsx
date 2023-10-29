@@ -99,7 +99,7 @@ export default function BucketDetail(props: Readonly<Props>) {
 
         <Typography.Title level={3}>Entries</Typography.Title>
         <Table style={{margin: "0.6em"}} columns={columns} dataSource={data} loading={entries.length == 0}/>
-        <RemoveConfirmationByName name={entryToRemove} onRemoved={() => removeEntry(entryToRemove)}
+        <RemoveConfirmationByName key={entryToRemove} name={entryToRemove} onRemoved={() => removeEntry(entryToRemove)}
                                   onCanceled={() => setEntryToRemove("")} resourceType="entry"
                                   confirm={entryToRemove !== ""}/>
     </div>;
