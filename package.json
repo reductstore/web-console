@@ -42,6 +42,7 @@
     "eject": "react-app-rewired eject",
     "lint": "eslint . --ext .ts"
   },
+  "proxy": "http://localhost:8383",
   "eslintConfig": {
     "extends": [
       "react-app",
