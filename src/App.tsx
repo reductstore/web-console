@@ -60,33 +60,37 @@ export default class App extends React.Component<Props, State> {
                 <Layout.Sider className="Sider">
                     <Menu className="MenuItem" selectable={false} triggerSubMenuAction="click">
                         <a href="https://www.reduct.store" title="https://www.reduct.store">
-                            <Image src={logo} preview={false}/>
+                            <Image src={logo} preview={false} />
                         </a>
 
-                        <Divider/>
+                        <Divider />
                         {permissions ? <>
-                                <Menu.Item icon={<BorderOuterOutlined/>} onClick={() => history.push("/dashboard")}>
-                                    Dashboard
-                                </Menu.Item>
-                                <Menu.Item id="Buckets" icon={<DatabaseOutlined/>}
-                                           onClick={() => history.push("/buckets")}>
-                                    Buckets
-                                </Menu.Item>
+                            <Menu.Item icon={<BorderOuterOutlined />} onClick={() => history.push("/dashboard")}>
+                                Dashboard
+                            </Menu.Item>
+                            <Menu.Item id="Buckets" icon={<DatabaseOutlined />}
+                                onClick={() => history.push("/buckets")}>
+                                Buckets
+                            </Menu.Item>
+                            <Menu.Item id="Replications" icon={<DatabaseOutlined />}
+                                onClick={() => history.push("/replications")}>
+                                Replications
+                            </Menu.Item>
 
-                                {permissions.fullAccess ?
-                                    <Menu.Item id="Security" icon={<LockOutlined/>}
-                                               onClick={() => history.push("/tokens")}>
-                                        Security
-                                    </Menu.Item>
-                                    : null}
-                                <Divider style={{borderColor: "white"}}/>
-
-                                <Menu.Item onClick={onLogout} icon={<LogoutOutlined/>}>
-                                    Logout
+                            {permissions.fullAccess ?
+                                <Menu.Item id="Security" icon={<LockOutlined />}
+                                    onClick={() => history.push("/tokens")}>
+                                    Security
                                 </Menu.Item>
+                                : null}
+                            <Divider style={{borderColor: "white"}} />
 
-                            </>
-                            : <div/>
+                            <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
+                                Logout
+                            </Menu.Item>
+
+                        </>
+                            : <div />
                         }
                     </Menu>
                     <div className="Meta">
@@ -99,7 +103,7 @@ export default class App extends React.Component<Props, State> {
                 <Layout>
                     <Layout.Content>
                         <Routes {...this.props} permissions={this.state.permissions}
-                                onLogin={onLogin}/>
+                            onLogin={onLogin} />
                     </Layout.Content>
                 </Layout>
             </Layout>
