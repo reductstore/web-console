@@ -13,7 +13,6 @@ interface Props {
     permissions?: TokenPermissions;
 }
 
-
 /**
  * Replications View
  */

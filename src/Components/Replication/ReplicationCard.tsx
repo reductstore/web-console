@@ -4,6 +4,7 @@ import humanizeDuration from "humanize-duration";
 import {Client, FullReplicationInfo, TokenPermissions} from "reduct-js";
 import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 
+import "./ReplicationCard.css";
 import CreateOrUpdate from "./CreateOrUpdate";
 import RemoveConfirmationByName from "../RemoveConfirmationByName";
 
@@ -28,7 +29,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
     const [confirmRemove, setConfirmRemove] = useState(false);
     const [changeSettings, setChangeSettings] = useState(false);
     const {client, replication, index} = props;
-    const {info, settings, diagnostics} = replication;
+    const {info, diagnostics} = replication;
 
     const n = (big: BigInt) => {
         return Number(big.valueOf());
@@ -54,10 +55,6 @@ export default function ReplicationCard(props: Readonly<Props>) {
         }
     }
 
-    console.log("replication: ", replication);
-    console.log("info: ", info);
-    console.log("settings: ", settings);
-    console.log("diagnostics: ", diagnostics);
     return (<Card className="ReplicationCard" key={index} id={info.name} title={info.name}
         extra={
             info.isProvisioned ?
@@ -68,7 +65,6 @@ export default function ReplicationCard(props: Readonly<Props>) {
         onClick={() => props.onShow(info.name)}
         actions={actions}>
         <Card.Meta>
-
 
         </Card.Meta>
         <Row gutter={24}>
@@ -98,5 +94,4 @@ export default function ReplicationCard(props: Readonly<Props>) {
         </Modal>
     </Card>
     );
-
 }

@@ -159,7 +159,7 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
             <>
                 {error && <Alert message={error} type="error" closable onClose={() => this.setState({error: undefined})} />}
                 <Form
-                    key={dataFetched ? "replicationForm-loaded" : "replicationForm-loading"}
+                    key={dataFetched ? "loaded" : "loading"}
                     name="replicationForm"
                     onFinish={this.onFinish}
                     layout="vertical"
@@ -240,7 +240,6 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                         <Input disabled={readOnly} />
                     </Form.Item>
 
-
                     <Form.Item
                         label={
                             <span>
@@ -296,7 +295,7 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                                                 name={[field.name, "key"]}
                                                 rules={[{required: true, message: "Key is required"}]}
                                                 style={{display: "inline-block", width: "calc(50% - 8px)"}}
-                                                key={`recordSettings-${field.key}-${index}-key`}
+                                                key={`recordSettings-${field.key}-${index}`}
                                             >
                                                 <Input placeholder="Key" />
                                             </Form.Item>
