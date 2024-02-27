@@ -91,9 +91,9 @@ export default function Replications(props: Readonly<Props>) {
             key: "isProvisioned",
             render: (isProvisioned: boolean) => {
                 if (isProvisioned) {
-                    return <Tag color="processing">Provisioned</Tag>;
+                    return <Tag color="success">Provisioned</Tag>;
                 } else {
-                    return <div />;
+                    return <Tag color="warning">Not Provisioned</Tag>;
                 }
             }
         },
