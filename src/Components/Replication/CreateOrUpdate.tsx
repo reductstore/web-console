@@ -250,7 +250,7 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                             </span>
                         }
                         name="entries">
-                        <Select mode="tags" style={{width: "100%"}} placeholder="Add entries">
+                        <Select mode="tags" style={{width: "100%"}} placeholder="Add entries" disabled={readOnly}>
                             {this.state.entries.map((entry) => (
                                 <Select.Option key={entry} value={entry}>{entry}</Select.Option>
                             ))}
@@ -282,12 +282,12 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                                                     rules={[{required: true, message: "Action is required"}]}
                                                     style={{marginBottom: 0}}
                                                 >
-                                                    <Radio.Group>
+                                                    <Radio.Group disabled={readOnly}>
                                                         <Radio value="include">Include</Radio>
                                                         <Radio value="exclude">Exclude</Radio>
                                                     </Radio.Group>
                                                 </Form.Item>
-                                                <Button type="primary" danger icon={<DeleteOutlined />} size="small" onClick={() => remove(field.name)} />
+                                                <Button type="primary" danger icon={<DeleteOutlined />} size="small" onClick={() => remove(field.name)} disabled={readOnly} />
                                             </div>
 
                                             <Form.Item
@@ -297,7 +297,7 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                                                 style={{display: "inline-block", width: "calc(50% - 8px)"}}
                                                 key={`recordSettings-${field.key}-${index}`}
                                             >
-                                                <Input placeholder="Key" />
+                                                <Input placeholder="Key" disabled={readOnly} />
                                             </Form.Item>
 
                                             <Form.Item
@@ -307,13 +307,13 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                                                 style={{display: "inline-block", width: "calc(50% - 8px)", marginLeft: "16px"}}
                                                 key={`recordSettings-${field.key}-${index}-value`}
                                             >
-                                                <Input placeholder="Value" />
+                                                <Input placeholder="Value" disabled={readOnly} />
                                             </Form.Item>
 
                                         </Form.Item>
                                     ))}
-                                    <Form.Item>
-                                        <Button type="dashed" onClick={() => add()} block>
+                                    <Form.Item name="addRule">
+                                        <Button type="dashed" onClick={() => add()} block disabled={readOnly}>
                                             Add Rule
                                         </Button>
                                     </Form.Item>
@@ -323,7 +323,7 @@ export default class CreateOrUpdateReplication extends React.Component<Props, St
                     </Form.Item>
 
                     <Form.Item>
-                        <Button type="primary" htmlType="submit" disabled={error !== undefined || this.props.readOnly}>
+                        <Button type="primary" htmlType="submit" disabled={error !== undefined || readOnly}>
                             {replicationName ? "Update Replication" : "Create Replication"}
                         </Button>
                     </Form.Item>
