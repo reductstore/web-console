@@ -82,7 +82,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
             onCanceled={() => setConfirmRemove(false)} confirm={confirmRemove}
             resourceType="bucket" />
         <Modal title="Settings" open={changeSettings} footer={null}
-            onCancel={() => setChangeSettings(false)}>
+            onCancel={() => setChangeSettings(false)} data-testid="settings-modal">
             <CreateOrUpdate
                 key={info.name}
                 client={client}
