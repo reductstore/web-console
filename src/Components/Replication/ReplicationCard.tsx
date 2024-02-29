@@ -1,6 +1,5 @@
 import React, {useState} from "react";
 import {Card, Col, Modal, Row, Statistic, Tag} from "antd";
-import humanizeDuration from "humanize-duration";
 import {Client, FullReplicationInfo, TokenPermissions} from "reduct-js";
 import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 
@@ -18,12 +17,6 @@ interface Props {
     onShow: (name: string) => void;
     permissions?: TokenPermissions
 }
-
-export const getHistory = (interval: {latestRecord: bigint, oldestRecord: bigint}) => {
-    return humanizeDuration(
-        Number((interval.latestRecord - interval.oldestRecord) / 1000n),
-        {largest: 1, round: true});
-};
 
 export default function ReplicationCard(props: Readonly<Props>) {
     const [confirmRemove, setConfirmRemove] = useState(false);
