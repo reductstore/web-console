@@ -86,18 +86,16 @@ export default function Replications(props: Readonly<Props>) {
             }
         },
         {
-            title: "Provisioned",
+            title: "Pending Records", dataIndex: "pendingRecords", key: "pendingRecords"
+        },
+        {
+            title: "",
             dataIndex: "isProvisioned",
             key: "isProvisioned",
-            render: (isProvisioned: boolean) => {
-                if (isProvisioned) {
-                    return <Tag color="success">Provisioned</Tag>;
-                } else {
-                    return <Tag color="warning">Not Provisioned</Tag>;
-                }
-            }
+            render: (isProvisioned: boolean) => (
+                isProvisioned ? <Tag color="processing">Provisioned</Tag> : null
+            )
         },
-        {title: "Pending Records", dataIndex: "pendingRecords", key: "pendingRecords"},
     ];
 
     return <div style={{margin: "2em"}}>
