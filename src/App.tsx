@@ -7,7 +7,7 @@ import "antd/dist/antd.variable.min.css";
 import "./App.css";
 import {IBackendAPI} from "./BackendAPI";
 import {Routes} from "./Components/Routes";
-import {BorderOuterOutlined, DatabaseOutlined, LockOutlined, LogoutOutlined} from "@ant-design/icons";
+import {BorderOuterOutlined, DatabaseOutlined, LockOutlined, LogoutOutlined, ShareAltOutlined} from "@ant-design/icons";
 import {TokenPermissions} from "reduct-js";
 
 ConfigProvider.config({
@@ -62,35 +62,33 @@ export default class App extends React.Component<Props, State> {
                         <a href="https://www.reduct.store" title="https://www.reduct.store">
                             <Image src={logo} preview={false} />
                         </a>
-
                         <Divider />
-                        {permissions ? <>
-                            <Menu.Item icon={<BorderOuterOutlined />} onClick={() => history.push("/dashboard")}>
-                                Dashboard
-                            </Menu.Item>
-                            <Menu.Item id="Buckets" icon={<DatabaseOutlined />}
-                                onClick={() => history.push("/buckets")}>
-                                Buckets
-                            </Menu.Item>
-                            <Menu.Item id="Replications" icon={<DatabaseOutlined />}
-                                onClick={() => history.push("/replications")}>
-                                Replications
-                            </Menu.Item>
-
-                            {permissions.fullAccess ?
-                                <Menu.Item id="Security" icon={<LockOutlined />}
-                                    onClick={() => history.push("/tokens")}>
-                                    Security
+                        {permissions &&
+                            <>
+                                <Menu.Item icon={<BorderOuterOutlined />} onClick={() => history.push("/dashboard")}>
+                                    Dashboard
                                 </Menu.Item>
-                                : null}
-                            <Divider style={{borderColor: "white"}} />
-
-                            <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
-                                Logout
-                            </Menu.Item>
-
-                        </>
-                            : <div />
+                                <Menu.Item id="Buckets" icon={<DatabaseOutlined />}
+                                    onClick={() => history.push("/buckets")}>
+                                    Buckets
+                                </Menu.Item>
+                                {permissions.fullAccess &&
+                                    <>
+                                        <Menu.Item id="Replications" icon={<ShareAltOutlined />}
+                                            onClick={() => history.push("/replications")}>
+                                            Replications
+                                        </Menu.Item>
+                                        <Menu.Item id="Security" icon={<LockOutlined />}
+                                            onClick={() => history.push("/tokens")}>
+                                            Security
+                                        </Menu.Item>
+                                    </>
+                                }
+                                <Divider style={{borderColor: "white"}} />
+                                <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
+                                    Logout
+                                </Menu.Item>
+                            </>
                         }
                     </Menu>
                     <div className="Meta">
