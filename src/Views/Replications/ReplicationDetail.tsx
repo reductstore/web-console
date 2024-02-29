@@ -2,12 +2,12 @@ import React, {useEffect, useState} from "react";
 import {Client, TokenPermissions, FullReplicationInfo, BucketInfo} from "reduct-js";
 import {useHistory, useParams} from "react-router-dom";
 import ReplicationCard from "../../Components/Replication/ReplicationCard";
+import {Table, Typography} from "antd";
 
 interface Props {
     client: Client;
     permissions?: TokenPermissions;
 }
-
 
 export default function ReplicationDetail(props: Readonly<Props>) {
     const {name} = useParams() as {name: string};
@@ -49,11 +49,45 @@ export default function ReplicationDetail(props: Readonly<Props>) {
         return () => clearInterval(interval);
     }, []);
 
+    const replicationErrors = replication && Object.values(replication.diagnostics.hourly.errors)
+        .map((error, index) => {
+            return {
+                key: `error-${index}`,
+                count: error.count,
+                lastMessage: error.lastMessage,
+            };
+        });
+
+    const columns = [
+        {
+            title: "Count",
+            dataIndex: "count",
+            key: "count",
+        },
+        {
+            title: "Last Message",
+            dataIndex: "lastMessage",
+            key: "lastMessage",
+        },
+    ];
+
     return <div style={{margin: "1.4em"}}>
-        {replication && <ReplicationCard replication={replication}
-            sourceBuckets={buckets.map((bucket) => bucket.name)} index={0} {...props}
-            showPanel
-            onRemoved={() => history.push("/replications")}
-            onShow={() => null} />}
+        {replication &&
+            <>
+                <ReplicationCard replication={replication}
+                    sourceBuckets={buckets.map((bucket) => bucket.name)} index={0} {...props}
+                    showPanel
+                    onRemoved={() => history.push("/replications")}
+                    onShow={() => null}
+                />
+                <Typography.Title level={3}>Errors</Typography.Title>
+                <Table
+                    style={{margin: "0.6em"}}
+                    columns={columns}
+                    dataSource={replicationErrors}
+                    loading={!replicationErrors || !replicationErrors.length}
+                />
+            </>
+        }
     </div>;
 }

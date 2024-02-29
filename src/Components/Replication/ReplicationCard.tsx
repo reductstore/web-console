@@ -68,7 +68,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
                 <Statistic title="Successfully Replicated (Past Hour)" value={n(diagnostics.hourly.ok)} />
             </Col>
             <Col span={8}>
-                <Statistic title="Replication Errors (Past Hour)" value={n(diagnostics.hourly.errored)} />
+                <Statistic title="Errors (Past Hour)" value={n(diagnostics.hourly.errored)} />
             </Col>
         </Row>
         <RemoveConfirmationByName name={info.name} onRemoved={onRemoved}

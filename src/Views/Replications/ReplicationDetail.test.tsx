@@ -48,6 +48,10 @@ describe("ReplicationDetail", () => {
               count: 5,
               last_message: "Error connecting to source bucket"
             },
+            1: {
+              count: 10,
+              last_message: "Error connecting to destination bucket"
+            },
           },
         },
       }
@@ -125,11 +129,25 @@ describe("ReplicationDetail", () => {
               count: 5,
               lastMessage: "Error connecting to source bucket"
             },
+            1: {
+              count: 10,
+              lastMessage: "Error connecting to destination bucket"
+            },
           },
         },
       },
     });
 
     expect(replicationCard.prop("sourceBuckets")).toEqual(["Bucket1", "Bucket2"]);
+  });
+
+  it("displays replication errors", async () => {
+    await wrapper.update();
+    const replicationErrors = wrapper.find("Table");
+    expect(replicationErrors.exists()).toBeTruthy();
+    expect(replicationErrors.prop("dataSource")).toEqual([
+      {key: "error-0", count: 5, lastMessage: "Error connecting to source bucket"},
+      {key: "error-1", count: 10, lastMessage: "Error connecting to destination bucket"},
+    ]);
   });
 });
