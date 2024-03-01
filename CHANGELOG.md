@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RS-47: New view in the console to manage replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
 
+### Fixed:
+
+- Fix token creation, [PR-63](https://github.com/reductstore/web-console/pull/63)
+
 ## [1.4.1] - 2024-20-01
 
 ### Fixed:
