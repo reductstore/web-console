@@ -49,16 +49,23 @@ export default function ReplicationDetail(props: Readonly<Props>) {
         return () => clearInterval(interval);
     }, []);
 
-    const replicationErrors = replication && Object.values(replication.diagnostics.hourly.errors)
-        .map((error, index) => {
+    const replicationErrors = replication && Object.entries(replication.diagnostics.hourly.errors)
+        .map(([key, error], index) => {
             return {
                 key: `error-${index}`,
-                count: error.count,
+                code: key,
+                count: error.count.toString(),
                 lastMessage: error.lastMessage,
             };
         });
 
     const columns = [
+
+        {
+            title: "Error Code",
+            dataIndex: "code",
+            key: "code",
+        },
         {
             title: "Count",
             dataIndex: "count",

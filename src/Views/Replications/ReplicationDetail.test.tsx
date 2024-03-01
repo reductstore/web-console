@@ -146,8 +146,8 @@ describe("ReplicationDetail", () => {
     const replicationErrors = wrapper.find("Table");
     expect(replicationErrors.exists()).toBeTruthy();
     expect(replicationErrors.prop("dataSource")).toEqual([
-      {key: "error-0", count: 5, lastMessage: "Error connecting to source bucket"},
-      {key: "error-1", count: 10, lastMessage: "Error connecting to destination bucket"},
+      {key: "error-0", code: "0", count: "5", lastMessage: "Error connecting to source bucket"},
+      {key: "error-1", code: "1", count: "10", lastMessage: "Error connecting to destination bucket"},
     ]);
   });
 });
