@@ -22,20 +22,20 @@ export default function RemoveConfirmationByName(props: Readonly<Props>) {
     };
 
     return (<Modal open={confirmRemove} onOk={() => {
-            props.onRemoved();
-            setConfirmRemove(false);
-        }} onCancel={props.onCanceled} closable={false}
-                   title={`Remove ${props.resourceType} "${props.name}"?`}
-                   okText="Remove"
-                   confirmLoading={!confirmName}
-                   okType="danger">
-            <p>
-                For confirmation type <b>{props.name}</b>
-            </p>
-            <Form.Item name="confirm">
-                <Input onChange={(e) => checkName(e.target.value)}></Input>
-            </Form.Item>
-        </Modal>
-    )
-        ;
+        props.onRemoved();
+        setConfirmRemove(false);
+    }} onCancel={props.onCanceled} closable={false}
+        title={`Remove ${props.resourceType} "${props.name}"?`}
+        okText="Remove"
+        confirmLoading={!confirmName}
+        okType="danger"
+        data-testid="delete-modal">
+        <p>
+            For confirmation type <b>{props.name}</b>
+        </p>
+        <Form.Item name="confirm">
+            <Input onChange={(e) => checkName(e.target.value)} data-testid="confirm-input" ></Input>
+        </Form.Item>
+    </Modal>
+    );
 }
