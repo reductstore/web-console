@@ -45,13 +45,19 @@ export default function TokenDetail(props: Readonly<Props>) {
                     return {value: b.name, label: b.name};
                 })))
                 .catch(err => setError(err.message));
+
+            setToken({
+                createdAt: Date.now(),
+                isProvisioned: false,
+                name: "new_token", permissions: {fullAccess: false, read: [], write: []}
+            });
             return;
         }
 
         client.getToken(name)
             .then(token => setToken(token))
             .catch(err => setError(err.message));
-    });
+    }, []);
 
     const removeToken = () => {
         const {client} = props;
