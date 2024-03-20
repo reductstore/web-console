@@ -50,7 +50,7 @@ export default function Dashboard(props: Readonly<Props>) {
     const [buckets, setBuckets] = useState<BucketInfo[]>([]);
     const [creatingBucket, setCreatingBucket] = useState(false);
 
-    const [activeTabKey, setActiveTabKey] = useState<string>("usage");
+    const [activeTabKey, setActiveTabKey] = useState<string>(tabList[0].key);
 
     const onTabChange = (key: string) => {
         setActiveTabKey(key);
