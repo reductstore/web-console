@@ -13,16 +13,6 @@ import UsageStatistics from "../../Components/UsageStatistics/UsageStatistics";
 import LicenseDetails from "../../Components/LicenseDetails/LicenseDetails";
 import LicenseAlert from "../../Components/LicenseAlert/LicenseAlert";
 
-const sampleLicense = {
-    licensee: "Sample Company",
-    invoice: "INV-123456",
-    expiry_date: "2024-12-31",
-    plan: "Standard",
-    device_number: 100,
-    disk_quota: 1024,
-    fingerprint: "ABC123DEF456"
-};
-
 const tabList = [
     {
         key: "usage",
@@ -138,8 +128,8 @@ export default function Dashboard(props: Readonly<Props>) {
                 bordered
             >
                 {activeTabKey === "usage" && <UsageStatistics info={info} buckets={buckets} />}
-                {activeTabKey === "license" && sampleLicense && <LicenseDetails license={sampleLicense} />}
-                {activeTabKey === "license" && !sampleLicense && <LicenseAlert />}
+                {activeTabKey === "license" && info.license && <LicenseDetails license={info.license} />}
+                {activeTabKey === "license" && !info.license && <LicenseAlert />}
 
                 <Modal title="Add a new bucket" open={creatingBucket} footer={null}
                     onCancel={() => setCreatingBucket(false)}>
