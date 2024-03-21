@@ -4,7 +4,7 @@ import {ServerInfo, BucketInfo} from "reduct-js";
 import humanizeDuration from "humanize-duration";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import {n} from "../../utils/helperFunctions";
+import {bigintToNumber} from "../../Helpers/NumberUtils";
 
 interface UsageStatisticsProps {
   info: ServerInfo;
@@ -14,13 +14,13 @@ interface UsageStatisticsProps {
 const UsageStatistics: React.FC<UsageStatisticsProps> = ({info, buckets}) => (
   <Row gutter={16}>
     <Col span={8}>
-      <Statistic title="Usage" value={prettierBytes(n(info.usage))} />
+      <Statistic title="Usage" value={prettierBytes(bigintToNumber(info.usage))} />
     </Col>
     <Col span={8}>
       <Statistic title="Buckets" value={buckets.length} />
     </Col>
     <Col span={8}>
-      <Statistic title="Uptime" value={humanizeDuration(n(info.uptime) * 1000, {largest: 1})} />
+      <Statistic title="Uptime" value={humanizeDuration(bigintToNumber(info.uptime) * 1000, {largest: 1})} />
     </Col>
   </Row>
 );
