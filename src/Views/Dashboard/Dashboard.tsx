@@ -128,7 +128,7 @@ export default function Dashboard(props: Readonly<Props>) {
                 bordered
             >
                 {activeTabKey === "usage" && <UsageStatistics info={info} buckets={buckets} />}
-                {activeTabKey === "license" && info.license && <LicenseDetails license={info.license} />}
+                {activeTabKey === "license" && info.license && <LicenseDetails license={info.license} usage={info.usage} />}
                 {activeTabKey === "license" && !info.license && <LicenseAlert />}
 
                 <Modal title="Add a new bucket" open={creatingBucket} footer={null}

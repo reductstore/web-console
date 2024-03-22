@@ -1,11 +1,16 @@
 import React from "react";
 import {Alert} from "antd";
 
-const LicenseAlert: React.FC = () => (
+interface LicenseAlertProps {
+  alertExplanation?: string;
+}
+
+const LicenseAlert: React.FC<LicenseAlertProps> = ({alertExplanation}) => (
   <Alert
     type="warning"
     message={
       <span>
+        {alertExplanation ? alertExplanation : ""}
         Please review the <strong>
           <a href="https://github.com/reductstore/reductstore/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
             Business Source License (BUSL)
@@ -15,7 +20,6 @@ const LicenseAlert: React.FC = () => (
           </a></strong> for more information on licensing options.
       </span>
     }
-    showIcon
   />
 );
 
