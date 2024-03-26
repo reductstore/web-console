@@ -62,7 +62,7 @@ describe("LicenseDetails", () => {
     expect(screen.getByText("100")).toBeInTheDocument();
 
     expect(screen.getByText("Disk Quota")).toBeInTheDocument();
-    expect(screen.getByText("1 B")).toBeInTheDocument();
+    expect(screen.getByText(/^1 TB/)).toBeInTheDocument();
 
     expect(screen.getByText("Fingerprint")).toBeInTheDocument();
     expect(screen.getByText("unique-fingerprint")).toBeInTheDocument();
@@ -81,8 +81,8 @@ describe("LicenseDetails", () => {
   });
 
   it("renders license alert when disk quota exceeded", () => {
-    render(<LicenseDetails license={mockLicenseInfo} usage={2n} />);
-    const regex = /You have exceeded your disk quota\./i;
+    render(<LicenseDetails license={mockLicenseInfo} usage={BigInt(1e12 + 1)} />);
+    const regex = /disk quota has been exceeded\./i;
     expect(screen.getByText(regex)).toBeInTheDocument();
   });
 
