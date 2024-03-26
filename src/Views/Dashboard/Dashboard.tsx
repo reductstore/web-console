@@ -6,23 +6,13 @@ import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
 import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
 
-import {PlusOutlined} from "@ant-design/icons";
+import {PlusOutlined, ExclamationCircleFilled} from "@ant-design/icons";
 import {useHistory} from "react-router-dom";
 import {History} from "history";
 import UsageStatistics from "../../Components/UsageStatistics/UsageStatistics";
 import LicenseDetails from "../../Components/LicenseDetails/LicenseDetails";
 import LicenseAlert from "../../Components/LicenseAlert/LicenseAlert";
-
-const tabList = [
-    {
-        key: "usage",
-        tab: "Usage",
-    },
-    {
-        key: "license",
-        tab: "License",
-    },
-];
+import {checkLicenseStatus} from "../../Helpers/licenseUtils";
 
 interface Props {
     backendApi: IBackendAPI;
@@ -40,11 +30,28 @@ export default function Dashboard(props: Readonly<Props>) {
     const [buckets, setBuckets] = useState<BucketInfo[]>([]);
     const [creatingBucket, setCreatingBucket] = useState(false);
 
-    const [activeTabKey, setActiveTabKey] = useState<string>(tabList[0].key);
+    const [isLicenseValid, setIsLicenseValid] = useState(true);
+    const [activeTabKey, setActiveTabKey] = useState<string>("usage");
 
     const onTabChange = (key: string) => {
         setActiveTabKey(key);
     };
+
+    const tabList = [
+        {
+            key: "usage",
+            tab: "Usage",
+        },
+        {
+            key: "license",
+            tab: (
+                <span>
+                    <span className={isLicenseValid ? "hide" : "warningIcon"}><ExclamationCircleFilled /></span>
+                    <span>License</span>
+                </span>
+            ),
+        },
+    ];
 
     const getInfo = async () => {
         try {
@@ -57,12 +64,23 @@ export default function Dashboard(props: Readonly<Props>) {
         }
     };
 
+    const checkLicense = () => {
+        if (info?.license) {
+            const {isValid} = checkLicenseStatus(info.license, info.usage);
+            setIsLicenseValid(isValid);
+        }
+    };
+
     useEffect(() => {
         getInfo().then();
         const interval = setInterval(() => getInfo(), 5000);
         return () => clearInterval(interval);
     }, [creatingBucket]);
 
+
+    useEffect(() => {
+        checkLicense();
+    }, [info]);
 
     const removeBucket = async (name: string) => {
         try {

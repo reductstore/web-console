@@ -102,4 +102,43 @@ describe("Dashboard", () => {
 
         expect(mockPush).toBeCalledWith("/buckets/bucket_1");
     });
+
+    it("shows warning icon if license is invalid", async () => {
+        client.getInfo = jest.fn().mockResolvedValue({
+            ...serverInfo,
+            license: {
+                licensee: "test",
+                plan: "free",
+                invoice: "123",
+                deviceNumber: "123",
+                expiryDate: Date.now() - 1000,
+                diskQuota: 1,
+                fingerprint: "123",
+            }
+        });
+
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}} />);
+        const warningIcon = (await waitUntilFind(wrapper, ".warningIcon")).hostNodes();
+        expect(warningIcon).toHaveLength(1);
+    });
+
+    it("does not show warning icon if license is valid", async () => {
+        client.getInfo = jest.fn().mockResolvedValue({
+            ...serverInfo,
+            license: {
+                licensee: "test",
+                plan: "free",
+                invoice: "123",
+                deviceNumber: "123",
+                expiryDate: Date.now() + 1000,
+                diskQuota: 1,
+                fingerprint: "123",
+            }
+        });
+
+        const wrapper = mount(<Dashboard backendApi={backend} permissions={{fullAccess: true}} />);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        wrapper.update();
+        expect(wrapper.find(".warningIcon").hostNodes()).toHaveLength(0);
+    });
 });

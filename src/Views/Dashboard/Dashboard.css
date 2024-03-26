@@ -3,3 +3,14 @@
   width: 80em;
   margin: 1em;
 }
+
+.warningIcon {
+  color: #faac14;
+  display: inline-block;
+  font-size: 0.9em;
+  margin-right: -8px;
+}
+
+.hide {
+  display: none;
+}
