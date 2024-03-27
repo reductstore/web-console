@@ -6,6 +6,7 @@ import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
 import "./ReplicationCard.css";
 import CreateOrUpdate from "./CreateOrUpdate";
 import RemoveConfirmationByName from "../RemoveConfirmationByName";
+import {bigintToNumber} from "../../Helpers/NumberUtils";
 
 interface Props {
     replication: FullReplicationInfo;
@@ -23,10 +24,6 @@ export default function ReplicationCard(props: Readonly<Props>) {
     const [changeSettings, setChangeSettings] = useState(false);
     const {client, replication, index} = props;
     const {info, diagnostics} = replication;
-
-    const n = (big: BigInt) => {
-        return Number(big.valueOf());
-    };
 
     const onRemoved = async () => {
         await client.deleteReplication(info.name);
@@ -62,13 +59,13 @@ export default function ReplicationCard(props: Readonly<Props>) {
         </Card.Meta>
         <Row gutter={24}>
             <Col span={8}>
-                <Statistic title="Records Awaiting Replication" value={n(info.pendingRecords)} />
+                <Statistic title="Records Awaiting Replication" value={bigintToNumber(info.pendingRecords)} />
             </Col>
             <Col span={8}>
-                <Statistic title="Successfully Replicated (Past Hour)" value={n(diagnostics.hourly.ok)} />
+                <Statistic title="Successfully Replicated (Past Hour)" value={bigintToNumber(diagnostics.hourly.ok)} />
             </Col>
             <Col span={8}>
-                <Statistic title="Errors (Past Hour)" value={n(diagnostics.hourly.errored)} />
+                <Statistic title="Errors (Past Hour)" value={bigintToNumber(diagnostics.hourly.errored)} />
             </Col>
         </Row>
         <RemoveConfirmationByName name={info.name} onRemoved={onRemoved}

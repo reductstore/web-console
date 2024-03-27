@@ -1,0 +1,15 @@
+.licenseDescriptions .ant-descriptions-item-label {
+  font-weight: bold;
+}
+
+.overQuota .ant-descriptions-item-content {
+  color: red;
+}
+
+.expired .ant-descriptions-item-content {
+  color: red;
+}
+
+.licenseAlert {
+  margin-bottom: 20px;
+}

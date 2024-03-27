@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added:
+
+- RS-180: Show license information in the web console, [PR-64](https://github.com/reductstore/web-console/pull/64)
+
 ## [1.5.0] - 2024-03-01
 
 ### Added:
