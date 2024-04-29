@@ -7,9 +7,17 @@ on:
   pull_request:
     branches: [main, stable]
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm i
+      - run: npm run fmt:check
+
   test:
     name: "Install dependencies and test app"
     runs-on: ubuntu-latest
+    needs: format
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
