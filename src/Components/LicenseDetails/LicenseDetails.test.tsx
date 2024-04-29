@@ -1,8 +1,8 @@
 import React from "react";
-import {render, screen} from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import LicenseDetails from "./LicenseDetails";
-import {LicenseInfo} from "reduct-js";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import { LicenseInfo } from "reduct-js";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("LicenseDetails", () => {
   const mockLicenseInfo: LicenseInfo = {
@@ -12,7 +12,7 @@ describe("LicenseDetails", () => {
     expiryDate: 1735689600000,
     deviceNumber: 100,
     diskQuota: 1,
-    fingerprint: "unique-fingerprint"
+    fingerprint: "unique-fingerprint",
   };
 
   const mockLicenseInfoExpired: LicenseInfo = {
@@ -22,7 +22,7 @@ describe("LicenseDetails", () => {
     expiryDate: 1614556800000,
     deviceNumber: 100,
     diskQuota: 1,
-    fingerprint: "unique-fingerprint"
+    fingerprint: "unique-fingerprint",
   };
 
   beforeEach(() => {
@@ -43,7 +43,7 @@ describe("LicenseDetails", () => {
         year: "numeric",
         month: "long",
         day: "numeric",
-      }
+      },
     );
 
     expect(screen.getByText("Plan")).toBeInTheDocument();
@@ -81,7 +81,9 @@ describe("LicenseDetails", () => {
   });
 
   it("renders license alert when disk quota exceeded", () => {
-    render(<LicenseDetails license={mockLicenseInfo} usage={BigInt(1e12 + 1)} />);
+    render(
+      <LicenseDetails license={mockLicenseInfo} usage={BigInt(1e12 + 1)} />,
+    );
     const regex = /disk quota has been exceeded\./i;
     expect(screen.getByText(regex)).toBeInTheDocument();
   });

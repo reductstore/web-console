@@ -1,5 +1,5 @@
-import {LicenseInfo} from "reduct-js";
-import {checkLicenseStatus} from "./licenseUtils";
+import { LicenseInfo } from "reduct-js";
+import { checkLicenseStatus } from "./licenseUtils";
 
 describe("checkLicenseStatus", () => {
   it("should return invalid status when license is undefined", () => {

@@ -1,12 +1,12 @@
 import React from "react";
-import {mount, ReactWrapper} from "enzyme";
-import {act} from "react-dom/test-utils";
-import {Card} from "antd";
-import {DeleteOutlined, SettingOutlined} from "@ant-design/icons";
+import { mount, ReactWrapper } from "enzyme";
+import { act } from "react-dom/test-utils";
+import { Card } from "antd";
+import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import ReplicationCard from "./ReplicationCard";
-import {Client, FullReplicationInfo} from "reduct-js";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import { Client, FullReplicationInfo } from "reduct-js";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("ReplicationCard", () => {
   let clientMock: Client;
@@ -45,8 +45,6 @@ describe("ReplicationCard", () => {
               count: 5,
               lastMessage: "Test error message",
             },
-
-
           },
           errored: 5n,
         },
@@ -73,8 +71,8 @@ describe("ReplicationCard", () => {
         showPanel={true}
         onRemoved={onRemovedMock}
         onShow={onShowMock}
-        permissions={{fullAccess: true}}
-      />
+        permissions={{ fullAccess: true }}
+      />,
     );
 
     expect(wrapper.find(Card).exists()).toBe(true);
@@ -91,8 +89,8 @@ describe("ReplicationCard", () => {
         showPanel={true}
         onRemoved={onRemovedMock}
         onShow={onShowMock}
-        permissions={{fullAccess: true}}
-      />
+        permissions={{ fullAccess: true }}
+      />,
     );
 
     act(() => {
@@ -100,7 +98,9 @@ describe("ReplicationCard", () => {
     });
     wrapper.update();
 
-    expect(wrapper.find("[data-testid='settings-modal']").at(0).prop("open")).toBe(true);
+    expect(
+      wrapper.find("[data-testid='settings-modal']").at(0).prop("open"),
+    ).toBe(true);
   });
 
   it("shows remove confirmation when remove icon is clicked", async () => {
@@ -113,8 +113,8 @@ describe("ReplicationCard", () => {
         showPanel={true}
         onRemoved={onRemovedMock}
         onShow={onShowMock}
-        permissions={{fullAccess: true}}
-      />
+        permissions={{ fullAccess: true }}
+      />,
     );
 
     await act(async () => {
@@ -123,7 +123,6 @@ describe("ReplicationCard", () => {
     wrapper.update();
 
     expect(wrapper.find("[data-testid='delete-modal']").exists()).toBe(true);
-
   });
 
   it("removes replication on confirm", async () => {
@@ -136,8 +135,8 @@ describe("ReplicationCard", () => {
         showPanel={true}
         onRemoved={onRemovedMock}
         onShow={onShowMock}
-        permissions={{fullAccess: true}}
-      />
+        permissions={{ fullAccess: true }}
+      />,
     );
 
     // Open the removal confirmation modal
@@ -150,15 +149,22 @@ describe("ReplicationCard", () => {
 
     // Type the confirmation name into the input field
     await act(async () => {
-      wrapper.find("input[data-testid='confirm-input']").simulate("change", {target: {value: replicationMock.info.name}});
+      wrapper
+        .find("input[data-testid='confirm-input']")
+        .simulate("change", { target: { value: replicationMock.info.name } });
     });
 
     // Click the confirmation button
     await act(async () => {
-      wrapper.find("button").filterWhere((btn) => btn.text() === "Remove").simulate("click");
+      wrapper
+        .find("button")
+        .filterWhere((btn) => btn.text() === "Remove")
+        .simulate("click");
     });
 
-    expect(clientMock.deleteReplication).toHaveBeenCalledWith(replicationMock.info.name);
+    expect(clientMock.deleteReplication).toHaveBeenCalledWith(
+      replicationMock.info.name,
+    );
     expect(onRemovedMock).toHaveBeenCalledWith(replicationMock.info.name);
   });
 
@@ -168,7 +174,7 @@ describe("ReplicationCard", () => {
       info: {
         ...replicationMock.info,
         isProvisioned: true,
-      }
+      },
     };
 
     wrapper = mount(
@@ -180,8 +186,8 @@ describe("ReplicationCard", () => {
         showPanel={true}
         onRemoved={onRemovedMock}
         onShow={onShowMock}
-        permissions={{fullAccess: true}}
-      />
+        permissions={{ fullAccess: true }}
+      />,
     );
 
     expect(wrapper.find(DeleteOutlined).exists()).toBe(false);

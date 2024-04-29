@@ -1,8 +1,8 @@
 import React from "react";
-import {mount} from "enzyme";
+import { mount } from "enzyme";
 import UsageStatistics from "./UsageStatistics";
-import {ServerInfo, BucketInfo} from "reduct-js";
-import {mockJSDOM} from "../../Helpers/TestHelpers";
+import { ServerInfo, BucketInfo } from "reduct-js";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("UsageStatistics", () => {
   const serverInfo: ServerInfo = {
@@ -31,17 +31,29 @@ describe("UsageStatistics", () => {
   });
 
   it("should display the correct usage", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} buckets={buckets} />);
-    expect(wrapper.find({title: "Usage"}).find("Statistic").prop("value")).toEqual("50 GB");
+    const wrapper = mount(
+      <UsageStatistics info={serverInfo} buckets={buckets} />,
+    );
+    expect(
+      wrapper.find({ title: "Usage" }).find("Statistic").prop("value"),
+    ).toEqual("50 GB");
   });
 
   it("should display the correct number of buckets", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} buckets={buckets} />);
-    expect(wrapper.find({title: "Buckets"}).find("Statistic").prop("value")).toEqual(buckets.length);
+    const wrapper = mount(
+      <UsageStatistics info={serverInfo} buckets={buckets} />,
+    );
+    expect(
+      wrapper.find({ title: "Buckets" }).find("Statistic").prop("value"),
+    ).toEqual(buckets.length);
   });
 
   it("should display the correct uptime", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} buckets={buckets} />);
-    expect(wrapper.find({title: "Uptime"}).find("Statistic").prop("value")).toEqual("1 day");
+    const wrapper = mount(
+      <UsageStatistics info={serverInfo} buckets={buckets} />,
+    );
+    expect(
+      wrapper.find({ title: "Uptime" }).find("Statistic").prop("value"),
+    ).toEqual("1 day");
   });
 });

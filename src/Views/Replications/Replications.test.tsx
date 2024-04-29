@@ -1,11 +1,11 @@
 import React from "react";
-import {ReactWrapper, mount} from "enzyme";
-import {Modal, Table} from "antd";
-import {MemoryRouter} from "react-router-dom";
+import { ReactWrapper, mount } from "enzyme";
+import { Modal, Table } from "antd";
+import { MemoryRouter } from "react-router-dom";
 
 import Replications from "./Replications";
-import {Client} from "reduct-js";
-import {mockJSDOM, waitUntilFind} from "../../Helpers/TestHelpers";
+import { Client } from "reduct-js";
+import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 
 describe("Replications", () => {
   const client = new Client("dummyURL");
@@ -16,14 +16,24 @@ describe("Replications", () => {
     mockJSDOM();
 
     client.getReplicationList = jest.fn().mockResolvedValue([
-      {name: "Replication1", isActive: true, isProvisioned: false, pendingRecords: 100n},
-      {name: "Replication2", isActive: false, isProvisioned: true, pendingRecords: 50n},
+      {
+        name: "Replication1",
+        isActive: true,
+        isProvisioned: false,
+        pendingRecords: 100n,
+      },
+      {
+        name: "Replication2",
+        isActive: false,
+        isProvisioned: true,
+        pendingRecords: 50n,
+      },
     ]);
 
     wrapper = mount(
       <MemoryRouter>
-        <Replications client={client} permissions={{fullAccess: true}} />
-      </MemoryRouter>
+        <Replications client={client} permissions={{ fullAccess: true }} />
+      </MemoryRouter>,
     );
   });
 
@@ -50,7 +60,9 @@ describe("Replications", () => {
 
     expect(rows.at(1).find("a").text()).toEqual("Replication2");
     expect(rows.at(1).find("span.ant-tag-error").text()).toEqual("Inactive");
-    expect(rows.at(1).find("span.ant-tag-processing").text()).toEqual("Provisioned");
+    expect(rows.at(1).find("span.ant-tag-processing").text()).toEqual(
+      "Provisioned",
+    );
     expect(rows.at(1).find("td").at(2).text()).toEqual("50");
   });
 
@@ -61,21 +73,21 @@ describe("Replications", () => {
   it("does not show the add replication button if the user does not have full access", () => {
     wrapper = mount(
       <MemoryRouter>
-        <Replications client={client} permissions={{fullAccess: false}} />
-      </MemoryRouter>
+        <Replications client={client} permissions={{ fullAccess: false }} />
+      </MemoryRouter>,
     );
     expect(wrapper.find("button").exists()).toBeFalsy();
   });
 
   it("opens the create replication modal", async () => {
     wrapper.find("button").simulate("click");
-    await waitUntilFind(wrapper, {name: "replicationForm"});
+    await waitUntilFind(wrapper, { name: "replicationForm" });
     expect(wrapper.find(Modal).prop("open")).toBeTruthy();
   });
 
   it("closes the create replication modal", async () => {
     wrapper.find("button").simulate("click");
-    await waitUntilFind(wrapper, {name: "replicationForm"});
+    await waitUntilFind(wrapper, { name: "replicationForm" });
     wrapper.find(".ant-modal-close-x").simulate("click");
     expect(wrapper.find(Modal).prop("open")).toBeFalsy();
   });
