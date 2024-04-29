@@ -1,4 +1,4 @@
-import {bigintToNumber} from "./NumberUtils";
+import { bigintToNumber } from "./NumberUtils";
 
 describe("bigintToNumber", () => {
   it("should convert a small bigint to a number accurately", () => {

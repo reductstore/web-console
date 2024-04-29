@@ -1,11 +1,11 @@
 name: ci
 on:
   push:
-    branches: [ main, stable ]
+    branches: [main, stable]
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
-    branches: [ main, stable ]
+    branches: [main, stable]
 jobs:
   test:
     name: "Install dependencies and test app"

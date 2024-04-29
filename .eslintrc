@@ -7,7 +7,8 @@
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
   ],
   "rules": {
     "no-var": "error",
@@ -21,30 +22,7 @@
     "prefer-arrow-callback": "error",
     "prefer-destructuring": "error",
     "prefer-rest-params": "error",
-    "space-in-parens": [
-      "error",
-      "never"
-    ],
-    "object-curly-spacing": [
-      "error",
-      "never"
-    ],
-    "linebreak-style": [
-      "error",
-      "unix"
-    ],
-    "quotes": [
-      "error",
-      "double"
-    ],
-    "semi": [
-      "error",
-      "always"
-    ],
-    "dot-location": [
-      "error",
-      "property"
-    ],
-    "@typescript-eslint/ban-ts-comment": "off"
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-explicit-any": "off"
   }
 }

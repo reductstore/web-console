@@ -1,4 +1,4 @@
-import {LicenseInfo} from "reduct-js";
+import { LicenseInfo } from "reduct-js";
 
 interface LicenseStatus {
   isValid: boolean;
@@ -15,7 +15,7 @@ interface LicenseStatus {
  */
 export function checkLicenseStatus(
   license: LicenseInfo | undefined,
-  usage: bigint
+  usage: bigint,
 ): LicenseStatus {
   if (!license) {
     return {

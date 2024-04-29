@@ -21,8 +21,10 @@
     "babel-jest": "^27.5.1",
     "buffer": "^6.0.3",
     "enzyme": "^3.11.0",
+    "eslint-config-prettier": "^9.1.0",
     "humanize-duration": "^3.30.0",
     "jest": "^27.5.1",
+    "prettier": "^3.2.5",
     "prettier-bytes": "^1.0.4",
     "react": "^17.0.2",
     "react-app-rewired": "^2.2.1",
@@ -40,7 +42,9 @@
     "build": "REACT_APP_VERSION=$npm_package_version react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check ."
   },
   "proxy": "https://play.reduct.store",
   "eslintConfig": {
