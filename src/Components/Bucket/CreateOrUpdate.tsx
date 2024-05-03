@@ -60,7 +60,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
    * Called when Create/Update button is pressed
    * @param values
    */
-  async onFinish(values: any): Promise<void> {
+  async onFinish(values: { maxBlockSize?: string; maxBlockRecords?: string; quotaType: string; quotaSize?: string, name: string; }): Promise<void> {
     console.log(values);
     let maxBlockSize = undefined;
     if (values.maxBlockSize) {
@@ -73,6 +73,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
       maxBlockRecords = BigInt(values.maxBlockRecords);
     }
 
+    // @ts-ignore
     const quotaType = QuotaType[values.quotaType];
 
     let quotaSize = undefined;
@@ -80,7 +81,6 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
       quotaSize =
         BigInt(values.quotaSize) * FACTOR_MAP[this.state.quotaSizeFactor];
     }
-    // @ts-ignore
     const settings: BucketSettings = {
       maxBlockSize,
       quotaType,
