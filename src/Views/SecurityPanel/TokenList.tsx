@@ -20,7 +20,7 @@ export default function TokenList(props: Readonly<Props>) {
       .getTokenList()
       .then((tokens) => setTokens(tokens))
       .catch((err) => setError(err.message));
-  });
+  }, []);
 
   const columns = [
     {

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed:
+
+- RS-314: fix infinite requests for token list, [PR-67](https://github.com/reductstore/web-console/pull/67)
+
 ## [1.6.0] - 2024-05-31
 
 ### Added:
@@ -37,7 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added:
 
-- RS-11: Mark provisioned resources and disable its control components, [PR-59](https://github.com/reductstore/web-console/pull/59)
+- RS-11: Mark provisioned resources and disable its control
+  components, [PR-59](https://github.com/reductstore/web-console/pull/59)
 
 ## [1.3.0] - 2023-08-17
 
@@ -62,7 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added:
 
-- Hiding admin control elements for token without full access, [PR-49](https://github.com/reductstore/web-console/pull/49)
+- Hiding admin control elements for token without full
+  access, [PR-49](https://github.com/reductstore/web-console/pull/49)
 - Update data each 5 seconds automatically, [PR-50](https://github.com/reductstore/web-console/pull/50)
 
 ## [1.1.1] - 2022-12-18
