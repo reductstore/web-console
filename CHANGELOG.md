@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed:a
 
-- Update `antd` to 5.18.3, [PR-68](https://github.com/reductstore/web-console/pull/68)
+- Update `antd` up to 5.18.3, [PR-68](https://github.com/reductstore/web-console/pull/68)
 
 ## [1.6.1] - 2024-06-09
 
