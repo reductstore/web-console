@@ -23,7 +23,7 @@ type State = {
   permissions?: TokenPermissions;
 };
 
-const primaryColor = "#231b49";
+const PRIMARY_COLOR = "#231b49";
 
 export default class App extends React.Component<Props, State> {
   constructor(props: Props) {
@@ -67,14 +67,14 @@ export default class App extends React.Component<Props, State> {
         <ConfigProvider
           theme={{
             token: {
-              colorPrimary: primaryColor,
-              colorLink: primaryColor,
+              colorPrimary: PRIMARY_COLOR,
+              colorLink: PRIMARY_COLOR,
             },
             components: {
               Menu: {
-                colorBgContainer: primaryColor,
+                colorBgContainer: PRIMARY_COLOR,
                 colorText: "#cccccc",
-                colorLink: primaryColor,
+                colorLink: PRIMARY_COLOR,
                 colorLinkHover: "#111",
               },
             },
@@ -83,7 +83,7 @@ export default class App extends React.Component<Props, State> {
           <Layout style={{ minHeight: "100vh" }}>
             <Layout.Sider
               className="Sider"
-              style={{ backgroundColor: primaryColor }}
+              style={{ backgroundColor: PRIMARY_COLOR }}
             >
               <Menu
                 className="MenuItem"

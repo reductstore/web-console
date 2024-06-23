@@ -23,5 +23,6 @@
 }
 
 .ant-menu-item-active {
-  background-color: #531dab !important;
+  background-color: #cccccc !important;
+  color: #231b49 !important;
 }
