@@ -3,7 +3,6 @@ import { ConfigProvider, Divider, Image, Layout, Menu } from "antd";
 import { RouteComponentProps } from "react-router-dom";
 
 import logo from "./main_logo.png";
-import "antd/dist/antd.variable.min.css";
 import "./App.css";
 import { IBackendAPI } from "./BackendAPI";
 import { Routes } from "./Components/Routes";
@@ -16,12 +15,6 @@ import {
 } from "@ant-design/icons";
 import { TokenPermissions } from "reduct-js";
 
-ConfigProvider.config({
-  theme: {
-    primaryColor: "#231b49",
-  },
-});
-
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
 }
@@ -29,6 +22,8 @@ interface Props extends RouteComponentProps {
 type State = {
   permissions?: TokenPermissions;
 };
+
+const primaryColor = "#231b49";
 
 export default class App extends React.Component<Props, State> {
   constructor(props: Props) {
@@ -69,75 +64,95 @@ export default class App extends React.Component<Props, State> {
 
     return (
       <div className="App">
-        <Layout>
-          <Layout.Sider className="Sider">
-            <Menu
-              className="MenuItem"
-              selectable={false}
-              triggerSubMenuAction="click"
+        <ConfigProvider
+          theme={{
+            token: {
+              colorPrimary: primaryColor,
+              colorLink: primaryColor,
+            },
+            components: {
+              Menu: {
+                colorBgContainer: primaryColor,
+                colorText: "#cccccc",
+                colorLink: primaryColor,
+                colorLinkHover: "#111",
+              },
+            },
+          }}
+        >
+          <Layout style={{ minHeight: "100vh" }}>
+            <Layout.Sider
+              className="Sider"
+              style={{ backgroundColor: primaryColor }}
             >
-              <a
-                href="https://www.reduct.store"
-                title="https://www.reduct.store"
+              <Menu
+                className="MenuItem"
+                selectable={false}
+                triggerSubMenuAction="click"
               >
-                <Image src={logo} preview={false} />
-              </a>
-              <Divider />
-              {permissions && (
-                <>
-                  <Menu.Item
-                    icon={<BorderOuterOutlined />}
-                    onClick={() => history.push("/dashboard")}
-                  >
-                    Dashboard
-                  </Menu.Item>
-                  <Menu.Item
-                    id="Buckets"
-                    icon={<DatabaseOutlined />}
-                    onClick={() => history.push("/buckets")}
-                  >
-                    Buckets
-                  </Menu.Item>
-                  {permissions.fullAccess && (
-                    <>
-                      <Menu.Item
-                        id="Replications"
-                        icon={<ShareAltOutlined />}
-                        onClick={() => history.push("/replications")}
-                      >
-                        Replications
-                      </Menu.Item>
-                      <Menu.Item
-                        id="Security"
-                        icon={<LockOutlined />}
-                        onClick={() => history.push("/tokens")}
-                      >
-                        Security
-                      </Menu.Item>
-                    </>
-                  )}
-                  <Divider style={{ borderColor: "white" }} />
-                  <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
-                    Logout
-                  </Menu.Item>
-                </>
-              )}
-            </Menu>
-            <div className="Meta">
-              <div className="MetaItem">Version: v{version}</div>
-            </div>
-          </Layout.Sider>
+                <a
+                  href="https://www.reduct.store"
+                  title="https://www.reduct.store"
+                >
+                  <Image src={logo} preview={false} />
+                </a>
+                <Divider />
+                {permissions && (
+                  <>
+                    <Menu.Item
+                      icon={<BorderOuterOutlined />}
+                      onClick={() => history.push("/dashboard")}
+                    >
+                      Dashboard
+                    </Menu.Item>
+                    <Menu.Item
+                      id="Buckets"
+                      icon={<DatabaseOutlined />}
+                      onClick={() => history.push("/buckets")}
+                    >
+                      Buckets
+                    </Menu.Item>
+                    {permissions.fullAccess && (
+                      <>
+                        <Menu.Item
+                          id="Replications"
+                          icon={<ShareAltOutlined />}
+                          onClick={() => history.push("/replications")}
+                        >
+                          Replications
+                        </Menu.Item>
+                        <Menu.Item
+                          id="Security"
+                          icon={<LockOutlined />}
+                          onClick={() => history.push("/tokens")}
+                        >
+                          Security
+                        </Menu.Item>
+                      </>
+                    )}
+                    <Divider style={{ borderColor: "white" }} />
+                    <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
+                      Logout
+                    </Menu.Item>
+                  </>
+                )}
+              </Menu>
+              <div className="Meta">
+                <div className="MetaItem">Web Console: v{version}</div>
+              </div>
+            </Layout.Sider>
 
-          <Layout>
-            <Layout.Content>
-              <Routes
-                {...this.props}
-                permissions={this.state.permissions}
-                onLogin={onLogin}
-              />
-            </Layout.Content>
+            <Layout>
+              <Layout.Content>
+                <Routes
+                  {...this.props}
+                  permissions={this.state.permissions}
+                  onLogin={onLogin}
+                />
+              </Layout.Content>
+            </Layout>
           </Layout>
-        </Layout>
+        </ConfigProvider>
       </div>
     );
   }

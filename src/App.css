@@ -13,12 +13,9 @@
 }
 
 .Sider {
-  min-height: 100vh;
-  background-color: #231b49;
 }
 
 .MenuItem {
-  background-color: #231b49;
   color: #cccccc;
   font-size: larger;
   font-weight: bold;
@@ -26,5 +23,5 @@
 }
 
 .ant-menu-item-active {
-  background-color: #cccccc !important;
+  background-color: #531dab !important;
 }
