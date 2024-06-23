@@ -141,7 +141,7 @@ describe("ReplicationDetail", () => {
     await wrapper.update();
     const replicationErrors = wrapper.find("Table");
     expect(replicationErrors.exists()).toBeTruthy();
-    expect(replicationErrors.prop("dataSource")).toEqual([
+    expect(replicationErrors.last().prop("dataSource")).toEqual([
       {
         key: "error-0",
         code: "0",
