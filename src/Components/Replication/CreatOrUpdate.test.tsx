@@ -30,6 +30,8 @@ describe("Replication::CreateOrUpdate", () => {
       entries: ["entry1", "entry2"],
       include: { label1: "value1" },
       exclude: { label2: "value2" },
+      each_n: 10n,
+      each_s: 0.5,
     });
 
     const mockDiagnostics = Diagnostics.parse({
@@ -92,6 +94,8 @@ describe("Replication::CreateOrUpdate", () => {
     expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "recordSettings" }).exists()).toBeTruthy();
+    expect(wrapper.find({ name: "eachN" }).exists()).toBeTruthy();
+    expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
 
   it("shows the replication name if it is provided", () => {
@@ -130,6 +134,20 @@ describe("Replication::CreateOrUpdate", () => {
       .find(".ant-select-selection-item");
     expect(selectedOptionText.at(0).text()).toEqual("entry1");
     expect(selectedOptionText.at(1).text()).toEqual("entry2");
+  });
+
+  it("shows the number of records to replicate every Nth record if it is provided", async () => {
+    await waitUntilFind(wrapper, { name: "eachN" });
+    expect(wrapper.find({ name: "eachN" }).find("input").prop("value")).toEqual(
+      "10",
+    );
+  });
+
+  it("shows timeinterval to replicate a record if it is provided", async () => {
+    await waitUntilFind(wrapper, { name: "eachS" });
+    expect(wrapper.find({ name: "eachS" }).find("input").prop("value")).toEqual(
+      "0.5",
+    );
   });
 
   it("disables record settings inputs and radios in read-only mode", () => {
