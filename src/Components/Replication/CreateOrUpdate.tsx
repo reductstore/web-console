@@ -395,8 +395,8 @@ export default class CreateOrUpdateReplication extends React.Component<
               <Form.Item
                 label={
                   <span>
-                    Once for seconds&nbsp;
-                    <Tooltip title="If set, only one record is replicated every N seconds. Can be float.">
+                    Every S seconds&nbsp;
+                    <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
                       <InfoCircleOutlined />
                     </Tooltip>
                   </span>
