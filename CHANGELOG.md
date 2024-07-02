@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed:a
+### Added:
+
+- RS-319: add downsampling options to Create/Update Replication form, [PR-69](https://github.com/reductstore/web-console/pull/69)
+
+### Changed:
 
 - Update `antd` up to 5.18.3, [PR-68](https://github.com/reductstore/web-console/pull/68)
 

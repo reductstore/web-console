@@ -5,8 +5,20 @@ import {
   FullReplicationInfo,
   ReplicationSettings,
 } from "reduct-js"; // Adjust import paths as necessary
-import { Alert, Button, Form, Input, Radio, Select, Tooltip } from "antd";
+import {
+  Alert,
+  Button,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Row,
+  Select,
+  Tooltip,
+} from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import "./CreateOrUpdate.css";
 
 interface Props {
   client: Client;
@@ -26,6 +38,8 @@ interface State {
   exclude: Record<string, string>;
   error?: string;
   dataFetched: boolean;
+  eachN?: bigint;
+  eachS?: number;
 }
 
 enum FilterType {
@@ -45,6 +59,8 @@ interface FormValues {
     key: string;
     value: string;
   }>;
+  eachN?: bigint;
+  eachS?: number;
 }
 
 /**
@@ -71,7 +87,8 @@ export default class CreateOrUpdateReplication extends React.Component<
    */
   onFinish = async (values: FormValues) => {
     const { replicationName, client, onCreated } = this.props;
-    const { srcBucket, dstBucket, dstHost, dstToken, entries } = values;
+    const { srcBucket, dstBucket, dstHost, dstToken, entries, eachN, eachS } =
+      values;
     const include: Record<string, string> = {};
     const exclude: Record<string, string> = {};
     if (values.recordSettings) {
@@ -83,16 +100,25 @@ export default class CreateOrUpdateReplication extends React.Component<
         }
       }
     }
-    const replicationSettings: ReplicationSettings = {
-      srcBucket,
-      dstBucket,
-      dstHost,
-      dstToken,
-      entries,
-      include,
-      exclude,
-    };
+
     try {
+      const replicationSettings: ReplicationSettings = {
+        srcBucket,
+        dstBucket,
+        dstHost,
+        dstToken,
+        entries,
+        include,
+        exclude,
+        eachN:
+          eachN == undefined || eachN.toString().length == 0
+            ? undefined
+            : BigInt(eachN),
+        eachS:
+          eachS == undefined || eachS.toString().length == 0
+            ? undefined
+            : Number(eachS),
+      };
       if (replicationName) {
         await client.updateReplication(replicationName, replicationSettings);
       } else {
@@ -118,6 +144,8 @@ export default class CreateOrUpdateReplication extends React.Component<
           entries,
           include,
           exclude,
+          eachN,
+          eachS,
         } = replication.settings;
         this.setState({
           srcBucket,
@@ -127,6 +155,8 @@ export default class CreateOrUpdateReplication extends React.Component<
           entries,
           include,
           exclude,
+          eachN,
+          eachS,
           dataFetched: true,
         });
       } catch (err) {
@@ -156,8 +186,16 @@ export default class CreateOrUpdateReplication extends React.Component<
   };
 
   getInitialFormValues = () => {
-    const { srcBucket, dstBucket, dstHost, entries, include, exclude } =
-      this.state;
+    const {
+      srcBucket,
+      dstBucket,
+      dstHost,
+      entries,
+      include,
+      exclude,
+      eachN,
+      eachS,
+    } = this.state;
     const { replicationName: name } = this.props;
     const recordSettings = [
       ...Object.keys(include).map((key) => ({
@@ -178,6 +216,8 @@ export default class CreateOrUpdateReplication extends React.Component<
       dstHost,
       entries,
       recordSettings,
+      eachN,
+      eachS,
     };
   };
 
@@ -201,6 +241,8 @@ export default class CreateOrUpdateReplication extends React.Component<
           onFinish={this.onFinish}
           layout="vertical"
           initialValues={this.getInitialFormValues()}
+          labelCol={{ span: 22 }}
+          wrapperCol={{ span: 22 }}
         >
           <Form.Item
             label="Replication Name"
@@ -212,111 +254,159 @@ export default class CreateOrUpdateReplication extends React.Component<
             <Input disabled={readOnly} />
           </Form.Item>
 
-          <Form.Item
-            label={
-              <span>
-                Source Bucket&nbsp;
-                <Tooltip title="Select the bucket from which data will be replicated.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="srcBucket"
-            rules={[
-              { required: true, message: "Please select the source bucket!" },
-            ]}
-          >
-            <Select
-              disabled={readOnly}
-              placeholder="Select a source bucket"
-              onChange={this.handleSourceBucketChange}
-            >
-              {sourceBuckets?.map((bucket) => (
-                <Select.Option key={bucket} value={bucket}>
-                  {bucket}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+          <Row>
+            <Col span={12}>
+              <b>Source</b>
+              <Form.Item
+                label={
+                  <span>
+                    Bucket&nbsp;
+                    <Tooltip title="Select the bucket from which data will be replicated.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="srcBucket"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select the source bucket!",
+                  },
+                ]}
+                className="ReplicationField"
+              >
+                <Select
+                  disabled={readOnly}
+                  placeholder="Select a source bucket"
+                  onChange={this.handleSourceBucketChange}
+                >
+                  {sourceBuckets?.map((bucket) => (
+                    <Select.Option key={bucket} value={bucket}>
+                      {bucket}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label={
+                  <span>
+                    Entries&nbsp;
+                    <Tooltip title="Select the entries to be replicated. If empty, all entries are replicated.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="entries"
+                className="ReplicationField"
+              >
+                <Select
+                  mode="tags"
+                  style={{ width: "100%" }}
+                  placeholder="Add entries"
+                  disabled={readOnly}
+                >
+                  {this.state.entries.map((entry) => (
+                    <Select.Option key={entry} value={entry}>
+                      {entry}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-          <Form.Item
-            label={
-              <span>
-                Destination Bucket&nbsp;
-                <Tooltip title="Select the bucket to which data will be replicated.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="dstBucket"
-            rules={[
-              {
-                required: true,
-                message: "Please input the destination bucket name!",
-              },
-            ]}
-          >
-            <Input disabled={readOnly} />
-          </Form.Item>
+            <Col span={12}>
+              <b>Destination</b>
+              <Form.Item
+                label={
+                  <span>
+                    Bucket&nbsp;
+                    <Tooltip title="Select the bucket to which data will be replicated.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="dstBucket"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input the destination bucket name!",
+                  },
+                ]}
+                className="ReplicationField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+              <Form.Item
+                label={
+                  <span>
+                    Host&nbsp;
+                    <Tooltip title="Enter the URL of the destination host.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="dstHost"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input the destination host URL!",
+                  },
+                ]}
+                className="ReplicationField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
 
-          <Form.Item
-            label={
-              <span>
-                Destination Host&nbsp;
-                <Tooltip title="Enter the URL of the destination host.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="dstHost"
-            rules={[
-              {
-                required: true,
-                message: "Please input the destination host URL!",
-              },
-            ]}
-          >
-            <Input disabled={readOnly} />
-          </Form.Item>
+              <Form.Item
+                label={
+                  <span>
+                    Token&nbsp;
+                    <Tooltip title="Enter the token with write access to the destination bucket.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="dstToken"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label={
-              <span>
-                Destination Token&nbsp;
-                <Tooltip title="Enter the token with write access to the destination bucket.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="dstToken"
-          >
-            <Input disabled={readOnly} />
-          </Form.Item>
+          <b>Conditions</b>
+          <Row>
+            <Col span={12}>
+              <Form.Item
+                label={
+                  <span>
+                    Every N-th record&nbsp;
+                    <Tooltip title="If set, only every N-th record is replicated.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="eachN"
+              >
+                <InputNumber disabled={readOnly} min={1} precision={0} />
+              </Form.Item>
+            </Col>
 
-          <Form.Item
-            label={
-              <span>
-                Filter Entries&nbsp;
-                <Tooltip title="Select the entries to be replicated. If empty, all entries are replicated.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="entries"
-          >
-            <Select
-              mode="tags"
-              style={{ width: "100%" }}
-              placeholder="Add entries"
-              disabled={readOnly}
-            >
-              {this.state.entries.map((entry) => (
-                <Select.Option key={entry} value={entry}>
-                  {entry}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+            <Col span={12}>
+              <Form.Item
+                label={
+                  <span>
+                    Every S seconds&nbsp;
+                    <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="eachS"
+              >
+                <InputNumber disabled={readOnly} min={0.000001} />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             label={
@@ -327,15 +417,13 @@ export default class CreateOrUpdateReplication extends React.Component<
                 </Tooltip>
               </span>
             }
+            className="ReplicationField"
           >
             <Form.List name="recordSettings">
               {(fields, { add, remove }) => (
                 <>
                   {fields.map((field, index) => (
-                    <Form.Item
-                      key={`recordSettings-${field.key}-${index}`}
-                      style={{ marginBottom: "10px" }}
-                    >
+                    <Form.Item key={`recordSettings-${field.key}-${index}`}>
                       <div
                         style={{
                           display: "flex",
@@ -411,7 +499,6 @@ export default class CreateOrUpdateReplication extends React.Component<
               )}
             </Form.List>
           </Form.Item>
-
           <Form.Item>
             <Button
               type="primary"
