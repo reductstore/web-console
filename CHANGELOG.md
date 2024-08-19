@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2024-08-19
+
 ### Added:
 
 - RS-319: add downsampling options to Create/Update Replication form, [PR-69](https://github.com/reductstore/web-console/pull/69)
@@ -173,7 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/reduct-storage/web-console/compare/v1.7.0...v1.6.1
 [1.6.1]: https://github.com/reduct-storage/web-console/compare/v1.6.1...v1.6.0
 [1.6.0]: https://github.com/reduct-storage/web-console/compare/v1.6.0...v1.5.0
 [1.5.0]: https://github.com/reduct-storage/web-console/compare/v1.5.0...v1.4.1
