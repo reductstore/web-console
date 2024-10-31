@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Col, Modal, Row, Statistic, Tag } from "antd";
 import humanizeDuration from "humanize-duration";
 import { Bucket, BucketInfo, Client, TokenPermissions } from "reduct-js";
@@ -35,7 +35,12 @@ export const getHistory = (interval: {
 export default function BucketCard(props: Readonly<Props>) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [changeSettings, setChangeSettings] = useState(false);
-  const { client, bucketInfo, index } = props;
+  const [bucketInfo, setBucketInfo] = useState(props.bucketInfo);
+  const { client, index } = props;
+
+  useEffect(() => {
+    setBucketInfo(props.bucketInfo);
+  }, [props.bucketInfo]);
 
   const onRemove = async () => {
     const bucket: Bucket = await client.getBucket(bucketInfo.name);
