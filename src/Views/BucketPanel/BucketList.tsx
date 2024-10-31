@@ -6,7 +6,7 @@ import prettierBytes from "prettier-bytes";
 
 import "../../App.css";
 import { getHistory } from "../../Components/Bucket/BucketCard";
-import RemoveConfirmationByName from "../../Components/RemoveConfirmationByName";
+import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import { Link } from "react-router-dom";
 import { PlusOutlined } from "@ant-design/icons";
 import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
@@ -29,7 +29,6 @@ export default function BucketList(props: Readonly<Props>) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [bucketToRename, setBucketToRename] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
-  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const getBuckets = async () => {
     try {
@@ -47,12 +46,8 @@ export default function BucketList(props: Readonly<Props>) {
       const bucket = await client.getBucket(name);
       await bucket.remove();
       setBuckets(buckets.filter((bucket) => bucket.name !== name));
-      setRemoveError(null);
     } catch (err) {
       console.error(err);
-      console.log(err);
-      if (err instanceof APIError && err.message) setRemoveError(err.message);
-      else setRemoveError("Failed to remove bucket.");
     }
   };
 
@@ -203,13 +198,12 @@ export default function BucketList(props: Readonly<Props>) {
         dataSource={data}
         loading={buckets.length == 0}
       />
-      <RemoveConfirmationByName
+      <RemoveConfirmationModal
         name={bucketToRemove}
-        onRemoved={() => removeBucket(bucketToRemove)}
-        onCanceled={() => setConfirmRemove(false)}
+        onRemove={() => removeBucket(bucketToRemove)}
+        onCancel={() => setConfirmRemove(false)}
         confirm={confirmRemove}
         resourceType="bucket"
-        errorMessage={removeError}
       />
       <RenameModal
         name={bucketToRename}

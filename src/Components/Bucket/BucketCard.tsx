@@ -9,7 +9,7 @@ import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import "./BucketCard.css";
 import CreateOrUpdate from "./CreateOrUpdate";
-import RemoveConfirmationByName from "../RemoveConfirmationByName";
+import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
 
 interface Props {
@@ -37,7 +37,7 @@ export default function BucketCard(props: Readonly<Props>) {
   const [changeSettings, setChangeSettings] = useState(false);
   const { client, bucketInfo, index } = props;
 
-  const onRemoved = async () => {
+  const onRemove = async () => {
     const bucket: Bucket = await client.getBucket(bucketInfo.name);
     await bucket.remove();
     props.onRemoved(bucketInfo.name);
@@ -104,10 +104,10 @@ export default function BucketCard(props: Readonly<Props>) {
           />
         </Col>
       </Row>
-      <RemoveConfirmationByName
+      <RemoveConfirmationModal
         name={bucketInfo.name}
-        onRemoved={onRemoved}
-        onCanceled={() => setConfirmRemove(false)}
+        onRemove={onRemove}
+        onCancel={() => setConfirmRemove(false)}
         confirm={confirmRemove}
         resourceType="bucket"
       />

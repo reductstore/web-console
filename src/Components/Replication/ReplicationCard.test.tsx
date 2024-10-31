@@ -11,7 +11,7 @@ import { mockJSDOM } from "../../Helpers/TestHelpers";
 describe("ReplicationCard", () => {
   let clientMock: Client;
   let replicationMock: FullReplicationInfo;
-  let onRemovedMock: jest.Mock;
+  let onRemoveMock: jest.Mock;
   let onShowMock: jest.Mock;
   let wrapper: ReactWrapper;
 
@@ -51,7 +51,7 @@ describe("ReplicationCard", () => {
       },
     };
 
-    onRemovedMock = jest.fn();
+    onRemoveMock = jest.fn();
     onShowMock = jest.fn();
   });
 
@@ -69,7 +69,7 @@ describe("ReplicationCard", () => {
         index={0}
         sourceBuckets={["sourceBucket1", "sourceBucket2"]}
         showPanel={true}
-        onRemoved={onRemovedMock}
+        onRemove={onRemoveMock}
         onShow={onShowMock}
         permissions={{ fullAccess: true }}
       />,
@@ -87,7 +87,7 @@ describe("ReplicationCard", () => {
         index={0}
         sourceBuckets={["sourceBucket1", "sourceBucket2"]}
         showPanel={true}
-        onRemoved={onRemovedMock}
+        onRemove={onRemoveMock}
         onShow={onShowMock}
         permissions={{ fullAccess: true }}
       />,
@@ -111,7 +111,7 @@ describe("ReplicationCard", () => {
         index={0}
         sourceBuckets={["sourceBucket1", "sourceBucket2"]}
         showPanel={true}
-        onRemoved={onRemovedMock}
+        onRemove={onRemoveMock}
         onShow={onShowMock}
         permissions={{ fullAccess: true }}
       />,
@@ -133,7 +133,7 @@ describe("ReplicationCard", () => {
         index={0}
         sourceBuckets={["sourceBucket1", "sourceBucket2"]}
         showPanel={true}
-        onRemoved={onRemovedMock}
+        onRemove={onRemoveMock}
         onShow={onShowMock}
         permissions={{ fullAccess: true }}
       />,
@@ -165,7 +165,7 @@ describe("ReplicationCard", () => {
     expect(clientMock.deleteReplication).toHaveBeenCalledWith(
       replicationMock.info.name,
     );
-    expect(onRemovedMock).toHaveBeenCalledWith(replicationMock.info.name);
+    expect(onRemoveMock).toHaveBeenCalledWith(replicationMock.info.name);
   });
 
   it("does not show remove button if replication is provisioned", () => {
@@ -184,7 +184,7 @@ describe("ReplicationCard", () => {
         index={0}
         sourceBuckets={["sourceBucket1", "sourceBucket2"]}
         showPanel={true}
-        onRemoved={onRemovedMock}
+        onRemove={onRemoveMock}
         onShow={onShowMock}
         permissions={{ fullAccess: true }}
       />,
