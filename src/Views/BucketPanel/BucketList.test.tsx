@@ -44,7 +44,9 @@ describe("BucketList", () => {
     expect(rows.at(0).render().text()).toEqual(
       "BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010ZProvisioned",
     );
-    expect(rows.at(1).render().text()).toEqual("EmptyBucket00 B---------");
+    expect(rows.at(1).render().text()).toEqual(
+      "EmptyBucket00 B---------Rename",
+    );
   });
 
   it("should add a new bucket", async () => {

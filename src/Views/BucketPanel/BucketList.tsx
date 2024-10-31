@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { BucketInfo, Client, TokenPermissions } from "reduct-js";
-import { Button, Modal, Table, Tag, Typography } from "antd";
+import { APIError, BucketInfo, Client, TokenPermissions } from "reduct-js";
+import { Button, Flex, Modal, Table, Tag, Typography } from "antd";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 
 import "../../App.css";
 import { getHistory } from "../../Components/Bucket/BucketCard";
+import RemoveConfirmationByName from "../../Components/RemoveConfirmationByName";
 import { Link } from "react-router-dom";
 import { PlusOutlined } from "@ant-design/icons";
 import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
+import { DeleteOutlined } from "@ant-design/icons";
+import RenameModal from "../../Components/RenameModal";
 
 interface Props {
   client: Client;
@@ -21,6 +24,12 @@ interface Props {
 export default function BucketList(props: Readonly<Props>) {
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [creatingBucket, setCreatingBucket] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [bucketToRemove, setBucketToRemove] = useState("");
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [bucketToRename, setBucketToRename] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const getBuckets = async () => {
     try {
@@ -32,11 +41,59 @@ export default function BucketList(props: Readonly<Props>) {
     }
   };
 
+  const removeBucket = async (name: string) => {
+    try {
+      const { client } = props;
+      const bucket = await client.getBucket(name);
+      await bucket.remove();
+      setBuckets(buckets.filter((bucket) => bucket.name !== name));
+      setRemoveError(null);
+    } catch (err) {
+      console.error(err);
+      console.log(err);
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove bucket.");
+    }
+  };
+
+  const renameBucket = async (name: string) => {
+    if (name.trim() === "") {
+      setRenameError("Name cannot be empty.");
+      return;
+    }
+    try {
+      const { client } = props;
+      const bucket = await client.getBucket(bucketToRename);
+      if (bucket.getName() === name) {
+        setRenameError("The new name must be different from the current name.");
+        return;
+      }
+      await bucket.rename(name);
+      getBuckets();
+      setRenameError(null);
+      setIsRenameModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) setRenameError(err.message);
+      else setRenameError("Failed to rename bucket.");
+    }
+  };
+
   useEffect(() => {
-    getBuckets().then();
+    getBuckets();
     const interval = setInterval(() => getBuckets(), 5000);
     return () => clearInterval(interval);
   }, [creatingBucket]);
+
+  const handleRemove = (bucketName: string) => {
+    setBucketToRemove(bucketName);
+    setConfirmRemove(true);
+  };
+
+  const handleOpenRenameModal = (bucketName: string) => {
+    setBucketToRename(bucketName);
+    setIsRenameModalOpen(true);
+  };
 
   const data = buckets.map((bucket) => {
     const printIsoDate = (timestamp: bigint) =>
@@ -83,11 +140,33 @@ export default function BucketList(props: Readonly<Props>) {
       title: "",
       dataIndex: "provisioned",
       key: "provisioned",
-      render: (isProvisioned: boolean) => {
+      render: (isProvisioned: boolean, record: { name: string }) => {
         if (isProvisioned) {
-          return <Tag color="processing">Provisioned</Tag>;
+          return (
+            <Tag key={`provisioned-${record.name}`} color="processing">
+              Provisioned
+            </Tag>
+          );
         } else {
-          return <div />;
+          return (
+            <Flex gap="small" key={`actions-${record.name}`}>
+              <Button
+                key={`rename-${record.name}`}
+                color="default"
+                variant="dashed"
+                size="small"
+                onClick={() => handleOpenRenameModal(record.name)}
+              >
+                Rename
+              </Button>
+              <DeleteOutlined
+                key={`remove-${record.name}`}
+                title="Remove"
+                style={{ color: "red" }}
+                onClick={() => handleRemove(record.name)}
+              />
+            </Flex>
+          );
         }
       },
     },
@@ -123,6 +202,25 @@ export default function BucketList(props: Readonly<Props>) {
         columns={columns}
         dataSource={data}
         loading={buckets.length == 0}
+      />
+      <RemoveConfirmationByName
+        name={bucketToRemove}
+        onRemoved={() => removeBucket(bucketToRemove)}
+        onCanceled={() => setConfirmRemove(false)}
+        confirm={confirmRemove}
+        resourceType="bucket"
+        errorMessage={removeError}
+      />
+      <RenameModal
+        name={bucketToRename}
+        onRename={(newName) => renameBucket(newName)}
+        onCancel={() => {
+          setIsRenameModalOpen(false);
+          setRenameError(null);
+        }}
+        resourceType="bucket"
+        open={isRenameModalOpen}
+        errorMessage={renameError}
       />
     </div>
   );
