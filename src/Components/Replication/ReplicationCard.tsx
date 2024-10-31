@@ -4,7 +4,7 @@ import { Client, FullReplicationInfo, TokenPermissions } from "reduct-js";
 import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import "./ReplicationCard.css";
-import CreateOrUpdate from "./CreateOrUpdate";
+import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
 
@@ -101,7 +101,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
         onCancel={() => setChangeSettings(false)}
         data-testid="settings-modal"
       >
-        <CreateOrUpdate
+        <ReplicationSettingsForm
           key={info.name}
           client={client}
           readOnly={readOnly}
