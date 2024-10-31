@@ -8,9 +8,8 @@ import "../../App.css";
 import { getHistory } from "../../Components/Bucket/BucketCard";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import { Link } from "react-router-dom";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
-import { DeleteOutlined } from "@ant-design/icons";
 import RenameModal from "../../Components/RenameModal";
 
 interface Props {
@@ -111,10 +110,21 @@ export default function BucketList(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (text: string) => (
-        <Link to={`buckets/${text}`}>
-          <b>{text}</b>
-        </Link>
+      render: (name: string, record: { provisioned: boolean | undefined }) => (
+        <Flex gap="small" key={`link-${name}`}>
+          {!record.provisioned && (
+            <EditOutlined
+              key={`rename-${name}`}
+              title="Rename"
+              onClick={() => handleOpenRenameModal(name)}
+            >
+              Rename
+            </EditOutlined>
+          )}
+          <Link to={`buckets/${name}`}>
+            <b>{name}</b>
+          </Link>
+        </Flex>
       ),
     },
 
@@ -135,8 +145,8 @@ export default function BucketList(props: Readonly<Props>) {
       title: "",
       dataIndex: "provisioned",
       key: "provisioned",
-      render: (isProvisioned: boolean, record: { name: string }) => {
-        if (isProvisioned) {
+      render: (provisioned: boolean, record: { name: string }) => {
+        if (provisioned) {
           return (
             <Tag key={`provisioned-${record.name}`} color="processing">
               Provisioned
@@ -144,23 +154,12 @@ export default function BucketList(props: Readonly<Props>) {
           );
         } else {
           return (
-            <Flex gap="small" key={`actions-${record.name}`}>
-              <Button
-                key={`rename-${record.name}`}
-                color="default"
-                variant="dashed"
-                size="small"
-                onClick={() => handleOpenRenameModal(record.name)}
-              >
-                Rename
-              </Button>
-              <DeleteOutlined
-                key={`remove-${record.name}`}
-                title="Remove"
-                style={{ color: "red" }}
-                onClick={() => handleRemove(record.name)}
-              />
-            </Flex>
+            <DeleteOutlined
+              key={`remove-${record.name}`}
+              title="Remove"
+              style={{ color: "red" }}
+              onClick={() => handleRemove(record.name)}
+            />
           );
         }
       },

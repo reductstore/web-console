@@ -38,6 +38,10 @@ export default function BucketDetail(props: Readonly<Props>) {
     }
   };
 
+  useEffect(() => {
+    getEntries().then();
+  }, [name]);
+
   const removeEntry = async (name: string) => {
     if (!info) {
       console.error("No bucket info");
