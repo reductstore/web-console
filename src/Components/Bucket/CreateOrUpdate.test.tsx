@@ -32,6 +32,7 @@ describe("Bucket::CreateOrUpdate", () => {
       quotaType: QuotaType.FIFO,
     });
     bucket.setSettings = jest.fn();
+    bucket.rename = jest.fn();
   });
 
   it("should show default values for a new bucket", async () => {
