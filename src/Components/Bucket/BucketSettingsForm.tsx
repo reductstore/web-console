@@ -47,7 +47,10 @@ const FACTOR_MAP: Record<string, bigint> = {
 /**
  * A form to create or update a bucket
  */
-class CreateOrUpdate extends React.Component<Props & { history: any }, State> {
+class BucketSettingsForm extends React.Component<
+  Props & { history: any },
+  State
+> {
   constructor(props: Readonly<Props & { history: any }>) {
     super(props);
     this.state = {
@@ -324,9 +327,9 @@ class CreateOrUpdate extends React.Component<Props & { history: any }, State> {
   }
 }
 
-const CreateOrUpdateWrapper: React.FC<Props> = (props) => {
+const BucketSettingsFormWrapper: React.FC<Props> = (props) => {
   const history = useHistory();
-  return <CreateOrUpdate {...props} history={history} />;
+  return <BucketSettingsForm {...props} history={history} />;
 };
 
-export default CreateOrUpdateWrapper;
+export default BucketSettingsFormWrapper;

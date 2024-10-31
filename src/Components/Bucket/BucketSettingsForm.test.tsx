@@ -2,10 +2,10 @@ import { mount } from "enzyme";
 import waitUntil from "async-wait-until";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 
-import CreateOrUpdate from "./CreateOrUpdate";
+import BucketSettingsForm from "./BucketSettingsForm";
 import { APIError, Bucket, BucketSettings, Client, QuotaType } from "reduct-js";
 
-describe("Bucket::CreateOrUpdate", () => {
+describe("Bucket::BucketSettingsForm", () => {
   const client = new Client("");
   const bucket = {} as Bucket;
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe("Bucket::CreateOrUpdate", () => {
 
   it("should show default values for a new bucket", async () => {
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         client={client}
         onCreated={() => console.log("")}
@@ -63,7 +63,7 @@ describe("Bucket::CreateOrUpdate", () => {
 
   it("should collapse advanced settings", async () => {
     const wrapper = mount(
-      <CreateOrUpdate client={client} onCreated={() => console.log("")} />,
+      <BucketSettingsForm client={client} onCreated={() => console.log("")} />,
     );
     await waitUntilFind(wrapper, { name: "quotaType" });
     expect(wrapper.find({ name: "maxBlockRecords" }).length).toEqual(0);
@@ -73,7 +73,7 @@ describe("Bucket::CreateOrUpdate", () => {
   it("should create a new bucket", async () => {
     let closed = false;
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         client={client}
         onCreated={() => (closed = true)}
@@ -102,7 +102,7 @@ describe("Bucket::CreateOrUpdate", () => {
 
   it("should show current settings for a updated bucket", async () => {
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         client={client}
         bucketName="bucket"
@@ -128,7 +128,7 @@ describe("Bucket::CreateOrUpdate", () => {
   it("should create update bucket settings", async () => {
     let closed = false;
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         bucketName="bucket"
         client={client}
@@ -159,7 +159,7 @@ describe("Bucket::CreateOrUpdate", () => {
     const err = new APIError("Oops");
     client.getInfo = jest.fn().mockRejectedValue(err);
     const wrapper = mount(
-      <CreateOrUpdate client={client} onCreated={() => console.log("")} />,
+      <BucketSettingsForm client={client} onCreated={() => console.log("")} />,
     );
 
     await waitUntilFind(wrapper, { type: "error" });
@@ -168,7 +168,7 @@ describe("Bucket::CreateOrUpdate", () => {
 
   it("should validate name of bucket", async () => {
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         client={client}
         onCreated={() => (closed = true)}
@@ -196,7 +196,7 @@ describe("Bucket::CreateOrUpdate", () => {
 
   it("should disable update button if readonly", async () => {
     const wrapper = mount(
-      <CreateOrUpdate
+      <BucketSettingsForm
         showAll
         readOnly
         client={client}

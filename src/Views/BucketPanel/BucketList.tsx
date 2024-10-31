@@ -9,7 +9,7 @@ import { getHistory } from "../../Components/Bucket/BucketCard";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import { Link } from "react-router-dom";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
+import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 import RenameModal from "../../Components/RenameModal";
 
 interface Props {
@@ -184,7 +184,7 @@ export default function BucketList(props: Readonly<Props>) {
           footer={null}
           onCancel={() => setCreatingBucket(false)}
         >
-          <CreateOrUpdate
+          <BucketSettingsForm
             client={props.client}
             onCreated={async () => {
               setCreatingBucket(false);

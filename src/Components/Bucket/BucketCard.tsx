@@ -8,7 +8,7 @@ import prettierBytes from "prettier-bytes";
 import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import "./BucketCard.css";
-import CreateOrUpdate from "./CreateOrUpdate";
+import BucketSettingsForm from "./BucketSettingsForm";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
 
@@ -122,7 +122,7 @@ export default function BucketCard(props: Readonly<Props>) {
         footer={null}
         onCancel={() => setChangeSettings(false)}
       >
-        <CreateOrUpdate
+        <BucketSettingsForm
           client={client}
           key={bucketInfo.name}
           bucketName={bucketInfo.name}
