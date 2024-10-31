@@ -46,7 +46,7 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check ."
   },
-  "proxy": "http://localhost:8383",
+  "proxy": "https://play.reduct.store",
   "eslintConfig": {
     "extends": [
       "react-app",
