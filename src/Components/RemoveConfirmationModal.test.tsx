@@ -58,7 +58,9 @@ describe("RemoveConfirmationModal", () => {
     const input = getByTestId("confirm-input");
     fireEvent.change(input, { target: { value: "wrong-name" } });
 
-    expect(getByText("Remove").closest("button")).toHaveClass("ant-btn-loading");
+    expect(getByText("Remove").closest("button")).toHaveClass(
+      "ant-btn-loading",
+    );
   });
 
   it("should call onRemove when the remove button is clicked", () => {
