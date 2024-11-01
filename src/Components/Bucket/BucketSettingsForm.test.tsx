@@ -155,6 +155,56 @@ describe("Bucket::BucketSettingsForm", () => {
     } as unknown as BucketSettings);
   });
 
+  it("should rename the bucket if the name is changed", async () => {
+    let closed = false;
+    const wrapper = mount(
+      <BucketSettingsForm
+        showAll
+        bucketName="oldBucket"
+        client={client}
+        onCreated={() => (closed = true)}
+      />,
+    );
+    await waitUntilFind(wrapper, { name: "quotaType" });
+
+    const submit = wrapper.find({ name: "bucketForm" }).at(0);
+    submit.props().onFinish({
+      maxBlockSize: "64",
+      maxBlockRecords: 1024,
+      name: "newBucket",
+      quotaType: "NONE",
+      quotaSize: "0",
+    });
+
+    await waitUntil(() => closed);
+    expect(bucket.rename).toBeCalledWith("newBucket");
+  });
+
+  it("should not rename the bucket if the name is not changed", async () => {
+    let closed = false;
+    const wrapper = mount(
+      <BucketSettingsForm
+        showAll
+        bucketName="sameBucket"
+        client={client}
+        onCreated={() => (closed = true)}
+      />,
+    );
+    await waitUntilFind(wrapper, { name: "quotaType" });
+
+    const submit = wrapper.find({ name: "bucketForm" }).at(0);
+    submit.props().onFinish({
+      maxBlockSize: "64",
+      maxBlockRecords: 1024,
+      name: "sameBucket",
+      quotaType: "NONE",
+      quotaSize: "0",
+    });
+
+    await waitUntil(() => closed);
+    expect(bucket.rename).not.toBeCalled();
+  });
+
   it("should show error if don't get settings", async () => {
     const err = new APIError("Oops");
     client.getInfo = jest.fn().mockRejectedValue(err);
