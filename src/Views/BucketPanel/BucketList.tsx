@@ -110,17 +110,8 @@ export default function BucketList(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (name: string, record: { provisioned: boolean | undefined }) => (
+      render: (name: string) => (
         <Flex gap="small" key={`link-${name}`}>
-          {!record.provisioned && (
-            <EditOutlined
-              key={`rename-${name}`}
-              title="Rename"
-              onClick={() => handleOpenRenameModal(name)}
-            >
-              Rename
-            </EditOutlined>
-          )}
           <Link to={`buckets/${name}`}>
             <b>{name}</b>
           </Link>
@@ -145,7 +136,10 @@ export default function BucketList(props: Readonly<Props>) {
       title: "",
       dataIndex: "provisioned",
       key: "provisioned",
-      render: (provisioned: boolean, record: { name: string }) => {
+      render: (
+        provisioned: boolean,
+        record: { name: string; provisioned: boolean | undefined },
+      ) => {
         if (provisioned) {
           return (
             <Tag key={`provisioned-${record.name}`} color="processing">
@@ -154,12 +148,21 @@ export default function BucketList(props: Readonly<Props>) {
           );
         } else {
           return (
-            <DeleteOutlined
-              key={`remove-${record.name}`}
-              title="Remove"
-              style={{ color: "red" }}
-              onClick={() => handleRemove(record.name)}
-            />
+            <Flex gap="middle">
+              {!record.provisioned && (
+                <EditOutlined
+                  key={`rename-${name}`}
+                  title="Rename"
+                  onClick={() => handleOpenRenameModal(record.name)}
+                />
+              )}
+              <DeleteOutlined
+                key={`remove-${record.name}`}
+                title="Remove"
+                style={{ color: "red" }}
+                onClick={() => handleRemove(record.name)}
+              />
+            </Flex>
           );
         }
       },
