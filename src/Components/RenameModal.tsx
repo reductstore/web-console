@@ -51,7 +51,7 @@ export default function RenameModal({
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          data-testid="confirm-input"
+          data-testid="rename-input"
         />
       </Flex>
     </Modal>
