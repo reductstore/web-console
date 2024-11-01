@@ -68,4 +68,40 @@ describe("BucketList", () => {
     const button = await waitUntilFind(panel, { title: "Add" });
     expect(button).toBeUndefined();
   });
+
+  it("should display rename and remove icons for non-provisioned buckets", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const emptyBucketRow = rows.at(1);
+
+    const renameIcon = emptyBucketRow.find('span[title="Rename"]');
+    const removeIcon = emptyBucketRow.find('span[title="Remove"]');
+
+    expect(renameIcon.exists()).toBe(true);
+    expect(removeIcon.exists()).toBe(true);
+  });
+
+  it("should not display rename and remove icons for provisioned buckets", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const provisionedBucketRow = rows.at(0);
+
+    const renameIcon = provisionedBucketRow.find('span[title="Rename"]');
+    const removeIcon = provisionedBucketRow.find('span[title="Remove"]');
+
+    expect(renameIcon.exists()).toBe(false);
+    expect(removeIcon.exists()).toBe(false);
+  });
 });

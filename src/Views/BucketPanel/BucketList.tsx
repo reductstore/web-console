@@ -151,7 +151,7 @@ export default function BucketList(props: Readonly<Props>) {
             <Flex gap="middle">
               {!record.provisioned && (
                 <EditOutlined
-                  key={`rename-${name}`}
+                  key={`rename-${record.name}`}
                   title="Rename"
                   onClick={() => handleOpenRenameModal(record.name)}
                 />
