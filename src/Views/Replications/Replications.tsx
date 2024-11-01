@@ -10,7 +10,7 @@ import { Button, Modal, Table, Tag, Typography } from "antd";
 import "../../App.css";
 import { Link } from "react-router-dom";
 import { PlusOutlined } from "@ant-design/icons";
-import CreateOrUpdate from "../../Components/Replication/CreateOrUpdate";
+import ReplicationSettingsForm from "../../Components/Replication/ReplicationSettingsForm";
 
 interface Props {
   client: Client;
@@ -124,7 +124,7 @@ export default function Replications(props: Readonly<Props>) {
           footer={null}
           onCancel={() => setCreatingReplication(false)}
         >
-          <CreateOrUpdate
+          <ReplicationSettingsForm
             client={props.client}
             onCreated={async () => {
               setCreatingReplication(false);

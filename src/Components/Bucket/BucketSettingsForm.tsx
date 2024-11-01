@@ -17,6 +17,7 @@ import {
   Select,
   Spin,
 } from "antd";
+import { useHistory } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -26,6 +27,7 @@ interface Props {
   onCreated: () => void;
   showAll?: boolean; // show all settings
   readOnly?: boolean; // now allowed to change settings
+  history?: any;
 }
 
 interface State {
@@ -46,8 +48,11 @@ const FACTOR_MAP: Record<string, bigint> = {
 /**
  * A form to create or update a bucket
  */
-export default class CreateOrUpdate extends React.Component<Props, State> {
-  constructor(props: Readonly<Props>) {
+class BucketSettingsForm extends React.Component<
+  Props & { history: any },
+  State
+> {
+  constructor(props: Readonly<Props & { history: any }>) {
     super(props);
     this.state = {
       maxBlockSizeFactor: DEFAULT_FACTOR,
@@ -67,6 +72,8 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
     quotaSize?: string;
     name: string;
   }): Promise<void> {
+    const { history } = this.props;
+
     console.log(values);
     let maxBlockSize = undefined;
     if (values.maxBlockSize) {
@@ -102,8 +109,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
       } else {
         const bucket = await client.getBucket(bucketName);
         await bucket.setSettings(settings);
+        if (bucketName !== values.name) await bucket.rename(values.name);
       }
       this.props.onCreated();
+      history.push(`/buckets/${values.name}`);
     } catch (err) {
       if (err instanceof APIError) {
         this.setState({ error: err.message });
@@ -235,7 +244,7 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
           >
             <Input
               id="InputName"
-              disabled={bucketName !== undefined}
+              disabled={this.props.readOnly}
               onChange={(event) => validateBucketName(event.target.value)}
             />
           </Form.Item>
@@ -318,3 +327,10 @@ export default class CreateOrUpdate extends React.Component<Props, State> {
     );
   }
 }
+
+const BucketSettingsFormWrapper: React.FC<Props> = (props) => {
+  const history = props.history || useHistory();
+  return <BucketSettingsForm {...props} history={history} />;
+};
+
+export default BucketSettingsFormWrapper;

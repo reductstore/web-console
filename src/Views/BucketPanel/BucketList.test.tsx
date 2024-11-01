@@ -68,4 +68,82 @@ describe("BucketList", () => {
     const button = await waitUntilFind(panel, { title: "Add" });
     expect(button).toBeUndefined();
   });
+
+  it("should display rename and remove icons for non-provisioned buckets", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const emptyBucketRow = rows.at(1);
+
+    const renameIcon = emptyBucketRow.find('span[title="Rename"]');
+    const removeIcon = emptyBucketRow.find('span[title="Remove"]');
+
+    expect(renameIcon.exists()).toBe(true);
+    expect(removeIcon.exists()).toBe(true);
+  });
+
+  it("should not display rename and remove icons for provisioned buckets", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const provisionedBucketRow = rows.at(0);
+
+    const renameIcon = provisionedBucketRow.find('span[title="Rename"]');
+    const removeIcon = provisionedBucketRow.find('span[title="Remove"]');
+
+    expect(renameIcon.exists()).toBe(false);
+    expect(removeIcon.exists()).toBe(false);
+  });
+
+  it("should open rename modal on rename icon click", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const emptyBucketRow = rows.at(1);
+
+    const renameIcon = emptyBucketRow.find('span[title="Rename"]');
+    renameIcon.simulate("click");
+
+    const renameModal = panel.find('div[data-testid="rename-modal"]');
+    const removeModal = panel.find('div[data-testid="delete-modal"]');
+
+    expect(renameModal.exists()).toBe(true);
+    expect(removeModal.exists()).toBe(false);
+  });
+
+  it("should open remove confirmation modal on remove icon click", async () => {
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+
+    const rows = panel.find(".ant-table-row");
+    const emptyBucketRow = rows.at(1);
+
+    const removeIcon = emptyBucketRow.find('span[title="Remove"]');
+    removeIcon.simulate("click");
+
+    const renameModal = panel.find('div[data-testid="rename-modal"]');
+    const removeModal = panel.find('div[data-testid="delete-modal"]');
+
+    expect(renameModal.exists()).toBe(false);
+    expect(removeModal.exists()).toBe(true);
+  });
 });

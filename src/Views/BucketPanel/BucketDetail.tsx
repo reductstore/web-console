@@ -12,7 +12,7 @@ import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 import prettierBytes from "prettier-bytes";
 import { Table, Typography } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
-import RemoveConfirmationByName from "../../Components/RemoveConfirmationByName";
+import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 
 interface Props {
   client: Client;
@@ -37,6 +37,10 @@ export default function BucketDetail(props: Readonly<Props>) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    getEntries().then();
+  }, [name]);
 
   const removeEntry = async (name: string) => {
     if (!info) {
@@ -134,11 +138,11 @@ export default function BucketDetail(props: Readonly<Props>) {
         dataSource={data}
         loading={entries.length == 0}
       />
-      <RemoveConfirmationByName
+      <RemoveConfirmationModal
         key={entryToRemove}
         name={entryToRemove}
-        onRemoved={() => removeEntry(entryToRemove)}
-        onCanceled={() => setEntryToRemove("")}
+        onRemove={() => removeEntry(entryToRemove)}
+        onCancel={() => setEntryToRemove("")}
         resourceType="entry"
         confirm={entryToRemove !== ""}
       />

@@ -18,7 +18,7 @@ import {
   Tooltip,
 } from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import "./CreateOrUpdate.css";
+import "./ReplicationSettingsForm.css";
 
 interface Props {
   client: Client;
@@ -66,7 +66,7 @@ interface FormValues {
 /**
  * A form to create or update a replication
  */
-export default class CreateOrUpdateReplication extends React.Component<
+export default class ReplicationSettingsFormReplication extends React.Component<
   Props,
   State
 > {

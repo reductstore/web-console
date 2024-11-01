@@ -4,8 +4,8 @@ import { Client, FullReplicationInfo, TokenPermissions } from "reduct-js";
 import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import "./ReplicationCard.css";
-import CreateOrUpdate from "./CreateOrUpdate";
-import RemoveConfirmationByName from "../RemoveConfirmationByName";
+import ReplicationSettingsForm from "./ReplicationSettingsForm";
+import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
   index: number;
   sourceBuckets: string[];
   showPanel?: boolean;
-  onRemoved: (name: string) => void;
+  onRemove: (name: string) => void;
   onShow: (name: string) => void;
   permissions?: TokenPermissions;
 }
@@ -25,9 +25,9 @@ export default function ReplicationCard(props: Readonly<Props>) {
   const { client, replication, index } = props;
   const { info, diagnostics } = replication;
 
-  const onRemoved = async () => {
+  const onRemove = async () => {
     await client.deleteReplication(info.name);
-    props.onRemoved(info.name);
+    props.onRemove(info.name);
   };
 
   const actions = [];
@@ -87,10 +87,10 @@ export default function ReplicationCard(props: Readonly<Props>) {
           />
         </Col>
       </Row>
-      <RemoveConfirmationByName
+      <RemoveConfirmationModal
         name={info.name}
-        onRemoved={onRemoved}
-        onCanceled={() => setConfirmRemove(false)}
+        onRemove={onRemove}
+        onCancel={() => setConfirmRemove(false)}
         confirm={confirmRemove}
         resourceType="bucket"
       />
@@ -101,7 +101,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
         onCancel={() => setChangeSettings(false)}
         data-testid="settings-modal"
       >
-        <CreateOrUpdate
+        <ReplicationSettingsForm
           key={info.name}
           client={client}
           readOnly={readOnly}

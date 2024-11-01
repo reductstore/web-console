@@ -4,10 +4,10 @@ import { MemoryRouter } from "react-router-dom";
 
 import { Client, ReplicationInfo, ReplicationSettings } from "reduct-js";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
-import CreateOrUpdate from "./CreateOrUpdate";
+import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
 
-describe("Replication::CreateOrUpdate", () => {
+describe("Replication::ReplicationSettingsForm", () => {
   const client = new Client("dummyURL");
   let wrapper: ReactWrapper;
 
@@ -65,7 +65,7 @@ describe("Replication::CreateOrUpdate", () => {
 
     wrapper = mount(
       <MemoryRouter>
-        <CreateOrUpdate
+        <ReplicationSettingsForm
           client={client}
           onCreated={() => console.log("")}
           sourceBuckets={["Bucket1", "Bucket2"]}
@@ -153,7 +153,7 @@ describe("Replication::CreateOrUpdate", () => {
   it("disables record settings inputs and radios in read-only mode", () => {
     wrapper = mount(
       <MemoryRouter>
-        <CreateOrUpdate
+        <ReplicationSettingsForm
           client={client}
           onCreated={() => console.log("")}
           sourceBuckets={["Bucket1", "Bucket2"]}

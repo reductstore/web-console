@@ -4,7 +4,7 @@ import { ServerInfo, BucketInfo, TokenPermissions } from "reduct-js";
 import { Card, Col, Divider, Modal, Row, Typography } from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
-import CreateOrUpdate from "../../Components/Bucket/CreateOrUpdate";
+import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 
 import { PlusOutlined, ExclamationCircleFilled } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";
@@ -172,7 +172,7 @@ export default function Dashboard(props: Readonly<Props>) {
           footer={null}
           onCancel={() => setCreatingBucket(false)}
         >
-          <CreateOrUpdate
+          <BucketSettingsForm
             client={client}
             onCreated={async () => {
               setCreatingBucket(false);
