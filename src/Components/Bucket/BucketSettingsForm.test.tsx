@@ -258,4 +258,31 @@ describe("Bucket::BucketSettingsForm", () => {
     const submit = wrapper.find({ type: "submit" }).at(0);
     expect(submit.props().disabled).toBeTruthy();
   });
+
+  it("should disable InputName only when readonly", async () => {
+    const wrapperReadOnly = mount(
+      <BucketSettingsForm
+        showAll
+        readOnly
+        client={client}
+        bucketName="bucket"
+        onCreated={() => console.log("")}
+      />,
+    );
+    await waitUntilFind(wrapperReadOnly, { name: "quotaType" });
+    const inputReadOnly = wrapperReadOnly.find("#InputName").at(0);
+    expect(inputReadOnly.props().disabled).toBeTruthy();
+
+    const wrapperEditable = mount(
+      <BucketSettingsForm
+        showAll
+        client={client}
+        bucketName="bucket"
+        onCreated={() => console.log("")}
+      />,
+    );
+    await waitUntilFind(wrapperEditable, { name: "quotaType" });
+    const inputEditable = wrapperEditable.find("#InputName").at(0);
+    expect(inputEditable.props().disabled).toBeFalsy();
+  });
 });
