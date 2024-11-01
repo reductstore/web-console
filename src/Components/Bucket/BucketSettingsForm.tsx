@@ -27,6 +27,7 @@ interface Props {
   onCreated: () => void;
   showAll?: boolean; // show all settings
   readOnly?: boolean; // now allowed to change settings
+  history?: any;
 }
 
 interface State {
@@ -328,7 +329,7 @@ class BucketSettingsForm extends React.Component<
 }
 
 const BucketSettingsFormWrapper: React.FC<Props> = (props) => {
-  const history = useHistory();
+  const history = props.history || useHistory();
   return <BucketSettingsForm {...props} history={history} />;
 };
 

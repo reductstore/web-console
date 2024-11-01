@@ -180,6 +180,34 @@ describe("Bucket::BucketSettingsForm", () => {
     expect(bucket.rename).toBeCalledWith("newBucket");
   });
 
+  it("should rename the bucket and update the URL path", async () => {
+    const history = { push: jest.fn() };
+    const wrapper = mount(
+      <BucketSettingsForm
+        showAll
+        client={client}
+        bucketName="oldBucket"
+        onCreated={() => console.log("")}
+        history={history}
+      />,
+    );
+
+    await waitUntilFind(wrapper, { name: "quotaType" });
+
+    const submit = wrapper.find({ name: "bucketForm" }).at(0);
+    submit.props().onFinish({
+      maxBlockSize: "64",
+      maxBlockRecords: 1024,
+      name: "newBucket",
+      quotaType: "NONE",
+      quotaSize: "0",
+    });
+
+    await waitUntil(() => history.push.mock.calls.length > 0);
+    expect(bucket.rename).toBeCalledWith("newBucket");
+    expect(history.push).toBeCalledWith("/buckets/newBucket");
+  });
+
   it("should not rename the bucket if the name is not changed", async () => {
     let closed = false;
     const wrapper = mount(
