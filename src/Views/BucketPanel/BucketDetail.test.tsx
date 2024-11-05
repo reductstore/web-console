@@ -2,6 +2,10 @@ import React from "react";
 import { mount } from "enzyme";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
+import BucketDetail from "./BucketDetail";
+import { MemoryRouter } from "react-router-dom";
+import waitUntil from "async-wait-until";
+import { act } from "react-dom/test-utils";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"), // use actual for all non-hook parts
@@ -9,8 +13,6 @@ jest.mock("react-router-dom", () => ({
     name: "testBucket",
   }),
 }));
-
-import BucketDetail from "./BucketDetail";
 
 describe("BucketDetail", () => {
   const client = new Client("");
@@ -48,6 +50,8 @@ describe("BucketDetail", () => {
         latestRecord: 10000n,
       } as EntryInfo,
     ]);
+
+    bucket.renameEntry = jest.fn(); // Mock renameEntry method
   });
 
   it("should show bucket card ", async () => {
@@ -110,5 +114,77 @@ describe("BucketDetail", () => {
     const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
 
     expect(removeButton).toBeUndefined();
+  });
+
+  it("should display rename icon for entries", async () => {
+    const detail = mount(
+      <BucketDetail
+        client={client}
+        permissions={{ fullAccess: false, write: ["BucketWithData"] }}
+      />,
+    );
+    const renameIcon = await waitUntilFind(detail, { title: "Rename entry" });
+
+    expect(renameIcon.hostNodes().length).toEqual(2);
+  });
+
+  it("should hide rename icon for entries if no permissions", async () => {
+    const detail = mount(
+      <BucketDetail client={client} permissions={{ fullAccess: false }} />,
+    );
+    const renameIcon = await waitUntilFind(detail, { title: "Rename entry" });
+
+    expect(renameIcon).toBeUndefined();
+  });
+
+  it("should open rename modal on rename icon click", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} permissions={{ fullAccess: true }} />
+      </MemoryRouter>,
+    );
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const rows = detail.find(".ant-table-row");
+    const emptyEntryRow = rows.at(1);
+
+    const renameIcon = emptyEntryRow.find('span[title="Rename entry"]');
+    renameIcon.simulate("click");
+
+    const renameModal = detail.find('div[data-testid="rename-modal"]');
+    const removeModal = detail.find('div[data-testid="delete-modal"]');
+
+    expect(renameModal.exists()).toBe(true);
+    expect(removeModal.exists()).toBe(false);
+  });
+
+  it("should rename the entry on modal submit", async () => {
+    const detail = mount(
+      <BucketDetail client={client} permissions={{ fullAccess: true }} />,
+    );
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const rows = detail.find(".ant-table-row");
+    const emptyEntryRow = rows.at(1);
+
+    const renameIcon = emptyEntryRow.find('span[title="Rename entry"]');
+    renameIcon.simulate("click");
+
+    const renameModal = detail.find('div[data-testid="rename-modal"]');
+    expect(renameModal.exists()).toBe(true);
+
+    const input = renameModal.find('input[data-testid="rename-input"]');
+    act(() => {
+      input.simulate("change", { target: { value: "NewEntryName" } });
+    });
+
+    const inputValue = input.getDOMNode()?.getAttribute("value");
+    expect(inputValue).toEqual("NewEntryName");
+
+    const submitButton = renameModal.find("button").at(1);
+    submitButton.simulate("click");
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+    expect(bucket.renameEntry).toBeCalledWith("EmptyEntry", "NewEntryName");
   });
 });

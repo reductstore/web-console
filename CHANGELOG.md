@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - RS-509: add option to rename a bucket in the console, [PR-70](https://github.com/reductstore/web-console/pull/70)
+- RS-510: add option to rename an entry in the console, [PR-70](https://github.com/reductstore/web-console/pull/71)
 
 ## [1.7.0] - 2024-08-19
 
