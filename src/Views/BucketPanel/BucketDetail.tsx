@@ -144,13 +144,13 @@ export default function BucketDetail(props: Readonly<Props>) {
             <Flex gap="middle">
               <EditOutlined
                 key={`rename-${entry.name}`}
-                title="Rename"
+                title="Rename entry"
                 onClick={() => handleOpenRenameModal(entry.name)}
               />
               <DeleteOutlined
                 key={entry.name}
                 style={{ color: "red" }}
-                title={"Remove entry"}
+                title="Remove entry"
                 onClick={() => setEntryToRemove(entry.name)}
               />
             </Flex>
