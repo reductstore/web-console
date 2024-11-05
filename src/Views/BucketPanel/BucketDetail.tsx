@@ -5,14 +5,16 @@ import {
   EntryInfo,
   Client,
   TokenPermissions,
+  APIError,
 } from "reduct-js";
 import { useHistory, useParams } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Table, Typography } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { Flex, Table, Typography } from "antd";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
+import RenameModal from "../../Components/RenameModal";
 
 interface Props {
   client: Client;
@@ -26,6 +28,9 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [info, setInfo] = useState<BucketInfo>();
   const [entries, setEntries] = useState<EntryInfo[]>([]);
   const [entryToRemove, setEntryToRemove] = useState<string>("");
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [entryToRename, setEntryToRename] = useState<string>("");
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   const getEntries = async () => {
     try {
@@ -38,9 +43,38 @@ export default function BucketDetail(props: Readonly<Props>) {
     }
   };
 
-  useEffect(() => {
-    getEntries().then();
-  }, [name]);
+  const renameEntry = async (newName: string) => {
+    if (newName.trim() === "") {
+      setRenameError("Name cannot be empty.");
+      return;
+    }
+    if (newName === entryToRename) {
+      setRenameError("New name is the same as the old name.");
+      return;
+    }
+    try {
+      const { client } = props;
+      const bucketName = info?.name;
+      if (!bucketName) {
+        setRenameError("No bucket info");
+        return;
+      }
+      const bucket: Bucket = await client.getBucket(bucketName);
+      await bucket.renameEntry(entryToRename, newName);
+      getEntries();
+      setRenameError(null);
+      setIsRenameModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) setRenameError(err.message);
+      else setRenameError("Failed to rename entry.");
+    }
+  };
+
+  const handleOpenRenameModal = (entryName: string) => {
+    setEntryToRename(entryName);
+    setIsRenameModalOpen(true);
+  };
 
   const removeEntry = async (name: string) => {
     if (!info) {
@@ -54,6 +88,10 @@ export default function BucketDetail(props: Readonly<Props>) {
     setEntryToRemove("");
     getEntries().then();
   };
+
+  useEffect(() => {
+    getEntries().then();
+  }, [name]);
 
   useEffect(() => {
     getEntries().then();
@@ -103,12 +141,19 @@ export default function BucketDetail(props: Readonly<Props>) {
             props.permissions?.write?.indexOf(info?.name) !== -1)
         ) {
           return (
-            <DeleteOutlined
-              key={entry.name}
-              style={{ color: "red" }}
-              title={"Remove entry"}
-              onClick={() => setEntryToRemove(entry.name)}
-            />
+            <Flex gap="middle">
+              <EditOutlined
+                key={`rename-${entry.name}`}
+                title="Rename"
+                onClick={() => handleOpenRenameModal(entry.name)}
+              />
+              <DeleteOutlined
+                key={entry.name}
+                style={{ color: "red" }}
+                title={"Remove entry"}
+                onClick={() => setEntryToRemove(entry.name)}
+              />
+            </Flex>
           );
         }
         return <div />;
@@ -145,6 +190,17 @@ export default function BucketDetail(props: Readonly<Props>) {
         onCancel={() => setEntryToRemove("")}
         resourceType="entry"
         confirm={entryToRemove !== ""}
+      />
+      <RenameModal
+        name={entryToRename}
+        onRename={(newName) => renameEntry(newName)}
+        onCancel={() => {
+          setIsRenameModalOpen(false);
+          setRenameError(null);
+        }}
+        resourceType="entry"
+        open={isRenameModalOpen}
+        errorMessage={renameError}
       />
     </div>
   );
