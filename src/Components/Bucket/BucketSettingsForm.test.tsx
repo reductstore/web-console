@@ -313,4 +313,30 @@ describe("Bucket::BucketSettingsForm", () => {
     const inputEditable = wrapperEditable.find("#InputName").at(0);
     expect(inputEditable.props().disabled).toBeFalsy();
   });
+
+  it.each(["NONE", "FIFO", "HARD"])(
+    "should show all available quota types",
+    async (quotaType: string) => {
+      bucket.getSettings = jest.fn().mockResolvedValue({
+        maxBlockSize: 64_000_001n,
+        maxBlockRecords: 1024,
+        quotaSize: 1000n,
+        quotaType: QuotaType[quotaType as keyof typeof QuotaType],
+      });
+
+      const wrapper = mount(
+        <BucketSettingsForm
+          showAll
+          client={client}
+          bucketName={"bucket"}
+          onCreated={() => console.log("")}
+        />,
+      );
+
+      await waitUntilFind(wrapper, { name: "quotaType" });
+      const input = wrapper.find({ name: "quotaType" }).at(0);
+      console.log(input.debug());
+      expect(input.props().initialValue).toEqual(quotaType);
+    },
+  );
 });
