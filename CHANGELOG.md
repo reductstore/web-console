@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- RS-554: add forgotten HARD quota type to bucket settings, [PR-72](https://github.com/reductstore/web-console/pull/72)
+
 ## [1.8.0] - 2024-11-06
 
 ### Added
