@@ -258,6 +258,7 @@ class BucketSettingsForm extends React.Component<
             <Select>
               <Option value="NONE">NONE</Option>
               <Option value="FIFO">FIFO</Option>
+              <Option value="HARD">HARD</Option>
             </Select>
           </Form.Item>
           <Form.Item
