@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- RS-582: fix state to ensure that the delete modal can reopen after removing a first bucket, [PR-75](https://github.com/reductstore/web-console/pull/75)
+
 ### [1.8.1] - 2024-12-16
 
 ### Fixed
