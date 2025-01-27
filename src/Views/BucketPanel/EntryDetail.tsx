@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Client } from "reduct-js";
 import { Table, Typography } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
+import { DownloadOutlined } from "@ant-design/icons";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -35,13 +36,40 @@ export default function EntryDetail(props: Readonly<Props>) {
     getRecords();
   }, [bucketName, entryName]);
 
+  const handleDownload = async (record: any) => {
+    console.log(record);
+    try {
+      const bucket = await props.client.getBucket(bucketName);
+      const data = await (await bucket.beginRead(entryName, record.key)).read();
+      const blob = new Blob([data], { type: record.contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${entryName}-${record.key}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const columns = [
     { title: "Timestamp", dataIndex: "timestamp", key: "timestamp" },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
     { title: "Labels", dataIndex: "labels", key: "labels" },
+    {
+      title: "",
+      key: "download",
+      render: (text: any, record: any) => (
+        <DownloadOutlined
+          onClick={() => handleDownload(record)}
+          style={{ cursor: "pointer" }}
+        />
+      ),
+    },
   ];
-  console.log(records);
+
   const data = records.map((record) => ({
     key: record.time.toString(),
     timestamp: new Date(Number(record.time / 1000n)).toISOString(),
