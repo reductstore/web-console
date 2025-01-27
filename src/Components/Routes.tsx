@@ -11,6 +11,7 @@ import TokenDetail from "../Views/SecurityPanel/TokenDetail";
 import { TokenPermissions } from "reduct-js";
 import Replications from "../Views/Replications/Replications";
 import ReplicationDetail from "../Views/Replications/ReplicationDetail";
+import EntryDetail from "../Views/BucketPanel/EntryDetail";
 
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
@@ -53,6 +54,14 @@ export function Routes(props: Props): JSX.Element {
 
       <PrivateRoute exact path="/buckets/:name" authorized={authorized}>
         <BucketDetail client={props.backendApi.client} {...props} />
+      </PrivateRoute>
+
+      <PrivateRoute
+        exact
+        path="/buckets/:bucketName/entries/:entryName"
+        authorized={authorized}
+      >
+        <EntryDetail client={props.backendApi.client} {...props} />
       </PrivateRoute>
 
       <PrivateRoute exact path="/replications" authorized={authorized}>
