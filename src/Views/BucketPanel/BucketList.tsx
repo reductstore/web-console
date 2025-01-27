@@ -45,6 +45,7 @@ export default function BucketList(props: Readonly<Props>) {
       const bucket = await client.getBucket(name);
       await bucket.remove();
       setBuckets(buckets.filter((bucket) => bucket.name !== name));
+      setConfirmRemove(false);
     } catch (err) {
       console.error(err);
     }
