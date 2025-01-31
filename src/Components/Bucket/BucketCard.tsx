@@ -54,6 +54,8 @@ export default function BucketCard(props: Readonly<Props>) {
       const bucket: Bucket = await client.getBucket(bucketInfo.name);
       await bucket.remove();
       props.onRemoved(bucketInfo.name);
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
     } catch (err) {
       console.error(err);
       if (err instanceof APIError && err.message) setRemoveError(err.message);

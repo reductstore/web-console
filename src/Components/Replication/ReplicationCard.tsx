@@ -35,6 +35,8 @@ export default function ReplicationCard(props: Readonly<Props>) {
     try {
       await client.deleteReplication(info.name);
       props.onRemove(info.name);
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
     } catch (err) {
       console.error(err);
       if (err instanceof APIError && err.message) setRemoveError(err.message);
