@@ -95,4 +95,21 @@ describe("RemoveConfirmationModal", () => {
     fireEvent.click(getByText("Cancel"));
     expect(mockOnCancel).toHaveBeenCalled();
   });
+
+  it("should display an error message if errorMessage is provided", () => {
+    const { getByTestId } = render(
+      <RemoveConfirmationModal
+        name="test-bucket"
+        onRemove={mockOnRemove}
+        onCancel={mockOnCancel}
+        resourceType="bucket"
+        open={true}
+        errorMessage="An error occurred"
+      />,
+    );
+
+    const alert = getByTestId("error-alert");
+    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent("An error occurred");
+  });
 });
