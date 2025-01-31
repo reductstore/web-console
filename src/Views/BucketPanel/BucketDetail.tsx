@@ -85,16 +85,13 @@ export default function BucketDetail(props: Readonly<Props>) {
     }
 
     try {
-      // test throw error here
-      throw new Error("test error");
-
-      // const { client } = props;
-      // const bucket: Bucket = await client.getBucket(info.name);
-      // await bucket.removeEntry(name);
-      // setEntryToRemove("");
-      // getEntries().then();
-      // setRemoveError(null);
-      // setIsRemoveModalOpen(false);
+      const { client } = props;
+      const bucket: Bucket = await client.getBucket(info.name);
+      await bucket.removeEntry(name);
+      setEntryToRemove("");
+      getEntries().then();
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
     } catch (err) {
       console.error(err);
       if (err instanceof APIError && err.message) setRemoveError(err.message);
