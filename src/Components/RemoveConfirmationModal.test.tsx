@@ -19,7 +19,7 @@ describe("RemoveConfirmationModal", () => {
         onRemove={mockOnRemove}
         onCancel={mockOnCancel}
         resourceType="bucket"
-        confirm={true}
+        open={true}
       />,
     );
     expect(getByText('Remove bucket "test-bucket"?')).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe("RemoveConfirmationModal", () => {
         onRemove={mockOnRemove}
         onCancel={mockOnCancel}
         resourceType="bucket"
-        confirm={true}
+        open={true}
       />,
     );
 
@@ -51,7 +51,7 @@ describe("RemoveConfirmationModal", () => {
         onRemove={mockOnRemove}
         onCancel={mockOnCancel}
         resourceType="bucket"
-        confirm={true}
+        open={true}
       />,
     );
 
@@ -70,7 +70,7 @@ describe("RemoveConfirmationModal", () => {
         onRemove={mockOnRemove}
         onCancel={mockOnCancel}
         resourceType="bucket"
-        confirm={true}
+        open={true}
       />,
     );
 
@@ -88,7 +88,7 @@ describe("RemoveConfirmationModal", () => {
         onRemove={mockOnRemove}
         onCancel={mockOnCancel}
         resourceType="bucket"
-        confirm={true}
+        open={true}
       />,
     );
 
