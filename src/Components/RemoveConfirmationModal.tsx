@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Flex, Form, Input, Modal } from "antd";
+import { Alert, Flex, Input, Modal } from "antd";
 
 interface RemoveConfirmationModalProps {
   name: string;
@@ -39,9 +39,6 @@ export default function RemoveConfirmationModal({
       data-testid="delete-modal"
     >
       <Flex vertical gap="small">
-        <p>
-          For confirmation type <b>{name}</b>
-        </p>
         {errorMessage && (
           <Alert
             message={errorMessage}
@@ -50,12 +47,11 @@ export default function RemoveConfirmationModal({
             data-testid="error-alert"
           />
         )}
-        <Form.Item name="confirm">
-          <Input
-            onChange={(e) => checkName(e.target.value)}
-            data-testid="confirm-input"
-          />
-        </Form.Item>
+        <Input
+          placeholder={`Type the name of the ${resourceType} to confirm`}
+          onChange={(e) => checkName(e.target.value)}
+          data-testid="confirm-input"
+        />
       </Flex>
     </Modal>
   );
