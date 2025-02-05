@@ -36,8 +36,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
   const [end, setEnd] = useState<bigint | undefined>(undefined);
-  const [minTime, setMinTime] = useState<bigint | undefined>(undefined);
-  const [maxTime, setMaxTime] = useState<bigint | undefined>(undefined);
   const [limit, setLimit] = useState<number | undefined>(10);
   const [showUnix, setShowUnix] = useState(false);
 
@@ -65,22 +63,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
 
   useEffect(() => {
-    const getOldestAndLatestTimestamps = async () => {
-      try {
-        const bucket = await props.client.getBucket(bucketName);
-        const entries = await bucket.getEntryList();
-        const entry = entries.find((entry) => entry.name === entryName);
-        if (!entry) {
-          return;
-        }
-        setMinTime(entry.oldestRecord);
-        setMaxTime(entry.latestRecord);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    getOldestAndLatestTimestamps();
     handleFetchRecords();
   }, [bucketName, entryName]);
 
@@ -154,7 +136,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   return (
     <div style={{ margin: "1.4em" }}>
       <Typography.Title level={3}>Records for {entryName}</Typography.Title>
-
       <div style={{ display: "flex", flexDirection: "column", gap: "1em" }}>
         <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
           Show Unix Timestamps
@@ -165,23 +146,13 @@ export default function EntryDetail(props: Readonly<Props>) {
               placeholder="Start Time (Unix)"
               onChange={(value) => setStart(value ? BigInt(value) : undefined)}
               style={{ width: 200 }}
-              min={minTime ? Number(minTime) : undefined}
-              max={
-                maxTime && end
-                  ? Number(Math.min(Number(maxTime), Number(end)))
-                  : undefined
-              }
+              max={Number(end)}
             />
             <InputNumber
               placeholder="End Time (Unix)"
               onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
               style={{ width: 200 }}
-              min={
-                start && minTime
-                  ? Number(Math.max(Number(start), Number(minTime)))
-                  : undefined
-              }
-              max={maxTime ? Number(maxTime) : undefined}
+              min={Number(start)}
             />
           </div>
         ) : (
