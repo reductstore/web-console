@@ -138,7 +138,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Typography.Title level={3}>Records for {entryName}</Typography.Title>
       <div style={{ display: "flex", flexDirection: "column", gap: "1em" }}>
         <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-          Show Unix Timestamps
+          Unix Timestamp
         </Checkbox>
         {showUnix ? (
           <div style={{ display: "flex", gap: "10px" }}>

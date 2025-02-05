@@ -85,7 +85,7 @@ describe("EntryDetail", () => {
     it("should show the Unix timestamp toggle", () => {
       const toggle = wrapper.find(".ant-checkbox-wrapper");
       expect(toggle.exists()).toBe(true);
-      expect(toggle.text()).toContain("Show Unix Timestamps");
+      expect(toggle.text()).toContain("Unix Timestamp");
     });
 
     it("should show the date picker by default", () => {
