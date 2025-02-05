@@ -55,7 +55,11 @@ describe("BucketDetail", () => {
   });
 
   it("should show bucket card ", async () => {
-    const detail = mount(<BucketDetail client={client} />);
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
     const card = await waitUntilFind(detail, ".BucketCard");
 
     expect(client.getBucket).toBeCalledWith("testBucket");
@@ -65,7 +69,11 @@ describe("BucketDetail", () => {
   });
 
   it("should show entry table ", async () => {
-    const detail = mount(<BucketDetail client={client} />);
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
     const rows = await waitUntilFind(detail, ".ant-table-row");
 
     expect(rows.length).toEqual(2);
@@ -77,7 +85,9 @@ describe("BucketDetail", () => {
 
   it("should remove bucket and redirect", async () => {
     const detail = mount(
-      <BucketDetail client={client} permissions={{ fullAccess: true }} />,
+      <MemoryRouter>
+        <BucketDetail client={client} permissions={{ fullAccess: true }} />,
+      </MemoryRouter>,
     );
     const removeButton = await waitUntilFind(detail, { title: "Remove" });
 
@@ -96,10 +106,12 @@ describe("BucketDetail", () => {
 
   it("should remove entry and update table", async () => {
     const detail = mount(
-      <BucketDetail
-        client={client}
-        permissions={{ fullAccess: false, write: ["BucketWithData"] }}
-      />,
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
+        />
+      </MemoryRouter>,
     );
     const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
 
@@ -118,10 +130,13 @@ describe("BucketDetail", () => {
 
   it("should display rename icon for entries", async () => {
     const detail = mount(
-      <BucketDetail
-        client={client}
-        permissions={{ fullAccess: false, write: ["BucketWithData"] }}
-      />,
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
+        />
+        ,
+      </MemoryRouter>,
     );
     const renameIcon = await waitUntilFind(detail, { title: "Rename entry" });
 
@@ -160,7 +175,9 @@ describe("BucketDetail", () => {
 
   it("should rename the entry on modal submit", async () => {
     const detail = mount(
-      <BucketDetail client={client} permissions={{ fullAccess: true }} />,
+      <MemoryRouter>
+        <BucketDetail client={client} permissions={{ fullAccess: true }} />,
+      </MemoryRouter>,
     );
     await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
 

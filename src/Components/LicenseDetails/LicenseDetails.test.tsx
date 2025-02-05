@@ -9,7 +9,7 @@ describe("LicenseDetails", () => {
     plan: "Pro",
     licensee: "Acme Corp",
     invoice: "INV-123",
-    expiryDate: 1735689600000,
+    expiryDate: 5000000000000,
     deviceNumber: 100,
     diskQuota: 1,
     fingerprint: "unique-fingerprint",
