@@ -1,4 +1,3 @@
-import React from "react";
 import { mount, ReactWrapper } from "enzyme";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Bucket, Client, EntryInfo } from "reduct-js";
@@ -6,6 +5,7 @@ import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
+import { DownloadOutlined } from "@ant-design/icons";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -57,10 +57,6 @@ describe("EntryDetail", () => {
       } as EntryInfo,
     ]);
 
-    bucket.beginRead = jest.fn().mockResolvedValue({
-      read: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-    });
-
     wrapper = mount(
       <MemoryRouter>
         <EntryDetail client={client} />
@@ -74,6 +70,41 @@ describe("EntryDetail", () => {
     if (wrapper) {
       wrapper.unmount();
     }
+  });
+
+  describe("UI Elements", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-checkbox").length > 0,
+        );
+      });
+    });
+
+    it("should show the Unix timestamp toggle", () => {
+      const toggle = wrapper.find(".ant-checkbox-wrapper");
+      expect(toggle.exists()).toBe(true);
+      expect(toggle.text()).toContain("Show Unix Timestamps");
+    });
+
+    it("should show the date picker by default", () => {
+      const datePicker = wrapper.find(".ant-picker-range");
+      expect(datePicker.exists()).toBe(true);
+      expect(datePicker.props().className).toContain("ant-picker-range");
+    });
+
+    it("should show the fetch records button", () => {
+      const fetchButton = wrapper.find("button");
+      expect(fetchButton.exists()).toBe(true);
+      expect(fetchButton.at(0).text()).toBe("Fetch Records");
+    });
+
+    it("should show the records limit input", () => {
+      const limitInput = wrapper.find(".ant-input-number");
+      expect(limitInput.exists()).toBe(true);
+      expect(limitInput.props().className).toContain("ant-input-number");
+    });
   });
 
   it("should fetch and display records", async () => {
@@ -110,5 +141,29 @@ describe("EntryDetail", () => {
     const rows = wrapper.find(".ant-table-row");
     expect(rows.at(0).text()).toContain("1000");
     expect(rows.at(1).text()).toContain("2000");
+  });
+
+  it("should show download icon for each record", async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
+    });
+    const downloadIcons = wrapper.find(DownloadOutlined);
+    expect(downloadIcons.length).toBe(2);
+  });
+
+  it("should create a download link on clicked icon", async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
+    });
+
+    act(() => {
+      wrapper.find(DownloadOutlined).at(0).simulate("click");
+    });
+    wrapper.update();
+
+    const downloadLink = wrapper.find("a");
+    expect(downloadLink.length).toBe(1);
   });
 });
