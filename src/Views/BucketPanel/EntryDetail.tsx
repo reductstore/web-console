@@ -11,7 +11,6 @@ import {
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { DownloadOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -39,37 +38,17 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [end, setEnd] = useState<bigint | undefined>(undefined);
   const [minTime, setMinTime] = useState<bigint | undefined>(undefined);
   const [maxTime, setMaxTime] = useState<bigint | undefined>(undefined);
-  const [limit, setLimit] = useState<number | undefined>(2);
+  const [limit, setLimit] = useState<number | undefined>(10);
   const [showUnix, setShowUnix] = useState(false);
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
+    setRecords([]);
     try {
       const bucket = await props.client.getBucket(bucketName);
-
-      const lastRecordTime =
-        records.length > 0 ? records[records.length - 1].time + 1n : start;
-
-      const adjustedStart =
-        start !== undefined &&
-        lastRecordTime !== undefined &&
-        lastRecordTime < start
-          ? start
-          : lastRecordTime;
-
-      const adjustedEnd =
-        end !== undefined && adjustedStart !== undefined && end < adjustedStart
-          ? adjustedStart
-          : end;
-
-      for await (const record of bucket.query(
-        entryName,
-        adjustedStart,
-        adjustedEnd,
-        {
-          limit: limit,
-        },
-      )) {
+      for await (const record of bucket.query(entryName, start, end, {
+        limit: limit,
+      })) {
         setRecords((records) => [...records, record]);
       }
     } catch (err) {
@@ -124,11 +103,15 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
 
   const handleDateChange = (dates: any) => {
-    // todo: check how to convert dates to bigint correctly
-    console.log(dates);
     if (dates) {
-      setStart(BigInt(dates[0].valueOf()) * 1000n);
-      setEnd(BigInt(dates[1].valueOf()) * 1000n);
+      const startDate = dates[0].toDate();
+      const endDate = dates[1].toDate();
+      const startTimestamp =
+        startDate.getTime() - startDate.getTimezoneOffset() * 60000;
+      const endTimestamp =
+        endDate.getTime() - endDate.getTimezoneOffset() * 60000;
+      setStart(BigInt(startTimestamp) * 1000n);
+      setEnd(BigInt(endTimestamp) * 1000n);
     } else {
       setStart(undefined);
       setEnd(undefined);
@@ -171,62 +154,59 @@ export default function EntryDetail(props: Readonly<Props>) {
   return (
     <div style={{ margin: "1.4em" }}>
       <Typography.Title level={3}>Records for {entryName}</Typography.Title>
-      <div style={{ marginBottom: "1em" }}>
-        <Checkbox
-          onChange={(e) => setShowUnix(e.target.checked)}
-          style={{ marginBottom: "1em" }}
-        >
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1em" }}>
+        <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
           Show Unix Timestamps
         </Checkbox>
-        <div style={{ marginBottom: "1em" }}>
-          {showUnix ? (
-            <>
-              <InputNumber
-                placeholder="Start time (Unix)"
-                onChange={(value) =>
-                  setStart(value ? BigInt(value) : undefined)
-                }
-                style={{ marginRight: "1em", width: 180 }}
-                min={minTime ? Number(minTime) : undefined}
-                max={
-                  maxTime && end
-                    ? Number(Math.min(Number(maxTime), Number(end)))
-                    : undefined
-                }
-              />
-              <InputNumber
-                placeholder="End time (Unix)"
-                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-                style={{ marginRight: "1em", width: 180 }}
-                min={
-                  start && minTime
-                    ? Number(Math.max(Number(start), Number(minTime)))
-                    : undefined
-                }
-                max={maxTime ? Number(maxTime) : undefined}
-              />
-            </>
-          ) : (
-            <DatePicker.RangePicker
-              showTime
-              onChange={handleDateChange}
-              style={{ marginRight: "1em" }}
-              minDate={minTime ? dayjs(Number(minTime / 1000n)) : undefined}
-              maxDate={maxTime ? dayjs(Number(maxTime / 1000n)) : undefined}
+        {showUnix ? (
+          <div style={{ display: "flex", gap: "10px" }}>
+            <InputNumber
+              placeholder="Start Time (Unix)"
+              onChange={(value) => setStart(value ? BigInt(value) : undefined)}
+              style={{ width: 200 }}
+              min={minTime ? Number(minTime) : undefined}
+              max={
+                maxTime && end
+                  ? Number(Math.min(Number(maxTime), Number(end)))
+                  : undefined
+              }
             />
-          )}
-          <InputNumber
-            min={1}
-            addonBefore="Limit"
-            onChange={(value) => setLimit(value ? Number(value) : undefined)}
-            style={{ width: 150 }}
-            defaultValue={limit}
+            <InputNumber
+              placeholder="End Time (Unix)"
+              onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
+              style={{ width: 200 }}
+              min={
+                start && minTime
+                  ? Number(Math.max(Number(start), Number(minTime)))
+                  : undefined
+              }
+              max={maxTime ? Number(maxTime) : undefined}
+            />
+          </div>
+        ) : (
+          <DatePicker.RangePicker
+            showTime
+            placeholder={["Start Time (UTC)", "End Time (UTC)"]}
+            onChange={handleDateChange}
+            style={{ maxWidth: 410 }}
           />
-        </div>
-        <Button onClick={handleFetchRecords} type="primary">
-          Fetch Records
-        </Button>
+        )}
+        <InputNumber
+          min={1}
+          addonBefore="Limit"
+          onChange={(value) => setLimit(value ? Number(value) : undefined)}
+          style={{ width: 150 }}
+          defaultValue={limit}
+        />
       </div>
+      <Button
+        onClick={handleFetchRecords}
+        type="primary"
+        style={{ marginBottom: "1em", marginTop: "1em" }}
+      >
+        Fetch Records
+      </Button>
       <Table columns={columns} dataSource={data} />
     </div>
   );
