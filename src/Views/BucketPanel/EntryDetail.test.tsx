@@ -143,7 +143,7 @@ describe("EntryDetail", () => {
     expect(rows.at(1).text()).toContain("2000");
   });
 
-  it("should show download icon for each record", async () => {
+  it("should show a download icon for each record", async () => {
     await act(async () => {
       jest.runOnlyPendingTimers();
       await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
@@ -152,7 +152,7 @@ describe("EntryDetail", () => {
     expect(downloadIcons.length).toBe(2);
   });
 
-  it("should create a download link on clicked icon", async () => {
+  it("should create a download link on download icon click", async () => {
     await act(async () => {
       jest.runOnlyPendingTimers();
       await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
