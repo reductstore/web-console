@@ -52,8 +52,13 @@ describe("EntryDetail", () => {
     bucket.getEntryList = jest.fn().mockResolvedValue([
       {
         name: "testEntry",
+        blockCount: 5n,
+        recordCount: 100n,
+        size: 1024n,
         oldestRecord: 0n,
         latestRecord: 10000n,
+        createdAt: 0n,
+        updatedAt: 10000n,
       } as EntryInfo,
     ]);
 
@@ -119,12 +124,12 @@ describe("EntryDetail", () => {
     expect(rows.at(0).text()).toContain("1970-01-01T00:00:00.001Z");
     expect(rows.at(0).text()).toContain("1.0 KB");
     expect(rows.at(0).text()).toContain("application/json");
-    expect(rows.at(0).text()).toContain("key: value");
+    expect(rows.at(0).text()).toContain('"key": "value"');
 
     expect(rows.at(1).text()).toContain("1970-01-01T00:00:00.002Z");
     expect(rows.at(1).text()).toContain("2.0 KB");
     expect(rows.at(1).text()).toContain("text/plain");
-    expect(rows.at(1).text()).toContain("type: test");
+    expect(rows.at(1).text()).toContain('"type": "test"');
   });
 
   it("should toggle between ISO and Unix timestamps", async () => {
@@ -164,6 +169,8 @@ describe("EntryDetail", () => {
     wrapper.update();
 
     const downloadLink = wrapper.find("a");
-    expect(downloadLink.length).toBe(1);
+    expect(downloadLink.length).toBe(2);
+    expect(downloadLink.at(0).props().children).toBe("testBucket");
+    expect(downloadLink.at(1)).toBeDefined();
   });
 });
