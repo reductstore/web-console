@@ -51,10 +51,7 @@ export default function EntryCard(props: Readonly<Props>) {
         key="delete"
         style={{ color: "red" }}
         title="Remove entry"
-        onClick={(e) => {
-          e.stopPropagation();
-          setEntryToRemove(entryInfo.name);
-        }}
+        onClick={() => setEntryToRemove(entryInfo.name)}
       />,
     );
   }
