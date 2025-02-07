@@ -22,10 +22,10 @@ export default function EntryCard(props: Readonly<Props>) {
   const history = useHistory();
   const [entryToRemove, setEntryToRemove] = useState<string>("");
 
-  const printIsoDate = (timestamp: bigint) => {
+  const printTimestamp = (timestamp: bigint) => {
     if (entryInfo.recordCount === 0n) return "---";
     return showUnix
-      ? timestamp.toString()
+      ? Number(timestamp)
       : new Date(Number(timestamp / 1000n)).toISOString();
   };
 
@@ -98,14 +98,16 @@ export default function EntryCard(props: Readonly<Props>) {
           </Col>
           <Col span={8}>
             <Statistic
-              title="Oldest Record (UTC)"
-              value={printIsoDate(entryInfo.oldestRecord)}
+              title={`Oldest Record ${showUnix ? "(Unix)" : "(UTC)"}`}
+              value={printTimestamp(entryInfo.oldestRecord)}
+              groupSeparator=""
             />
           </Col>
           <Col span={8}>
             <Statistic
-              title="Latest Record (UTC)"
-              value={printIsoDate(entryInfo.latestRecord)}
+              title={`Latest Record ${showUnix ? "(Unix)" : "(UTC)"}`}
+              value={printTimestamp(entryInfo.latestRecord)}
+              groupSeparator=""
             />
           </Col>
         </Row>
