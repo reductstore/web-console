@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Client } from "reduct-js";
+import { Client, EntryInfo, TokenPermissions } from "reduct-js";
 import {
   Table,
   Typography,
@@ -11,12 +11,15 @@ import {
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { DownloadOutlined } from "@ant-design/icons";
+import EntryCard from "../../Components/Entry/EntryCard";
+import "./EntryDetail.css";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 
 interface Props {
   client: Client;
+  permissions?: TokenPermissions;
 }
 
 type LabelMap = Record<string, string | number | boolean | bigint>;
@@ -38,6 +41,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [end, setEnd] = useState<bigint | undefined>(undefined);
   const [limit, setLimit] = useState<number | undefined>(10);
   const [showUnix, setShowUnix] = useState(false);
+  const [entryInfo, setEntryInfo] = useState<EntryInfo>();
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
@@ -61,10 +65,6 @@ export default function EntryDetail(props: Readonly<Props>) {
       getRecords(start, end, limit);
     }
   };
-
-  useEffect(() => {
-    handleFetchRecords();
-  }, [bucketName, entryName]);
 
   const handleDownload = async (record: any) => {
     try {
@@ -100,6 +100,24 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
+  const getEntryInfo = async () => {
+    try {
+      const bucket = await props.client.getBucket(bucketName);
+      const entries = await bucket.getEntryList();
+      const entry = entries.find((e) => e.name === entryName);
+      if (entry) {
+        setEntryInfo(entry);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    getEntryInfo();
+    handleFetchRecords();
+  }, [bucketName, entryName]);
+
   const columns = [
     {
       title: "Timestamp",
@@ -134,24 +152,35 @@ export default function EntryDetail(props: Readonly<Props>) {
   }));
 
   return (
-    <div style={{ margin: "1.4em" }}>
-      <Typography.Title level={3}>Records for {entryName}</Typography.Title>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1em" }}>
-        <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-          Unix Timestamp
-        </Checkbox>
+    <div className="entryDetail">
+      {entryInfo && (
+        <EntryCard
+          entryInfo={entryInfo}
+          bucketName={bucketName}
+          permissions={props.permissions}
+          showUnix={showUnix}
+          onDelete={() => {
+            /* implement delete handling */
+          }}
+        />
+      )}
+      <Typography.Title level={3}>Records</Typography.Title>
+      <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
+        Unix Timestamp
+      </Checkbox>
+      <div className="detailControls">
         {showUnix ? (
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div className="timeInputs">
             <InputNumber
               placeholder="Start Time (Unix)"
               onChange={(value) => setStart(value ? BigInt(value) : undefined)}
-              style={{ width: 200 }}
+              className="timeInput"
               max={Number(end)}
             />
             <InputNumber
               placeholder="End Time (Unix)"
               onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-              style={{ width: 200 }}
+              className="timeInput"
               min={Number(start)}
             />
           </div>
@@ -160,24 +189,20 @@ export default function EntryDetail(props: Readonly<Props>) {
             showTime
             placeholder={["Start Time (UTC)", "End Time (UTC)"]}
             onChange={handleDateChange}
-            style={{ maxWidth: 410 }}
+            className="datePicker"
           />
         )}
         <InputNumber
           min={1}
           addonBefore="Limit"
           onChange={(value) => setLimit(value ? Number(value) : undefined)}
-          style={{ width: 150 }}
+          className="limitInput"
           defaultValue={limit}
         />
+        <Button onClick={handleFetchRecords} type="primary">
+          Fetch Records
+        </Button>
       </div>
-      <Button
-        onClick={handleFetchRecords}
-        type="primary"
-        style={{ marginBottom: "1em", marginTop: "1em" }}
-      >
-        Fetch Records
-      </Button>
       <Table columns={columns} dataSource={data} />
     </div>
   );
