@@ -22,12 +22,6 @@ interface Props {
   permissions?: TokenPermissions;
 }
 
-type LabelMap = Record<string, string | number | boolean | bigint>;
-
-const formatLabels = (labels: LabelMap): string => {
-  return JSON.stringify(labels, null, 2);
-};
-
 export default function EntryDetail(props: Readonly<Props>) {
   const { bucketName, entryName } = useParams() as {
     bucketName: string;
@@ -147,7 +141,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     timestamp: record.time,
     size: prettierBytes(Number(record.size)),
     contentType: record.contentType,
-    labels: formatLabels(record.labels as LabelMap),
+    labels: JSON.stringify(record.labels, null, 2),
   }));
 
   return (
