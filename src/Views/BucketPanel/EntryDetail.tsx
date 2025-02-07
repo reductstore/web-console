@@ -25,9 +25,7 @@ interface Props {
 type LabelMap = Record<string, string | number | boolean | bigint>;
 
 const formatLabels = (labels: LabelMap): string => {
-  return Object.entries(labels)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(", ");
+  return JSON.stringify(labels, null, 2);
 };
 
 export default function EntryDetail(props: Readonly<Props>) {
