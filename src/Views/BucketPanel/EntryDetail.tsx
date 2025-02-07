@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useHistory, useParams } from "react-router-dom";
 import { Client, EntryInfo, TokenPermissions } from "reduct-js";
 import {
   Table,
@@ -35,6 +35,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     bucketName: string;
     entryName: string;
   };
+  const history = useHistory();
   const [isLoading, setIsLoading] = useState(false);
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
@@ -159,9 +160,8 @@ export default function EntryDetail(props: Readonly<Props>) {
           bucketName={bucketName}
           permissions={props.permissions}
           showUnix={showUnix}
-          onDelete={() => {
-            /* implement delete handling */
-          }}
+          client={props.client}
+          onRemoved={() => history.push(`/buckets/${bucketName}`)}
         />
       )}
       <Typography.Title level={3}>Records</Typography.Title>
