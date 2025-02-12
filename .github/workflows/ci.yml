@@ -26,6 +26,10 @@ jobs:
         run: npm run lint
       - name: Run Tests
         run: npm test -- --watchAll=false
+      - name: Build App
+        run: npm run build
+        env:
+          CI: true
 
   deploy:
     name: Publish Docker image
