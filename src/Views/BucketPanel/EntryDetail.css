@@ -1,0 +1,28 @@
+.entryDetail {
+  margin: 1.4em;
+}
+
+.detailControls {
+  display: flex;
+  gap: 1em;
+  flex-wrap: wrap;
+  margin-bottom: 1em;
+  margin-top: 0.5em;
+}
+
+.timeInputs {
+  display: flex;
+  gap: 10px;
+}
+
+.timeInput {
+  width: 200px;
+}
+
+.datePicker {
+  width: 410px;
+}
+
+.limitInput {
+  width: 120px;
+}

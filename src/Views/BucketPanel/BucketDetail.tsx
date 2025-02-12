@@ -7,7 +7,7 @@ import {
   TokenPermissions,
   APIError,
 } from "reduct-js";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -131,7 +131,16 @@ export default function BucketDetail(props: Readonly<Props>) {
   });
 
   const columns = [
-    { title: "Name", dataIndex: "name", key: "name" },
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string) => (
+        <Link to={`/buckets/${info?.name}/entries/${name}`}>
+          <b>{name}</b>
+        </Link>
+      ),
+    },
     { title: "Records", dataIndex: "recordCount", key: "recordCount" },
     { title: "Blocks", dataIndex: "blockCount", key: "blockCount" },
     { title: "Size", dataIndex: "size", key: "size" },

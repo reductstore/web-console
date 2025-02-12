@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RS-582: fix remove modal to display error messages, [PR-75](https://github.com/reductstore/web-console/pull/75)
 
+### Added:
+
+- RS-580: browse records in the console, [PR-76](https://github.com/reductstore/web-console/pull/76)
+
 ### [1.8.1] - 2024-12-16
 
 ### Fixed
