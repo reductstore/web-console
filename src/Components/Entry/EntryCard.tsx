@@ -115,7 +115,7 @@ export default function EntryCard(props: Readonly<Props>) {
         onRemove={() => removeEntry(entryToRemove)}
         onCancel={() => setEntryToRemove("")}
         resourceType="entry"
-        confirm={entryToRemove !== ""}
+        open={entryToRemove !== ""}
       />
     </>
   );
