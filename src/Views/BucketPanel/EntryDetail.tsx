@@ -43,6 +43,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       const bucket = await props.client.getBucket(bucketName);
       for await (const record of bucket.query(entryName, start, end, {
         limit: limit,
+        head: true,
       })) {
         setRecords((records) => [...records, record]);
       }
