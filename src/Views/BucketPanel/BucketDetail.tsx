@@ -29,7 +29,9 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [entries, setEntries] = useState<EntryInfo[]>([]);
   const [entryToRemove, setEntryToRemove] = useState<string>("");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [entryToRename, setEntryToRename] = useState<string>("");
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
 
   const getEntries = async () => {
@@ -78,15 +80,28 @@ export default function BucketDetail(props: Readonly<Props>) {
 
   const removeEntry = async (name: string) => {
     if (!info) {
-      console.error("No bucket info");
+      setRemoveError("No bucket info");
       return;
     }
 
-    const { client } = props;
-    const bucket: Bucket = await client.getBucket(info.name);
-    await bucket.removeEntry(name);
-    setEntryToRemove("");
-    getEntries().then();
+    try {
+      const { client } = props;
+      const bucket: Bucket = await client.getBucket(info.name);
+      await bucket.removeEntry(name);
+      setEntryToRemove("");
+      getEntries().then();
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove entry.");
+    }
+  };
+
+  const handleOpenRemoveModal = (entryName: string) => {
+    setEntryToRemove(entryName);
+    setIsRemoveModalOpen(true);
   };
 
   useEffect(() => {
@@ -151,7 +166,7 @@ export default function BucketDetail(props: Readonly<Props>) {
                 key={entry.name}
                 style={{ color: "red" }}
                 title="Remove entry"
-                onClick={() => setEntryToRemove(entry.name)}
+                onClick={() => handleOpenRemoveModal(entry.name)}
               />
             </Flex>
           );
@@ -187,9 +202,13 @@ export default function BucketDetail(props: Readonly<Props>) {
         key={entryToRemove}
         name={entryToRemove}
         onRemove={() => removeEntry(entryToRemove)}
-        onCancel={() => setEntryToRemove("")}
+        onCancel={() => {
+          setRemoveError(null);
+          setIsRemoveModalOpen(false);
+        }}
         resourceType="entry"
-        confirm={entryToRemove !== ""}
+        open={isRemoveModalOpen}
+        errorMessage={removeError}
       />
       <RenameModal
         name={entryToRename}

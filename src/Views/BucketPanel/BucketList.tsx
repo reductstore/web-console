@@ -23,11 +23,12 @@ interface Props {
 export default function BucketList(props: Readonly<Props>) {
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [creatingBucket, setCreatingBucket] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(false);
   const [bucketToRemove, setBucketToRemove] = useState("");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [bucketToRename, setBucketToRename] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const getBuckets = async () => {
     try {
@@ -45,9 +46,18 @@ export default function BucketList(props: Readonly<Props>) {
       const bucket = await client.getBucket(name);
       await bucket.remove();
       setBuckets(buckets.filter((bucket) => bucket.name !== name));
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
     } catch (err) {
       console.error(err);
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove bucket.");
     }
+  };
+
+  const handleOpenRemoveModal = (name: string) => {
+    setBucketToRemove(name);
+    setIsRemoveModalOpen(true);
   };
 
   const renameBucket = async (name: string) => {
@@ -73,21 +83,16 @@ export default function BucketList(props: Readonly<Props>) {
     }
   };
 
+  const handleOpenRenameModal = (bucketName: string) => {
+    setBucketToRename(bucketName);
+    setIsRenameModalOpen(true);
+  };
+
   useEffect(() => {
     getBuckets();
     const interval = setInterval(() => getBuckets(), 5000);
     return () => clearInterval(interval);
   }, [creatingBucket]);
-
-  const handleRemove = (bucketName: string) => {
-    setBucketToRemove(bucketName);
-    setConfirmRemove(true);
-  };
-
-  const handleOpenRenameModal = (bucketName: string) => {
-    setBucketToRename(bucketName);
-    setIsRenameModalOpen(true);
-  };
 
   const data = buckets.map((bucket) => {
     const printIsoDate = (timestamp: bigint) =>
@@ -160,7 +165,7 @@ export default function BucketList(props: Readonly<Props>) {
                 key={`remove-${record.name}`}
                 title="Remove"
                 style={{ color: "red" }}
-                onClick={() => handleRemove(record.name)}
+                onClick={() => handleOpenRemoveModal(record.name)}
               />
             </Flex>
           );
@@ -203,9 +208,13 @@ export default function BucketList(props: Readonly<Props>) {
       <RemoveConfirmationModal
         name={bucketToRemove}
         onRemove={() => removeBucket(bucketToRemove)}
-        onCancel={() => setConfirmRemove(false)}
-        confirm={confirmRemove}
+        onCancel={() => {
+          setIsRemoveModalOpen(false);
+          setRemoveError(null);
+        }}
         resourceType="bucket"
+        open={isRemoveModalOpen}
+        errorMessage={removeError}
       />
       <RenameModal
         name={bucketToRename}
