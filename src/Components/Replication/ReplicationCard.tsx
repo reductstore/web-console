@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { Card, Col, Modal, Row, Statistic, Tag } from "antd";
-import { Client, FullReplicationInfo, TokenPermissions } from "reduct-js";
+import {
+  APIError,
+  Client,
+  FullReplicationInfo,
+  TokenPermissions,
+} from "reduct-js";
 import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import "./ReplicationCard.css";
@@ -20,14 +25,23 @@ interface Props {
 }
 
 export default function ReplicationCard(props: Readonly<Props>) {
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [changeSettings, setChangeSettings] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const { client, replication, index } = props;
   const { info, diagnostics } = replication;
 
   const onRemove = async () => {
-    await client.deleteReplication(info.name);
-    props.onRemove(info.name);
+    try {
+      await client.deleteReplication(info.name);
+      props.onRemove(info.name);
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove replication.");
+    }
   };
 
   const actions = [];
@@ -47,7 +61,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
           title="Remove"
           key="delete"
           style={{ color: "red" }}
-          onClick={() => setConfirmRemove(true)}
+          onClick={() => setIsRemoveModalOpen(true)}
         />,
       );
     }
@@ -90,9 +104,13 @@ export default function ReplicationCard(props: Readonly<Props>) {
       <RemoveConfirmationModal
         name={info.name}
         onRemove={onRemove}
-        onCancel={() => setConfirmRemove(false)}
-        confirm={confirmRemove}
-        resourceType="bucket"
+        onCancel={() => {
+          setIsRemoveModalOpen(false);
+          setRemoveError(null);
+        }}
+        open={isRemoveModalOpen}
+        resourceType="replication"
+        errorMessage={removeError}
       />
       <Modal
         title="Settings"

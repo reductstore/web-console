@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Card, Col, Modal, Row, Statistic, Tag } from "antd";
 import humanizeDuration from "humanize-duration";
-import { Bucket, BucketInfo, Client, TokenPermissions } from "reduct-js";
+import {
+  APIError,
+  Bucket,
+  BucketInfo,
+  Client,
+  TokenPermissions,
+} from "reduct-js";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -33,8 +39,9 @@ export const getHistory = (interval: {
 };
 
 export default function BucketCard(props: Readonly<Props>) {
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [changeSettings, setChangeSettings] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [bucketInfo, setBucketInfo] = useState(props.bucketInfo);
   const { client, index } = props;
 
@@ -43,9 +50,17 @@ export default function BucketCard(props: Readonly<Props>) {
   }, [props.bucketInfo]);
 
   const onRemove = async () => {
-    const bucket: Bucket = await client.getBucket(bucketInfo.name);
-    await bucket.remove();
-    props.onRemoved(bucketInfo.name);
+    try {
+      const bucket: Bucket = await client.getBucket(bucketInfo.name);
+      await bucket.remove();
+      props.onRemoved(bucketInfo.name);
+      setRemoveError(null);
+      setIsRemoveModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove bucket.");
+    }
   };
 
   const actions = [];
@@ -65,7 +80,7 @@ export default function BucketCard(props: Readonly<Props>) {
           title="Remove"
           key="delete"
           style={{ color: "red" }}
-          onClick={() => setConfirmRemove(true)}
+          onClick={() => setIsRemoveModalOpen(true)}
         />,
       );
     }
@@ -112,9 +127,13 @@ export default function BucketCard(props: Readonly<Props>) {
       <RemoveConfirmationModal
         name={bucketInfo.name}
         onRemove={onRemove}
-        onCancel={() => setConfirmRemove(false)}
-        confirm={confirmRemove}
+        onCancel={() => {
+          setIsRemoveModalOpen(false);
+          setRemoveError(null);
+        }}
+        open={isRemoveModalOpen}
         resourceType="bucket"
+        errorMessage={removeError}
       />
       <Modal
         title="Settings"
