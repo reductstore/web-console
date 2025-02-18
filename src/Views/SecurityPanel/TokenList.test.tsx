@@ -4,6 +4,7 @@ import { Client, Token } from "reduct-js";
 import { mount } from "enzyme";
 import TokenList from "./TokenList";
 import { MemoryRouter } from "react-router-dom";
+import { act } from "react-dom/test-utils";
 
 describe("TokenList", () => {
   const client = new Client("");
@@ -47,5 +48,31 @@ describe("TokenList", () => {
     button.hostNodes().props().onClick();
 
     // No idea how to mock history and use MemoryRouter in the same test
+  });
+
+  it("should show loading state while fetching tokens", async () => {
+    let resolveGetTokens: (value: Token[]) => void;
+    const getTokensPromise = new Promise<Token[]>((resolve) => {
+      resolveGetTokens = resolve;
+    });
+
+    client.getTokenList = jest.fn().mockReturnValue(getTokensPromise);
+
+    const panel = mount(
+      <MemoryRouter>
+        <TokenList client={client} />
+      </MemoryRouter>,
+    );
+
+    expect(panel.find(".ant-spin").exists()).toBe(true);
+
+    await act(async () => {
+      resolveGetTokens([
+        { name: "token-1", createdAt: 100000, isProvisioned: true } as Token,
+      ]);
+    });
+
+    panel.update();
+    expect(panel.find(".ant-spin").exists()).toBe(false);
   });
 });
