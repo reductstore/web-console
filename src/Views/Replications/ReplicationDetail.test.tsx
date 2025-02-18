@@ -89,13 +89,13 @@ describe("ReplicationDetail", () => {
   });
 
   it("displays replication card", async () => {
-    await wrapper.update();
+    wrapper.update();
     const replicationCard = wrapper.find("ReplicationCard");
     expect(replicationCard.exists()).toBeTruthy();
   });
 
   it("displays replication card with correct props", async () => {
-    await wrapper.update();
+    wrapper.update();
     const replicationCard = wrapper.find("ReplicationCard");
     expect(replicationCard.prop("replication")).toMatchObject({
       info: {
@@ -138,7 +138,7 @@ describe("ReplicationDetail", () => {
   });
 
   it("displays replication errors", async () => {
-    await wrapper.update();
+    wrapper.update();
     const replicationErrors = wrapper.find("Table");
     expect(replicationErrors.exists()).toBeTruthy();
     expect(replicationErrors.last().prop("dataSource")).toEqual([
