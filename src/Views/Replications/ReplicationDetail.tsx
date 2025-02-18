@@ -20,13 +20,17 @@ export default function ReplicationDetail(props: Readonly<Props>) {
 
   const [replication, setReplication] = useState<FullReplicationInfo>();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
+  const [isLoadingReplication, setIsLoadingReplication] = useState(true);
 
   const getReplication = async () => {
+    setIsLoadingReplication(true);
     try {
       const { client } = props;
       setReplication(await client.getReplication(name));
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoadingReplication(false);
     }
   };
 
@@ -101,7 +105,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
             style={{ margin: "0.6em" }}
             columns={columns}
             dataSource={replicationErrors}
-            loading={!replicationErrors || !replicationErrors.length}
+            loading={isLoadingReplication}
           />
         </>
       )}
