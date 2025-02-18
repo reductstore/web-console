@@ -204,4 +204,29 @@ describe("BucketDetail", () => {
     await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
     expect(bucket.renameEntry).toBeCalledWith("EmptyEntry", "NewEntryName");
   });
+
+  it("should show loading state while fetching entries", async () => {
+    let resolveGetInfo: (value: BucketInfo) => void;
+    const getInfoPromise = new Promise<BucketInfo>((resolve) => {
+      resolveGetInfo = resolve;
+    });
+    bucket.getInfo = jest.fn().mockReturnValue(getInfoPromise);
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+    expect(detail.find(".ant-spin").exists()).toBe(true);
+    await act(async () => {
+      resolveGetInfo({
+        name: "BucketWithData",
+        entryCount: 2n,
+        size: 10220n,
+        oldestRecord: 0n,
+        latestRecord: 10000n,
+      } as BucketInfo);
+    });
+    detail.update();
+    expect(detail.find(".ant-spin").exists()).toBe(false);
+  });
 });
