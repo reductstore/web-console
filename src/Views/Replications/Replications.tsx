@@ -23,17 +23,21 @@ interface Props {
 export default function Replications(props: Readonly<Props>) {
   const [replications, setReplications] = useState<ReplicationInfo[]>([]);
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
+  const [isLoadingReplications, setIsLoadingReplications] = useState(true);
 
   const [creatingReplication, setCreatingReplication] = useState(false);
 
   const getReplications = async () => {
     try {
+      setIsLoadingReplications(true);
       const { client } = props;
       const replicationList: ReplicationInfo[] =
         await client.getReplicationList();
       setReplications(replicationList);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoadingReplications(false);
     }
   };
 
@@ -136,7 +140,7 @@ export default function Replications(props: Readonly<Props>) {
       <Table
         columns={columns}
         dataSource={data}
-        loading={replications.length == 0}
+        loading={isLoadingReplications}
       />
     </div>
   );
