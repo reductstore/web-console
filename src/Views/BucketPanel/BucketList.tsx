@@ -29,14 +29,18 @@ export default function BucketList(props: Readonly<Props>) {
   const [bucketToRename, setBucketToRename] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getBuckets = async () => {
     try {
+      setIsLoading(true);
       const { client } = props;
       const bucketList: BucketInfo[] = await client.getBucketList();
       setBuckets(bucketList);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -200,11 +204,7 @@ export default function BucketList(props: Readonly<Props>) {
           />
         </Modal>
       </Typography.Title>
-      <Table
-        columns={columns}
-        dataSource={data}
-        loading={buckets.length == 0}
-      />
+      <Table columns={columns} dataSource={data} loading={isLoading} />
       <RemoveConfirmationModal
         name={bucketToRemove}
         onRemove={() => removeBucket(bucketToRemove)}
