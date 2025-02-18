@@ -54,7 +54,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleFetchRecords = () => {
+  const handleFetchRecordsClick = () => {
     if (!isLoading) {
       getRecords(start, end, limit);
     }
@@ -109,7 +109,7 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   useEffect(() => {
     getEntryInfo();
-    handleFetchRecords();
+    getRecords(start, end, limit);
   }, [bucketName, entryName]);
 
   const columns = [
@@ -192,7 +192,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           className="limitInput"
           defaultValue={limit}
         />
-        <Button onClick={handleFetchRecords} type="primary">
+        <Button onClick={handleFetchRecordsClick} type="primary">
           Fetch Records
         </Button>
       </div>
