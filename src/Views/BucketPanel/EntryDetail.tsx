@@ -28,13 +28,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     entryName: string;
   };
   const history = useHistory();
-  const [isLoading, setIsLoading] = useState(false);
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
   const [end, setEnd] = useState<bigint | undefined>(undefined);
   const [limit, setLimit] = useState<number | undefined>(10);
   const [showUnix, setShowUnix] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
+  const [isLoading, setIsLoading] = useState(true);
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
@@ -196,7 +196,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           Fetch Records
         </Button>
       </div>
-      <Table columns={columns} dataSource={data} />
+      <Table columns={columns} dataSource={data} loading={isLoading} />
     </div>
   );
 }
