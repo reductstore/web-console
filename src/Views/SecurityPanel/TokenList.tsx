@@ -11,15 +11,25 @@ interface Props {
 export default function TokenList(props: Readonly<Props>) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const history = useHistory();
 
   useEffect(() => {
     const { client } = props;
+    setIsLoading(true);
     client
       .getTokenList()
-      .then((tokens) => setTokens(tokens))
-      .catch((err) => setError(err.message));
+      .then((tokens) => {
+        setTokens(tokens);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const columns = [
@@ -78,7 +88,7 @@ export default function TokenList(props: Readonly<Props>) {
         id="TokenTable"
         columns={columns}
         dataSource={tokens}
-        loading={tokens.length == 0}
+        loading={isLoading}
       />
     </div>
   );
