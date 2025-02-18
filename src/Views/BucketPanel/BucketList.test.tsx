@@ -5,6 +5,7 @@ import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
 import { BucketInfo, Client } from "reduct-js";
 import { MemoryRouter } from "react-router-dom";
+import { act } from "react-dom/test-utils";
 
 describe("BucketList", () => {
   const client = new Client("");
@@ -145,5 +146,38 @@ describe("BucketList", () => {
 
     expect(renameModal.exists()).toBe(false);
     expect(removeModal.exists()).toBe(true);
+  });
+
+  it("should show loading state while fetching buckets", async () => {
+    let resolveGetBuckets: (value: BucketInfo[]) => void;
+    const getBucketsPromise = new Promise<BucketInfo[]>((resolve) => {
+      resolveGetBuckets = resolve;
+    });
+
+    client.getBucketList = jest.fn().mockReturnValue(getBucketsPromise);
+
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+
+    expect(panel.find(".ant-spin").exists()).toBe(true);
+
+    await act(async () => {
+      resolveGetBuckets([
+        {
+          name: "BucketWithData",
+          entryCount: 2n,
+          size: 10220n,
+          oldestRecord: 0n,
+          latestRecord: 10000n,
+          isProvisioned: true,
+        } as BucketInfo,
+      ]);
+    });
+
+    panel.update();
+    expect(panel.find(".ant-spin").exists()).toBe(false);
   });
 });
