@@ -196,7 +196,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           Fetch Records
         </Button>
       </div>
-      <Table columns={columns} dataSource={data} loading={isLoading} />
+      <Table columns={columns} dataSource={data} />
     </div>
   );
 }
