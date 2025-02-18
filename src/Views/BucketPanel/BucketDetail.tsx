@@ -33,8 +33,10 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [entryToRename, setEntryToRename] = useState<string>("");
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getEntries = async () => {
+    setIsLoading(true);
     try {
       const { client } = props;
       const bucket: Bucket = await client.getBucket(name);
@@ -42,6 +44,8 @@ export default function BucketDetail(props: Readonly<Props>) {
       setEntries(await bucket.getEntryList());
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -205,7 +209,7 @@ export default function BucketDetail(props: Readonly<Props>) {
         style={{ margin: "0.6em" }}
         columns={columns}
         dataSource={data}
-        loading={entries.length == 0}
+        loading={isLoading}
       />
       <RemoveConfirmationModal
         key={entryToRemove}
