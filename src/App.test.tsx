@@ -24,6 +24,27 @@ describe("App", () => {
     mockJSDOM();
   });
 
+  it("should have a link to dashboard panel", async () => {
+    backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+    backendAPI.me = jest
+      .fn()
+      .mockResolvedValue({ permissions: { fullAccess: false } } as Token);
+    routeProps.history.push = jest.fn();
+
+    const app = mount(
+      <MemoryRouter>
+        <App {...routeProps} backendApi={backendAPI} />
+      </MemoryRouter>,
+    );
+
+    await new Promise(process.nextTick);
+    app.update();
+
+    const bucketItem = app.find('li[data-menu-id$="dashboard"]');
+    bucketItem.simulate("click");
+    expect(routeProps.history.push).toBeCalledWith("/dashboard");
+  });
+
   it("should have a link to bucket panel", async () => {
     backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
     backendAPI.me = jest
@@ -43,6 +64,27 @@ describe("App", () => {
     const bucketItem = app.find('li[data-menu-id$="buckets"]');
     bucketItem.simulate("click");
     expect(routeProps.history.push).toBeCalledWith("/buckets");
+  });
+
+  it("should have a link to replication panel", async () => {
+    backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+    backendAPI.me = jest
+      .fn()
+      .mockResolvedValue({ permissions: { fullAccess: true } } as Token);
+    routeProps.history.push = jest.fn();
+
+    const app = mount(
+      <MemoryRouter>
+        <App {...routeProps} backendApi={backendAPI} />
+      </MemoryRouter>,
+    );
+
+    await new Promise(process.nextTick);
+    app.update();
+
+    const securityItem = app.find('li[data-menu-id$="replications"]');
+    securityItem.simulate("click");
+    expect(routeProps.history.push).toBeCalledWith("/replications");
   });
 
   it("should have a link to security panel", async () => {
@@ -82,5 +124,41 @@ describe("App", () => {
     app.update();
 
     expect(app.find('li[data-menu-id$="security"]').exists()).toBeFalsy();
+  });
+
+  it("should hide replications panel", async () => {
+    backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+    backendAPI.me = jest
+      .fn()
+      .mockResolvedValue({ permissions: { fullAccess: false } } as Token);
+
+    const app = mount(
+      <MemoryRouter>
+        <App {...routeProps} backendApi={backendAPI} />
+      </MemoryRouter>,
+    );
+
+    await new Promise(process.nextTick);
+    app.update();
+
+    expect(app.find('li[data-menu-id$="replications"]').exists()).toBeFalsy();
+  });
+
+  it("should show help menu", async () => {
+    backendAPI.isAllowed = jest.fn().mockResolvedValue(true);
+    backendAPI.me = jest
+      .fn()
+      .mockResolvedValue({ permissions: { fullAccess: false } } as Token);
+
+    const app = mount(
+      <MemoryRouter>
+        <App {...routeProps} backendApi={backendAPI} />
+      </MemoryRouter>,
+    );
+
+    await new Promise(process.nextTick);
+    app.update();
+
+    expect(app.find(".help-menu-item").exists()).toBeTruthy();
   });
 });
