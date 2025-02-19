@@ -1,11 +1,8 @@
-.App {
-}
-
 .Meta {
   position: absolute;
   bottom: 0;
   color: #cccccc;
-  margin: 20px;
+  margin: 20px 30px 15px;
 }
 
 .MetaItem {
@@ -13,16 +10,32 @@
 }
 
 .Sider {
+  background-color: #231b49;
 }
 
 .MenuItem {
   color: #cccccc;
   font-size: larger;
   font-weight: bold;
-  padding: 10px;
 }
 
 .ant-menu-item-active {
   background-color: #cccccc !important;
   color: #231b49 !important;
+}
+
+.LogoContainer {
+  padding: 16px;
+  text-align: center;
+  height: 100px;
+}
+
+.MenuContainer {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+}
+
+.MainMenu {
+  flex-grow: 1;
 }

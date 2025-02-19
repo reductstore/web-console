@@ -1,6 +1,7 @@
 import React from "react";
 import { ConfigProvider, Divider, Image, Layout, Menu } from "antd";
 import { RouteComponentProps } from "react-router-dom";
+import type { MenuProps } from "antd";
 
 import logo from "./main_logo.png";
 import "./App.css";
@@ -14,6 +15,7 @@ import {
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { TokenPermissions } from "reduct-js";
+import { getHelpMenuItems } from "./Components/HelpMenu";
 
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
@@ -62,98 +64,118 @@ export default class App extends React.Component<Props, State> {
     const version = process.env.REACT_APP_VERSION;
     const { permissions } = this.state;
 
-    return (
-      <div className="App">
-        <ConfigProvider
-          theme={{
-            token: {
-              colorPrimary: PRIMARY_COLOR,
-              colorLink: PRIMARY_COLOR,
-            },
-            components: {
-              Menu: {
-                colorBgContainer: PRIMARY_COLOR,
-                colorText: "#cccccc",
-                colorLink: PRIMARY_COLOR,
-                colorLinkHover: "#111",
-              },
-            },
-          }}
-        >
-          <Layout style={{ minHeight: "100vh" }}>
-            <Layout.Sider
-              className="Sider"
-              style={{ backgroundColor: PRIMARY_COLOR }}
-            >
-              <Menu
-                className="MenuItem"
-                selectable={false}
-                triggerSubMenuAction="click"
-              >
-                <a
-                  href="https://www.reduct.store"
-                  title="https://www.reduct.store"
-                >
-                  <Image src={logo} preview={false} />
-                </a>
-                <Divider />
-                {permissions && (
-                  <>
-                    <Menu.Item
-                      icon={<BorderOuterOutlined />}
-                      onClick={() => history.push("/dashboard")}
-                    >
-                      Dashboard
-                    </Menu.Item>
-                    <Menu.Item
-                      id="Buckets"
-                      icon={<DatabaseOutlined />}
-                      onClick={() => history.push("/buckets")}
-                    >
-                      Buckets
-                    </Menu.Item>
-                    {permissions.fullAccess && (
-                      <>
-                        <Menu.Item
-                          id="Replications"
-                          icon={<ShareAltOutlined />}
-                          onClick={() => history.push("/replications")}
-                        >
-                          Replications
-                        </Menu.Item>
-                        <Menu.Item
-                          id="Security"
-                          icon={<LockOutlined />}
-                          onClick={() => history.push("/tokens")}
-                        >
-                          Security
-                        </Menu.Item>
-                      </>
-                    )}
-                    <Divider style={{ borderColor: "white" }} />
-                    <Menu.Item onClick={onLogout} icon={<LogoutOutlined />}>
-                      Logout
-                    </Menu.Item>
-                  </>
-                )}
-              </Menu>
-              <div className="Meta">
-                <div className="MetaItem">Web Console: v{version}</div>
-              </div>
-            </Layout.Sider>
+    const getMenuItems = (): MenuProps["items"] => {
+      const items: MenuProps["items"] = [];
 
-            <Layout>
-              <Layout.Content>
-                <Routes
-                  {...this.props}
-                  permissions={this.state.permissions}
-                  onLogin={onLogin}
-                />
-              </Layout.Content>
-            </Layout>
+      if (permissions) {
+        items.push(
+          {
+            key: "dashboard",
+            icon: <BorderOuterOutlined />,
+            label: "Dashboard",
+            onClick: () => history.push("/dashboard"),
+          },
+          {
+            key: "buckets",
+            icon: <DatabaseOutlined />,
+            label: "Buckets",
+            onClick: () => history.push("/buckets"),
+          },
+        );
+
+        if (permissions.fullAccess) {
+          items.push(
+            {
+              key: "replications",
+              icon: <ShareAltOutlined />,
+              label: "Replications",
+              onClick: () => history.push("/replications"),
+            },
+            {
+              key: "security",
+              icon: <LockOutlined />,
+              label: "Security",
+              onClick: () => history.push("/tokens"),
+            },
+          );
+        }
+
+        items.push(...getHelpMenuItems(true));
+      } else {
+        items.push(...getHelpMenuItems(false));
+      }
+
+      return items;
+    };
+
+    return (
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: PRIMARY_COLOR,
+            colorLink: PRIMARY_COLOR,
+          },
+          components: {
+            Menu: {
+              colorBgContainer: PRIMARY_COLOR,
+              colorText: "#cccccc",
+              colorLink: PRIMARY_COLOR,
+              colorLinkHover: "#111",
+            },
+          },
+        }}
+      >
+        <Layout style={{ minHeight: "100vh" }}>
+          <Layout.Sider className="Sider">
+            <div className="LogoContainer">
+              <a
+                href="https://www.reduct.store"
+                title="https://www.reduct.store"
+              >
+                <Image src={logo} preview={false} />
+              </a>
+            </div>
+            <div className="MenuContainer">
+              <Menu
+                className="MenuItem MainMenu"
+                selectable={false}
+                mode="inline"
+                items={getMenuItems()}
+              />
+              <Divider />
+              {permissions && (
+                <>
+                  <Menu
+                    className="MenuItem LogoutMenu"
+                    selectable={false}
+                    mode="inline"
+                    items={[
+                      {
+                        key: "logout",
+                        icon: <LogoutOutlined />,
+                        label: "Logout",
+                        onClick: onLogout,
+                      },
+                    ]}
+                  />
+                </>
+              )}
+            </div>
+            <div className="Meta">
+              <div className="MetaItem">Web Console v{version}</div>
+            </div>
+          </Layout.Sider>
+          <Layout>
+            <Layout.Content>
+              <Routes
+                {...this.props}
+                permissions={this.state.permissions}
+                onLogin={onLogin}
+              />
+            </Layout.Content>
           </Layout>
-        </ConfigProvider>
-      </div>
+        </Layout>
+      </ConfigProvider>
     );
   }
 }
