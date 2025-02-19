@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RS-582: fix remove modal to display error messages, [PR-75](https://github.com/reductstore/web-console/pull/75)
 - RS-600: fix CI workflow and corrected a prop name in EntryCard component, [PR-77](https://github.com/reductstore/web-console/pull/77)
 - RS-603: fix table loading state to display empty table when no data is available, [PR-78](https://github.com/reductstore/web-console/pull/78)
+- RS-588: add useful links in the side menu, [PR-79](https://github.com/reductstore/web-console/pull/79)
 
 ### Added:
 
