@@ -4,6 +4,14 @@
   margin: 1em;
 }
 
+.Panel #ServerInfo a {
+  text-decoration: underline;
+}
+
+.Panel #ServerInfo a:hover {
+  opacity: 0.8;
+}
+
 .warningIcon {
   color: #faac14;
   display: inline-block;
