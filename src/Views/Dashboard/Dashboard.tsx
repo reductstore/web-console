@@ -151,7 +151,18 @@ export default function Dashboard(props: Readonly<Props>) {
     <div className="Panel">
       <Card
         id="ServerInfo"
-        title={`Server v${info.version}`}
+        title={
+          <>
+            Server{" "}
+            <a
+              href="https://github.com/reductstore/reductstore/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              v{info.version}
+            </a>
+          </>
+        }
         actions={allowedActions}
         tabList={tabList}
         activeTabKey={activeTabKey}

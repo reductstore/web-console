@@ -162,7 +162,16 @@ export default class App extends React.Component<Props, State> {
               )}
             </div>
             <div className="Meta">
-              <div className="MetaItem">Web Console v{version}</div>
+              <div className="MetaItem">
+                Web Console{" "}
+                <a
+                  href="https://github.com/reductstore/web-console/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  v{version}
+                </a>
+              </div>
             </div>
           </Layout.Sider>
           <Layout>

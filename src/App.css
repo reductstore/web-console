@@ -9,6 +9,10 @@
   padding: 5px 0;
 }
 
+.MetaItem a {
+  color: #cccccc;
+}
+
 .Sider {
   background-color: #231b49;
 }
