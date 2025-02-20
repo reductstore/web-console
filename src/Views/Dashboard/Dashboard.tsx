@@ -155,7 +155,7 @@ export default function Dashboard(props: Readonly<Props>) {
           <>
             Server{" "}
             <a
-              href="https://github.com/reductstore/reductstore/releases"
+              href={`https://github.com/reductstore/reductstore/releases/tag/v${info.version}`}
               target="_blank"
               rel="noopener noreferrer"
             >

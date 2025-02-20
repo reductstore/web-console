@@ -165,7 +165,7 @@ export default class App extends React.Component<Props, State> {
               <div className="MetaItem">
                 Web Console{" "}
                 <a
-                  href="https://github.com/reductstore/web-console/releases"
+                  href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
