@@ -169,7 +169,7 @@ describe("EntryDetail", () => {
     wrapper.update();
 
     const downloadLink = wrapper.find("a");
-    expect(downloadLink.length).toBe(2);
+    expect(downloadLink.length).toBe(3);
     expect(downloadLink.at(0).props().children).toBe("testBucket");
     expect(downloadLink.at(1)).toBeDefined();
   });
