@@ -64,5 +64,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "dependencies": {
+    "codemirror": "^5.65.18",
+    "react-codemirror2": "^8.0.1"
   }
 }
