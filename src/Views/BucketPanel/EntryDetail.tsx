@@ -9,15 +9,18 @@ import {
   InputNumber,
   Checkbox,
   Alert,
-  Input,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { DownloadOutlined } from "@ant-design/icons";
+import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 
 interface Props {
   client: Client;
@@ -159,13 +162,11 @@ export default function EntryDetail(props: Readonly<Props>) {
     labels: JSON.stringify(record.labels, null, 2),
   }));
 
-  const handleJsonChange = (value: string) => {
-    setWhenCondition(value);
+  const formatJSON = (jsonString: string): string => {
     try {
-      JSON.parse(value);
-      setWhenError("");
-    } catch (e) {
-      return;
+      return JSON.stringify(JSON.parse(jsonString), null, 2);
+    } catch {
+      return jsonString;
     }
   };
 
@@ -186,9 +187,9 @@ export default function EntryDetail(props: Readonly<Props>) {
         Unix Timestamp
       </Checkbox>
       <div className="detailControls">
-        <div>
+        <div className="timeInputs">
           {showUnix ? (
-            <div className="timeInputs">
+            <>
               <InputNumber
                 placeholder="Start Time (Unix)"
                 onChange={(value) =>
@@ -203,7 +204,7 @@ export default function EntryDetail(props: Readonly<Props>) {
                 className="timeInput"
                 min={Number(start)}
               />
-            </div>
+            </>
           ) : (
             <DatePicker.RangePicker
               showTime
@@ -222,10 +223,24 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
         <div className="jsonFilterSection">
           <Typography.Text>Filter Records (JSON):</Typography.Text>
-          <Input.TextArea
+          <CodeMirror
+            className="jsonEditor"
             value={whenCondition}
-            onChange={(e) => handleJsonChange(e.target.value)}
-            autoSize={{ minRows: 3 }}
+            options={{
+              mode: { name: "javascript", json: true },
+              theme: "default",
+              lineNumbers: true,
+              lineWrapping: true,
+              viewportMargin: Infinity,
+              matchBrackets: true,
+              autoCloseBrackets: true,
+            }}
+            onBeforeChange={(editor, data, value) => {
+              setWhenCondition(value);
+            }}
+            onBlur={(editor) => {
+              setWhenCondition(formatJSON(editor.getValue()));
+            }}
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
