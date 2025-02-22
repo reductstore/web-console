@@ -15,12 +15,11 @@ import { DownloadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
 
 interface Props {
   client: Client;
