@@ -42,7 +42,13 @@
 .MenuContainer {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px);
+}
+
+.Divider {
+  height: 1px;
+  background-color: #cccccc;
+  opacity: 1;
+  margin: 20px 10px;
 }
 
 .MainMenu {
