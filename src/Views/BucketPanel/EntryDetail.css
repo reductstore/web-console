@@ -25,6 +25,7 @@
 
 .limitInput {
   width: 120px;
+  margin-left: 10px;
 }
 
 .jsonFilterSection {
@@ -42,4 +43,8 @@
   display: block;
   margin-top: 8px;
   font-size: 12px;
+}
+
+.fetchButton {
+  display: block;
 }
