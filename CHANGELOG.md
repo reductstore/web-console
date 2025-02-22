@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RS-580: browse records in the console, [PR-76](https://github.com/reductstore/web-console/pull/76)
 - RS-588: add useful links in the side menu, [PR-79](https://github.com/reductstore/web-console/pull/79)
+- RS-594: filter data with when conditions in object explorer, [PR-80](https://github.com/reductstore/web-console/pull/80)
 
 ### [1.8.1] - 2024-12-16
 
