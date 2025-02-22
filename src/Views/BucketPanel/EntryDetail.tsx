@@ -9,11 +9,10 @@ import {
   InputNumber,
   Checkbox,
   Alert,
+  Input,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { DownloadOutlined } from "@ant-design/icons";
-import CodeMirror from "@uiw/react-codemirror";
-import { json } from "@codemirror/lang-json";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 
@@ -223,12 +222,10 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
         <div className="jsonFilterSection">
           <Typography.Text>Filter Records (JSON):</Typography.Text>
-          <CodeMirror
+          <Input.TextArea
             value={whenCondition}
-            height="100px"
-            extensions={[json()]}
-            onChange={handleJsonChange}
-            className="jsonEditor"
+            onChange={(e) => handleJsonChange(e.target.value)}
+            autoSize={{ minRows: 3 }}
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">

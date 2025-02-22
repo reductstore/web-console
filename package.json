@@ -64,9 +64,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "dependencies": {
-    "@codemirror/lang-json": "^6.0.1",
-    "@uiw/react-codemirror": "^4.23.8"
   }
 }
