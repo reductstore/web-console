@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { Client, EntryInfo, TokenPermissions } from "reduct-js";
+import { Client, EntryInfo, QueryOptions, TokenPermissions } from "reduct-js";
 import {
   Table,
   Typography,
@@ -8,9 +8,12 @@ import {
   Button,
   InputNumber,
   Checkbox,
+  Alert,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { DownloadOutlined } from "@ant-design/icons";
+import CodeMirror from "@uiw/react-codemirror";
+import { json } from "@codemirror/lang-json";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 
@@ -35,16 +38,28 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [showUnix, setShowUnix] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
+  const [whenCondition, setWhenCondition] = useState<string>("");
+  const [whenError, setWhenError] = useState<string>("");
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
     setRecords([]);
+    setWhenError("");
     try {
       const bucket = await props.client.getBucket(bucketName);
-      for await (const record of bucket.query(entryName, start, end, {
-        limit: limit,
-        head: true,
-      })) {
+      const options = new QueryOptions();
+      options.limit = limit;
+      options.head = true;
+      if (whenCondition) {
+        try {
+          options.when = JSON.parse(whenCondition);
+        } catch (e) {
+          setWhenError("Invalid JSON syntax");
+          console.log(e);
+          return;
+        }
+      }
+      for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
     } catch (err) {
@@ -145,6 +160,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     labels: JSON.stringify(record.labels, null, 2),
   }));
 
+  const handleJsonChange = (value: string) => {
+    setWhenCondition(value);
+    try {
+      JSON.parse(value);
+      setWhenError("");
+    } catch (e) {
+      return;
+    }
+  };
+
   return (
     <div className="entryDetail">
       {entryInfo && (
@@ -162,39 +187,67 @@ export default function EntryDetail(props: Readonly<Props>) {
         Unix Timestamp
       </Checkbox>
       <div className="detailControls">
-        {showUnix ? (
-          <div className="timeInputs">
-            <InputNumber
-              placeholder="Start Time (Unix)"
-              onChange={(value) => setStart(value ? BigInt(value) : undefined)}
-              className="timeInput"
-              max={Number(end)}
+        <div>
+          {showUnix ? (
+            <div className="timeInputs">
+              <InputNumber
+                placeholder="Start Time (Unix)"
+                onChange={(value) =>
+                  setStart(value ? BigInt(value) : undefined)
+                }
+                className="timeInput"
+                max={Number(end)}
+              />
+              <InputNumber
+                placeholder="End Time (Unix)"
+                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
+                className="timeInput"
+                min={Number(start)}
+              />
+            </div>
+          ) : (
+            <DatePicker.RangePicker
+              showTime
+              placeholder={["Start Time (UTC)", "End Time (UTC)"]}
+              onChange={handleDateChange}
+              className="datePicker"
             />
-            <InputNumber
-              placeholder="End Time (Unix)"
-              onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-              className="timeInput"
-              min={Number(start)}
-            />
-          </div>
-        ) : (
-          <DatePicker.RangePicker
-            showTime
-            placeholder={["Start Time (UTC)", "End Time (UTC)"]}
-            onChange={handleDateChange}
-            className="datePicker"
+          )}
+          <InputNumber
+            min={1}
+            addonBefore="Limit"
+            onChange={(value) => setLimit(value ? Number(value) : undefined)}
+            className="limitInput"
+            defaultValue={limit}
           />
-        )}
-        <InputNumber
-          min={1}
-          addonBefore="Limit"
-          onChange={(value) => setLimit(value ? Number(value) : undefined)}
-          className="limitInput"
-          defaultValue={limit}
-        />
-        <Button onClick={handleFetchRecordsClick} type="primary">
-          Fetch Records
-        </Button>
+        </div>
+        <div className="jsonFilterSection">
+          <Typography.Text>Filter Records (JSON):</Typography.Text>
+          <CodeMirror
+            value={whenCondition}
+            height="100px"
+            extensions={[json()]}
+            onChange={handleJsonChange}
+            className="jsonEditor"
+          />
+          {whenError && <Alert type="error" message={whenError} />}
+          <Typography.Text type="secondary" className="jsonExample">
+            {'Example: {"&label_name": { "$gt": 10 }}'}
+            <br />
+            <a
+              href="https://www.reduct.store/docs/conditional-query"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Query Reference Documentation
+            </a>
+          </Typography.Text>
+        </div>
+        <div className="fetchButton">
+          <Button onClick={handleFetchRecordsClick} type="primary">
+            Fetch Records
+          </Button>
+        </div>
       </div>
       <Table columns={columns} dataSource={data} />
     </div>
