@@ -57,7 +57,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       options.limit = limit;
       options.head = true;
       options.strict = true;
-      if (whenCondition) options.when = JSON.parse(whenCondition);
+      if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
       for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
