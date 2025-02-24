@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { Client, EntryInfo, QueryOptions, TokenPermissions } from "reduct-js";
+import {
+  APIError,
+  Client,
+  EntryInfo,
+  QueryOptions,
+  TokenPermissions,
+} from "reduct-js";
 import {
   Table,
   Typography,
@@ -20,7 +26,6 @@ import "codemirror/mode/javascript/javascript";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-
 interface Props {
   client: Client;
   permissions?: TokenPermissions;
@@ -51,20 +56,15 @@ export default function EntryDetail(props: Readonly<Props>) {
       const options = new QueryOptions();
       options.limit = limit;
       options.head = true;
-      if (whenCondition) {
-        try {
-          options.when = JSON.parse(whenCondition);
-        } catch (e) {
-          setWhenError("Invalid JSON syntax");
-          console.log(e);
-          return;
-        }
-      }
+      options.strict = true;
+      if (whenCondition) options.when = JSON.parse(whenCondition);
       for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
     } catch (err) {
-      console.error(err);
+      if (err instanceof APIError && err.message) setWhenError(err.message);
+      else if (err instanceof SyntaxError) setWhenError(err.message);
+      else setWhenError("Failed to fetch records.");
     } finally {
       setIsLoading(false);
     }
