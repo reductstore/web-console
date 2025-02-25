@@ -1,0 +1,28 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: fmt
+        name: fmt
+        entry: npm
+        language: system
+        args:
+          - run
+          - fmt
+
+      - id: eslint
+        types_or: [ts, tsx]
+        name: eslint
+        entry: npm
+        language: system
+        args:
+          - run
+          - lint

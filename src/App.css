@@ -1,3 +1,56 @@
-.App {
-  height: 100vh;
+.Meta {
+  position: absolute;
+  bottom: 0;
+  color: #cccccc;
+  margin: 20px 30px 15px;
+}
+
+.MetaItem {
+  padding: 5px 0;
+}
+
+.MetaItem a {
+  color: #cccccc;
+  text-decoration: underline;
+}
+
+.MetaItem a:hover {
+  color: #ffffff;
+}
+
+.Sider {
+  background-color: #231b49;
+}
+
+.MenuItem {
+  color: #cccccc;
+  font-size: larger;
+  font-weight: bold;
+}
+
+.ant-menu-item-active {
+  background-color: #cccccc !important;
+  color: #231b49 !important;
+}
+
+.LogoContainer {
+  padding: 16px;
+  text-align: center;
+  height: 100px;
+}
+
+.MenuContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.Divider {
+  height: 1px;
+  background-color: #cccccc;
+  opacity: 1;
+  margin: 20px 10px;
+}
+
+.MainMenu {
+  flex-grow: 1;
 }

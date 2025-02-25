@@ -1,14 +1,23 @@
-name: CI
+name: ci
 on:
   push:
-    branches: [ main, stable ]
+    branches: [main, stable]
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
-    branches: [ main, stable ]
+    branches: [main, stable]
 jobs:
-  test:
+  format:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm i
+      - run: npm run fmt:check
+
+  test:
+    name: "Install dependencies and test app"
+    runs-on: ubuntu-latest
+    needs: format
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
@@ -17,10 +26,16 @@ jobs:
         run: npm run lint
       - name: Run Tests
         run: npm test -- --watchAll=false
+      - name: Build App
+        run: npm run build
+        env:
+          CI: true
 
   deploy:
+    name: Publish Docker image
     runs-on: ubuntu-latest
     needs: test
+    if: ${{ (github.ref == 'refs/heads/main') || (startsWith(github.event.ref, 'refs/tags/v')) }}
     steps:
       - uses: actions/checkout@v2
       - name: Log in to the Container registry
@@ -43,3 +58,40 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  make_release:
+    runs-on: ubuntu-latest
+    needs: test
+    name: Make release
+    if: ${{ startsWith(github.event.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: true
+          prerelease: false
+          release_name: Release ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body: Copy changes from CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: actions/checkout@v2
+      - name: Install modules
+        run: npm install
+      - name: Build app
+        run: npm run build
+        env:
+          CI: false
+      - name: Zip built application
+        run: cd build && zip web-console.build.zip -r *
+      - name: Upload  artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/web-console.build.zip
+          asset_name: web-console.build.zip
+          asset_content_type: application/zip

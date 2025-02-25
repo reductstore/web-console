@@ -2,6 +2,23 @@
   text-align: left;
   width: 80em;
   margin: 1em;
-  min-height: 96vh;
+}
 
+.Panel #ServerInfo a {
+  text-decoration: underline;
+}
+
+.Panel #ServerInfo a:hover {
+  opacity: 0.8;
+}
+
+.warningIcon {
+  color: #faac14;
+  display: inline-block;
+  font-size: 0.9em;
+  margin-right: -8px;
+}
+
+.hide {
+  display: none;
 }
