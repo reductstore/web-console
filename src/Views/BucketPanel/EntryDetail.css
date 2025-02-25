@@ -4,9 +4,9 @@
 
 .detailControls {
   display: flex;
-  gap: 1em;
-  flex-wrap: wrap;
-  margin-bottom: 1em;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
   margin-top: 0.5em;
 }
 
@@ -25,4 +25,35 @@
 
 .limitInput {
   width: 120px;
+}
+
+.jsonFilterSection {
+  margin: 10px 0;
+  width: 100%;
+}
+
+.jsonEditor {
+  margin: 8px 0;
+  margin-bottom: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+}
+
+.jsonEditor .CodeMirror {
+  height: auto;
+  min-height: 100px;
+}
+
+.CodeMirror-scroll {
+  min-height: 100px;
+}
+
+.jsonExample {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.fetchButton {
+  display: block;
 }

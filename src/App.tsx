@@ -1,5 +1,5 @@
 import React from "react";
-import { ConfigProvider, Divider, Image, Layout, Menu } from "antd";
+import { ConfigProvider, Image, Layout, Menu } from "antd";
 import { RouteComponentProps } from "react-router-dom";
 import type { MenuProps } from "antd";
 
@@ -142,23 +142,21 @@ export default class App extends React.Component<Props, State> {
                 mode="inline"
                 items={getMenuItems()}
               />
-              <Divider />
+              <div className="Divider" />
               {permissions && (
-                <>
-                  <Menu
-                    className="MenuItem LogoutMenu"
-                    selectable={false}
-                    mode="inline"
-                    items={[
-                      {
-                        key: "logout",
-                        icon: <LogoutOutlined />,
-                        label: "Logout",
-                        onClick: onLogout,
-                      },
-                    ]}
-                  />
-                </>
+                <Menu
+                  className="MenuItem LogoutMenu"
+                  selectable={false}
+                  mode="inline"
+                  items={[
+                    {
+                      key: "logout",
+                      icon: <LogoutOutlined />,
+                      label: "Logout",
+                      onClick: onLogout,
+                    },
+                  ]}
+                />
               )}
             </div>
             <div className="Meta">

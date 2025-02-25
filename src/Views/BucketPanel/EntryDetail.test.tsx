@@ -6,6 +6,8 @@ import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
 import { DownloadOutlined } from "@ant-design/icons";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -110,6 +112,18 @@ describe("EntryDetail", () => {
       expect(limitInput.exists()).toBe(true);
       expect(limitInput.props().className).toContain("ant-input-number");
     });
+
+    it("should show the CodeMirror editor for JSON filtering", () => {
+      const codeMirror = wrapper.find(".react-codemirror2");
+      expect(codeMirror.exists()).toBe(true);
+      const cmInstance = wrapper.find("Controlled").prop("options");
+      expect(cmInstance).toEqual(
+        expect.objectContaining({
+          mode: { name: "javascript", json: true },
+          lineNumbers: true,
+        }),
+      );
+    });
   });
 
   it("should fetch and display records", async () => {
@@ -169,7 +183,7 @@ describe("EntryDetail", () => {
     wrapper.update();
 
     const downloadLink = wrapper.find("a");
-    expect(downloadLink.length).toBe(2);
+    expect(downloadLink.length).toBe(3);
     expect(downloadLink.at(0).props().children).toBe("testBucket");
     expect(downloadLink.at(1)).toBeDefined();
   });
