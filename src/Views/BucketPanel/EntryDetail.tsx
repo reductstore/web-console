@@ -32,7 +32,7 @@ import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -148,13 +148,15 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       // Check write permissions
       if (!props.permissions?.write) {
-        throw new Error("You don't have permission to write to this bucket. Please check your token permissions.");
+        throw new Error(
+          "You don't have permission to write to this bucket. Please check your token permissions.",
+        );
       }
 
       // First verify we can connect to the bucket
       try {
         const bucket = await props.client.getBucket(bucketName);
-        
+
         // Verify bucket is accessible
         await bucket.getInfo();
       } catch (error) {
@@ -163,16 +165,19 @@ export default function EntryDetail(props: Readonly<Props>) {
       }
 
       const bucket = await props.client.getBucket(bucketName);
-      
+
       // Read the file as an ArrayBuffer for binary data
       const arrayBuffer = await uploadFile.arrayBuffer();
-      
+
       const writer = await bucket.beginWrite(entryName, {
         contentType: uploadFile.type || "application/octet-stream",
-        labels: labels.reduce((acc, label) => ({
-          ...acc,
-          [label.key.trim()]: label.value
-        }), {})
+        labels: labels.reduce(
+          (acc, label) => ({
+            ...acc,
+            [label.key.trim()]: label.value,
+          }),
+          {},
+        ),
       });
 
       try {
@@ -186,21 +191,23 @@ export default function EntryDetail(props: Readonly<Props>) {
         uploadForm.resetFields();
         setUploadFile(null);
         setLabels([]);
-        
+
         // Add a small delay before refreshing
         setTimeout(() => {
           getRecords(start, end, limit);
         }, 1000);
-        
       } catch (error) {
         const writeError = error as Error;
-        console.log('Write error:', writeError);
+        console.log("Write error:", writeError);
         throw new Error(`Failed to write file: ${writeError.message}`);
       }
     } catch (error) {
       const err = error as Error;
-      console.log('Upload error:', err);
-      setUploadError(err.message || "Failed to upload file. Please check your connection and try again.");
+      console.log("Upload error:", err);
+      setUploadError(
+        err.message ||
+          "Failed to upload file. Please check your connection and try again.",
+      );
     } finally {
       setIsUploadLoading(false);
     }
@@ -211,13 +218,15 @@ export default function EntryDetail(props: Readonly<Props>) {
     const verifyConnection = async () => {
       try {
         await props.client.getInfo();
-        console.log('Successfully connected to Reduct Store');
+        console.log("Successfully connected to Reduct Store");
       } catch (err) {
-        console.log('Failed to connect to Reduct Store:', err);
-        setUploadError('Cannot connect to storage server. Please check your connection.');
+        console.log("Failed to connect to Reduct Store:", err);
+        setUploadError(
+          "Cannot connect to storage server. Please check your connection.",
+        );
       }
     };
-    
+
     verifyConnection();
     getEntryInfo();
     getRecords(start, end, limit);
@@ -294,62 +303,70 @@ export default function EntryDetail(props: Readonly<Props>) {
           form={uploadForm}
           onFinish={handleUpload}
           layout="vertical"
-          style={{ padding: '20px 0' }}
+          style={{ padding: "20px 0" }}
         >
-          <Form.Item style={{ marginBottom: '24px' }}>
+          <Form.Item style={{ marginBottom: "24px" }}>
             <Upload.Dragger
               beforeUpload={(file) => {
                 // Add file size check (e.g., 10MB limit)
                 const maxSize = 10 * 1024 * 1024; // 10MB
                 if (file.size > maxSize) {
-                  setUploadError(`File size must be smaller than ${maxSize / (1024 * 1024)}MB`);
+                  setUploadError(
+                    `File size must be smaller than ${maxSize / (1024 * 1024)}MB`,
+                  );
                   return false;
                 }
-                setUploadError('');
+                setUploadError("");
                 setUploadFile(file);
                 return false;
               }}
               maxCount={1}
-              style={{ padding: '24px' }}
+              style={{ padding: "24px" }}
             >
-              <p className="ant-upload-drag-icon" style={{ fontSize: '32px' }}>
+              <p className="ant-upload-drag-icon" style={{ fontSize: "32px" }}>
                 <UploadOutlined />
               </p>
-              <p className="ant-upload-text" style={{ fontSize: '16px', margin: '16px 0 8px' }}>
+              <p
+                className="ant-upload-text"
+                style={{ fontSize: "16px", margin: "16px 0 8px" }}
+              >
                 Click or drag file to this area to upload
               </p>
-              <p className="ant-upload-hint" style={{ color: '#666' }}>
+              <p className="ant-upload-hint" style={{ color: "#666" }}>
                 Maximum file size: 10MB
               </p>
             </Upload.Dragger>
           </Form.Item>
 
-          <Form.Item 
-            label={<Typography.Text strong>Timestamp</Typography.Text>} 
+          <Form.Item
+            label={<Typography.Text strong>Timestamp</Typography.Text>}
             name="timestamp"
-            style={{ marginBottom: '24px' }}
+            style={{ marginBottom: "24px" }}
           >
-            <DatePicker 
-              showTime 
-              style={{ width: '100%' }}
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
               placeholder="Select date and time (optional)"
             />
           </Form.Item>
 
-          <div style={{ marginBottom: '24px' }}>
-            <Typography.Text strong style={{ display: 'block', marginBottom: '16px' }}>
+          <div style={{ marginBottom: "24px" }}>
+            <Typography.Text
+              strong
+              style={{ display: "block", marginBottom: "16px" }}
+            >
               Labels
             </Typography.Text>
             {labels.map((label, index) => (
-              <div 
-                key={index} 
-                style={{ 
-                  display: 'flex', 
-                  gap: '12px', 
-                  marginBottom: '12px',
-                  background: '#f5f5f5',
-                  padding: '12px',
-                  borderRadius: '6px'
+              <div
+                key={index}
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  marginBottom: "12px",
+                  background: "#f5f5f5",
+                  padding: "12px",
+                  borderRadius: "6px",
                 }}
               >
                 <Input
@@ -372,8 +389,10 @@ export default function EntryDetail(props: Readonly<Props>) {
                   }}
                   style={{ flex: 1 }}
                 />
-                <Button 
-                  onClick={() => setLabels(labels.filter((_, i) => i !== index))}
+                <Button
+                  onClick={() =>
+                    setLabels(labels.filter((_, i) => i !== index))
+                  }
                   danger
                   icon={<DeleteOutlined />}
                 />
@@ -381,27 +400,27 @@ export default function EntryDetail(props: Readonly<Props>) {
             ))}
             <Button
               type="dashed"
-              onClick={() => setLabels([...labels, { key: '', value: '' }])}
+              onClick={() => setLabels([...labels, { key: "", value: "" }])}
               icon={<PlusOutlined />}
-              style={{ width: '100%', marginTop: '8px' }}
+              style={{ width: "100%", marginTop: "8px" }}
             >
               Add Label
             </Button>
           </div>
 
           {uploadError && (
-            <Alert 
-              type="error" 
-              message={uploadError} 
-              style={{ marginBottom: '24px' }}
+            <Alert
+              type="error"
+              message={uploadError}
+              style={{ marginBottom: "24px" }}
               showIcon
             />
           )}
 
           <Form.Item style={{ marginBottom: 0 }}>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button
+              type="primary"
+              htmlType="submit"
               block
               size="large"
               icon={<UploadOutlined />}
@@ -494,9 +513,13 @@ export default function EntryDetail(props: Readonly<Props>) {
             type="primary"
             icon={<UploadOutlined />}
             onClick={() => setIsUploadModalVisible(true)}
-            style={{ marginLeft: '8px' }}
+            style={{ marginLeft: "8px" }}
             disabled={!props.permissions?.write}
-            title={!props.permissions?.write ? "You don't have write permissions" : undefined}
+            title={
+              !props.permissions?.write
+                ? "You don't have write permissions"
+                : undefined
+            }
           >
             Upload File
           </Button>
