@@ -20,14 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RS-580: browse records in the console, [PR-76](https://github.com/reductstore/web-console/pull/76)
 - RS-588: add useful links in the side menu, [PR-79](https://github.com/reductstore/web-console/pull/79)
 - RS-594: filter data with when conditions in object explorer, [PR-80](https://github.com/reductstore/web-console/pull/80)
-- File upload dialog in EntryDetail view allowing users to upload files with metadata.
+- RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
 
 ### [1.8.1] - 2024-12-16
 
 ### Fixed
 
 - RS-554: add forgotten HARD quota type to bucket settings, [PR-72](https://github.com/reductstore/web-console/pull/72)
-- Improved error handling in file upload process.
 
 ## [1.8.0] - 2024-11-06
 

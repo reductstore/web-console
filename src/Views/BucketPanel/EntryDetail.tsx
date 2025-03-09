@@ -16,16 +16,13 @@ import {
   Checkbox,
   Alert,
   Modal,
-  Upload,
   Form,
-  Input,
+  Tooltip,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   DownloadOutlined,
   UploadOutlined,
-  PlusOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -33,6 +30,7 @@ import "./EntryDetail.css";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import { Buffer } from "buffer";
+import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -62,6 +60,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [uploadError, setUploadError] = useState<string>("");
   const [labels, setLabels] = useState<{ key: string; value: string }[]>([]);
   const [isUploadLoading, setIsUploadLoading] = useState(false);
+  const [availableEntries, setAvailableEntries] = useState<string[]>([]);
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
@@ -85,7 +84,6 @@ export default function EntryDetail(props: Readonly<Props>) {
       setIsLoading(false);
     }
   };
-
   const handleFetchRecordsClick = () => {
     if (!isLoading) {
       getRecords(start, end, limit);
@@ -130,6 +128,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       const bucket = await props.client.getBucket(bucketName);
       const entries = await bucket.getEntryList();
+      setAvailableEntries(entries.map((e) => e.name));
       const entry = entries.find((e) => e.name === entryName);
       if (entry) {
         setEntryInfo(entry);
@@ -146,88 +145,39 @@ export default function EntryDetail(props: Readonly<Props>) {
         throw new Error("Please select a file to upload");
       }
 
-      // Check write permissions
       if (!props.permissions?.write) {
-        throw new Error(
-          "You don't have permission to write to this bucket. Please check your token permissions.",
-        );
-      }
-
-      // First verify we can connect to the bucket
-      try {
-        const bucket = await props.client.getBucket(bucketName);
-
-        // Verify bucket is accessible
-        await bucket.getInfo();
-      } catch (error) {
-        const connError = error as Error;
-        throw new Error(`Cannot connect to bucket: ${connError.message}`);
+        throw new Error("You don't have permission to write to this bucket.");
       }
 
       const bucket = await props.client.getBucket(bucketName);
+      await bucket.getInfo();
 
-      // Read the file as an ArrayBuffer for binary data
       const arrayBuffer = await uploadFile.arrayBuffer();
-
-      const writer = await bucket.beginWrite(entryName, {
-        contentType: uploadFile.type || "application/octet-stream",
-        labels: labels.reduce(
-          (acc, label) => ({
-            ...acc,
-            [label.key.trim()]: label.value,
-          }),
-          {},
-        ),
+      const writer = await bucket.beginWrite(values.entryName, {
+        contentType: values.contentType || uploadFile.type || "application/octet-stream",
+        labels: labels.reduce((acc, label) => ({ ...acc, [label.key.trim()]: label.value }), {}),
       });
 
-      try {
-        // Convert Uint8Array to Buffer
-        const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(arrayBuffer);
+      await writer.write(buffer);
 
-        // Write the binary data
-        await writer.write(buffer);
-
-        setIsUploadModalVisible(false);
-        uploadForm.resetFields();
-        setUploadFile(null);
-        setLabels([]);
-
-        // Add a small delay before refreshing
-        setTimeout(() => {
-          getRecords(start, end, limit);
-        }, 1000);
-      } catch (error) {
-        const writeError = error as Error;
-        console.log("Write error:", writeError);
-        throw new Error(`Failed to write file: ${writeError.message}`);
-      }
+      setIsUploadModalVisible(false);
+      uploadForm.resetFields();
+      setUploadFile(null);
+      setLabels([]);
+      setTimeout(() => getRecords(start, end, limit), 1000);
     } catch (error) {
-      const err = error as Error;
-      console.log("Upload error:", err);
-      setUploadError(
-        err.message ||
-          "Failed to upload file. Please check your connection and try again.",
-      );
+      if (error instanceof APIError) {
+        setUploadError(error.message || "An unknown error occurred.");
+      } else {
+        setUploadError("Failed to upload file. Please check your connection and try again.");
+      }
     } finally {
       setIsUploadLoading(false);
     }
   };
 
   useEffect(() => {
-    // Verify connection when component mounts
-    const verifyConnection = async () => {
-      try {
-        await props.client.getInfo();
-        console.log("Successfully connected to Reduct Store");
-      } catch (err) {
-        console.log("Failed to connect to Reduct Store:", err);
-        setUploadError(
-          "Cannot connect to storage server. Please check your connection.",
-        );
-      }
-    };
-
-    verifyConnection();
     getEntryInfo();
     getRecords(start, end, limit);
   }, [bucketName, entryName]);
@@ -273,6 +223,9 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
+  // Check if the bucketName is in the write permissions list
+  const hasWritePermission = props.permissions?.write?.includes(bucketName);
+
   return (
     <div className="entryDetail">
       {entryInfo && (
@@ -299,137 +252,19 @@ export default function EntryDetail(props: Readonly<Props>) {
         footer={null}
         width={600}
       >
-        <Form
-          form={uploadForm}
-          onFinish={handleUpload}
-          layout="vertical"
-          style={{ padding: "20px 0" }}
-        >
-          <Form.Item style={{ marginBottom: "24px" }}>
-            <Upload.Dragger
-              beforeUpload={(file) => {
-                // Add file size check (e.g., 10MB limit)
-                const maxSize = 10 * 1024 * 1024; // 10MB
-                if (file.size > maxSize) {
-                  setUploadError(
-                    `File size must be smaller than ${maxSize / (1024 * 1024)}MB`,
-                  );
-                  return false;
-                }
-                setUploadError("");
-                setUploadFile(file);
-                return false;
-              }}
-              maxCount={1}
-              style={{ padding: "24px" }}
-            >
-              <p className="ant-upload-drag-icon" style={{ fontSize: "32px" }}>
-                <UploadOutlined />
-              </p>
-              <p
-                className="ant-upload-text"
-                style={{ fontSize: "16px", margin: "16px 0 8px" }}
-              >
-                Click or drag file to this area to upload
-              </p>
-              <p className="ant-upload-hint" style={{ color: "#666" }}>
-                Maximum file size: 10MB
-              </p>
-            </Upload.Dragger>
-          </Form.Item>
-
-          <Form.Item
-            label={<Typography.Text strong>Timestamp</Typography.Text>}
-            name="timestamp"
-            style={{ marginBottom: "24px" }}
-          >
-            <DatePicker
-              showTime
-              style={{ width: "100%" }}
-              placeholder="Select date and time (optional)"
-            />
-          </Form.Item>
-
-          <div style={{ marginBottom: "24px" }}>
-            <Typography.Text
-              strong
-              style={{ display: "block", marginBottom: "16px" }}
-            >
-              Labels
-            </Typography.Text>
-            {labels.map((label, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  marginBottom: "12px",
-                  background: "#f5f5f5",
-                  padding: "12px",
-                  borderRadius: "6px",
-                }}
-              >
-                <Input
-                  placeholder="Key"
-                  value={label.key}
-                  onChange={(e) => {
-                    const newLabels = [...labels];
-                    newLabels[index].key = e.target.value;
-                    setLabels(newLabels);
-                  }}
-                  style={{ flex: 1 }}
-                />
-                <Input
-                  placeholder="Value"
-                  value={label.value}
-                  onChange={(e) => {
-                    const newLabels = [...labels];
-                    newLabels[index].value = e.target.value;
-                    setLabels(newLabels);
-                  }}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  onClick={() =>
-                    setLabels(labels.filter((_, i) => i !== index))
-                  }
-                  danger
-                  icon={<DeleteOutlined />}
-                />
-              </div>
-            ))}
-            <Button
-              type="dashed"
-              onClick={() => setLabels([...labels, { key: "", value: "" }])}
-              icon={<PlusOutlined />}
-              style={{ width: "100%", marginTop: "8px" }}
-            >
-              Add Label
-            </Button>
-          </div>
-
-          {uploadError && (
-            <Alert
-              type="error"
-              message={uploadError}
-              style={{ marginBottom: "24px" }}
-              showIcon
-            />
-          )}
-
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              size="large"
-              icon={<UploadOutlined />}
-              loading={isUploadLoading}
-            >
-              Upload File
-            </Button>
-          </Form.Item>
-        </Form>
+        <UploadFileForm
+          onUpload={handleUpload}
+          isUploadLoading={isUploadLoading}
+          uploadError={uploadError}
+          setUploadError={setUploadError}
+          setUploadFile={setUploadFile}
+          uploadForm={uploadForm}
+          labels={labels}
+          setLabels={setLabels}
+          entryName={entryName}
+          isItemView={true}
+          availableEntries={availableEntries}
+        />
       </Modal>
 
       <Typography.Title level={3}>Records</Typography.Title>
@@ -509,20 +344,30 @@ export default function EntryDetail(props: Readonly<Props>) {
           <Button onClick={handleFetchRecordsClick} type="primary">
             Fetch Records
           </Button>
-          <Button
-            type="primary"
-            icon={<UploadOutlined />}
-            onClick={() => setIsUploadModalVisible(true)}
-            style={{ marginLeft: "8px" }}
-            disabled={!props.permissions?.write}
-            title={
-              !props.permissions?.write
-                ? "You don't have write permissions"
-                : undefined
-            }
-          >
-            Upload File
-          </Button>
+          {hasWritePermission ? (
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setIsUploadModalVisible(true)}
+              style={{ marginLeft: "8px" }}
+              title="Upload File"
+            >
+              Upload File
+            </Button>
+          ) : (
+            <Tooltip title="You don't have permission to upload files" overlayClassName="custom-tooltip">
+              <Button
+                type="default"
+                icon={<UploadOutlined />}
+                onClick={() => console.log("User has no permission")}
+                style={{ marginLeft: "8px" }}
+                disabled
+                title="Upload File"
+              >
+                Upload File
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </div>
       <Table columns={columns} dataSource={data} />
