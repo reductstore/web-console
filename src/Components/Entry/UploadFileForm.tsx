@@ -1,6 +1,19 @@
 import React, { useState } from "react";
-import { Form, Upload, Button, Input, Alert, Typography, DatePicker, Select } from "antd";
-import { UploadOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  Form,
+  Upload,
+  Button,
+  Input,
+  Alert,
+  Typography,
+  DatePicker,
+  Select,
+} from "antd";
+import {
+  UploadOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { FormInstance } from "antd/lib/form";
 
 interface UploadFileFormProps {
@@ -11,7 +24,9 @@ interface UploadFileFormProps {
   setUploadFile: React.Dispatch<React.SetStateAction<File | null>>;
   uploadForm: FormInstance;
   labels: { key: string; value: string }[];
-  setLabels: React.Dispatch<React.SetStateAction<{ key: string; value: string }[]>>;
+  setLabels: React.Dispatch<
+    React.SetStateAction<{ key: string; value: string }[]>
+  >;
   entryName: string;
   isItemView: boolean;
   availableEntries: string[];
@@ -68,7 +83,9 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           beforeUpload={(file) => {
             const maxSize = 1 * 1000 * 1000 * 1000; // 1GB
             if (file.size > maxSize) {
-              setUploadError(`File size must be smaller than ${maxSize / (1000 * 1000 * 1000)}GB`);
+              setUploadError(
+                `File size must be smaller than ${maxSize / (1000 * 1000 * 1000)}GB`,
+              );
               return false;
             }
             setUploadError("");
@@ -81,7 +98,10 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           <p className="ant-upload-drag-icon" style={{ fontSize: "32px" }}>
             <UploadOutlined />
           </p>
-          <p className="ant-upload-text" style={{ fontSize: "16px", margin: "16px 0 8px" }}>
+          <p
+            className="ant-upload-text"
+            style={{ fontSize: "16px", margin: "16px 0 8px" }}
+          >
             Click or drag file to this area to upload
           </p>
           <p className="ant-upload-hint" style={{ color: "#666" }}>
@@ -115,7 +135,10 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       </Form.Item>
 
       <div style={{ marginBottom: "24px" }}>
-        <Typography.Text strong style={{ display: "block", marginBottom: "16px" }}>
+        <Typography.Text
+          strong
+          style={{ display: "block", marginBottom: "16px" }}
+        >
           Labels
         </Typography.Text>
         {labels.map((label, index) => (
@@ -192,4 +215,4 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   );
 };
 
-export default UploadFileForm; 
+export default UploadFileForm;

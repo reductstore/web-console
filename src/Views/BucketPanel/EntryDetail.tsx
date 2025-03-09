@@ -20,10 +20,7 @@ import {
   Tooltip,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import {
-  DownloadOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
@@ -154,8 +151,12 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       const arrayBuffer = await uploadFile.arrayBuffer();
       const writer = await bucket.beginWrite(values.entryName, {
-        contentType: values.contentType || uploadFile.type || "application/octet-stream",
-        labels: labels.reduce((acc, label) => ({ ...acc, [label.key.trim()]: label.value }), {}),
+        contentType:
+          values.contentType || uploadFile.type || "application/octet-stream",
+        labels: labels.reduce(
+          (acc, label) => ({ ...acc, [label.key.trim()]: label.value }),
+          {},
+        ),
       });
 
       const buffer = Buffer.from(arrayBuffer);
@@ -170,7 +171,9 @@ export default function EntryDetail(props: Readonly<Props>) {
       if (error instanceof APIError) {
         setUploadError(error.message || "An unknown error occurred.");
       } else {
-        setUploadError("Failed to upload file. Please check your connection and try again.");
+        setUploadError(
+          "Failed to upload file. Please check your connection and try again.",
+        );
       }
     } finally {
       setIsUploadLoading(false);
@@ -355,7 +358,10 @@ export default function EntryDetail(props: Readonly<Props>) {
               Upload File
             </Button>
           ) : (
-            <Tooltip title="You don't have permission to upload files" overlayClassName="custom-tooltip">
+            <Tooltip
+              title="You don't have permission to upload files"
+              overlayClassName="custom-tooltip"
+            >
               <Button
                 type="default"
                 icon={<UploadOutlined />}
