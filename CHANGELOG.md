@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### [1.9.1] - 2025-03-12
+
+### Added:
+
+- RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
+
 ### [1.9.0] - 2025-02-25
 
 ### Fixed
@@ -20,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RS-580: browse records in the console, [PR-76](https://github.com/reductstore/web-console/pull/76)
 - RS-588: add useful links in the side menu, [PR-79](https://github.com/reductstore/web-console/pull/79)
 - RS-594: filter data with when conditions in object explorer, [PR-80](https://github.com/reductstore/web-console/pull/80)
-- RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
 
 ### [1.8.1] - 2024-12-16
 

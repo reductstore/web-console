@@ -16,7 +16,6 @@ import {
   Checkbox,
   Alert,
   Modal,
-  Form,
   Tooltip,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
@@ -24,16 +23,20 @@ import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
-import { Buffer } from "buffer";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+
+// Define CustomPermissions to match TokenPermissions
+interface CustomPermissions {
+  write?: string[];
+  fullAccess: boolean;
+}
+
 interface Props {
   client: Client;
-  permissions?: TokenPermissions;
+  permissions?: CustomPermissions;
 }
 
 export default function EntryDetail(props: Readonly<Props>) {
@@ -52,12 +55,10 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [whenCondition, setWhenCondition] = useState<string>("");
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
-  const [uploadForm] = Form.useForm();
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadError, setUploadError] = useState<string>("");
-  const [labels, setLabels] = useState<{ key: string; value: string }[]>([]);
-  const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
+
+  // Provide a default value for permissions
+  const permissions = props.permissions || { write: [], fullAccess: false };
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
@@ -135,51 +136,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleUpload = async (values: any) => {
-    setIsUploadLoading(true);
-    try {
-      if (!uploadFile) {
-        throw new Error("Please select a file to upload");
-      }
-
-      if (!props.permissions?.write) {
-        throw new Error("You don't have permission to write to this bucket.");
-      }
-
-      const bucket = await props.client.getBucket(bucketName);
-      await bucket.getInfo();
-
-      const arrayBuffer = await uploadFile.arrayBuffer();
-      const writer = await bucket.beginWrite(values.entryName, {
-        contentType:
-          values.contentType || uploadFile.type || "application/octet-stream",
-        labels: labels.reduce(
-          (acc, label) => ({ ...acc, [label.key.trim()]: label.value }),
-          {},
-        ),
-      });
-
-      const buffer = Buffer.from(arrayBuffer);
-      await writer.write(buffer);
-
-      setIsUploadModalVisible(false);
-      uploadForm.resetFields();
-      setUploadFile(null);
-      setLabels([]);
-      setTimeout(() => getRecords(start, end, limit), 1000);
-    } catch (error) {
-      if (error instanceof APIError) {
-        setUploadError(error.message || "An unknown error occurred.");
-      } else {
-        setUploadError(
-          "Failed to upload file. Please check your connection and try again.",
-        );
-      }
-    } finally {
-      setIsUploadLoading(false);
-    }
-  };
-
   useEffect(() => {
     getEntryInfo();
     getRecords(start, end, limit);
@@ -226,8 +182,9 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  // Check if the bucketName is in the write permissions list
-  const hasWritePermission = props.permissions?.write?.includes(bucketName);
+  const hasWritePermission =
+    permissions.fullAccess ||
+    (permissions.write && permissions.write.includes(bucketName));
 
   return (
     <div className="entryDetail">
@@ -235,7 +192,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         <EntryCard
           entryInfo={entryInfo}
           bucketName={bucketName}
-          permissions={props.permissions}
+          permissions={permissions as TokenPermissions} // Type assertion if necessary
           showUnix={showUnix}
           client={props.client}
           onRemoved={() => history.push(`/buckets/${bucketName}`)}
@@ -245,28 +202,20 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
-        onCancel={() => {
-          setIsUploadModalVisible(false);
-          setUploadError("");
-          uploadForm.resetFields();
-          setUploadFile(null);
-          setLabels([]);
-        }}
+        onCancel={() => setIsUploadModalVisible(false)}
         footer={null}
         width={600}
       >
         <UploadFileForm
-          onUpload={handleUpload}
-          isUploadLoading={isUploadLoading}
-          uploadError={uploadError}
-          setUploadError={setUploadError}
-          setUploadFile={setUploadFile}
-          uploadForm={uploadForm}
-          labels={labels}
-          setLabels={setLabels}
+          client={props.client}
+          bucketName={bucketName}
           entryName={entryName}
-          isItemView={true}
+          permissions={props.permissions}
           availableEntries={availableEntries}
+          onUploadSuccess={() => {
+            setIsUploadModalVisible(false);
+            getRecords(start, end, limit);
+          }}
         />
       </Modal>
 
@@ -323,10 +272,10 @@ export default function EntryDetail(props: Readonly<Props>) {
               matchBrackets: true,
               autoCloseBrackets: true,
             }}
-            onBeforeChange={(editor, data, value) => {
+            onBeforeChange={(editor: any, data: any, value: string) => {
               setWhenCondition(value);
             }}
-            onBlur={(editor) => {
+            onBlur={(editor: any) => {
               setWhenCondition(formatJSON(editor.getValue()));
             }}
           />
@@ -365,7 +314,6 @@ export default function EntryDetail(props: Readonly<Props>) {
               <Button
                 type="default"
                 icon={<UploadOutlined />}
-                onClick={() => console.log("User has no permission")}
                 style={{ marginLeft: "8px" }}
                 disabled
                 title="Upload File"

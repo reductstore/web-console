@@ -1,0 +1,77 @@
+/* Add your styles here */
+.uploadForm {
+  /* Example styles */
+  padding: 16px;
+}
+
+.uploadButton {
+  margin-top: 16px;
+}
+
+.upload-form {
+  padding: 20px 0;
+}
+
+.form-item {
+  margin-bottom: 24px;
+}
+
+.select-entry {
+  width: 100%;
+}
+
+.upload-dragger {
+  padding: 24px;
+}
+
+.upload-icon {
+  font-size: 32px;
+}
+
+.upload-text {
+  font-size: 16px;
+  margin: 16px 0 8px;
+}
+
+.upload-hint {
+  color: #666;
+}
+
+.date-picker {
+  width: 100%;
+}
+
+.labels-section {
+  margin-bottom: 24px;
+}
+
+.labels-title {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.label-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.label-input {
+  flex: 1;
+}
+
+.add-label-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.upload-error {
+  margin-bottom: 24px;
+}
+
+.upload-button {
+  margin-bottom: 0;
+}
