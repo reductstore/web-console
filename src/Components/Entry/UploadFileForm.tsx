@@ -45,15 +45,20 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   const handleUpload = async (values: any) => {
     setIsUploadLoading(true);
 
+    if (!uploadFile) {
+      setUploadError("No file selected for upload.");
+      setIsUploadLoading(false);
+      return;
+    }
     try {
       // Interact with the database
       const bucket = await client.getBucket(bucketName);
       await bucket.getInfo();
 
-      const arrayBuffer = await uploadFile!.arrayBuffer();
+      const arrayBuffer = await uploadFile.arrayBuffer();
       const writer = await bucket.beginWrite(values.entryName, {
         contentType:
-          values.contentType || uploadFile!.type || "application/octet-stream",
+          values.contentType || uploadFile.type || "application/octet-stream",
         labels: labels.reduce(
           (acc, label) => ({ ...acc, [label.key.trim()]: label.value }),
           {},
