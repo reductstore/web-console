@@ -45,18 +45,6 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   const handleUpload = async (values: any) => {
     setIsUploadLoading(true);
 
-    // Validate label keys before proceeding
-    const invalidLabels = labels.filter(
-      (label) => !/^[a-zA-Z0-9_-]+$/.test(label.key),
-    );
-    if (invalidLabels.length > 0) {
-      setUploadError(
-        `Invalid label: ${invalidLabels.map((label) => label.key).join(", ")}. Keys must be alphanumeric and can include underscores or hyphens.`,
-      );
-      setIsUploadLoading(false);
-      return;
-    }
-
     try {
       // Interact with the database
       const bucket = await client.getBucket(bucketName);
