@@ -22,7 +22,6 @@ interface UploadFileFormProps {
   client: Client;
   bucketName: string;
   entryName: string;
-  permissions?: any;
   availableEntries: string[];
   onUploadSuccess: () => void;
 }
@@ -31,7 +30,6 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   client,
   bucketName,
   entryName,
-  permissions,
   availableEntries,
   onUploadSuccess,
 }) => {
@@ -41,17 +39,38 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   const [labels, setLabels] = useState<{ key: string; value: string }[]>([]);
   const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  const [timestamp, setTimestamp] = useState<Date | null>(null);
+
+  const resetForm = () => {
+    uploadForm.resetFields();
+    setUploadFile(null);
+    setLabels([]);
+    setUploadError("");
+    setFileList([]);
+    setTimestamp(null);
+  };
 
   const handleUpload = async (values: any) => {
     setIsUploadLoading(true);
 
-    if (!uploadFile) {
-      setUploadError("No file selected for upload.");
+    const invalidLabels = labels.filter(
+      (label) => !/^[a-zA-Z0-9_-]+$/.test(label.key),
+    );
+    if (invalidLabels.length > 0) {
+      setUploadError(
+        `Invalid label key(s): ${invalidLabels.map((label) => label.key).join(", ")}. Keys must be alphanumeric and can include underscores or hyphens.`,
+      );
       setIsUploadLoading(false);
       return;
     }
+
+    if (!uploadFile) {
+      setUploadError("Please select a file.");
+      setIsUploadLoading(false);
+      return;
+    }
+
     try {
-      // Interact with the database
       const bucket = await client.getBucket(bucketName);
       await bucket.getInfo();
 
@@ -63,15 +82,14 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           (acc, label) => ({ ...acc, [label.key.trim()]: label.value }),
           {},
         ),
+        ts: BigInt((timestamp ? timestamp.getTime() : Date.now()) * 1000),
       });
 
       const buffer = Buffer.from(arrayBuffer);
       await writer.write(buffer);
 
       onUploadSuccess();
-      uploadForm.resetFields();
-      setUploadFile(null);
-      setLabels([]);
+      resetForm();
     } catch (error) {
       if (error instanceof APIError) {
         setUploadError(error.message || "An unknown error occurred.");
@@ -86,7 +104,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
   };
 
   const handleFileChange = (info: any) => {
-    const newFileList = info.fileList.slice(-1); // Keep only the latest file
+    const newFileList = info.fileList.slice(-1);
     setFileList(newFileList);
     setUploadFile(newFileList.length > 0 ? newFileList[0].originFileObj : null);
   };
@@ -96,24 +114,25 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       form={uploadForm}
       onFinish={handleUpload}
       layout="vertical"
-      className="upload-form"
+      className="uploadForm"
     >
       <Form.Item
         label={<Typography.Text strong>Entry Name</Typography.Text>}
         name="entryName"
         initialValue={entryName}
-        className="form-item"
+        className="formItem"
       >
         <Select
           showSearch
           placeholder="Select or enter entry name"
           defaultValue={entryName}
-          className="select-entry"
+          className="selectEntry"
           options={availableEntries.map((entry) => ({ value: entry }))}
+          disabled={true}
         />
       </Form.Item>
 
-      <Form.Item className="form-item">
+      <Form.Item className="formItem">
         <Upload.Dragger
           beforeUpload={() => false}
           fileList={fileList}
@@ -122,22 +141,22 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
             showRemoveIcon: true,
             removeIcon: <DeleteOutlined />,
           }}
-          className="upload-dragger"
+          className="uploadDragger"
         >
-          <p className="ant-upload-drag-icon upload-icon">
+          <p className="ant-upload-drag-icon uploadIcon">
             <UploadOutlined />
           </p>
-          <p className="ant-upload-text upload-text">
+          <p className="ant-upload-text uploadText">
             Click or drag file to this area to upload
           </p>
-          <p className="ant-upload-hint upload-hint">Maximum file size: 1GB</p>
+          <p className="ant-upload-hint uploadHint">Maximum file size: 1GB</p>
         </Upload.Dragger>
       </Form.Item>
 
       <Form.Item
         label={<Typography.Text strong>Content Type</Typography.Text>}
         name="contentType"
-        className="form-item"
+        className="formItem"
       >
         <Input placeholder="Enter content type (optional)" />
       </Form.Item>
@@ -145,21 +164,22 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       <Form.Item
         label={<Typography.Text strong>Timestamp</Typography.Text>}
         name="timestamp"
-        className="form-item"
+        className="formItem"
       >
         <DatePicker
           showTime
-          className="date-picker"
+          className="datePicker"
           placeholder="Select date and time (optional)"
+          onChange={(value) => setTimestamp(value ? value.toDate() : null)}
         />
       </Form.Item>
 
-      <div className="labels-section">
-        <Typography.Text strong className="labels-title">
+      <div className="labelsSection">
+        <Typography.Text strong className="labelsTitle">
           Labels
         </Typography.Text>
         {labels.map((label, index) => (
-          <div key={index} className="label-item">
+          <div key={index} className="labelItem">
             <Input
               placeholder="Key"
               value={label.key}
@@ -168,7 +188,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
                 newLabels[index].key = e.target.value;
                 setLabels(newLabels);
               }}
-              className="label-input"
+              className="labelInput"
             />
             <Input
               placeholder="Value"
@@ -178,7 +198,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
                 newLabels[index].value = e.target.value;
                 setLabels(newLabels);
               }}
-              className="label-input"
+              className="labelInput"
             />
             <Button
               onClick={() => setLabels(labels.filter((_, i) => i !== index))}
@@ -191,7 +211,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           type="dashed"
           onClick={() => setLabels([...labels, { key: "", value: "" }])}
           icon={<PlusOutlined />}
-          className="add-label-button"
+          className="addLabelButton"
         >
           Add Label
         </Button>
@@ -201,12 +221,12 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
         <Alert
           type="error"
           message={uploadError}
-          className="upload-error"
+          className="uploadError"
           showIcon
         />
       )}
 
-      <Form.Item className="form-item">
+      <Form.Item className="formItem">
         <Button
           type="primary"
           htmlType="submit"
@@ -215,7 +235,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           icon={<UploadOutlined />}
           loading={isUploadLoading}
           disabled={!uploadFile}
-          className="upload-button"
+          className="uploadButton"
         >
           Upload File
         </Button>

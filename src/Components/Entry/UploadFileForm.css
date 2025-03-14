@@ -8,49 +8,49 @@
   margin-top: 16px;
 }
 
-.upload-form {
+.uploadForm {
   padding: 20px 0;
 }
 
-.form-item {
+.formItem {
   margin-bottom: 24px;
 }
 
-.select-entry {
+.selectEntry {
   width: 100%;
 }
 
-.upload-dragger {
+.uploadDragger {
   padding: 24px;
 }
 
-.upload-icon {
+.uploadIcon {
   font-size: 32px;
 }
 
-.upload-text {
+.uploadText {
   font-size: 16px;
   margin: 16px 0 8px;
 }
 
-.upload-hint {
+.uploadHint {
   color: #666;
 }
 
-.date-picker {
+.datePicker {
   width: 100%;
 }
 
-.labels-section {
+.labelsSection {
   margin-bottom: 24px;
 }
 
-.labels-title {
+.labelsTitle {
   display: block;
   margin-bottom: 16px;
 }
 
-.label-item {
+.labelItem {
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
@@ -59,19 +59,19 @@
   border-radius: 6px;
 }
 
-.label-input {
+.labelInput {
   flex: 1;
 }
 
-.add-label-button {
+.addLabelButton {
   width: 100%;
   margin-top: 8px;
 }
 
-.upload-error {
+.uploadError {
   margin-bottom: 24px;
 }
 
-.upload-button {
+.uploadButton {
   margin-bottom: 0;
 }

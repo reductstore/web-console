@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### [1.9.1] - 2025-03-12
-
 ### Added:
 
 - RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)

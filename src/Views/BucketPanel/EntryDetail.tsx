@@ -210,7 +210,6 @@ export default function EntryDetail(props: Readonly<Props>) {
           client={props.client}
           bucketName={bucketName}
           entryName={entryName}
-          permissions={props.permissions}
           availableEntries={availableEntries}
           onUploadSuccess={() => {
             setIsUploadModalVisible(false);
