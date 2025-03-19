@@ -158,7 +158,10 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
         name="contentType"
         className="formItem"
       >
-        <Input placeholder="Enter content type (optional)" />
+        <Input
+          placeholder="Enter content type (optional)"
+          data-testid="content-type-input"
+        />
       </Form.Item>
 
       <Form.Item
@@ -171,6 +174,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           className="datePicker"
           placeholder="Select date and time (optional)"
           onChange={(value) => setTimestamp(value ? value.toDate() : null)}
+          data-testid="timestamp-input"
         />
       </Form.Item>
 
@@ -189,6 +193,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
                 setLabels(newLabels);
               }}
               className="labelInput"
+              data-testid={`label-key-input`}
             />
             <Input
               placeholder="Value"
@@ -199,6 +204,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
                 setLabels(newLabels);
               }}
               className="labelInput"
+              data-testid={`label-value-input`}
             />
             <Button
               onClick={() => setLabels(labels.filter((_, i) => i !== index))}

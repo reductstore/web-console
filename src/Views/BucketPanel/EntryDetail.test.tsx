@@ -187,4 +187,67 @@ describe("EntryDetail", () => {
     expect(downloadLink.at(0).props().children).toBe("testBucket");
     expect(downloadLink.at(1)).toBeDefined();
   });
+
+  it('"Upload file" button is disabled if there are no permissions', () => {
+    wrapper = mount(
+      <MemoryRouter>
+        <EntryDetail client={client} permissions={{ fullAccess: false }} />
+      </MemoryRouter>,
+    );
+    const uploadButton = wrapper.find('button[title="Upload File"]');
+    expect(uploadButton.exists()).toBe(true);
+    expect(uploadButton.props().disabled).toBe(true);
+  });
+
+  it('"Upload file" button is enabled if there is permission', () => {
+    wrapper = mount(
+      <MemoryRouter>
+        <EntryDetail client={client} permissions={{ fullAccess: true }} />
+      </MemoryRouter>,
+    );
+    const uploadButton = wrapper.find('button[title="Upload File"]');
+    expect(uploadButton.exists()).toBe(true);
+    expect(uploadButton.props().disabled).toBe(false);
+  });
+
+  describe("EntryDetail - Permissions", () => {
+    it('"Upload file" button is enabled with full access', () => {
+      const wrapper = mount(
+        <MemoryRouter>
+          <EntryDetail client={client} permissions={{ fullAccess: true }} />
+        </MemoryRouter>,
+      );
+      const uploadButton = wrapper.find('button[title="Upload File"]');
+      expect(uploadButton.exists()).toBe(true);
+      expect(uploadButton.props().disabled).toBe(false);
+    });
+
+    it('"Upload file" button is enabled with write permission', () => {
+      const wrapper = mount(
+        <MemoryRouter>
+          <EntryDetail
+            client={client}
+            permissions={{ write: ["testBucket"], fullAccess: false }}
+          />
+        </MemoryRouter>,
+      );
+      const uploadButton = wrapper.find('button[title="Upload File"]');
+      expect(uploadButton.exists()).toBe(true);
+      expect(uploadButton.props().disabled).toBe(false);
+    });
+
+    it('"Upload file" button is disabled with no permissions', () => {
+      const wrapper = mount(
+        <MemoryRouter>
+          <EntryDetail
+            client={client}
+            permissions={{ write: [], fullAccess: false }}
+          />
+        </MemoryRouter>,
+      );
+      const uploadButton = wrapper.find('button[title="Upload File"]');
+      expect(uploadButton.exists()).toBe(true);
+      expect(uploadButton.props().disabled).toBe(true);
+    });
+  });
 });
