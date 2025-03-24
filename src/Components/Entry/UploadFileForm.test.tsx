@@ -132,7 +132,7 @@ describe("UploadFileForm", () => {
 
     // Set the file
     await act(async () => {
-      const onChange = uploadDragger.prop('onChange');
+      const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
         file: mockFile,
@@ -223,7 +223,7 @@ describe("UploadFileForm", () => {
     // Set the file
     const uploadDragger = wrapper.find(Upload.Dragger);
     await act(async () => {
-      const onChange = uploadDragger.prop('onChange');
+      const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
         file: mockFile,
@@ -345,7 +345,7 @@ describe("UploadFileForm", () => {
     expect(uploadDragger.exists()).toBe(true);
 
     await act(async () => {
-      const onChange = uploadDragger.prop('onChange');
+      const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
         file: mockFile,
@@ -361,7 +361,7 @@ describe("UploadFileForm", () => {
 
     // Remove the file
     await act(async () => {
-      const onChange = uploadDragger.prop('onChange');
+      const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
         file: { ...mockFile, status: "removed" },
@@ -398,7 +398,7 @@ describe("UploadFileForm", () => {
     expect(uploadDragger.exists()).toBe(true);
 
     await act(async () => {
-      const onChange = uploadDragger.prop('onChange');
+      const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
         file: mockFile,
