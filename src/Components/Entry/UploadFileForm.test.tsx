@@ -5,7 +5,6 @@ import UploadFileForm from "./UploadFileForm";
 import { act } from "react-dom/test-utils";
 import { Upload, Button, Alert } from "antd";
 import dayjs from "dayjs";
-import { APIError } from "reduct-js";
 
 // Mock the File API
 global.File = class MockFile {
@@ -133,7 +132,9 @@ describe("UploadFileForm", () => {
 
     // Set the file
     await act(async () => {
-      uploadDragger.props().onChange({
+      const onChange = uploadDragger.prop('onChange');
+      expect(onChange).toBeDefined();
+      onChange!({
         file: mockFile,
         fileList: [mockFile],
       });
@@ -222,7 +223,9 @@ describe("UploadFileForm", () => {
     // Set the file
     const uploadDragger = wrapper.find(Upload.Dragger);
     await act(async () => {
-      uploadDragger.props().onChange({
+      const onChange = uploadDragger.prop('onChange');
+      expect(onChange).toBeDefined();
+      onChange!({
         file: mockFile,
         fileList: [mockFile],
       });
@@ -342,7 +345,9 @@ describe("UploadFileForm", () => {
     expect(uploadDragger.exists()).toBe(true);
 
     await act(async () => {
-      uploadDragger.props().onChange({
+      const onChange = uploadDragger.prop('onChange');
+      expect(onChange).toBeDefined();
+      onChange!({
         file: mockFile,
         fileList: [mockFile],
       });
@@ -356,7 +361,9 @@ describe("UploadFileForm", () => {
 
     // Remove the file
     await act(async () => {
-      uploadDragger.props().onChange({
+      const onChange = uploadDragger.prop('onChange');
+      expect(onChange).toBeDefined();
+      onChange!({
         file: { ...mockFile, status: "removed" },
         fileList: [],
       });
@@ -391,7 +398,9 @@ describe("UploadFileForm", () => {
     expect(uploadDragger.exists()).toBe(true);
 
     await act(async () => {
-      uploadDragger.props().onChange({
+      const onChange = uploadDragger.prop('onChange');
+      expect(onChange).toBeDefined();
+      onChange!({
         file: mockFile,
         fileList: [mockFile],
       });
