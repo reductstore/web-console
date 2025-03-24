@@ -57,3 +57,8 @@
 .fetchButton {
   display: block;
 }
+
+.custom-tooltip .ant-tooltip-inner {
+  background-color: #f0f0f0;
+  color: #333;
+}

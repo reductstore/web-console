@@ -15,20 +15,28 @@ import {
   InputNumber,
   Checkbox,
   Alert,
+  Modal,
+  Tooltip,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
+import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+
+// Define CustomPermissions to match TokenPermissions
+interface CustomPermissions {
+  write?: string[];
+  fullAccess: boolean;
+}
+
 interface Props {
   client: Client;
-  permissions?: TokenPermissions;
+  permissions?: CustomPermissions;
 }
 
 export default function EntryDetail(props: Readonly<Props>) {
@@ -46,6 +54,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>("");
   const [whenError, setWhenError] = useState<string>("");
+  const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [availableEntries, setAvailableEntries] = useState<string[]>([]);
+
+  // Provide a default value for permissions
+  const permissions = props.permissions || { write: [], fullAccess: false };
 
   const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
     setIsLoading(true);
@@ -69,7 +82,6 @@ export default function EntryDetail(props: Readonly<Props>) {
       setIsLoading(false);
     }
   };
-
   const handleFetchRecordsClick = () => {
     if (!isLoading) {
       getRecords(start, end, limit);
@@ -114,6 +126,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       const bucket = await props.client.getBucket(bucketName);
       const entries = await bucket.getEntryList();
+      setAvailableEntries(entries.map((e) => e.name));
       const entry = entries.find((e) => e.name === entryName);
       if (entry) {
         setEntryInfo(entry);
@@ -169,18 +182,42 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
+  const hasWritePermission =
+    permissions.fullAccess ||
+    (permissions.write && permissions.write.includes(bucketName));
+
   return (
     <div className="entryDetail">
       {entryInfo && (
         <EntryCard
           entryInfo={entryInfo}
           bucketName={bucketName}
-          permissions={props.permissions}
+          permissions={permissions as TokenPermissions} // Type assertion if necessary
           showUnix={showUnix}
           client={props.client}
           onRemoved={() => history.push(`/buckets/${bucketName}`)}
         />
       )}
+
+      <Modal
+        title="Upload File"
+        open={isUploadModalVisible}
+        onCancel={() => setIsUploadModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <UploadFileForm
+          client={props.client}
+          bucketName={bucketName}
+          entryName={entryName}
+          availableEntries={availableEntries}
+          onUploadSuccess={() => {
+            setIsUploadModalVisible(false);
+            getRecords(start, end, limit);
+          }}
+        />
+      </Modal>
+
       <Typography.Title level={3}>Records</Typography.Title>
       <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
         Unix Timestamp
@@ -234,10 +271,10 @@ export default function EntryDetail(props: Readonly<Props>) {
               matchBrackets: true,
               autoCloseBrackets: true,
             }}
-            onBeforeChange={(editor, data, value) => {
+            onBeforeChange={(editor: any, data: any, value: string) => {
               setWhenCondition(value);
             }}
-            onBlur={(editor) => {
+            onBlur={(editor: any) => {
               setWhenCondition(formatJSON(editor.getValue()));
             }}
           />
@@ -258,6 +295,32 @@ export default function EntryDetail(props: Readonly<Props>) {
           <Button onClick={handleFetchRecordsClick} type="primary">
             Fetch Records
           </Button>
+          {hasWritePermission ? (
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setIsUploadModalVisible(true)}
+              style={{ marginLeft: "8px" }}
+              title="Upload File"
+            >
+              Upload File
+            </Button>
+          ) : (
+            <Tooltip
+              title="You don't have permission to upload files"
+              overlayClassName="custom-tooltip"
+            >
+              <Button
+                type="default"
+                icon={<UploadOutlined />}
+                style={{ marginLeft: "8px" }}
+                disabled
+                title="Upload File"
+              >
+                Upload File
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </div>
       <Table columns={columns} dataSource={data} />

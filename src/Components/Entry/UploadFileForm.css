@@ -1,0 +1,77 @@
+/* Add your styles here */
+.uploadForm {
+  /* Example styles */
+  padding: 16px;
+}
+
+.uploadButton {
+  margin-top: 16px;
+}
+
+.uploadForm {
+  padding: 20px 0;
+}
+
+.formItem {
+  margin-bottom: 24px;
+}
+
+.selectEntry {
+  width: 100%;
+}
+
+.uploadDragger {
+  padding: 24px;
+}
+
+.uploadIcon {
+  font-size: 32px;
+}
+
+.uploadText {
+  font-size: 16px;
+  margin: 16px 0 8px;
+}
+
+.uploadHint {
+  color: #666;
+}
+
+.datePicker {
+  width: 100%;
+}
+
+.labelsSection {
+  margin-bottom: 24px;
+}
+
+.labelsTitle {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.labelItem {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.labelInput {
+  flex: 1;
+}
+
+.addLabelButton {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.uploadError {
+  margin-bottom: 24px;
+}
+
+.uploadButton {
+  margin-bottom: 0;
+}
