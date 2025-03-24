@@ -125,7 +125,6 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
         <Select
           showSearch
           placeholder="Select or enter entry name"
-          defaultValue={entryName}
           className="selectEntry"
           options={availableEntries.map((entry) => ({ value: entry }))}
           disabled={true}
