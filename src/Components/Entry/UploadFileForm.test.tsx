@@ -5,33 +5,75 @@ import UploadFileForm from "./UploadFileForm";
 import { act } from "react-dom/test-utils";
 import { Upload, Button, Alert } from "antd";
 import dayjs from "dayjs";
+import { TextEncoder, TextDecoder } from "util";
+import { UploadFile, UploadFileStatus } from "antd/es/upload/interface";
+import { RcFile } from "antd/es/upload";
 
 // Mock the File API
-global.File = class MockFile {
+global.File = class MockFile implements RcFile {
   name: string;
   size: number;
   type: string;
   lastModified: number;
-  private content: Buffer;
+  lastModifiedDate: Date;
+  uid: string;
+  webkitRelativePath: string = "";
+  private content: Uint8Array;
 
   constructor(
-    bits: Array<string | Buffer>,
+    bits: Array<string | Uint8Array>,
     filename: string,
     options: { type: string; lastModified: number },
   ) {
     this.name = filename;
     this.type = options.type;
     this.lastModified = options.lastModified;
-    this.content = Buffer.concat(bits.map((bit) => Buffer.from(bit)));
+    this.lastModifiedDate = new Date(options.lastModified);
+    this.uid = "1";
+
+    // Convert inputs to Uint8Arrays
+    const arrays = bits.map((bit) =>
+      typeof bit === "string" ? new TextEncoder().encode(bit) : bit,
+    );
+
+    // Calculate total length
+    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+
+    // Create a single Uint8Array and copy all data
+    this.content = new Uint8Array(totalLength);
+    let offset = 0;
+    arrays.forEach((arr) => {
+      this.content.set(arr, offset);
+      offset += arr.length;
+    });
+
     this.size = this.content.length;
   }
 
   arrayBuffer() {
-    return Promise.resolve(this.content);
+    return Promise.resolve(this.content.buffer as ArrayBuffer);
   }
 
   text() {
-    return Promise.resolve(this.content.toString("utf-8"));
+    return Promise.resolve(new TextDecoder().decode(this.content));
+  }
+
+  slice(start?: number, end?: number, contentType?: string): Blob {
+    return new Blob([this.content.slice(start, end)], { type: contentType });
+  }
+
+  stream(): ReadableStream {
+    const content = this.content;
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(content);
+        controller.close();
+      },
+    });
+  }
+
+  bytes(): Promise<Uint8Array> {
+    return Promise.resolve(this.content);
   }
 } as unknown as typeof File;
 
@@ -84,20 +126,20 @@ describe("UploadFileForm", () => {
     const testContent = "test content for verification";
     const file = new File([testContent], "test.txt", {
       type: "text/plain",
-    });
+    }) as unknown as RcFile;
 
-    const mockFile = {
+    const mockFile: UploadFile = {
       uid: "1",
       name: "test.txt",
       type: "text/plain",
       size: file.size,
       originFileObj: file,
-      status: "done",
+      status: "done" as UploadFileStatus,
     };
 
     // Track what data is written
-    let writtenData: Buffer | null = null;
-    const mockWrite = jest.fn().mockImplementation((data: Buffer) => {
+    let writtenData: Uint8Array | null = null;
+    const mockWrite = jest.fn().mockImplementation((data: Uint8Array) => {
       writtenData = data;
       return Promise.resolve();
     });
@@ -166,7 +208,7 @@ describe("UploadFileForm", () => {
 
     // Verify the actual content that was uploaded
     if (writtenData) {
-      const uploadedContent = writtenData.toString("utf-8");
+      const uploadedContent = new TextDecoder().decode(writtenData);
       expect(uploadedContent).toBe(testContent);
     }
 
@@ -180,20 +222,20 @@ describe("UploadFileForm", () => {
     const file = new File([testContent], "test.txt", {
       type: "text/plain",
       lastModified: Date.now(),
-    });
+    }) as unknown as RcFile;
 
-    const mockFile = {
+    const mockFile: UploadFile = {
       uid: "1",
       name: "test.txt",
       type: "text/plain",
       size: file.size,
       originFileObj: file,
-      status: "done",
+      status: "done" as UploadFileStatus,
     };
 
     // Track what data is written
-    let writtenData: Buffer | null = null;
-    const mockWrite = jest.fn().mockImplementation((data: Buffer) => {
+    let writtenData: Uint8Array | null = null;
+    const mockWrite = jest.fn().mockImplementation((data: Uint8Array) => {
       writtenData = data;
       return Promise.resolve();
     });
@@ -249,7 +291,12 @@ describe("UploadFileForm", () => {
       'DatePicker[data-testid="timestamp-input"]',
     );
     await act(async () => {
-      timestampInput.prop("onChange")(testDate);
+      const onChange = timestampInput.prop("onChange") as
+        | ((date: dayjs.Dayjs | null) => void)
+        | undefined;
+      if (onChange) {
+        onChange(testDate);
+      }
       wrapper.update();
     });
 
@@ -307,7 +354,7 @@ describe("UploadFileForm", () => {
     // Verify the write was called with correct content
     expect(mockWrite).toHaveBeenCalled();
     if (writtenData) {
-      const uploadedContent = writtenData.toString("utf-8");
+      const uploadedContent = new TextDecoder().decode(writtenData);
       expect(uploadedContent).toBe(testContent);
     }
 
@@ -329,15 +376,15 @@ describe("UploadFileForm", () => {
     const file = new File([testContent], "test.txt", {
       type: "text/plain",
       lastModified: Date.now(),
-    });
+    }) as unknown as RcFile;
 
-    const mockFile = {
+    const mockFile: UploadFile = {
       uid: "1",
       name: "test.txt",
       type: "text/plain",
       size: file.size,
       originFileObj: file,
-      status: "done",
+      status: "done" as UploadFileStatus,
     };
 
     // Find Upload.Dragger and set file
@@ -364,7 +411,7 @@ describe("UploadFileForm", () => {
       const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
       onChange!({
-        file: { ...mockFile, status: "removed" },
+        file: { ...mockFile, status: "removed" } as UploadFile,
         fileList: [],
       });
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -382,15 +429,15 @@ describe("UploadFileForm", () => {
     const file = new File([testContent], "test.txt", {
       type: "text/plain",
       lastModified: Date.now(),
-    });
+    }) as unknown as RcFile;
 
-    const mockFile = {
+    const mockFile: UploadFile = {
       uid: "1",
       name: "test.txt",
       type: "text/plain",
       size: file.size,
       originFileObj: file,
-      status: "done",
+      status: "done" as UploadFileStatus,
     };
 
     // Set the file
