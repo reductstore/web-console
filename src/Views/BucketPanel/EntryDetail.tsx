@@ -23,6 +23,8 @@ import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 // @ts-ignore

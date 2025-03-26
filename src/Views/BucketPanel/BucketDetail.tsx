@@ -11,10 +11,15 @@ import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Flex, Table, Typography } from "antd";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { Flex, Table, Typography, Button, Modal } from "antd";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
+import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 interface Props {
   client: Client;
@@ -34,6 +39,7 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
 
   const getEntries = async () => {
     setIsLoading(true);
@@ -106,6 +112,17 @@ export default function BucketDetail(props: Readonly<Props>) {
   const handleOpenRemoveModal = (entryName: string) => {
     setEntryToRemove(entryName);
     setIsRemoveModalOpen(true);
+  };
+
+  const hasWritePermission =
+    props.permissions?.fullAccess ||
+    (props.permissions?.write &&
+      info &&
+      props.permissions.write.includes(info.name));
+
+  const handleUploadSuccess = () => {
+    setIsUploadModalVisible(false);
+    getEntries();
   };
 
   useEffect(() => {
@@ -205,12 +222,43 @@ export default function BucketDetail(props: Readonly<Props>) {
       )}
 
       <Typography.Title level={3}>Entries</Typography.Title>
+
+      <Flex justify="start" style={{ marginBottom: "1em" }}>
+        {hasWritePermission && (
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={() => setIsUploadModalVisible(true)}
+          >
+            Upload File
+          </Button>
+        )}
+      </Flex>
+
       <Table
         style={{ margin: "0.6em" }}
         columns={columns}
         dataSource={data}
         loading={isLoading}
       />
+
+      {/* Upload Modal */}
+      <Modal
+        title="Upload File"
+        open={isUploadModalVisible}
+        onCancel={() => setIsUploadModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <UploadFileForm
+          client={props.client}
+          bucketName={name}
+          entryName=""
+          availableEntries={entries.map((entry) => entry.name)}
+          onUploadSuccess={handleUploadSuccess}
+        />
+      </Modal>
+
       <RemoveConfirmationModal
         key={entryToRemove}
         name={entryToRemove}

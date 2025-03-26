@@ -38,7 +38,7 @@
 }
 
 .datePicker {
-  width: 100%;
+  width: 100% !important;
 }
 
 .labelsSection {
@@ -74,4 +74,8 @@
 
 .uploadButton {
   margin-bottom: 0;
+}
+
+.formItem .ant-picker {
+  width: 100%;
 }
