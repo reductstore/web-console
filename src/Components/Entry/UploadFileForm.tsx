@@ -129,7 +129,8 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
           options={availableEntries.map((entry) => ({ value: entry }))}
           disabled={Boolean(entryName)}
           filterOption={(inputValue, option) =>
-            option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+            option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !==
+            -1
           }
         />
       </Form.Item>
