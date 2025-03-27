@@ -11,12 +11,8 @@ import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Flex, Table, Typography, Button, Modal } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { Flex, Table, Typography, Modal } from "antd";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
@@ -216,24 +212,14 @@ export default function BucketDetail(props: Readonly<Props>) {
           showPanel
           onRemoved={() => history.push("/buckets")}
           onShow={() => null}
+          onUpload={() => setIsUploadModalVisible(true)}
+          hasWritePermission={hasWritePermission}
         />
       ) : (
         <div />
       )}
 
       <Typography.Title level={3}>Entries</Typography.Title>
-
-      <Flex justify="start" style={{ marginBottom: "1em" }}>
-        {hasWritePermission && (
-          <Button
-            type="primary"
-            icon={<UploadOutlined />}
-            onClick={() => setIsUploadModalVisible(true)}
-          >
-            Upload File
-          </Button>
-        )}
-      </Flex>
 
       <Table
         style={{ margin: "0.6em" }}

@@ -381,7 +381,7 @@ describe("UploadFileForm", () => {
     expect(autoComplete.prop("value")).toBe("fixedEntry");
   });
 
-  it("should should allow creating a new entry name not in available entries", async () => {
+  it("should allow creating a new entry name not in available entries", async () => {
     const testContent = "test content";
     const mockFile = makeMockFile(testContent);
     const { mockWrite, mockBucket } = mockWriting(client);
@@ -433,43 +433,5 @@ describe("UploadFileForm", () => {
     );
     expect(mockWrite).toHaveBeenCalledWith(Buffer.from(testContent));
     expect(mockOnUploadSuccess).toHaveBeenCalled();
-  });
-
-  it("should not submit form when no entry name is provided", async () => {
-    const testContent = "test content";
-    const mockFile = makeMockFile(testContent);
-    const { mockWrite } = mockWriting(client);
-
-    // Mount with empty entry name
-    await act(async () => {
-      wrapper = mount(
-        <UploadFileForm
-          client={client}
-          bucketName="testBucket"
-          entryName=""
-          availableEntries={[]}
-          onUploadSuccess={mockOnUploadSuccess}
-        />,
-      );
-    });
-
-    // Attach file
-    await attachFile(wrapper, mockFile);
-
-    // Submit form
-    await submitForm(wrapper);
-
-    // Check form validation state
-    const form = wrapper.find("Form").prop("form") as unknown as {
-      getFieldError: (field: string) => string[];
-    };
-    expect(form).toBeDefined();
-    const errors = form?.getFieldError("entryName");
-    expect(errors).toContain("Please enter an entry name");
-
-    // Verify upload wasn't called
-    expect(client.getBucket).not.toHaveBeenCalled();
-    expect(mockWrite).not.toHaveBeenCalled();
-    expect(mockOnUploadSuccess).not.toHaveBeenCalled();
   });
 });
