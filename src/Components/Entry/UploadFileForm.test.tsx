@@ -362,4 +362,76 @@ describe("UploadFileForm", () => {
     // Verify upload wasn't called
     expect(client.getBucket).not.toHaveBeenCalled();
   });
+
+  it("should have disabled entry name input when entryName prop is provided", async () => {
+    await act(async () => {
+      wrapper = mount(
+        <UploadFileForm
+          client={client}
+          bucketName="testBucket"
+          entryName="fixedEntry"
+          availableEntries={["existingEntry1", "fixedEntry"]}
+          onUploadSuccess={mockOnUploadSuccess}
+        />,
+      );
+    });
+
+    const autoComplete = wrapper.find("AutoComplete");
+    expect(autoComplete.prop("disabled")).toBe(true);
+    expect(autoComplete.prop("value")).toBe("fixedEntry");
+  });
+
+  it("should allow creating a new entry name not in available entries", async () => {
+    const testContent = "test content";
+    const mockFile = makeMockFile(testContent);
+    const { mockWrite, mockBucket } = mockWriting(client);
+
+    // Mount with empty entry name to allow creation
+    await act(async () => {
+      wrapper = mount(
+        <UploadFileForm
+          client={client}
+          bucketName="testBucket"
+          entryName=""
+          availableEntries={["existingEntry1", "existingEntry2"]}
+          onUploadSuccess={mockOnUploadSuccess}
+        />,
+      );
+    });
+
+    // Attach file
+    await attachFile(wrapper, mockFile);
+
+    const autoComplete = wrapper.find("AutoComplete");
+    await act(async () => {
+      const onChange = autoComplete.prop("onChange");
+      if (onChange) {
+        onChange({ target: { value: "newTestEntry" } } as any);
+      }
+      wrapper.update();
+    });
+
+    const form = wrapper.find("Form").prop("form") as unknown as {
+      getFieldValue: (field: string) => any;
+    };
+    expect(form).toBeDefined();
+    const formValue = form?.getFieldValue("entryName");
+    expect(formValue).toBe("newTestEntry");
+
+    // Submit form
+    await submitForm(wrapper);
+
+    // Verify the upload process succeeded with sanitized name
+    expect(client.getBucket).toHaveBeenCalledWith("testBucket");
+    expect(mockBucket.beginWrite).toHaveBeenCalledWith(
+      "newTestEntry",
+      expect.objectContaining({
+        contentType: "text/plain",
+        labels: {},
+        ts: expect.any(BigInt),
+      }),
+    );
+    expect(mockWrite).toHaveBeenCalledWith(Buffer.from(testContent));
+    expect(mockOnUploadSuccess).toHaveBeenCalled();
+  });
 });

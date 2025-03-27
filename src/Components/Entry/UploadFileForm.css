@@ -37,10 +37,6 @@
   color: #666;
 }
 
-.datePicker {
-  width: 100%;
-}
-
 .labelsSection {
   margin-bottom: 24px;
 }
@@ -74,4 +70,8 @@
 
 .uploadButton {
   margin-bottom: 0;
+}
+
+.formItem .ant-picker {
+  width: 100%;
 }

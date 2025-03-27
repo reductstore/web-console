@@ -7,7 +7,7 @@ import {
   Alert,
   Typography,
   DatePicker,
-  Select,
+  AutoComplete,
 } from "antd";
 import {
   UploadOutlined,
@@ -119,15 +119,19 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       <Form.Item
         label={<Typography.Text strong>Entry Name</Typography.Text>}
         name="entryName"
-        initialValue={entryName}
+        initialValue={entryName || ""}
+        rules={[{ required: true, message: "Please enter an entry name" }]}
         className="formItem"
       >
-        <Select
-          showSearch
-          placeholder="Select or enter entry name"
-          className="selectEntry"
+        <AutoComplete
+          placeholder="Select or create an entry"
+          data-testid="entry-name-input"
           options={availableEntries.map((entry) => ({ value: entry }))}
-          disabled={true}
+          disabled={Boolean(entryName)}
+          filterOption={(inputValue, option) =>
+            option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !==
+            -1
+          }
         />
       </Form.Item>
 

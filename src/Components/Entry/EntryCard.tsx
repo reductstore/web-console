@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, Col, Row, Statistic } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import { EntryInfo, TokenPermissions, Client } from "reduct-js";
 import { useHistory } from "react-router-dom";
 // @ts-ignore
@@ -15,6 +15,8 @@ interface Props {
   showUnix?: boolean;
   client: Client;
   onRemoved?: () => void;
+  onUpload?: () => void;
+  hasWritePermission?: boolean;
 }
 
 export default function EntryCard(props: Readonly<Props>) {
@@ -42,6 +44,15 @@ export default function EntryCard(props: Readonly<Props>) {
   };
 
   const actions = [];
+  if (props.hasWritePermission) {
+    actions.push(
+      <UploadOutlined
+        key="upload"
+        title="Upload File"
+        onClick={() => props.onUpload?.()}
+      />,
+    );
+  }
   if (
     permissions?.fullAccess ||
     (permissions?.write && permissions.write.indexOf(bucketName) !== -1)

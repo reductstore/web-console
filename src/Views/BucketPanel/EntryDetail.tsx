@@ -16,13 +16,14 @@ import {
   Checkbox,
   Alert,
   Modal,
-  Tooltip,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { DownloadOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
 // @ts-ignore
@@ -192,10 +193,12 @@ export default function EntryDetail(props: Readonly<Props>) {
         <EntryCard
           entryInfo={entryInfo}
           bucketName={bucketName}
-          permissions={permissions as TokenPermissions} // Type assertion if necessary
+          permissions={permissions as TokenPermissions}
           showUnix={showUnix}
           client={props.client}
           onRemoved={() => history.push(`/buckets/${bucketName}`)}
+          onUpload={() => setIsUploadModalVisible(true)}
+          hasWritePermission={hasWritePermission}
         />
       )}
 
@@ -219,6 +222,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       </Modal>
 
       <Typography.Title level={3}>Records</Typography.Title>
+
       <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
         Unix Timestamp
       </Checkbox>
@@ -295,32 +299,6 @@ export default function EntryDetail(props: Readonly<Props>) {
           <Button onClick={handleFetchRecordsClick} type="primary">
             Fetch Records
           </Button>
-          {hasWritePermission ? (
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              onClick={() => setIsUploadModalVisible(true)}
-              style={{ marginLeft: "8px" }}
-              title="Upload File"
-            >
-              Upload File
-            </Button>
-          ) : (
-            <Tooltip
-              title="You don't have permission to upload files"
-              overlayClassName="custom-tooltip"
-            >
-              <Button
-                type="default"
-                icon={<UploadOutlined />}
-                style={{ marginLeft: "8px" }}
-                disabled
-                title="Upload File"
-              >
-                Upload File
-              </Button>
-            </Tooltip>
-          )}
         </div>
       </div>
       <Table columns={columns} dataSource={data} />

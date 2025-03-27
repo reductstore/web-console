@@ -11,7 +11,11 @@ import {
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  SettingOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 
 import "./BucketCard.css";
 import BucketSettingsForm from "./BucketSettingsForm";
@@ -26,6 +30,8 @@ interface Props {
   onRemoved: (name: string) => void;
   onShow: (name: string) => void;
   permissions?: TokenPermissions;
+  onUpload?: () => void;
+  hasWritePermission?: boolean;
 }
 
 export const getHistory = (interval: {
@@ -66,6 +72,19 @@ export default function BucketCard(props: Readonly<Props>) {
   const actions = [];
   const readOnly = !props.permissions?.fullAccess || bucketInfo.isProvisioned;
   if (props.showPanel) {
+    if (props.hasWritePermission) {
+      actions.push(
+        <UploadOutlined
+          title="Upload File"
+          key="upload"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onUpload?.();
+          }}
+        />,
+      );
+    }
+
     actions.push(
       <SettingOutlined
         title="Settings"
