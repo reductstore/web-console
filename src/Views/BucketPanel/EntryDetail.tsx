@@ -26,6 +26,7 @@ import "codemirror/mode/javascript/javascript";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+
 interface Props {
   client: Client;
   permissions?: TokenPermissions;
@@ -51,13 +52,20 @@ export default function EntryDetail(props: Readonly<Props>) {
     setIsLoading(true);
     setRecords([]);
     setWhenError("");
+
     try {
       const bucket = await props.client.getBucket(bucketName);
+
       const options = new QueryOptions();
       options.limit = limit;
       options.head = true;
       options.strict = true;
-      if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
+      if (whenCondition.trim().length > 0) {
+        options.when = JSON.parse(whenCondition);
+      } else {
+        options.when = {}; // enable POST endpoint that handles the head flag correctly
+      }
+
       for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
