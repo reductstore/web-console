@@ -12,7 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
 - RS-632: Add upload button to bucket panel allowing users to create new entries by uploading files, [PR-86](https://github.com/reductstore/web-console/pull/86)
 
-### [1.9.0] - 2025-02-25
+## [1.9.1] - 2025-04-03
+
+### Fixed
+
+- RS-658: fix server-side channel error for empty conditional query, [PR-88](https://github.com/reductstore/web-console/pull/88)
+
+## [1.9.0] - 2025-02-25
 
 ### Fixed
 
@@ -207,7 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.9.1...HEAD
+[1.9.1]: https://github.com/reduct-storage/web-console/compare/v1.9.1...v1.9.0
 [1.9.0]: https://github.com/reduct-storage/web-console/compare/v1.9.0...v1.8.1
 [1.8.1]: https://github.com/reduct-storage/web-console/compare/v1.8.1...v1.8.0
 [1.8.0]: https://github.com/reduct-storage/web-console/compare/v1.8.0...v1.7.0
