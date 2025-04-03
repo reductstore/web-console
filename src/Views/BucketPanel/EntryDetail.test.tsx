@@ -144,6 +144,13 @@ describe("EntryDetail", () => {
     expect(rows.at(1).text()).toContain("2.0 KB");
     expect(rows.at(1).text()).toContain("text/plain");
     expect(rows.at(1).text()).toContain('"type": "test"');
+
+    expect(bucket.query).toBeCalledWith("testEntry", undefined, undefined, {
+      head: true,
+      limit: 10,
+      strict: true,
+      when: {},
+    });
   });
 
   it("should toggle between ISO and Unix timestamps", async () => {

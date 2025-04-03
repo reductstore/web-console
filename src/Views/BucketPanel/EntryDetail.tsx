@@ -51,13 +51,20 @@ export default function EntryDetail(props: Readonly<Props>) {
     setIsLoading(true);
     setRecords([]);
     setWhenError("");
+
     try {
       const bucket = await props.client.getBucket(bucketName);
+
       const options = new QueryOptions();
       options.limit = limit;
       options.head = true;
       options.strict = true;
-      if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
+      if (whenCondition.trim().length > 0) {
+        options.when = JSON.parse(whenCondition);
+      } else {
+        options.when = {}; // enable POST endpoint that handle the head flag correctly
+      }
+
       for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
@@ -234,6 +241,9 @@ export default function EntryDetail(props: Readonly<Props>) {
               matchBrackets: true,
               autoCloseBrackets: true,
             }}
+            onChange={(editor, data, value) => {
+              setWhenCondition(formatJSON(value));
+            }}
             onBeforeChange={(editor, data, value) => {
               setWhenCondition(value);
             }}
@@ -255,7 +265,11 @@ export default function EntryDetail(props: Readonly<Props>) {
           </Typography.Text>
         </div>
         <div className="fetchButton">
-          <Button onClick={handleFetchRecordsClick} type="primary">
+          <Button
+            onClick={handleFetchRecordsClick}
+            type="primary"
+            id="fetchButton"
+          >
             Fetch Records
           </Button>
         </div>
