@@ -26,6 +26,7 @@ import "codemirror/mode/javascript/javascript";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+
 interface Props {
   client: Client;
   permissions?: TokenPermissions;
@@ -241,9 +242,6 @@ export default function EntryDetail(props: Readonly<Props>) {
               matchBrackets: true,
               autoCloseBrackets: true,
             }}
-            onChange={(editor, data, value) => {
-              setWhenCondition(formatJSON(value));
-            }}
             onBeforeChange={(editor, data, value) => {
               setWhenCondition(value);
             }}
@@ -265,11 +263,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           </Typography.Text>
         </div>
         <div className="fetchButton">
-          <Button
-            onClick={handleFetchRecordsClick}
-            type="primary"
-            id="fetchButton"
-          >
+          <Button onClick={handleFetchRecordsClick} type="primary">
             Fetch Records
           </Button>
         </div>
