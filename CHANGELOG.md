@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- RS-658: fix server-side channel error for empty conditional query, [PR-88](https://github.com/reductstore/web-console/pull/88)
+
 ### [1.9.0] - 2025-02-25
 
 ### Fixed
