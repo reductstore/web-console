@@ -63,7 +63,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       if (whenCondition.trim().length > 0) {
         options.when = JSON.parse(whenCondition);
       } else {
-        options.when = {}; // enable POST endpoint that handle the head flag correctly
+        options.when = {}; // enable POST endpoint that handles the head flag correctly
       }
 
       for await (const record of bucket.query(entryName, start, end, options)) {
