@@ -30,6 +30,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       entries: ["entry1", "entry2"],
       include: { label1: "value1" },
       exclude: { label2: "value2" },
+      when: { "&temperature": { $gt: 25 } },
       each_n: 10n,
       each_s: 0.5,
     });
@@ -94,6 +95,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "recordSettings" }).exists()).toBeTruthy();
+    expect(wrapper.find({ name: "when" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "eachN" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
@@ -191,5 +193,19 @@ describe("Replication::ReplicationSettingsForm", () => {
       .find("Button")
       .filterWhere((node) => node.text() === "Update Replication");
     expect(button.prop("disabled")).toBe(true);
+  });
+
+  it("parses and displays a valid JSON when condition", async () => {
+    const validJson = '{"&temperature": {"$gt": 25}}';
+
+    await waitUntilFind(wrapper, "form");
+
+    const textArea = wrapper.find("textarea");
+    expect(textArea.exists()).toBe(true);
+
+    textArea.simulate("change", { target: { value: validJson } });
+    wrapper.update();
+    expect(wrapper.find("textarea").prop("value")).toEqual(validJson);
+    expect(wrapper.find("Alert").exists()).toBeFalsy();
   });
 });
