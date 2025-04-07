@@ -16,9 +16,15 @@ import {
   Row,
   Select,
   Tooltip,
+  Typography,
 } from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "./ReplicationSettingsForm.css";
+import { Controlled as CodeMirror } from "react-codemirror2";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
+
+const isTestEnvironment = process.env.NODE_ENV === "test";
 
 interface Props {
   client: Client;
@@ -88,22 +94,16 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     dataFetched: false,
   };
 
+  codeMirrorInstance: any;
+
   /**
    * Called when Create/Update button is pressed
    * @param values
    */
   onFinish = async (values: FormValues) => {
     const { replicationName, client, onCreated } = this.props;
-    const {
-      srcBucket,
-      dstBucket,
-      dstHost,
-      dstToken,
-      entries,
-      eachN,
-      eachS,
-      when,
-    } = values;
+    const { srcBucket, dstBucket, dstHost, dstToken, entries, eachN, eachS } =
+      values;
     const include: Record<string, string> = {};
     const exclude: Record<string, string> = {};
     if (values.recordSettings) {
@@ -118,65 +118,13 @@ export default class ReplicationSettingsFormReplication extends React.Component<
 
     try {
       let parsedWhen: Record<string, any> | undefined;
-      if (when && when.trim()) {
+      if (this.state.when && this.state.when.trim()) {
         try {
-          parsedWhen = JSON.parse(when);
+          parsedWhen = JSON.parse(this.state.when);
           // Validate that parsedWhen is an object
           if (typeof parsedWhen !== "object" || parsedWhen === null) {
             this.setState({ error: "When Condition must be a JSON object" });
             return;
-          }
-          // Validate the structure of the when condition
-          for (const [key, value] of Object.entries(parsedWhen)) {
-            // Handle $exists operator
-            if (key === "$exists") {
-              if (!Array.isArray(value)) {
-                this.setState({
-                  error: "$exists operator must have an array value",
-                });
-                return;
-              }
-              continue;
-            }
-
-            // Handle label conditions
-            if (!key.startsWith("&")) {
-              this.setState({
-                error: "Label keys must start with '&' in When Condition",
-              });
-              return;
-            }
-            if (typeof value !== "object" || value === null) {
-              this.setState({
-                error: "Label values must be objects in When Condition",
-              });
-              return;
-            }
-            // Validate operators
-            for (const [op] of Object.entries(value)) {
-              if (!op.startsWith("$")) {
-                this.setState({
-                  error: "Operators must start with '$' in When Condition",
-                });
-                return;
-              }
-              const validOperators = [
-                "$gt",
-                "$gte",
-                "$lt",
-                "$lte",
-                "$eq",
-                "$ne",
-                "$and",
-                "$or",
-              ];
-              if (!validOperators.includes(op)) {
-                this.setState({
-                  error: `Invalid operator '${op}'. Valid operators are: ${validOperators.join(", ")}`,
-                });
-                return;
-              }
-            }
           }
         } catch (err) {
           this.setState({ error: "Invalid JSON in When Condition" });
@@ -252,6 +200,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
         this.handleError(err);
       }
     }
+
+    if (this.codeMirrorInstance) {
+      this.codeMirrorInstance.refresh();
+    }
   }
 
   handleSourceBucketChange = async (selectedBucket: string) => {
@@ -314,6 +266,18 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       eachS,
     };
     return formValues;
+  };
+
+  handleWhenConditionChange = (value: string) => {
+    this.setState((prevState) => ({ ...prevState, when: value }));
+  };
+
+  formatJSON = (jsonString: string): string => {
+    try {
+      return JSON.stringify(JSON.parse(jsonString), null, 2);
+    } catch {
+      return jsonString;
+    }
   };
 
   render() {
@@ -503,29 +467,54 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <Form.Item
-            label={
-              <span>
-                When Condition&nbsp;
-                <Tooltip title="JSON condition for filtering records based on labels. Example: {'&temperature': {'$gt': 25}, '&humidity': {'$lt': 60}}. Use & for labels and $ for operators. Supported operators: $gt, $gte, $lt, $lte, $eq, $ne, $and, $or">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="when"
-            className="ReplicationField"
-            style={{ marginBottom: "24px" }}
-          >
-            <Input.TextArea
-              rows={5}
-              placeholder="Enter JSON condition (e.g., {'&temperature': {'$gt': 25}, '&humidity': {'$lt': 60}})"
-              disabled={readOnly}
-              style={{ resize: "none" }}
-            />
+          <Form.Item label={<span>When Condition</span>}>
+            {!isTestEnvironment ? (
+              <CodeMirror
+                className="jsonEditor"
+                value={this.state.when}
+                options={{
+                  mode: { name: "javascript", json: true },
+                  theme: "default",
+                  lineNumbers: true,
+                  lineWrapping: true,
+                  viewportMargin: Infinity,
+                  matchBrackets: true,
+                  autoCloseBrackets: true,
+                }}
+                onBeforeChange={(editor: any, data: any, value: string) => {
+                  this.handleWhenConditionChange(value);
+                }}
+                onBlur={(editor: any) => {
+                  this.handleWhenConditionChange(
+                    this.formatJSON(editor.getValue()),
+                  );
+                }}
+                editorDidMount={(editor) => {
+                  this.codeMirrorInstance = editor;
+                  editor.refresh();
+                }}
+              />
+            ) : (
+              <></>
+            )}
+            <Typography.Text type="secondary" className="jsonExample">
+              {'Example: {"&label_name": { "$gt": 10 }}'}
+              <br />
+              <a
+                href="https://www.reduct.store/docs/conditional-query"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Query Reference Documentation
+              </a>
+            </Typography.Text>
           </Form.Item>
 
-          {/* Show Filter Records section only for existing tasks */}
-          {this.props.replicationName ? (
+          {/* Show Filter Records section only for existing tasks AND if they are already set */}
+          {(this.props.replicationName &&
+            this.state.include &&
+            Object.keys(this.state.include).length > 0) ||
+          (this.state.exclude && Object.keys(this.state.exclude).length > 0) ? (
             <Form.Item
               label={
                 <span>
