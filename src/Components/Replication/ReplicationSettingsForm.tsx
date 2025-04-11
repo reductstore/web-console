@@ -47,6 +47,7 @@ interface State {
   dataFetched: boolean;
   eachN?: bigint;
   eachS?: number;
+  lastRefresh: number;
 }
 
 enum FilterType {
@@ -92,7 +93,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     exclude: {},
     when: "",
     dataFetched: false,
+    lastRefresh: Date.now(),
   };
+
+  refreshInterval: NodeJS.Timeout | null = null;
 
   codeMirrorInstance: any;
 
@@ -161,12 +165,15 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
   };
 
-  async componentDidMount() {
+  // Force re-fetching data from the server
+  loadReplicationData = async (forceRefresh = false) => {
     const { replicationName, client } = this.props;
     if (replicationName) {
       try {
+        // Force request with no cache to ensure latest data
         const replication: FullReplicationInfo =
           await client.getReplication(replicationName);
+
         const {
           srcBucket,
           dstBucket,
@@ -180,30 +187,82 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           eachS,
         } = replication.settings;
 
-        // Use the utility function
-        const whenString = convertWhenToString(when);
+        // Use the utility function and format properly
+        let whenString = convertWhenToString(when);
 
-        this.setState({
-          srcBucket,
-          dstBucket,
-          dstHost,
-          dstToken,
-          entries,
-          include: include || {},
-          exclude: exclude || {},
-          when: whenString,
-          eachN,
-          eachS,
-          dataFetched: true,
-        });
+        // Ensure it's properly formatted JSON
+        try {
+          whenString = JSON.stringify(JSON.parse(whenString), null, 2);
+        } catch {
+          // If parsing fails, keep original string
+        }
+
+        // Calculate if there are actual changes to avoid unnecessary re-renders
+        const hasChanges =
+          this.state.srcBucket !== srcBucket ||
+          this.state.dstBucket !== dstBucket ||
+          this.state.dstHost !== dstHost ||
+          this.state.dstToken !== dstToken ||
+          JSON.stringify(this.state.entries) !== JSON.stringify(entries) ||
+          JSON.stringify(this.state.include) !==
+            JSON.stringify(include || {}) ||
+          JSON.stringify(this.state.exclude) !==
+            JSON.stringify(exclude || {}) ||
+          this.state.when !== whenString ||
+          this.state.eachN !== eachN ||
+          this.state.eachS !== eachS;
+
+        if (hasChanges || forceRefresh) {
+          console.log("Updating state with new data");
+          this.setState(
+            {
+              srcBucket,
+              dstBucket,
+              dstHost,
+              dstToken,
+              entries,
+              include: include || {},
+              exclude: exclude || {},
+              when: whenString,
+              eachN,
+              eachS,
+              dataFetched: true,
+              lastRefresh: Date.now(),
+            },
+            () => {
+              // After state update, refresh the code mirror instance
+              if (this.codeMirrorInstance) {
+                this.codeMirrorInstance.refresh();
+              }
+            },
+          );
+        }
       } catch (err) {
         this.handleError(err);
       }
     }
+  };
 
-    if (this.codeMirrorInstance) {
-      this.codeMirrorInstance.refresh();
+  setupAutoRefresh = () => {
+    this.refreshInterval = setInterval(() => {
+      this.loadReplicationData(true);
+    }, 3000);
+  };
+
+  cleanupAutoRefresh = () => {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
     }
+  };
+
+  async componentDidMount() {
+    await this.loadReplicationData();
+    this.setupAutoRefresh();
+  }
+
+  componentWillUnmount() {
+    this.cleanupAutoRefresh();
   }
 
   handleSourceBucketChange = async (selectedBucket: string) => {
@@ -281,8 +340,11 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   };
 
   render() {
-    const { error, dataFetched } = this.state;
+    const { error, dataFetched, lastRefresh } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
+
+    // Force form to update when data changes by using lastRefresh in the key
+    const formKey = `${dataFetched ? "loaded" : "loading"}-${lastRefresh}`;
 
     return (
       <>
@@ -295,7 +357,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           />
         )}
         <Form
-          key={dataFetched ? "loaded" : "loading"}
+          key={formKey}
           name="replicationForm"
           onFinish={this.onFinish}
           layout="vertical"
@@ -491,6 +553,16 @@ export default class ReplicationSettingsFormReplication extends React.Component<
                 }}
                 editorDidMount={(editor) => {
                   this.codeMirrorInstance = editor;
+                  // Format content in the editor
+                  const value = editor.getValue();
+                  try {
+                    const formatted = this.formatJSON(value);
+                    if (formatted !== value) {
+                      editor.setValue(formatted);
+                    }
+                  } catch {
+                    // If formatting fails, keep the original value
+                  }
                   editor.refresh();
                 }}
               />
