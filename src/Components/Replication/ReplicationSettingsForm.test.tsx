@@ -93,7 +93,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "dstHost" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "recordSettings" }).exists()).toBeTruthy();
+
     expect(wrapper.find({ name: "eachN" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
