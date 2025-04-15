@@ -35,19 +35,12 @@ interface Props {
 }
 
 interface State {
-  srcBucket: string;
-  dstBucket: string;
-  dstHost: string;
-  dstToken: string;
-  entries: string[];
-  include: Record<string, string>;
-  exclude: Record<string, string>;
-  when: string;
+  settings?: ReplicationSettings;
+  formattedWhen: string;
   error?: string;
   dataFetched: boolean;
-  eachN?: bigint;
-  eachS?: number;
-  lastRefresh: number;
+  entries: string[];
+  refreshCount: number;
 }
 
 enum FilterType {
@@ -84,16 +77,11 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   State
 > {
   state: State = {
-    srcBucket: "",
-    dstBucket: "",
-    dstHost: "",
-    dstToken: "",
+    settings: undefined,
+    formattedWhen: "",
     entries: [],
-    include: {},
-    exclude: {},
-    when: "",
     dataFetched: false,
-    lastRefresh: Date.now(),
+    refreshCount: 0,
   };
 
   refreshInterval: NodeJS.Timeout | null = null;
@@ -122,9 +110,9 @@ export default class ReplicationSettingsFormReplication extends React.Component<
 
     try {
       let parsedWhen: Record<string, any> | undefined;
-      if (this.state.when && this.state.when.trim()) {
+      if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
         try {
-          parsedWhen = JSON.parse(this.state.when);
+          parsedWhen = JSON.parse(this.state.formattedWhen);
           // Validate that parsedWhen is an object
           if (typeof parsedWhen !== "object" || parsedWhen === null) {
             this.setState({ error: "When Condition must be a JSON object" });
@@ -159,7 +147,16 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       } else {
         await client.createReplication(values.name, replicationSettings);
       }
-      onCreated();
+      // Reset settings to undefined when task is completed
+      this.setState(
+        {
+          settings: undefined,
+          formattedWhen: "",
+        },
+        () => {
+          onCreated();
+        },
+      );
     } catch (err) {
       this.handleError(err);
     }
@@ -174,21 +171,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
         const replication: FullReplicationInfo =
           await client.getReplication(replicationName);
 
-        const {
-          srcBucket,
-          dstBucket,
-          dstHost,
-          dstToken,
-          entries,
-          include,
-          exclude,
-          when,
-          eachN,
-          eachS,
-        } = replication.settings;
+        const { settings } = replication;
 
         // Use the utility function and format properly
-        let whenString = convertWhenToString(when);
+        let whenString = convertWhenToString(settings.when);
 
         // Ensure it's properly formatted JSON
         try {
@@ -197,72 +183,43 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           // If parsing fails, keep original string
         }
 
-        // Calculate if there are actual changes to avoid unnecessary re-renders
-        const hasChanges =
-          this.state.srcBucket !== srcBucket ||
-          this.state.dstBucket !== dstBucket ||
-          this.state.dstHost !== dstHost ||
-          this.state.dstToken !== dstToken ||
-          JSON.stringify(this.state.entries) !== JSON.stringify(entries) ||
-          JSON.stringify(this.state.include) !==
-            JSON.stringify(include || {}) ||
-          JSON.stringify(this.state.exclude) !==
-            JSON.stringify(exclude || {}) ||
-          this.state.when !== whenString ||
-          this.state.eachN !== eachN ||
-          this.state.eachS !== eachS;
+        // Always update state with fresh data when loaded
 
-        if (hasChanges || forceRefresh) {
-          console.log("Updating state with new data");
-          this.setState(
-            {
-              srcBucket,
-              dstBucket,
-              dstHost,
-              dstToken,
-              entries,
-              include: include || {},
-              exclude: exclude || {},
-              when: whenString,
-              eachN,
-              eachS,
-              dataFetched: true,
-              lastRefresh: Date.now(),
-            },
-            () => {
-              // After state update, refresh the code mirror instance
-              if (this.codeMirrorInstance) {
-                this.codeMirrorInstance.refresh();
-              }
-            },
-          );
-        }
+        this.setState(
+          {
+            settings,
+            formattedWhen: whenString,
+            entries: settings.entries || [],
+            dataFetched: true,
+            refreshCount: this.state.refreshCount + 1,
+          },
+          () => {
+            // After state update, refresh the code mirror instance
+            if (this.codeMirrorInstance) {
+              this.codeMirrorInstance.refresh();
+            }
+          },
+        );
       } catch (err) {
         this.handleError(err);
       }
     }
   };
 
-  setupAutoRefresh = () => {
-    this.refreshInterval = setInterval(() => {
-      this.loadReplicationData(true);
-    }, 3000);
-  };
+  componentDidMount() {
+    this.loadReplicationData();
+    // More frequent polling to match original implementation
+    this.refreshInterval = setInterval(
+      () => this.loadReplicationData(true),
+      5000,
+    );
+  }
 
-  cleanupAutoRefresh = () => {
+  componentWillUnmount() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
     }
-  };
-
-  async componentDidMount() {
-    await this.loadReplicationData();
-    this.setupAutoRefresh();
-  }
-
-  componentWillUnmount() {
-    this.cleanupAutoRefresh();
   }
 
   handleSourceBucketChange = async (selectedBucket: string) => {
@@ -271,7 +228,18 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       const bucket = await client.getBucket(selectedBucket);
       const entries = await bucket.getEntryList();
 
-      this.setState({ entries: entries.map((entry) => entry.name) });
+      // Update entries and update settings if they exist
+      if (this.state.settings) {
+        this.setState({
+          entries: entries.map((entry) => entry.name),
+          settings: {
+            ...this.state.settings,
+            srcBucket: selectedBucket,
+          },
+        });
+      } else {
+        this.setState({ entries: entries.map((entry) => entry.name) });
+      }
     } catch (err) {
       this.handleError(err);
     }
@@ -286,18 +254,16 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   };
 
   getInitialFormValues = () => {
-    const {
-      srcBucket,
-      dstBucket,
-      dstHost,
-      entries,
-      include,
-      exclude,
-      when,
-      eachN,
-      eachS,
-    } = this.state;
+    const { settings, formattedWhen, entries } = this.state;
     const { replicationName: name } = this.props;
+
+    if (!settings) {
+      return { name };
+    }
+
+    const include = settings.include || {};
+    const exclude = settings.exclude || {};
+
     const recordSettings = [
       ...Object.keys(include).map((key) => ({
         action: FilterType.Include,
@@ -311,24 +277,23 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       })),
     ];
 
-    const whenString = convertWhenToString(when);
-
     const formValues = {
       name,
-      srcBucket,
-      dstBucket,
-      dstHost,
-      entries,
+      srcBucket: settings.srcBucket,
+      dstBucket: settings.dstBucket,
+      dstHost: settings.dstHost,
+      dstToken: settings.dstToken,
+      entries: settings.entries || entries,
       recordSettings,
-      when: whenString,
-      eachN,
-      eachS,
+      when: formattedWhen,
+      eachN: settings.eachN,
+      eachS: settings.eachS,
     };
     return formValues;
   };
 
   handleWhenConditionChange = (value: string) => {
-    this.setState((prevState) => ({ ...prevState, when: value }));
+    this.setState((prevState) => ({ ...prevState, formattedWhen: value }));
   };
 
   formatJSON = (jsonString: string): string => {
@@ -340,11 +305,11 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   };
 
   render() {
-    const { error, dataFetched, lastRefresh } = this.state;
+    const { error, refreshCount } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
 
-    // Force form to update when data changes by using lastRefresh in the key
-    const formKey = `${dataFetched ? "loaded" : "loading"}-${lastRefresh}`;
+    // Aggressive key forcing complete re-renders
+    const formKey = `form-${refreshCount}`;
 
     return (
       <>
@@ -533,7 +498,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             {!isTestEnvironment ? (
               <CodeMirror
                 className="jsonEditor"
-                value={this.state.when}
+                value={this.state.formattedWhen}
                 options={{
                   mode: { name: "javascript", json: true },
                   theme: "default",
@@ -583,10 +548,12 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           </Form.Item>
 
           {/* Show Filter Records section only for existing tasks AND if they are already set */}
-          {(this.props.replicationName &&
-            this.state.include &&
-            Object.keys(this.state.include).length > 0) ||
-          (this.state.exclude && Object.keys(this.state.exclude).length > 0) ? (
+          {this.props.replicationName &&
+          this.state.settings &&
+          ((this.state.settings.include &&
+            Object.keys(this.state.settings.include).length > 0) ||
+            (this.state.settings.exclude &&
+              Object.keys(this.state.settings.exclude).length > 0)) ? (
             <Form.Item
               label={
                 <span>
