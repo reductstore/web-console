@@ -16,9 +16,15 @@ import {
   Row,
   Select,
   Tooltip,
+  Typography,
 } from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "./ReplicationSettingsForm.css";
+import { Controlled as CodeMirror } from "react-codemirror2";
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
+
+const isTestEnvironment = process.env.NODE_ENV === "test";
 
 interface Props {
   client: Client;
@@ -29,17 +35,10 @@ interface Props {
 }
 
 interface State {
-  srcBucket: string;
-  dstBucket: string;
-  dstHost: string;
-  dstToken: string;
+  settings?: ReplicationSettings;
+  formattedWhen: string;
   entries: string[];
-  include: Record<string, string>;
-  exclude: Record<string, string>;
   error?: string;
-  dataFetched: boolean;
-  eachN?: bigint;
-  eachS?: number;
 }
 
 enum FilterType {
@@ -59,9 +58,14 @@ interface FormValues {
     key: string;
     value: string;
   }>;
+  when?: string;
   eachN?: bigint;
   eachS?: number;
 }
+
+const convertWhenToString = (when: any): string => {
+  return typeof when === "string" ? when : JSON.stringify(when || {});
+};
 
 /**
  * A form to create or update a replication
@@ -71,15 +75,14 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   State
 > {
   state: State = {
-    srcBucket: "",
-    dstBucket: "",
-    dstHost: "",
-    dstToken: "",
+    settings: undefined,
+    formattedWhen: "",
     entries: [],
-    include: {},
-    exclude: {},
-    dataFetched: false,
   };
+
+  refreshInterval: NodeJS.Timeout | null = null;
+
+  codeMirrorInstance: any;
 
   /**
    * Called when Create/Update button is pressed
@@ -102,6 +105,21 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
 
     try {
+      let parsedWhen: Record<string, any> | undefined;
+      if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
+        try {
+          parsedWhen = JSON.parse(this.state.formattedWhen);
+          // Validate that parsedWhen is an object
+          if (typeof parsedWhen !== "object" || parsedWhen === null) {
+            this.setState({ error: "When Condition must be a JSON object" });
+            return;
+          }
+        } catch (err) {
+          this.setState({ error: "Invalid JSON in When Condition" });
+          return;
+        }
+      }
+
       const replicationSettings: ReplicationSettings = {
         srcBucket,
         dstBucket,
@@ -110,6 +128,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
         entries,
         include,
         exclude,
+        when: parsedWhen,
         eachN:
           eachN == undefined || eachN.toString().length == 0
             ? undefined
@@ -130,40 +149,47 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
   };
 
-  async componentDidMount() {
+  // Force re-fetching data from the server
+  loadReplicationData = async () => {
     const { replicationName, client } = this.props;
     if (replicationName) {
       try {
+        // Force request with no cache to ensure latest data
         const replication: FullReplicationInfo =
           await client.getReplication(replicationName);
-        const {
-          srcBucket,
-          dstBucket,
-          dstHost,
-          dstToken,
-          entries,
-          include,
-          exclude,
-          eachN,
-          eachS,
-        } = replication.settings;
-        this.setState({
-          srcBucket,
-          dstBucket,
-          dstHost,
-          dstToken,
-          entries,
-          include,
-          exclude,
-          eachN,
-          eachS,
-          dataFetched: true,
-        });
+
+        const { settings } = replication;
+
+        // Use the utility function and format properly
+        let whenString = convertWhenToString(settings.when);
+
+        // Ensure it's properly formatted JSON
+        try {
+          whenString = JSON.stringify(JSON.parse(whenString), null, 2);
+        } catch {
+          // If parsing fails, keep original string
+        }
+
+        // Always update state with fresh data when loaded
+
+        this.setState(
+          {
+            settings,
+            formattedWhen: whenString,
+            entries: settings.entries || [],
+          },
+          () => {
+            // After state update, refresh the code mirror instance
+            if (this.codeMirrorInstance) {
+              this.codeMirrorInstance.refresh();
+            }
+          },
+        );
       } catch (err) {
         this.handleError(err);
       }
     }
-  }
+  };
 
   handleSourceBucketChange = async (selectedBucket: string) => {
     try {
@@ -171,7 +197,18 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       const bucket = await client.getBucket(selectedBucket);
       const entries = await bucket.getEntryList();
 
-      this.setState({ entries: entries.map((entry) => entry.name) });
+      // Update entries and update settings if they exist
+      if (this.state.settings) {
+        this.setState({
+          entries: entries.map((entry) => entry.name),
+          settings: {
+            ...this.state.settings,
+            srcBucket: selectedBucket,
+          },
+        });
+      } else {
+        this.setState({ entries: entries.map((entry) => entry.name) });
+      }
     } catch (err) {
       this.handleError(err);
     }
@@ -185,18 +222,21 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
   };
 
+  async componentDidMount() {
+    await this.loadReplicationData();
+  }
+
   getInitialFormValues = () => {
-    const {
-      srcBucket,
-      dstBucket,
-      dstHost,
-      entries,
-      include,
-      exclude,
-      eachN,
-      eachS,
-    } = this.state;
+    const { settings, formattedWhen, entries } = this.state;
     const { replicationName: name } = this.props;
+
+    if (!settings) {
+      return { name };
+    }
+
+    const include = settings.include || {};
+    const exclude = settings.exclude || {};
+
     const recordSettings = [
       ...Object.keys(include).map((key) => ({
         action: FilterType.Include,
@@ -209,21 +249,40 @@ export default class ReplicationSettingsFormReplication extends React.Component<
         value: exclude[key],
       })),
     ];
+
     return {
       name,
-      srcBucket,
-      dstBucket,
-      dstHost,
-      entries,
+      srcBucket: settings.srcBucket,
+      dstBucket: settings.dstBucket,
+      dstHost: settings.dstHost,
+      dstToken: settings.dstToken,
+      entries: settings.entries || entries,
       recordSettings,
-      eachN,
-      eachS,
+      when: formattedWhen,
+      eachN: settings.eachN,
+      eachS: settings.eachS,
     };
   };
 
+  handleWhenConditionChange = (value: string) => {
+    this.setState((prevState) => ({ ...prevState, formattedWhen: value }));
+  };
+
+  formatJSON = (jsonString: string): string => {
+    try {
+      return JSON.stringify(JSON.parse(jsonString), null, 2);
+    } catch {
+      return jsonString;
+    }
+  };
+
   render() {
-    const { error, dataFetched } = this.state;
+    const { error } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
+    if (this.state.settings === undefined && replicationName) {
+      // If settings are not loaded yet for update
+      return <div></div>;
+    }
 
     return (
       <>
@@ -236,7 +295,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           />
         )}
         <Form
-          key={dataFetched ? "loaded" : "loading"}
           name="replicationForm"
           onFinish={this.onFinish}
           layout="vertical"
@@ -408,97 +466,163 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <Form.Item
-            label={
-              <span>
-                Filter Records&nbsp;
-                <Tooltip title="Set the labels a record should include/exclude to be replicated. If empty, all records are replicated.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            className="ReplicationField"
-          >
-            <Form.List name="recordSettings">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map((field, index) => (
-                    <Form.Item key={`recordSettings-${field.key}-${index}`}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: "10px",
-                        }}
-                      >
+          <Form.Item label={<span>When Condition</span>}>
+            {!isTestEnvironment ? (
+              <CodeMirror
+                className="jsonEditor"
+                value={this.state.formattedWhen}
+                options={{
+                  mode: { name: "javascript", json: true },
+                  theme: "default",
+                  lineNumbers: true,
+                  lineWrapping: true,
+                  viewportMargin: Infinity,
+                  matchBrackets: true,
+                  autoCloseBrackets: true,
+                }}
+                onBeforeChange={(editor: any, data: any, value: string) => {
+                  this.handleWhenConditionChange(value);
+                }}
+                onBlur={(editor: any) => {
+                  this.handleWhenConditionChange(
+                    this.formatJSON(editor.getValue()),
+                  );
+                }}
+                editorDidMount={(editor) => {
+                  this.codeMirrorInstance = editor;
+                  // Format content in the editor
+                  const value = editor.getValue();
+                  try {
+                    const formatted = this.formatJSON(value);
+                    if (formatted !== value) {
+                      editor.setValue(formatted);
+                    }
+                  } catch {
+                    // If formatting fails, keep the original value
+                  }
+                  editor.refresh();
+                }}
+              />
+            ) : (
+              <></>
+            )}
+            <Typography.Text type="secondary" className="jsonExample">
+              {'Example: {"&label_name": { "$gt": 10 }}'}
+              <br />
+              <a
+                href="https://www.reduct.store/docs/conditional-query"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Query Reference Documentation
+              </a>
+            </Typography.Text>
+          </Form.Item>
+
+          {/* Show Filter Records section only for existing tasks AND if they are already set */}
+          {this.props.replicationName &&
+          this.state.settings &&
+          ((this.state.settings.include &&
+            Object.keys(this.state.settings.include).length > 0) ||
+            (this.state.settings.exclude &&
+              Object.keys(this.state.settings.exclude).length > 0)) ? (
+            <Form.Item
+              label={
+                <span>
+                  Filter Records&nbsp;
+                  <Tooltip title="Set the labels a record should include/exclude to be replicated. If empty, all records are replicated.">
+                    <InfoCircleOutlined />
+                  </Tooltip>
+                </span>
+              }
+              className="ReplicationField"
+            >
+              <Form.List name="recordSettings">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map((field, index) => (
+                      <Form.Item key={`recordSettings-${field.key}-${index}`}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "10px",
+                          }}
+                        >
+                          <Form.Item
+                            {...field}
+                            name={[field.name, "action"]}
+                            rules={[
+                              { required: true, message: "Action is required" },
+                            ]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Radio.Group disabled={readOnly}>
+                              <Radio value="include">Include</Radio>
+                              <Radio value="exclude">Exclude</Radio>
+                            </Radio.Group>
+                          </Form.Item>
+                          <Button
+                            type="primary"
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            onClick={() => remove(field.name)}
+                            disabled={readOnly}
+                          />
+                        </div>
+
                         <Form.Item
                           {...field}
-                          name={[field.name, "action"]}
+                          name={[field.name, "key"]}
                           rules={[
-                            { required: true, message: "Action is required" },
+                            { required: true, message: "Key is required" },
                           ]}
-                          style={{ marginBottom: 0 }}
+                          style={{
+                            display: "inline-block",
+                            width: "calc(50% - 8px)",
+                          }}
+                          key={`recordSettings-${field.key}-${index}`}
                         >
-                          <Radio.Group disabled={readOnly}>
-                            <Radio value="include">Include</Radio>
-                            <Radio value="exclude">Exclude</Radio>
-                          </Radio.Group>
+                          <Input placeholder="Key" disabled={readOnly} />
                         </Form.Item>
+
+                        <Form.Item
+                          {...field}
+                          name={[field.name, "value"]}
+                          rules={[
+                            { required: true, message: "Value is required" },
+                          ]}
+                          style={{
+                            display: "inline-block",
+                            width: "calc(50% - 8px)",
+                            marginLeft: "16px",
+                          }}
+                          key={`recordSettings-${field.key}-${index}-value`}
+                        >
+                          <Input placeholder="Value" disabled={readOnly} />
+                        </Form.Item>
+                      </Form.Item>
+                    ))}
+                    {/* Only show Add Rule button for existing tasks */}
+                    {this.props.replicationName && (
+                      <Form.Item name="addRule">
                         <Button
-                          type="primary"
-                          danger
-                          icon={<DeleteOutlined />}
-                          size="small"
-                          onClick={() => remove(field.name)}
+                          type="dashed"
+                          onClick={() => add()}
+                          block
                           disabled={readOnly}
-                        />
-                      </div>
-
-                      <Form.Item
-                        {...field}
-                        name={[field.name, "key"]}
-                        rules={[{ required: true, message: "Key is required" }]}
-                        style={{
-                          display: "inline-block",
-                          width: "calc(50% - 8px)",
-                        }}
-                        key={`recordSettings-${field.key}-${index}`}
-                      >
-                        <Input placeholder="Key" disabled={readOnly} />
+                        >
+                          Add Rule
+                        </Button>
                       </Form.Item>
-
-                      <Form.Item
-                        {...field}
-                        name={[field.name, "value"]}
-                        rules={[
-                          { required: true, message: "Value is required" },
-                        ]}
-                        style={{
-                          display: "inline-block",
-                          width: "calc(50% - 8px)",
-                          marginLeft: "16px",
-                        }}
-                        key={`recordSettings-${field.key}-${index}-value`}
-                      >
-                        <Input placeholder="Value" disabled={readOnly} />
-                      </Form.Item>
-                    </Form.Item>
-                  ))}
-                  <Form.Item name="addRule">
-                    <Button
-                      type="dashed"
-                      onClick={() => add()}
-                      block
-                      disabled={readOnly}
-                    >
-                      Add Rule
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
-          </Form.Item>
+                    )}
+                  </>
+                )}
+              </Form.List>
+            </Form.Item>
+          ) : null}
           <Form.Item>
             <Button
               type="primary"

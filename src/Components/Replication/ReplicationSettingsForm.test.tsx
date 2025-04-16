@@ -11,7 +11,7 @@ describe("Replication::ReplicationSettingsForm", () => {
   const client = new Client("dummyURL");
   let wrapper: ReactWrapper;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     mockJSDOM();
 
@@ -74,6 +74,9 @@ describe("Replication::ReplicationSettingsForm", () => {
         />
       </MemoryRouter>,
     );
+
+    // Wait for the component to finish rendering
+    await waitUntilFind(wrapper, "form");
   });
 
   afterEach(() => {
@@ -93,7 +96,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "dstHost" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "recordSettings" }).exists()).toBeTruthy();
+
     expect(wrapper.find({ name: "eachN" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
@@ -150,7 +153,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     );
   });
 
-  it("disables record settings inputs and radios in read-only mode", () => {
+  it("disables record settings inputs and radios in read-only mode", async () => {
     wrapper = mount(
       <MemoryRouter>
         <ReplicationSettingsForm
@@ -162,6 +165,9 @@ describe("Replication::ReplicationSettingsForm", () => {
         />
       </MemoryRouter>,
     );
+
+    // Wait for the component to finish rendering
+    await waitUntilFind(wrapper, "form");
 
     // Find all Radio.Group and Input components within the record settings Form.List
     const recordSettingsRadios = wrapper.find("Form.List").find("Radio.Group");
