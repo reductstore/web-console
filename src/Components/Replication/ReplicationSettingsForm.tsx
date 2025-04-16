@@ -37,10 +37,8 @@ interface Props {
 interface State {
   settings?: ReplicationSettings;
   formattedWhen: string;
-  error?: string;
-  dataFetched: boolean;
   entries: string[];
-  refreshCount: number;
+  error?: string;
 }
 
 enum FilterType {
@@ -80,8 +78,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     settings: undefined,
     formattedWhen: "",
     entries: [],
-    dataFetched: false,
-    refreshCount: 0,
   };
 
   refreshInterval: NodeJS.Timeout | null = null;
@@ -147,23 +143,14 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       } else {
         await client.createReplication(values.name, replicationSettings);
       }
-      // Reset settings to undefined when task is completed
-      this.setState(
-        {
-          settings: undefined,
-          formattedWhen: "",
-        },
-        () => {
-          onCreated();
-        },
-      );
+      onCreated();
     } catch (err) {
       this.handleError(err);
     }
   };
 
   // Force re-fetching data from the server
-  loadReplicationData = async (forceRefresh = false) => {
+  loadReplicationData = async () => {
     const { replicationName, client } = this.props;
     if (replicationName) {
       try {
@@ -190,8 +177,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             settings,
             formattedWhen: whenString,
             entries: settings.entries || [],
-            dataFetched: true,
-            refreshCount: this.state.refreshCount + 1,
           },
           () => {
             // After state update, refresh the code mirror instance
@@ -205,22 +190,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       }
     }
   };
-
-  componentDidMount() {
-    this.loadReplicationData();
-    // More frequent polling to match original implementation
-    this.refreshInterval = setInterval(
-      () => this.loadReplicationData(true),
-      5000,
-    );
-  }
-
-  componentWillUnmount() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
-  }
 
   handleSourceBucketChange = async (selectedBucket: string) => {
     try {
@@ -253,6 +222,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
   };
 
+  async componentDidMount() {
+    await this.loadReplicationData();
+  }
+
   getInitialFormValues = () => {
     const { settings, formattedWhen, entries } = this.state;
     const { replicationName: name } = this.props;
@@ -277,7 +250,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       })),
     ];
 
-    const formValues = {
+    return {
       name,
       srcBucket: settings.srcBucket,
       dstBucket: settings.dstBucket,
@@ -289,7 +262,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
       eachN: settings.eachN,
       eachS: settings.eachS,
     };
-    return formValues;
   };
 
   handleWhenConditionChange = (value: string) => {
@@ -305,11 +277,8 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   };
 
   render() {
-    const { error, refreshCount } = this.state;
+    const { error } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
-
-    // Aggressive key forcing complete re-renders
-    const formKey = `form-${refreshCount}`;
 
     return (
       <>
@@ -322,7 +291,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           />
         )}
         <Form
-          key={formKey}
           name="replicationForm"
           onFinish={this.onFinish}
           layout="vertical"
