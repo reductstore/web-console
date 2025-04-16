@@ -279,6 +279,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   render() {
     const { error } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
+    if (this.state.settings === undefined && replicationName) {
+      // If settings are not loaded yet for update
+      return <div></div>;
+    }
 
     return (
       <>
