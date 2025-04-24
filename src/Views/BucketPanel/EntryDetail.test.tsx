@@ -250,25 +250,20 @@ describe("EntryDetail", () => {
     });
 
     it("should open edit labels modal when edit icon is clicked", () => {
-      // Find the first record row
       const recordRow = wrapper.find(".ant-table-row").at(0);
       expect(recordRow.exists()).toBe(true);
 
-      // Find the edit icon button
       const editIcon = wrapper.find(EditOutlined).at(0);
       expect(editIcon.exists()).toBe(true);
 
-      // Get the onClick handler
       const onClickHandler = editIcon.props().onClick;
       expect(typeof onClickHandler).toBe("function");
 
-      // Create a mock event and record object to pass to the handler
       const mockEvent = {
         stopPropagation: jest.fn(),
       } as unknown as React.MouseEvent;
       const mockRecordWithKey = { ...mockRecords[0], key: "1000" };
 
-      // Call the handler directly to simulate clicking the icon
       act(() => {
         // Pass both the event and record to the handler
         // @ts-ignore - We're manually calling with test data
@@ -276,55 +271,46 @@ describe("EntryDetail", () => {
       });
       wrapper.update();
 
-      // Now check if the modal is displayed
       const modal = wrapper.find(".ant-modal");
       expect(modal.exists()).toBe(true);
       expect(modal.find(".ant-modal-title").text()).toBe("Edit Record Labels");
 
-      // Check if record info is displayed in the modal
       const modalContent = modal.find(".ant-modal-body").text();
       expect(modalContent).toContain("Record Timestamp");
       expect(modalContent).toContain("Content Type");
       expect(modalContent).toContain("Size");
 
-      // Check if the JSON editor is present
       const jsonEditor = modal.find(".jsonEditor");
       expect(jsonEditor.exists()).toBe(true);
     });
 
     it("should verify record labels can be updated", async () => {
-      // Setup a simplified test with direct mocking of the bucket API
       const originalData = new Uint8Array([1, 2, 3, 4]);
 
-      // Mock the necessary bucket methods that will be called during update
+      jest.clearAllMocks();
+
       mockReader.read.mockResolvedValue(originalData);
       mockReader.contentType = "application/json";
       mockReader.labels = { key: "value" };
 
-      // Make sure our mocks return proper values
+      bucket.update = jest.fn().mockResolvedValue(undefined);
+
       (bucket.beginRead as jest.Mock).mockResolvedValue(mockReader);
       (bucket.removeRecord as jest.Mock).mockResolvedValue(undefined);
       (bucket.beginWrite as jest.Mock).mockResolvedValue(mockWriter);
-
-      // Reset the write mock and track data
-      mockWriter.write.mockReset();
       mockWriter.write.mockResolvedValue(undefined);
 
-      // 1. First find all record rows
       const recordRows = wrapper.find(".ant-table-row");
       expect(recordRows.length).toBeGreaterThan(0);
 
       const firstRow = recordRows.at(0);
 
-      // Find the edit icon
       const editIcon = wrapper.find(EditOutlined).at(0);
       expect(editIcon.exists()).toBe(true);
 
       const onClick = editIcon.props().onClick;
 
-      // Call the click handler with a mocked event and the record data
       act(() => {
-        // TypeScript needs an explicit cast here
         (onClick as any)(
           {
             stopPropagation: jest.fn(),
@@ -334,31 +320,29 @@ describe("EntryDetail", () => {
       });
       wrapper.update();
 
-      // Verify modal is shown
       const modal = wrapper.find(".ant-modal");
       expect(modal.exists()).toBe(true);
 
-      // Find the OK button in the modal
       const buttons = modal.find(".ant-modal-footer").find("button");
       expect(buttons.length).toBeGreaterThan(1);
 
       const okButton = buttons.at(1);
       expect(okButton.exists()).toBe(true);
 
-      // Call the click handler
       const okButtonOnClick = okButton.props().onClick;
 
       await act(async () => {
         (okButtonOnClick as any)();
-        jest.runAllTimers(); // Run all timers to complete async operations
+        jest.runAllTimers();
       });
 
-      expect(bucket.beginRead).toHaveBeenCalled();
-      expect(bucket.removeRecord).toHaveBeenCalled();
-      expect(bucket.beginWrite).toHaveBeenCalled();
+      expect(bucket.update).toHaveBeenCalled();
 
-      //  erify that data was written
-      expect(mockWriter.write).toHaveBeenCalled();
+      expect(bucket.update).toHaveBeenCalledWith(
+        "testEntry",
+        mockRecords[0].time,
+        expect.any(Object),
+      );
     });
   });
 });
