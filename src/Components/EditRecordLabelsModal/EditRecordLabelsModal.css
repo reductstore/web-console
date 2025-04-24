@@ -1,0 +1,36 @@
+.edit-record-labels-modal .record-info {
+  margin-bottom: 16px;
+}
+
+.edit-record-labels-modal .record-info-label {
+  font-weight: bold;
+}
+
+.edit-record-labels-modal .help-text {
+  font-size: 0.85em;
+  margin-bottom: 8px;
+}
+
+.edit-record-labels-modal .json-editor-container {
+  margin-bottom: 16px;
+}
+
+.edit-record-labels-modal .jsonEditor {
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  font-family: monospace;
+}
+
+/* Fix CodeMirror styling */
+.edit-record-labels-modal .CodeMirror {
+  height: auto;
+  min-height: 100px;
+}
+
+.edit-record-labels-modal .CodeMirror-scroll {
+  min-height: 100px;
+}
+
+.edit-record-labels-modal .error-message {
+  margin-top: 16px;
+}

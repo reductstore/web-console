@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-// Add this to detect test environment
-const isTestEnv = process.env.NODE_ENV === "test";
+
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -27,6 +26,7 @@ import "./EntryDetail.css";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
+import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -60,21 +60,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
     useState(false);
-  const [editorKey, setEditorKey] = useState(0);
-
-  // Force CodeMirror to refresh when modal becomes visible
-  useEffect(() => {
-    if (isEditLabelsModalVisible && !isTestEnv) {
-      // Need to wait for modal animation to complete
-      const timer = setTimeout(() => {
-        setEditorKey((prev) => prev + 1);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isEditLabelsModalVisible]);
   const [currentRecord, setCurrentRecord] = useState<any>(null);
-  const [labelsJson, setLabelsJson] = useState("");
-  const [labelUpdateError, setLabelUpdateError] = useState("");
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
 
   // Provide a default value for permissions
@@ -128,98 +114,12 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const handleEditLabels = (record: any) => {
     setCurrentRecord(record);
-
-    // Format the labels exactly like the When Condition editor
-    let labelsJson = "{}";
-
-    if (record.labels) {
-      try {
-        // First convert to string if it's an object
-        const labelsStr =
-          typeof record.labels === "string"
-            ? record.labels
-            : JSON.stringify(record.labels);
-
-        // Parse and reformat to ensure proper structure
-        labelsJson = JSON.stringify(JSON.parse(labelsStr), null, 2);
-      } catch (error) {
-        console.error("Error formatting labels:", error);
-        labelsJson = "{}"; // Default to empty object if error
-      }
-    }
-
-    // Set it in the editor
-    setLabelsJson(labelsJson);
-    setLabelUpdateError("");
     setIsEditLabelsModalVisible(true);
   };
 
-  const handleUpdateLabels = async () => {
-    try {
-      // Parse the JSON to validate it
-      const labels = JSON.parse(labelsJson);
-      setLabelUpdateError("");
-
-      // Get the timestamp of the record to update
-      const timestamp = BigInt(currentRecord.key);
-
-      // Get the bucket
-      const bucket = await props.client.getBucket(bucketName);
-
-      try {
-        // First check if record exists and get its current information
-        const reader = await bucket.beginRead(entryName, timestamp, true); // true = head only (metadata)
-        const oldLabels = reader.labels;
-
-        // Add diagnostics info
-        console.log("Updating record labels for:", timestamp.toString());
-        console.log("Current labels:", oldLabels);
-        console.log("New labels:", labels);
-
-        // 1. Read the original record's full data
-        const fullReader = await bucket.beginRead(entryName, timestamp);
-        const recordData = await fullReader.read();
-        const recordContentType = fullReader.contentType;
-
-        // 2. Remove the old record
-        await bucket.removeRecord(entryName, timestamp);
-
-        // 3. Write a new record with the same timestamp but updated labels
-        const writer = await bucket.beginWrite(entryName, {
-          ts: timestamp,
-          contentType: recordContentType,
-          labels: labels,
-        });
-
-        // 4. Write the original data back
-        await writer.write(recordData);
-      } catch (error) {
-        let errorMessage = "Failed to update labels";
-
-        if (error instanceof APIError) {
-          errorMessage = error.message || errorMessage;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      // Refresh the records to show updated labels
-      getRecords(start, end, limit);
-      setIsEditLabelsModalVisible(false);
-    } catch (err) {
-      console.error(err);
-      if (err instanceof SyntaxError) {
-        setLabelUpdateError("Invalid JSON format: " + err.message);
-      } else if (err instanceof APIError) {
-        setLabelUpdateError(err.message || "API Error");
-      } else if (err instanceof Error) {
-        setLabelUpdateError(err.message || "Failed to update labels.");
-      } else {
-        setLabelUpdateError("Failed to update labels: " + String(err));
-      }
-    }
+  const handleLabelsUpdated = () => {
+    // Refresh the records to show updated labels
+    getRecords(start, end, limit);
   };
 
   const handleDateChange = (dates: any) => {
@@ -437,73 +337,16 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Table columns={columns} dataSource={data} />
 
       {/* Modal for editing labels */}
-      <Modal
-        title="Edit Record Labels"
-        open={isEditLabelsModalVisible}
+      <EditRecordLabelsModal
+        isVisible={isEditLabelsModalVisible}
         onCancel={() => setIsEditLabelsModalVisible(false)}
-        onOk={handleUpdateLabels}
-        okText="Update Labels"
-        width={600}
-      >
-        {currentRecord && (
-          <>
-            <div style={{ marginBottom: 16 }}>
-              <Typography.Text strong>Record Timestamp: </Typography.Text>
-              <Typography.Text>
-                {showUnix
-                  ? currentRecord.key
-                  : new Date(
-                      Number(currentRecord.timestamp / 1000n),
-                    ).toISOString()}
-              </Typography.Text>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <Typography.Text strong>Content Type: </Typography.Text>
-              <Typography.Text>{currentRecord.contentType}</Typography.Text>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <Typography.Text strong>Size: </Typography.Text>
-              <Typography.Text>{currentRecord.size}</Typography.Text>
-            </div>
-            <Typography.Text>Edit Labels (JSON format):</Typography.Text>
-            <div style={{ marginBottom: 8 }}>
-              <Typography.Text type="secondary" style={{ fontSize: "0.85em" }}>
-                Note: To remove a label, remove the key-value pair from the JSON
-              </Typography.Text>
-            </div>
-            <div className="jsonFilterSection">
-              <CodeMirror
-                key={`editor-${editorKey}`}
-                className="jsonEditor"
-                value={labelsJson}
-                options={{
-                  mode: { name: "javascript", json: true },
-                  theme: "default",
-                  lineNumbers: true,
-                  lineWrapping: true,
-                  viewportMargin: Infinity,
-                  matchBrackets: true,
-                  autoCloseBrackets: true,
-                }}
-                onBeforeChange={(editor: any, data: any, value: string) => {
-                  setLabelsJson(value);
-                }}
-                onBlur={(editor: any) => {
-                  const value = editor.getValue() || "";
-                  setLabelsJson(formatJSON(value));
-                }}
-              />
-            </div>
-            {labelUpdateError && (
-              <Alert
-                type="error"
-                message={labelUpdateError}
-                style={{ marginTop: 16 }}
-              />
-            )}
-          </>
-        )}
-      </Modal>
+        record={currentRecord}
+        client={props.client}
+        bucketName={bucketName}
+        entryName={entryName}
+        showUnix={showUnix}
+        onLabelsUpdated={handleLabelsUpdated}
+      />
     </div>
   );
 }

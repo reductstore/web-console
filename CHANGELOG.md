@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added:
 
-- RS-xyz: Add record label editing functionality, [PR-xx](https://github.com/reductstore/web-console/pull/xx)
+- RS-613: Add record label editing functionality, [PR-93](https://github.com/reductstore/web-console/pull/93)
 - RS-605: Add when conditions to replication settings in WebConsole, [PR-89](https://github.com/reductstore/web-console/pull/89)
 - RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
 - RS-632: Add upload button to bucket panel allowing users to create new entries by uploading files, [PR-86](https://github.com/reductstore/web-console/pull/86)
