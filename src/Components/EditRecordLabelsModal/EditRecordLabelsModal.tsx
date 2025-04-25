@@ -29,55 +29,29 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
   showUnix,
   onLabelsUpdated,
 }) => {
-  const [labelsJson, setLabelsJson] = useState<string>("{}");
+  const [labelsJson, setLabelsJson] = useState<string | null>();
   const [labelUpdateError, setLabelUpdateError] = useState<string | null>(null);
-  const [editorKey, setEditorKey] = useState<number>(0);
 
-  // Prepare the initial JSON when the record changes
   useEffect(() => {
-    if (record && isVisible) {
-      setLabelUpdateError(null);
+    if (!record) return;
+    setLabelUpdateError(null);
+    try {
+      const labels = record.labels || {};
 
-      try {
-        const labels = record.labels || {};
+      const labelsObj =
+        typeof labels === "string" ? JSON.parse(labels) : labels;
 
-        const labelsObj =
-          typeof labels === "string" ? JSON.parse(labels) : labels;
-
-        const formattedLabels = JSON.stringify(labelsObj, null, 2);
-        setLabelsJson(formattedLabels);
-
-        setEditorKey(Date.now());
-      } catch (error) {
-        console.error("Error preparing labels for display:", error);
-        setLabelsJson("{}");
-      }
+      const formattedLabels = JSON.stringify(labelsObj, null, 2);
+      setLabelsJson(formattedLabels);
+    } catch (error) {
+      console.error("Error preparing labels for display:", error);
+      setLabelsJson("{}");
     }
-  }, [record, isVisible]);
-
-  // Force CodeMirror to refresh after the modal is fully visible
-  useEffect(() => {
-    if (isVisible) {
-      const timer1 = setTimeout(() => {
-        setEditorKey(Date.now());
-      }, 100);
-
-      const timer2 = setTimeout(() => {
-        setEditorKey(Date.now());
-      }, 300);
-
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-      };
-    }
-  }, [isVisible]);
+  }, [record]);
 
   const handleUpdateLabels = async () => {
-    if (!record) return;
-
+    if (!record || !labelsJson) return;
     setLabelUpdateError(null);
-
     try {
       const labels = JSON.parse(labelsJson);
       const { timestamp } = record;
@@ -88,16 +62,13 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
       onLabelsUpdated();
       onCancel();
     } catch (err) {
-      console.error(err);
-      if (err instanceof SyntaxError) {
+      if (err instanceof SyntaxError)
         setLabelUpdateError("Invalid JSON format: " + err.message);
-      } else if (err instanceof APIError) {
+      else if (err instanceof APIError)
         setLabelUpdateError(err.message || "API Error");
-      } else if (err instanceof Error) {
+      else if (err instanceof Error)
         setLabelUpdateError(err.message || "Failed to update labels.");
-      } else {
-        setLabelUpdateError("Failed to update labels: " + String(err));
-      }
+      else setLabelUpdateError("Failed to update labels: " + String(err));
     }
   };
 
@@ -142,39 +113,40 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
             </Typography.Text>
           </div>
           <div className="json-editor-container">
-            <CodeMirror
-              key={`editor-${editorKey}`}
-              className="jsonEditor"
-              value={labelsJson}
-              options={{
-                mode: { name: "javascript", json: true },
-                theme: "default",
-                lineNumbers: true,
-                lineWrapping: true,
-                viewportMargin: Infinity,
-                matchBrackets: true,
-                autoCloseBrackets: true,
-                firstLineNumber: 1,
-                indentWithTabs: false,
-                indentUnit: 2,
-                tabSize: 2,
-              }}
-              onBeforeChange={(editor: any, data: any, value: string) => {
-                setLabelsJson(value);
-              }}
-              onBlur={(editor: any) => {
-                const value = editor.getValue() || "";
-                try {
-                  // Parse and reformat to ensure proper structure
-                  const parsed = JSON.parse(value);
-                  const formatted = JSON.stringify(parsed, null, 2);
-                  setLabelsJson(formatted);
-                } catch (e) {
-                  // Keep the value as is if it's not valid JSON
-                  console.error("Error formatting JSON on blur:", e);
-                }
-              }}
-            />
+            {labelsJson && (
+              <CodeMirror
+                className="jsonEditor"
+                value={labelsJson}
+                options={{
+                  mode: { name: "javascript", json: true },
+                  theme: "default",
+                  lineNumbers: true,
+                  lineWrapping: true,
+                  viewportMargin: Infinity,
+                  matchBrackets: true,
+                  autoCloseBrackets: true,
+                  firstLineNumber: 1,
+                  indentWithTabs: false,
+                  indentUnit: 2,
+                  tabSize: 2,
+                }}
+                onBeforeChange={(editor: any, data: any, value: string) => {
+                  setLabelsJson(value);
+                }}
+                onBlur={(editor: any) => {
+                  const value = editor.getValue() || "";
+                  try {
+                    // Parse and reformat to ensure proper structure
+                    const parsed = JSON.parse(value);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    setLabelsJson(formatted);
+                  } catch (e) {
+                    // Keep the value as is if it's not valid JSON
+                    console.error("Error formatting JSON on blur:", e);
+                  }
+                }}
+              />
+            )}
           </div>
           {labelUpdateError && (
             <Alert
