@@ -11,26 +11,89 @@
   margin-bottom: 8px;
 }
 
-.edit-record-labels-modal .json-editor-container {
+.edit-record-labels-modal .label-table-container {
   margin-bottom: 16px;
-}
-
-.edit-record-labels-modal .jsonEditor {
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  font-family: monospace;
-}
-
-/* Fix CodeMirror styling */
-.edit-record-labels-modal .CodeMirror {
-  height: auto;
-  min-height: 100px;
-}
-
-.edit-record-labels-modal .CodeMirror-scroll {
-  min-height: 100px;
 }
 
 .edit-record-labels-modal .error-message {
   margin-top: 16px;
+}
+
+/* Editable table styles */
+.edit-record-labels-modal .editable-cell {
+  position: relative;
+}
+
+.edit-record-labels-modal .editable-cell-value-wrap {
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+/* Remove hover border effect */
+.edit-record-labels-modal .editable-row:hover .editable-cell-value-wrap {
+  padding: 5px 12px;
+  /* No border on hover */
+}
+
+/* Style validation errors */
+.edit-record-labels-modal .ant-form-item {
+  margin-bottom: 0;
+}
+
+/* Error message styling */
+.edit-record-labels-modal .ant-form-item-explain {
+  color: #ff4d4f;
+  font-size: 12px;
+  padding: 4px 0;
+  line-height: 1.2;
+  position: absolute;
+  margin-top: 4px;
+}
+
+/* Ensure table cells have enough space and centered content */
+.edit-record-labels-modal .ant-table-cell {
+  padding: 12px;
+  vertical-align: middle;
+}
+
+/* Add spacing between rows */
+.edit-record-labels-modal .ant-table-tbody > tr {
+  margin-bottom: 20px;
+}
+
+.edit-record-labels-modal .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Style the input fields */
+.edit-record-labels-modal .ant-input {
+  height: 32px;
+}
+
+/* Style the editable cell value wrap */
+.edit-record-labels-modal .editable-cell-value-wrap {
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+/* Style the placeholder text */
+.edit-record-labels-modal .placeholder-text {
+  color: #bfbfbf;
+}
+
+/* Style the add label button */
+.edit-record-labels-modal .add-label-button {
+  margin-bottom: 16px;
+}
+
+/* Style the form item */
+.edit-record-labels-modal .edit-form-item {
+  margin: 0;
+}
+
+/* Style the input field */
+.edit-record-labels-modal .edit-input {
+  width: 100%;
 }

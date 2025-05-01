@@ -280,8 +280,9 @@ describe("EntryDetail", () => {
       expect(modalContent).toContain("Content Type");
       expect(modalContent).toContain("Size");
 
-      const jsonEditor = modal.find(".jsonEditor");
-      expect(jsonEditor.exists()).toBe(true);
+      // Check for the label table instead of CodeMirror
+      const labelTable = modal.find(".edit-record-labels-modal .ant-table");
+      expect(labelTable.exists()).toBe(true);
     });
 
     it("should verify record labels can be updated", async () => {
