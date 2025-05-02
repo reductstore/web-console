@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Update RuductStore SDK with fixed start/stop query parameters, [PR-97](https://github.com/reductstore/web-console/pull/97)
+
 ## [1.9.1] - 2025-04-03
 
 ### Fixed
