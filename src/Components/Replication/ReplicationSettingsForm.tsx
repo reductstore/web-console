@@ -142,7 +142,9 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           dstHost,
           dstToken,
           entries,
+          // @ts-ignore
           include,
+          // @ts-ignore
           exclude,
           eachN,
           eachS,
@@ -153,7 +155,9 @@ export default class ReplicationSettingsFormReplication extends React.Component<
           dstHost,
           dstToken,
           entries,
+          // @ts-ignore
           include,
+          // @ts-ignore
           exclude,
           eachN,
           eachS,
