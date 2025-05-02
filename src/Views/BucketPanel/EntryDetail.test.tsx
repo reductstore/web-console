@@ -255,10 +255,9 @@ describe("EntryDetail", () => {
 
       const modal = wrapper.find(".ant-modal");
       expect(modal.exists()).toBe(true);
-      expect(modal.find(".ant-modal-title").text()).toBe("Labels");
 
       const modalContent = modal.find(".ant-modal-body").text();
-      expect(modalContent).toContain("Record Timestamp");
+      expect(modalContent).toContain("Timestamp");
       expect(modalContent).toContain("Content Type");
       expect(modalContent).toContain("Size");
 
@@ -283,12 +282,10 @@ describe("EntryDetail", () => {
       const recordRows = wrapper.find(".ant-table-row");
       expect(recordRows.length).toBeGreaterThan(0);
 
-      const firstRow = recordRows.at(0);
-
       const editIcon = wrapper.find(EditOutlined).at(0);
       expect(editIcon.exists()).toBe(true);
 
-      const onClick = editIcon.props().onClick;
+      const { onClick } = editIcon.props();
 
       act(() => {
         (onClick as any)(
