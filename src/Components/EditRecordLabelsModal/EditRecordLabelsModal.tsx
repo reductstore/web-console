@@ -286,7 +286,6 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
 
   return (
     <Modal
-      title="Labels"
       open={isVisible}
       onCancel={onCancel}
       onOk={handleUpdateLabels}
@@ -298,7 +297,7 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
         <>
           <div className="record-info">
             <Typography.Text className="record-info-label">
-              Record Timestamp:{" "}
+              Timestamp:{" "}
             </Typography.Text>
             <Typography.Text>
               {showUnix
@@ -318,12 +317,9 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
             </Typography.Text>
             <Typography.Text>{record.size}</Typography.Text>
           </div>
-          <Typography.Text>Labels:</Typography.Text>
-          <div className="help-text">
-            <Typography.Text type="secondary">
-              Note: To remove a label, click the delete button
-            </Typography.Text>
-          </div>
+          <Typography.Text className="record-info-label">
+            Labels:
+          </Typography.Text>
           <div className="label-table-container">
             <Button
               style={{ float: "right" }}
