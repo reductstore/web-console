@@ -286,7 +286,7 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
 
   return (
     <Modal
-      title="Edit Record Labels"
+      title="Labels"
       open={isVisible}
       onCancel={onCancel}
       onOk={handleUpdateLabels}
@@ -318,7 +318,7 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
             </Typography.Text>
             <Typography.Text>{record.size}</Typography.Text>
           </div>
-          <Typography.Text>Edit Labels:</Typography.Text>
+          <Typography.Text>Labels:</Typography.Text>
           <div className="help-text">
             <Typography.Text type="secondary">
               Note: To remove a label, click the delete button
@@ -326,13 +326,12 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
           </div>
           <div className="label-table-container">
             <Button
-              type="primary"
+              style={{ float: "right" }}
               onClick={handleAdd}
               className="add-label-button"
               icon={<PlusOutlined />}
-            >
-              Add Label
-            </Button>
+              title="Add"
+            />
             <Table
               components={components}
               rowClassName="editable-row"

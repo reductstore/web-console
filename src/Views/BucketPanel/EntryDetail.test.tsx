@@ -9,24 +9,6 @@ import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
-// Mock CodeMirror to prevent getBoundingClientRect errors in tests
-jest.mock("react-codemirror2", () => ({
-  Controlled: (props: any) => {
-    // Simple mock that just renders a div and calls onChange when needed
-    return (
-      <div
-        className="react-codemirror2 jsonEditor"
-        data-testid="codemirror-mock"
-      >
-        <textarea
-          value={props.value}
-          onChange={(e) => props.onBeforeChange?.(null, null, e.target.value)}
-        />
-      </div>
-    );
-  },
-}));
-
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useParams: () => ({
@@ -273,7 +255,7 @@ describe("EntryDetail", () => {
 
       const modal = wrapper.find(".ant-modal");
       expect(modal.exists()).toBe(true);
-      expect(modal.find(".ant-modal-title").text()).toBe("Edit Record Labels");
+      expect(modal.find(".ant-modal-title").text()).toBe("Labels");
 
       const modalContent = modal.find(".ant-modal-body").text();
       expect(modalContent).toContain("Record Timestamp");
@@ -297,9 +279,6 @@ describe("EntryDetail", () => {
       bucket.update = jest.fn().mockResolvedValue(undefined);
 
       (bucket.beginRead as jest.Mock).mockResolvedValue(mockReader);
-      (bucket.removeRecord as jest.Mock).mockResolvedValue(undefined);
-      (bucket.beginWrite as jest.Mock).mockResolvedValue(mockWriter);
-      mockWriter.write.mockResolvedValue(undefined);
 
       const recordRows = wrapper.find(".ant-table-row");
       expect(recordRows.length).toBeGreaterThan(0);
