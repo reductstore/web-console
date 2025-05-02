@@ -157,7 +157,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
         // Force request with no cache to ensure latest data
         const replication: FullReplicationInfo =
           await client.getReplication(replicationName);
-
         const { settings } = replication;
 
         // Use the utility function and format properly
