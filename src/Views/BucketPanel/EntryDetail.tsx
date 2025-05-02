@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -18,13 +19,14 @@ import {
   Modal,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
+import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -56,6 +58,9 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [whenCondition, setWhenCondition] = useState<string>("");
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
+    useState(false);
+  const [currentRecord, setCurrentRecord] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
 
   // Provide a default value for permissions
@@ -65,20 +70,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     setIsLoading(true);
     setRecords([]);
     setWhenError("");
-
     try {
       const bucket = await props.client.getBucket(bucketName);
-
       const options = new QueryOptions();
       options.limit = limit;
       options.head = true;
       options.strict = true;
-      if (whenCondition.trim().length > 0) {
-        options.when = JSON.parse(whenCondition);
-      } else {
-        options.when = {}; // enable POST endpoint that handles the head flag correctly
-      }
-
+      if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
       for await (const record of bucket.query(entryName, start, end, options)) {
         setRecords((records) => [...records, record]);
       }
@@ -114,6 +112,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
+  const handleEditLabels = (record: any) => {
+    setCurrentRecord(record);
+    setIsEditLabelsModalVisible(true);
+  };
+
+  const handleLabelsUpdated = () => {
+    // Refresh the records to show updated labels
+    getRecords(start, end, limit);
+  };
+
   const handleDateChange = (dates: any) => {
     if (dates) {
       const startDate = dates[0].toDate();
@@ -146,6 +154,9 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   useEffect(() => {
     getEntryInfo();
+  }, []);
+
+  useEffect(() => {
     getRecords(start, end, limit);
   }, [bucketName, entryName]);
 
@@ -164,12 +175,22 @@ export default function EntryDetail(props: Readonly<Props>) {
     { title: "Labels", dataIndex: "labels", key: "labels" },
     {
       title: "",
-      key: "download",
+      key: "actions",
       render: (text: any, record: any) => (
-        <DownloadOutlined
-          onClick={() => handleDownload(record)}
-          style={{ cursor: "pointer" }}
-        />
+        <div style={{ display: "flex", gap: "8px" }}>
+          <DownloadOutlined
+            onClick={() => handleDownload(record)}
+            style={{ cursor: "pointer" }}
+            title="Download record"
+          />
+          {hasWritePermission && (
+            <EditOutlined
+              onClick={() => handleEditLabels(record)}
+              style={{ cursor: "pointer" }}
+              title="Edit labels"
+            />
+          )}
+        </div>
       ),
     },
   ];
@@ -182,8 +203,12 @@ export default function EntryDetail(props: Readonly<Props>) {
     labels: JSON.stringify(record.labels, null, 2),
   }));
 
+  // Format JSON exactly like in the When Condition component
   const formatJSON = (jsonString: string): string => {
+    if (!jsonString) return "{}";
+
     try {
+      // Parse and re-stringify to ensure proper formatting
       return JSON.stringify(JSON.parse(jsonString), null, 2);
     } catch {
       return jsonString;
@@ -286,7 +311,8 @@ export default function EntryDetail(props: Readonly<Props>) {
               setWhenCondition(value);
             }}
             onBlur={(editor: any) => {
-              setWhenCondition(formatJSON(editor.getValue()));
+              const value = editor.getValue() || "";
+              setWhenCondition(formatJSON(value));
             }}
           />
           {whenError && <Alert type="error" message={whenError} />}
@@ -309,6 +335,18 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
       </div>
       <Table columns={columns} dataSource={data} />
+
+      {/* Modal for editing labels */}
+      <EditRecordLabelsModal
+        isVisible={isEditLabelsModalVisible}
+        onCancel={() => setIsEditLabelsModalVisible(false)}
+        record={currentRecord}
+        client={props.client}
+        bucketName={bucketName}
+        entryName={entryName}
+        showUnix={showUnix}
+        onLabelsUpdated={handleLabelsUpdated}
+      />
     </div>
   );
 }

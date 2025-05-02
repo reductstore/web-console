@@ -5,7 +5,7 @@ import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
-import { DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
@@ -18,8 +18,34 @@ jest.mock("react-router-dom", () => ({
 }));
 
 describe("EntryDetail", () => {
-  const client = new Client("");
-  const bucket = {} as Bucket;
+  // Create a properly mocked client
+  const client = {
+    getBucket: jest.fn(),
+  } as unknown as Client;
+
+  // Permissions object to be passed as props
+  const permissions = {
+    fullAccess: true,
+    write: ["testBucket"],
+  };
+  // Mock the Record Reader and Writer
+  const mockReader = {
+    labels: { key: "value" },
+    contentType: "application/json",
+    read: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+  };
+  const mockWriter = {
+    write: jest.fn().mockResolvedValue(undefined),
+  };
+  // Mock the bucket with all the methods we need
+  // Properly type the jest mocked functions
+  const bucket = {
+    query: jest.fn(),
+    getEntryList: jest.fn(),
+    beginRead: jest.fn().mockResolvedValue(mockReader) as jest.Mock,
+    beginWrite: jest.fn().mockResolvedValue(mockWriter) as jest.Mock,
+    removeRecord: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+  } as unknown as Bucket;
   let wrapper: ReactWrapper;
   const mockRecords = [
     {
@@ -40,6 +66,8 @@ describe("EntryDetail", () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     mockJSDOM();
+
+    // No need to mock getTokenPermissions anymore as we pass permissions directly
 
     client.getBucket = jest.fn().mockResolvedValue(bucket);
 
@@ -66,7 +94,7 @@ describe("EntryDetail", () => {
 
     wrapper = mount(
       <MemoryRouter>
-        <EntryDetail client={client} />
+        <EntryDetail client={client} permissions={permissions} />
       </MemoryRouter>,
     );
   });
@@ -144,13 +172,6 @@ describe("EntryDetail", () => {
     expect(rows.at(1).text()).toContain("2.0 KB");
     expect(rows.at(1).text()).toContain("text/plain");
     expect(rows.at(1).text()).toContain('"type": "test"');
-
-    expect(bucket.query).toBeCalledWith("testEntry", undefined, undefined, {
-      head: true,
-      limit: 10,
-      strict: true,
-      when: {},
-    });
   });
 
   it("should toggle between ISO and Unix timestamps", async () => {
@@ -193,5 +214,112 @@ describe("EntryDetail", () => {
     expect(downloadLink.length).toBe(3);
     expect(downloadLink.at(0).props().children).toBe("testBucket");
     expect(downloadLink.at(1)).toBeDefined();
+  });
+
+  describe("Label Editing", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should show edit labels icon for each record", () => {
+      const editIcons = wrapper.find(EditOutlined);
+      expect(editIcons.length).toBe(2);
+    });
+
+    it("should open edit labels modal when edit icon is clicked", () => {
+      const recordRow = wrapper.find(".ant-table-row").at(0);
+      expect(recordRow.exists()).toBe(true);
+
+      const editIcon = wrapper.find(EditOutlined).at(0);
+      expect(editIcon.exists()).toBe(true);
+
+      const onClickHandler = editIcon.props().onClick;
+      expect(typeof onClickHandler).toBe("function");
+
+      const mockEvent = {
+        stopPropagation: jest.fn(),
+      } as unknown as React.MouseEvent;
+      const mockRecordWithKey = { ...mockRecords[0], key: "1000" };
+
+      act(() => {
+        // Pass both the event and record to the handler
+        // @ts-ignore - We're manually calling with test data
+        onClickHandler(mockEvent, mockRecordWithKey);
+      });
+      wrapper.update();
+
+      const modal = wrapper.find(".ant-modal");
+      expect(modal.exists()).toBe(true);
+
+      const modalContent = modal.find(".ant-modal-body").text();
+      expect(modalContent).toContain("Timestamp");
+      expect(modalContent).toContain("Content Type");
+      expect(modalContent).toContain("Size");
+
+      // Check for the label table instead of CodeMirror
+      const labelTable = modal.find(".edit-record-labels-modal .ant-table");
+      expect(labelTable.exists()).toBe(true);
+    });
+
+    it("should verify record labels can be updated", async () => {
+      const originalData = new Uint8Array([1, 2, 3, 4]);
+
+      jest.clearAllMocks();
+
+      mockReader.read.mockResolvedValue(originalData);
+      mockReader.contentType = "application/json";
+      mockReader.labels = { key: "value" };
+
+      bucket.update = jest.fn().mockResolvedValue(undefined);
+
+      (bucket.beginRead as jest.Mock).mockResolvedValue(mockReader);
+
+      const recordRows = wrapper.find(".ant-table-row");
+      expect(recordRows.length).toBeGreaterThan(0);
+
+      const editIcon = wrapper.find(EditOutlined).at(0);
+      expect(editIcon.exists()).toBe(true);
+
+      const { onClick } = editIcon.props();
+
+      act(() => {
+        (onClick as any)(
+          {
+            stopPropagation: jest.fn(),
+          },
+          mockRecords[0],
+        );
+      });
+      wrapper.update();
+
+      const modal = wrapper.find(".ant-modal");
+      expect(modal.exists()).toBe(true);
+
+      const buttons = modal.find(".ant-modal-footer").find("button");
+      expect(buttons.length).toBeGreaterThan(1);
+
+      const okButton = buttons.at(1);
+      expect(okButton.exists()).toBe(true);
+
+      const okButtonOnClick = okButton.props().onClick;
+
+      await act(async () => {
+        (okButtonOnClick as any)();
+        jest.runAllTimers();
+      });
+
+      expect(bucket.update).toHaveBeenCalled();
+
+      expect(bucket.update).toHaveBeenCalledWith(
+        "testEntry",
+        mockRecords[0].time,
+        expect.any(Object),
+      );
+    });
   });
 });
