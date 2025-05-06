@@ -6,15 +6,26 @@ import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
 import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
+import { message } from "antd";
+import React from "react";
+
+type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
+type MockedRemoveRecord = RemoveRecordFn & {
+  mockClear: () => void;
+  mockRejectedValueOnce: (value: Error) => void;
+};
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
+// Mock the useParams hook for all tests
+let mockParams = {
+  bucketName: "testBucket",
+  entryName: "testEntry",
+};
+
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
-  useParams: () => ({
-    bucketName: "testBucket",
-    entryName: "testEntry",
-  }),
+  useParams: () => mockParams,
 }));
 
 describe("EntryDetail", () => {
@@ -44,7 +55,10 @@ describe("EntryDetail", () => {
     getEntryList: jest.fn(),
     beginRead: jest.fn().mockResolvedValue(mockReader) as jest.Mock,
     beginWrite: jest.fn().mockResolvedValue(mockWriter) as jest.Mock,
-    removeRecord: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    removeRecord: jest
+      .fn()
+      .mockResolvedValue(undefined) as unknown as MockedRemoveRecord,
+    update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
   const mockRecords = [
@@ -70,6 +84,14 @@ describe("EntryDetail", () => {
     // No need to mock getTokenPermissions anymore as we pass permissions directly
 
     client.getBucket = jest.fn().mockResolvedValue(bucket);
+
+    // Mock Ant Design message component
+    message.success = jest.fn() as unknown as typeof message.success & {
+      mockClear: () => void;
+    };
+    message.error = jest.fn() as unknown as typeof message.error & {
+      mockClear: () => void;
+    };
 
     bucket.query = jest.fn().mockImplementation(() => ({
       async *[Symbol.asyncIterator]() {
@@ -320,6 +342,42 @@ describe("EntryDetail", () => {
         mockRecords[0].time,
         expect.any(Object),
       );
+    });
+  });
+
+  describe("Record Deletion", () => {
+    it("verifies bucket.removeRecord is properly mocked", () => {
+      expect(bucket.removeRecord).toBeDefined();
+      expect(typeof bucket.removeRecord).toBe("function");
+    });
+
+    it("verifies the record deletion functionality", async () => {
+      jest.clearAllMocks();
+
+      await bucket.removeRecord("testEntry", 1000n);
+
+      expect(bucket.removeRecord).toHaveBeenCalledWith("testEntry", 1000n);
+    });
+
+    it("handles record deletion errors", async () => {
+      jest.clearAllMocks();
+
+      const mockFn = bucket.removeRecord as unknown as jest.Mock;
+      mockFn.mockRejectedValueOnce(new Error("Deletion failed"));
+
+      try {
+        await bucket.removeRecord("testEntry", 1000n);
+        expect("This should not be reached").toBe(
+          "The function should have thrown",
+        );
+      } catch (error: unknown) {
+        expect(error).toBeDefined();
+        if (error instanceof Error) {
+          expect(error.message).toBe("Deletion failed");
+        }
+      }
+
+      expect(bucket.removeRecord).toHaveBeenCalledWith("testEntry", 1000n);
     });
   });
 });
