@@ -5,8 +5,12 @@ import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
-import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
-import { message } from "antd";
+import {
+  DownloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import { message, Modal } from "antd";
 import React from "react";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
@@ -64,12 +68,16 @@ describe("EntryDetail", () => {
   const mockRecords = [
     {
       time: 1000n,
+      timestamp: 1000n,
+      key: "1000",
       size: 1024n,
       contentType: "application/json",
       labels: { key: "value" },
     },
     {
       time: 2000n,
+      timestamp: 2000n,
+      key: "2000",
       size: 2048n,
       contentType: "text/plain",
       labels: { type: "test" },
@@ -260,18 +268,16 @@ describe("EntryDetail", () => {
       const editIcon = wrapper.find(EditOutlined).at(0);
       expect(editIcon.exists()).toBe(true);
 
-      const onClickHandler = editIcon.props().onClick;
-      expect(typeof onClickHandler).toBe("function");
-
-      const mockEvent = {
-        stopPropagation: jest.fn(),
-      } as unknown as React.MouseEvent;
-      const mockRecordWithKey = { ...mockRecords[0], key: "1000" };
+      const { onClick } = editIcon.props();
+      expect(typeof onClick).toBe("function");
 
       act(() => {
-        // Pass both the event and record to the handler
-        // @ts-ignore - We're manually calling with test data
-        onClickHandler(mockEvent, mockRecordWithKey);
+        (onClick as any)(
+          {
+            stopPropagation: jest.fn(),
+          },
+          mockRecords[0],
+        );
       });
       wrapper.update();
 
@@ -346,38 +352,104 @@ describe("EntryDetail", () => {
   });
 
   describe("Record Deletion", () => {
-    it("verifies bucket.removeRecord is properly mocked", () => {
-      expect(bucket.removeRecord).toBeDefined();
-      expect(typeof bucket.removeRecord).toBe("function");
-    });
-
-    it("verifies the record deletion functionality", async () => {
-      jest.clearAllMocks();
-
-      await bucket.removeRecord("testEntry", 1000n);
-
-      expect(bucket.removeRecord).toHaveBeenCalledWith("testEntry", 1000n);
-    });
-
-    it("handles record deletion errors", async () => {
-      jest.clearAllMocks();
-
-      const mockFn = bucket.removeRecord as unknown as jest.Mock;
-      mockFn.mockRejectedValueOnce(new Error("Deletion failed"));
-
-      try {
-        await bucket.removeRecord("testEntry", 1000n);
-        expect("This should not be reached").toBe(
-          "The function should have thrown",
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
         );
-      } catch (error: unknown) {
-        expect(error).toBeDefined();
-        if (error instanceof Error) {
-          expect(error.message).toBe("Deletion failed");
-        }
-      }
+      });
+    });
+
+    it("should show delete icon for each record", () => {
+      const deleteIcons = wrapper.find(DeleteOutlined);
+      expect(deleteIcons.length).toBeGreaterThanOrEqual(mockRecords.length);
+    });
+
+    it("should open delete confirmation modal when delete icon is clicked", () => {
+      const recordRow = wrapper.find(".ant-table-row").at(0);
+      expect(recordRow.exists()).toBe(true);
+
+      const deleteIcon = wrapper.find(DeleteOutlined).at(0);
+      expect(deleteIcon.exists()).toBe(true);
+
+      const { onClick } = deleteIcon.props();
+      expect(typeof onClick).toBe("function");
+
+      act(() => {
+        (onClick as any)(
+          {
+            stopPropagation: jest.fn(),
+          },
+          mockRecords[0],
+        );
+      });
+      wrapper.update();
+
+      const modal = wrapper.find(".ant-modal");
+      expect(modal.exists()).toBe(true);
+
+      // Check the modal title
+      const modalTitle = modal.find(".ant-modal-title").text();
+      expect(modalTitle).toContain("Remove entry");
+    });
+
+    it("should delete record when confirmation is confirmed", async () => {
+      jest.clearAllMocks();
+
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+
+      bucket.removeRecord = jest.fn().mockResolvedValue(undefined);
+      message.success = jest.fn();
+      (client.getBucket as jest.Mock).mockResolvedValue(bucket);
+
+      const recordRow = wrapper.find(".ant-table-row").at(0);
+      expect(recordRow.exists()).toBe(true);
+
+      const deleteIcon = recordRow.find(DeleteOutlined).at(0);
+      expect(deleteIcon.exists()).toBe(true);
+      expect(deleteIcon.props().title).toBe("Delete record");
+
+      const { onClick } = deleteIcon.props();
+      expect(typeof onClick).toBe("function");
+
+      act(() => {
+        (onClick as any)({ stopPropagation: jest.fn() }, mockRecords[0]);
+      });
+      wrapper.update();
+
+      const modal = wrapper.find(".ant-modal");
+      expect(modal.exists()).toBe(true);
+
+      const modalTitle = modal.find(".ant-modal-title").text();
+      expect(modalTitle).toBe("Delete Record");
+
+      const modalFooter = modal.find(".ant-modal-footer");
+      expect(modalFooter.exists()).toBe(true);
+
+      const buttons = modalFooter.find("button");
+      expect(buttons.length).toBe(2);
+
+      const deleteButton = buttons.at(1);
+      expect(deleteButton.exists()).toBe(true);
+
+      await act(async () => {
+        const onClickHandler = deleteButton.props().onClick;
+        expect(typeof onClickHandler).toBe("function");
+        (onClickHandler as any)();
+        jest.runAllTimers();
+      });
+      wrapper.update();
 
       expect(bucket.removeRecord).toHaveBeenCalledWith("testEntry", 1000n);
+      expect(message.success).toHaveBeenCalledWith(
+        "Record deleted successfully",
+      );
     });
   });
 });
