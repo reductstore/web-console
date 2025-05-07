@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2025-05-07
+
 ### Added:
 
 - RS-613: Add record label editing functionality, [PR-93](https://github.com/reductstore/web-console/pull/93)
@@ -221,7 +223,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/reduct-storage/web-console/compare/v1.10.0...v1.9.2
 [1.9.2]: https://github.com/reduct-storage/web-console/compare/v1.9.2...v1.9.1
 [1.9.1]: https://github.com/reduct-storage/web-console/compare/v1.9.1...v1.9.0
 [1.9.0]: https://github.com/reduct-storage/web-console/compare/v1.9.0...v1.8.1
