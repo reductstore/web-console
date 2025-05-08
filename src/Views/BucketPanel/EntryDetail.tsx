@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -17,9 +16,15 @@ import {
   Checkbox,
   Alert,
   Modal,
+  Space,
+  message,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  DownloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
@@ -61,6 +66,8 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
     useState(false);
   const [currentRecord, setCurrentRecord] = useState<any>(null);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
 
   // Provide a default value for permissions
@@ -109,6 +116,29 @@ export default function EntryDetail(props: Readonly<Props>) {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
+      message.error("Failed to download record");
+    }
+  };
+
+  const handleDeleteClick = (record: any) => {
+    setRecordToDelete(record);
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleDeleteRecord = async () => {
+    if (!recordToDelete) return;
+
+    try {
+      setIsLoading(true);
+      const bucket = await props.client.getBucket(bucketName);
+      await bucket.removeRecord(entryName, BigInt(recordToDelete.key));
+      message.success("Record deleted successfully");
+      setIsDeleteModalVisible(false);
+      getRecords(start, end, limit);
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to delete record");
+      setIsLoading(false);
     }
   };
 
@@ -174,10 +204,10 @@ export default function EntryDetail(props: Readonly<Props>) {
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
     { title: "Labels", dataIndex: "labels", key: "labels" },
     {
-      title: "",
+      title: "Actions",
       key: "actions",
       render: (text: any, record: any) => (
-        <div style={{ display: "flex", gap: "8px" }}>
+        <Space size="middle">
           <DownloadOutlined
             onClick={() => handleDownload(record)}
             style={{ cursor: "pointer" }}
@@ -190,7 +220,14 @@ export default function EntryDetail(props: Readonly<Props>) {
               title="Edit labels"
             />
           )}
-        </div>
+          {hasWritePermission && (
+            <DeleteOutlined
+              onClick={() => handleDeleteClick(record)}
+              style={{ cursor: "pointer", color: "#ff4d4f" }}
+              title="Delete record"
+            />
+          )}
+        </Space>
       ),
     },
   ];
@@ -251,6 +288,34 @@ export default function EntryDetail(props: Readonly<Props>) {
             getRecords(start, end, limit);
           }}
         />
+      </Modal>
+
+      <Modal
+        title="Delete Record"
+        open={isDeleteModalVisible}
+        onCancel={() => setIsDeleteModalVisible(false)}
+        onOk={handleDeleteRecord}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+        cancelText="Cancel"
+        centered
+      >
+        <Typography.Paragraph>
+          Are you sure you want to delete this record? This action cannot be
+          undone.
+        </Typography.Paragraph>
+        {recordToDelete && (
+          <div>
+            <Typography.Text strong>Timestamp: </Typography.Text>
+            <Typography.Text>
+              {showUnix
+                ? recordToDelete.key
+                : new Date(
+                    Number(recordToDelete.timestamp / 1000n),
+                  ).toISOString()}
+            </Typography.Text>
+          </div>
+        )}
       </Modal>
 
       <Typography.Title level={3}>Records</Typography.Title>
