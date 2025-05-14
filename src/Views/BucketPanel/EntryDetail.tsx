@@ -376,7 +376,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
-            {'Example: {"$limit": 10, "&label_name": { "$gt": 10 }}'}
+            {'Example: {"&label_name": { "$gt": 10 }, "$limit": 10 }'}
             <br />
             <a
               href="https://www.reduct.store/docs/conditional-query"
