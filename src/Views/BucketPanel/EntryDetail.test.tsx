@@ -204,16 +204,16 @@ describe("EntryDetail", () => {
       const exampleText = wrapper.find(".jsonExample").at(0).text();
       expect(exampleText).toContain("$limit");
     });
-    
+
     it("should call bucket.query with the correct when condition", async () => {
       const fetchButton = wrapper.find(".fetchButton button");
       expect(fetchButton.exists()).toBe(true);
-      
+
       await act(async () => {
-        fetchButton.simulate('click');
+        fetchButton.simulate("click");
         jest.runOnlyPendingTimers();
       });
-      
+
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
         undefined,
@@ -222,9 +222,9 @@ describe("EntryDetail", () => {
           head: true,
           strict: true,
           when: expect.objectContaining({
-            "$limit": 10
-          })
-        })
+            $limit: 10,
+          }),
+        }),
       );
     });
   });
