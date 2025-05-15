@@ -147,9 +147,24 @@ export default function EntryDetail(props: Readonly<Props>) {
     setIsEditLabelsModalVisible(true);
   };
 
-  const handleLabelsUpdated = () => {
-    // Refresh the records to show updated labels
-    getRecords(start, end, limit);
+  const handleLabelsUpdated = async (
+    newLabels: Record<string, string>,
+    timestamp: bigint,
+  ) => {
+    try {
+      const bucket = await props.client.getBucket(bucketName);
+      await bucket.update(entryName, timestamp, newLabels);
+
+      getRecords(start, end, limit);
+      message.success("Record labels updated successfully");
+    } catch (err) {
+      console.error("Failed to update labels:", err);
+      if (err instanceof APIError) {
+        message.error(err.message || "API Error");
+      } else {
+        message.error("Failed to update record labels");
+      }
+    }
   };
 
   const handleDateChange = (dates: any) => {
@@ -406,9 +421,6 @@ export default function EntryDetail(props: Readonly<Props>) {
         isVisible={isEditLabelsModalVisible}
         onCancel={() => setIsEditLabelsModalVisible(false)}
         record={currentRecord}
-        client={props.client}
-        bucketName={bucketName}
-        entryName={entryName}
         showUnix={showUnix}
         onLabelsUpdated={handleLabelsUpdated}
       />
