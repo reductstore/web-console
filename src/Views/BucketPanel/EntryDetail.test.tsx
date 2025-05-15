@@ -18,6 +18,23 @@ type MockedRemoveRecord = RemoveRecordFn & {
   mockClear: () => void;
   mockRejectedValueOnce: (value: Error) => void;
 };
+
+jest.mock("react-codemirror2", () => ({
+  Controlled: (props: any) => {
+    return (
+      <div className="react-codemirror2" data-testid="codemirror-mock">
+        <textarea
+          value={props.value}
+          onChange={(e) => props.onBeforeChange(null, null, e.target.value)}
+          onBlur={(e) =>
+            props.onBlur && props.onBlur({ getValue: () => e.target.value })
+          }
+        />
+      </div>
+    );
+  },
+}));
+
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
@@ -165,13 +182,12 @@ describe("EntryDetail", () => {
       expect(fetchButton.at(0).text()).toBe("Fetch Records");
     });
 
-    it("should show the records limit input", () => {
-      const limitInput = wrapper.find(".ant-input-number");
-      expect(limitInput.exists()).toBe(true);
-      expect(limitInput.props().className).toContain("ant-input-number");
+    it("should not show a separate limit input", () => {
+      const limitInput = wrapper.find(".limitInput");
+      expect(limitInput.exists()).toBe(false);
     });
 
-    it("should show the CodeMirror editor for JSON filtering", () => {
+    it("should show the CodeMirror editor with $limit in default JSON", () => {
       const codeMirror = wrapper.find(".react-codemirror2");
       expect(codeMirror.exists()).toBe(true);
       const cmInstance = wrapper.find("Controlled").prop("options");
@@ -179,6 +195,35 @@ describe("EntryDetail", () => {
         expect.objectContaining({
           mode: { name: "javascript", json: true },
           lineNumbers: true,
+        }),
+      );
+
+      const cmValue = wrapper.find("Controlled").prop("value");
+      expect(cmValue).toContain("$limit");
+
+      const exampleText = wrapper.find(".jsonExample").at(0).text();
+      expect(exampleText).toContain("$limit");
+    });
+
+    it("should call bucket.query with the correct when condition", async () => {
+      const fetchButton = wrapper.find(".fetchButton button");
+      expect(fetchButton.exists()).toBe(true);
+
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runOnlyPendingTimers();
+      });
+
+      expect(bucket.query).toHaveBeenCalledWith(
+        "testEntry",
+        undefined,
+        undefined,
+        expect.objectContaining({
+          head: true,
+          strict: true,
+          when: expect.objectContaining({
+            $limit: 10,
+          }),
         }),
       );
     });

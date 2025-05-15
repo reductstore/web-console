@@ -56,11 +56,13 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
   const [end, setEnd] = useState<bigint | undefined>(undefined);
-  const [limit, setLimit] = useState<number | undefined>(10);
+
   const [showUnix, setShowUnix] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
-  const [whenCondition, setWhenCondition] = useState<string>("");
+  const [whenCondition, setWhenCondition] = useState<string>(
+    '{\n  "$limit": 10\n}',
+  );
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
@@ -73,14 +75,13 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
-  const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
+  const getRecords = async (start?: bigint, end?: bigint) => {
     setIsLoading(true);
     setRecords([]);
     setWhenError("");
     try {
       const bucket = await props.client.getBucket(bucketName);
       const options = new QueryOptions();
-      options.limit = limit;
       options.head = true;
       options.strict = true;
       if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
@@ -97,7 +98,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
   const handleFetchRecordsClick = () => {
     if (!isLoading) {
-      getRecords(start, end, limit);
+      getRecords(start, end);
     }
   };
 
@@ -134,7 +135,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       await bucket.removeRecord(entryName, BigInt(recordToDelete.key));
       message.success("Record deleted successfully");
       setIsDeleteModalVisible(false);
-      getRecords(start, end, limit);
+      getRecords(start, end);
     } catch (err) {
       console.error(err);
       message.error("Failed to delete record");
@@ -155,7 +156,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       const bucket = await props.client.getBucket(bucketName);
       await bucket.update(entryName, timestamp, newLabels);
 
-      getRecords(start, end, limit);
+      getRecords(start, end);
       message.success("Record labels updated successfully");
     } catch (err) {
       console.error("Failed to update labels:", err);
@@ -202,7 +203,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
-    getRecords(start, end, limit);
+    getRecords(start, end);
   }, [bucketName, entryName]);
 
   const columns = [
@@ -300,7 +301,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           availableEntries={availableEntries}
           onUploadSuccess={() => {
             setIsUploadModalVisible(false);
-            getRecords(start, end, limit);
+            getRecords(start, end);
           }}
         />
       </Modal>
@@ -365,13 +366,6 @@ export default function EntryDetail(props: Readonly<Props>) {
               className="datePicker"
             />
           )}
-          <InputNumber
-            min={1}
-            addonBefore="Limit"
-            onChange={(value) => setLimit(value ? Number(value) : undefined)}
-            className="limitInput"
-            defaultValue={limit}
-          />
         </div>
         <div className="jsonFilterSection">
           <Typography.Text>Filter Records (JSON):</Typography.Text>
@@ -397,7 +391,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
-            {'Example: {"&label_name": { "$gt": 10 }}'}
+            {'Example: {"&label_name": { "$gt": 10 }, "$limit": 10 }'}
             <br />
             <a
               href="https://www.reduct.store/docs/conditional-query"
