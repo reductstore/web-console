@@ -478,6 +478,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
                   viewportMargin: Infinity,
                   matchBrackets: true,
                   autoCloseBrackets: true,
+                  readOnly: readOnly || false,
                 }}
                 onBeforeChange={(editor: any, data: any, value: string) => {
                   this.handleWhenConditionChange(value);
