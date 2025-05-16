@@ -264,6 +264,9 @@ export default class ReplicationSettingsFormReplication extends React.Component<
   };
 
   handleWhenConditionChange = (value: string) => {
+    if (this.props.readOnly) {
+      return;
+    }
     this.setState((prevState) => ({ ...prevState, formattedWhen: value }));
   };
 

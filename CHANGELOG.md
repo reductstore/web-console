@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- When condition editor made disabled for provisioned replication settings, [PR-103](https://github.com/reductstore/web-console/pull/103)
+
 - Update RuductStore SDK with fixed start/stop query parameters, [PR-97](https://github.com/reductstore/web-console/pull/97)
 
 ## [1.9.1] - 2025-04-03
@@ -83,9 +85,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2024-03-01
 
-### Added:
+### Fixed
 
-- RS-47: New view in the console to manage replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
+- Fix bug where "When condition" editor wasn't disabled for provisioned replication tasks when they are configured via environment variables, [PR-XX](https://github.com/reductstore/web-console/pull/XX)
+
+### Added
+
+- Added comprehensive documentation on provisioning replications using environment variables in PROVISIONED_REPLICATIONS.md
+- Added example docker-compose configuration showing how to set up provisioned replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
 
 ### Fixed:
 
