@@ -54,9 +54,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     });
 
     client.updateReplication = jest.fn().mockResolvedValue(undefined);
-
     client.createReplication = jest.fn().mockResolvedValue(undefined);
-
     client.getBucket = jest.fn().mockResolvedValue({
       getEntryList: jest
         .fn()
@@ -96,7 +94,6 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "dstHost" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
-
     expect(wrapper.find({ name: "eachN" }).exists()).toBeTruthy();
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
@@ -204,7 +201,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
-          onCreated={() => {}}
+          onCreated={() => null}
           sourceBuckets={["Bucket1", "Bucket2"]}
           replicationName={"TestReplication"}
           readOnly={true}
@@ -220,7 +217,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
-          onCreated={() => {}}
+          onCreated={() => null}
           sourceBuckets={["Bucket1", "Bucket2"]}
           replicationName={"TestReplication"}
           readOnly={true}
@@ -231,15 +228,12 @@ describe("Replication::ReplicationSettingsForm", () => {
     await waitUntilFind(wrapper, "form");
 
     const component = wrapper.find(ReplicationSettingsForm).instance() as any;
-
     const setStateSpy = jest.spyOn(component, "setState");
-
     const initialFormattedWhen = component.state.formattedWhen;
 
     component.handleWhenConditionChange('{"test": "value"}');
 
     expect(setStateSpy).not.toHaveBeenCalled();
-
     expect(component.state.formattedWhen).toEqual(initialFormattedWhen);
 
     setStateSpy.mockRestore();
@@ -250,7 +244,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
-          onCreated={() => {}}
+          onCreated={() => null}
           sourceBuckets={["Bucket1", "Bucket2"]}
           replicationName={"TestReplication"}
           readOnly={false}
@@ -261,14 +255,12 @@ describe("Replication::ReplicationSettingsForm", () => {
     await waitUntilFind(wrapper, "form");
 
     const component = wrapper.find(ReplicationSettingsForm).instance() as any;
-
     const setStateSpy = jest.spyOn(component, "setState");
-
     const newValue = '{"test": "value"}';
+
     component.handleWhenConditionChange(newValue);
 
     expect(setStateSpy).toHaveBeenCalled();
-
     expect(component.state.formattedWhen).toEqual(newValue);
 
     setStateSpy.mockRestore();
