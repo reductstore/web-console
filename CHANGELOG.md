@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2025-05-20
+
+### Fixed
+
+- When condition editor disabled for provisioned replication settings, [PR-103](https://github.com/reductstore/web-console/pull/103)
+
 ## [1.10.0] - 2025-05-07
 
 ### Added:
@@ -85,9 +91,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2024-03-01
 
-### Added:
+### Fixed
 
-- RS-47: New view in the console to manage replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
+- Fix bug where "When condition" editor wasn't disabled for provisioned replication tasks when they are configured via environment variables, [PR-XX](https://github.com/reductstore/web-console/pull/XX)
+
+### Added
+
+- Added comprehensive documentation on provisioning replications using environment variables in PROVISIONED_REPLICATIONS.md
+- Added example docker-compose configuration showing how to set up provisioned replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
 
 ### Fixed:
 
@@ -225,7 +236,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/reduct-storage/web-console/compare/v1.10.1...v1.10.0
 [1.10.0]: https://github.com/reduct-storage/web-console/compare/v1.10.0...v1.9.2
 [1.9.2]: https://github.com/reduct-storage/web-console/compare/v1.9.2...v1.9.1
 [1.9.1]: https://github.com/reduct-storage/web-console/compare/v1.9.1...v1.9.0

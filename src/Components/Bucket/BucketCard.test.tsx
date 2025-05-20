@@ -2,7 +2,6 @@ import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import BucketCard from "./BucketCard";
 import { BucketInfo, Client } from "reduct-js";
-import { UploadOutlined } from "@ant-design/icons";
 
 describe("BucketCard", () => {
   beforeEach(() => mockJSDOM());
@@ -191,9 +190,9 @@ describe("BucketCard", () => {
           hasWritePermission={false}
         />,
       );
-      await wrapper.update();
+      wrapper.update();
+
       const uploadButton = wrapper.find("UploadOutlined[title='Upload File']");
-      const removeButton = wrapper.find("DeleteOutlined[title='Remove']");
       expect(uploadButton.length).toEqual(0);
     });
 

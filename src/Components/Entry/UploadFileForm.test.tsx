@@ -64,8 +64,11 @@ async function attachFile(
   // Set the file
   await act(async () => {
     const onChange = uploadDragger.prop("onChange");
-    expect(onChange).toBeDefined();
-    onChange!({
+    if (!onChange) {
+      throw new Error("onChange prop is not defined");
+    }
+
+    onChange({
       file: mockFile,
       fileList: [mockFile],
     });
@@ -300,7 +303,11 @@ describe("UploadFileForm", () => {
     await act(async () => {
       const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
-      onChange!({
+      if (!onChange) {
+        throw new Error("onChange prop is not defined");
+      }
+
+      onChange({
         file: mockFile,
         fileList: [mockFile],
       });
@@ -316,7 +323,11 @@ describe("UploadFileForm", () => {
     await act(async () => {
       const onChange = uploadDragger.prop("onChange");
       expect(onChange).toBeDefined();
-      onChange!({
+      if (!onChange) {
+        throw new Error("onChange prop is not defined");
+      }
+
+      onChange({
         file: { ...mockFile, status: "removed" } as UploadFile,
         fileList: [],
       });
