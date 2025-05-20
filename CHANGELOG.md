@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- When condition editor disabled for provisioned replication settings, [PR-103](https://github.com/reductstore/web-console/pull/103)
+
 ## [1.10.0] - 2025-05-07
 
 ### Added:
@@ -83,9 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2024-03-01
 
-### Added:
+### Fixed
 
-- RS-47: New view in the console to manage replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
+- Fix bug where "When condition" editor wasn't disabled for provisioned replication tasks when they are configured via environment variables, [PR-XX](https://github.com/reductstore/web-console/pull/XX)
+
+### Added
+
+- Added comprehensive documentation on provisioning replications using environment variables in PROVISIONED_REPLICATIONS.md
+- Added example docker-compose configuration showing how to set up provisioned replications, [PR-62](https://github.com/reductstore/web-console/pull/62)
 
 ### Fixed:
 
