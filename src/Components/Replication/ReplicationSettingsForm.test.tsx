@@ -265,4 +265,120 @@ describe("Replication::ReplicationSettingsForm", () => {
 
     setStateSpy.mockRestore();
   });
+
+  it("shows condition fields when settings.eachN is defined", async () => {
+    const mockSettings = ReplicationSettings.parse({
+      src_bucket: "Bucket1",
+      dst_bucket: "destinationBucket",
+      dst_host: "destinationHost",
+      dst_token: "destinationToken",
+      entries: ["entry1", "entry2"],
+      include: {},
+      exclude: {},
+      each_n: 42n,
+      // each_s is undefined
+    });
+    const mockReplicationInfo = ReplicationInfo.parse({
+      name: "TestReplication",
+      is_active: true,
+      is_provisioned: true,
+      pending_records: BigInt(100),
+    });
+    client.getReplication = jest.fn().mockResolvedValue({
+      info: mockReplicationInfo,
+      settings: mockSettings,
+      diagnostics: undefined,
+    });
+    wrapper = mount(
+      <MemoryRouter>
+        <ReplicationSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          replicationName={"TestReplication"}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+    await waitUntilFind(wrapper, "form");
+    expect(wrapper.text()).toContain("Every N-th record");
+    expect(wrapper.text()).toContain("Every S seconds");
+  });
+
+  it("shows condition fields when settings.eachS is defined", async () => {
+    const mockSettings = ReplicationSettings.parse({
+      src_bucket: "Bucket1",
+      dst_bucket: "destinationBucket",
+      dst_host: "destinationHost",
+      dst_token: "destinationToken",
+      entries: ["entry1", "entry2"],
+      include: {},
+      exclude: {},
+      // each_n is undefined
+      each_s: 1.23,
+    });
+    const mockReplicationInfo = ReplicationInfo.parse({
+      name: "TestReplication",
+      is_active: true,
+      is_provisioned: true,
+      pending_records: BigInt(100),
+    });
+    client.getReplication = jest.fn().mockResolvedValue({
+      info: mockReplicationInfo,
+      settings: mockSettings,
+      diagnostics: undefined,
+    });
+    wrapper = mount(
+      <MemoryRouter>
+        <ReplicationSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          replicationName={"TestReplication"}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+    await waitUntilFind(wrapper, "form");
+    expect(wrapper.text()).toContain("Every N-th record");
+    expect(wrapper.text()).toContain("Every S seconds");
+  });
+
+  it("hides condition fields when neither settings.eachN nor settings.eachS is defined", async () => {
+    const mockSettings = ReplicationSettings.parse({
+      src_bucket: "Bucket1",
+      dst_bucket: "destinationBucket",
+      dst_host: "destinationHost",
+      dst_token: "destinationToken",
+      entries: ["entry1", "entry2"],
+      include: {},
+      exclude: {},
+      // both each_n and each_s are undefined
+    });
+    const mockReplicationInfo = ReplicationInfo.parse({
+      name: "TestReplication",
+      is_active: true,
+      is_provisioned: true,
+      pending_records: BigInt(100),
+    });
+    client.getReplication = jest.fn().mockResolvedValue({
+      info: mockReplicationInfo,
+      settings: mockSettings,
+      diagnostics: undefined,
+    });
+    wrapper = mount(
+      <MemoryRouter>
+        <ReplicationSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          replicationName={"TestReplication"}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+    await waitUntilFind(wrapper, "form");
+    expect(wrapper.text()).not.toContain("Every N-th record");
+    expect(wrapper.text()).not.toContain("Every S seconds");
+  });
 });
