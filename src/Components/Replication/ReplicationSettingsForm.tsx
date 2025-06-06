@@ -433,7 +433,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <b>Condition</b>
+          <b>Conditions</b>
           {(this.state.settings?.eachN != null ||
             this.state.settings?.eachS != null) && (
             <>
