@@ -381,4 +381,44 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.text()).not.toContain("Every N-th record");
     expect(wrapper.text()).not.toContain("Every S seconds");
   });
+
+  it("hides condition fields when settings.eachN and settings.eachS are both null", async () => {
+    const mockSettings = ReplicationSettings.parse({
+      src_bucket: "Bucket1",
+      dst_bucket: "destinationBucket",
+      dst_host: "destinationHost",
+      dst_token: "destinationToken",
+      entries: ["entry1", "entry2"],
+      include: {},
+      exclude: {},
+      // Simulating null for each_n and each_s
+      each_n: null as unknown as bigint,
+      each_s: null as unknown as number,
+    });
+    const mockReplicationInfo = ReplicationInfo.parse({
+      name: "TestReplication",
+      is_active: true,
+      is_provisioned: true,
+      pending_records: BigInt(100),
+    });
+    client.getReplication = jest.fn().mockResolvedValue({
+      info: mockReplicationInfo,
+      settings: mockSettings,
+      diagnostics: undefined,
+    });
+    wrapper = mount(
+      <MemoryRouter>
+        <ReplicationSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          replicationName={"TestReplication"}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+    await waitUntilFind(wrapper, "form");
+    expect(wrapper.text()).not.toContain("Every N-th record");
+    expect(wrapper.text()).not.toContain("Every S seconds");
+  });
 });
