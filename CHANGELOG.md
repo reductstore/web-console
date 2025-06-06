@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Hide condition fields in replication settings when `each_n` and `each_s` are null or undefined, [PR-106](https://github.com/reductstore/web-console/pull/106)
+
 ## [1.10.1] - 2025-05-20
 
 ### Fixed
