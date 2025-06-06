@@ -433,42 +433,55 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <b>Conditions</b>
-          <Row>
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Every N-th record&nbsp;
-                    <Tooltip title="If set, only every N-th record is replicated.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="eachN"
-              >
-                <InputNumber disabled={readOnly} min={1} precision={0} />
-              </Form.Item>
-            </Col>
+          <b>Condition</b>
+          {(this.state.settings?.eachN !== undefined ||
+            this.state.settings?.eachS !== undefined) && (
+            <>
+              <Row>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Every N-th record&nbsp;
+                        <Tooltip title="If set, only every N-th record is replicated.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="eachN"
+                  >
+                    <InputNumber disabled={readOnly} min={1} precision={0} />
+                  </Form.Item>
+                </Col>
 
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Every S seconds&nbsp;
-                    <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="eachS"
-              >
-                <InputNumber disabled={readOnly} min={0.000001} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label={<span>When Condition</span>}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Every S seconds&nbsp;
+                        <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="eachS"
+                  >
+                    <InputNumber disabled={readOnly} min={0.000001} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
+          <Form.Item
+            label={
+              <span>
+                When&nbsp;
+                <Tooltip title="Enter conditions to filter records by labels.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </span>
+            }
+          >
             {!isTestEnvironment ? (
               <CodeMirror
                 className="jsonEditor"
