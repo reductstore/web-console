@@ -19,6 +19,7 @@ import { getHelpMenuItems } from "./Components/HelpMenu";
 
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
+  publicUrl: string;
 }
 
 type State = {
@@ -132,7 +133,7 @@ export default class App extends React.Component<Props, State> {
                 href="https://www.reduct.store"
                 title="https://www.reduct.store"
               >
-                <Image src={logo} preview={false} />
+                <Image src={this.normalizeStaticUrl(logo)} preview={false} />
               </a>
             </div>
             <div className="MenuContainer">
@@ -185,4 +186,15 @@ export default class App extends React.Component<Props, State> {
       </ConfigProvider>
     );
   }
+
+  /**
+   * Normalizes static URLs to use in the embedded web console.
+   * In the embedded context, the public URL may differ from the one used in the standalone version.
+   * See RS_API_BASE_PATH in the ReductStore documentation.
+   * @param url
+   */
+  normalizeStaticUrl = (url: string): string => {
+    url.replace(process.env.PUBLIC_URL, this.props.publicUrl);
+    return url;
+  };
 }

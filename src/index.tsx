@@ -20,7 +20,7 @@ ReactDOM.render(
   <React.StrictMode>
     {/* @ts-ignore*/}
     <BrowserRouter basename={uiUrl}>
-      <RoutableApp backendApi={backendApi} />
+      <RoutableApp backendApi={backendApi} publicUrl={uiUrl} />
     </BrowserRouter>
   </React.StrictMode>,
   document.getElementById("root") as HTMLElement,
