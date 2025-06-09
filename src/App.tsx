@@ -194,7 +194,6 @@ export default class App extends React.Component<Props, State> {
    * @param url
    */
   normalizeStaticUrl = (url: string): string => {
-    url.replace(process.env.PUBLIC_URL, this.props.publicUrl);
-    return url;
+    return url.replace(process.env.PUBLIC_URL, this.props.publicUrl);
   };
 }
