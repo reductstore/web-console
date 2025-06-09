@@ -433,10 +433,10 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <b>Conditions</b>
-          {(this.state.settings?.eachN != null ||
-            this.state.settings?.eachS != null) && (
+          {this.state.settings?.eachN != null ||
+          this.state.settings?.eachS != null ? (
             <>
+              <b>Conditions</b>
               <Row>
                 <Col span={12}>
                   <Form.Item
@@ -471,12 +471,17 @@ export default class ReplicationSettingsFormReplication extends React.Component<
                 </Col>
               </Row>
             </>
+          ) : (
+            <>
+              <b>Conditional Replication</b>
+            </>
           )}
+
           <Form.Item
             label={
               <span>
                 When&nbsp;
-                <Tooltip title="Enter conditions to filter records by labels.">
+                <Tooltip title="Define JSON-based rules to filter and control record replication. Supports label comparisons (e.g., &score > 0.5) and aggregation (e.g., every N-th record).">
                   <InfoCircleOutlined />
                 </Tooltip>
               </span>
@@ -523,15 +528,26 @@ export default class ReplicationSettingsFormReplication extends React.Component<
               <></>
             )}
             <Typography.Text type="secondary" className="jsonExample">
-              {'Example: {"&label_name": { "$gt": 10 }}'}
+              Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
               <br />
-              <a
-                href="https://www.reduct.store/docs/conditional-query"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Query Reference Documentation
-              </a>
+              Use <code>&label</code> for standard labels and{" "}
+              <code>@label</code> for computed labels. Combine with operators
+              like <code>$eq</code>, <code>$gt</code>, <code>$lt</code>,{" "}
+              <code>$and</code>, etc.
+              <br />
+              You can also use aggregation operators:
+              <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
+              (every N seconds) to control replication frequency.
+              <br />
+              <strong>
+                <a
+                  href="https://www.reduct.store/docs/conditional-query"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Conditional Query Reference →
+                </a>
+              </strong>
             </Typography.Text>
           </Form.Item>
 
