@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.2] - 2025-06-09
+
 ### Fixed
 
 - Use dynamic public URL for static assets, [PR-107](https://github.com/reductstore/web-console/pull/107)
