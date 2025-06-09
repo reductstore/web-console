@@ -10,7 +10,7 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { message, Modal } from "antd";
+import { message } from "antd";
 import React from "react";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
@@ -39,7 +39,7 @@ import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
 // Mock the useParams hook for all tests
-let mockParams = {
+const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
