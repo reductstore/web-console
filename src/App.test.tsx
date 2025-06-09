@@ -33,7 +33,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -54,7 +54,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -75,7 +75,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -96,7 +96,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -116,7 +116,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -134,7 +134,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
@@ -152,7 +152,7 @@ describe("App", () => {
 
     const app = mount(
       <MemoryRouter>
-        <App {...routeProps} backendApi={backendAPI} />
+        <App {...routeProps} backendApi={backendAPI} publicUrl="/ui" />
       </MemoryRouter>,
     );
 
