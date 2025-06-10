@@ -6,6 +6,8 @@ import { Client, ReplicationInfo, ReplicationSettings } from "reduct-js";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
+import { act } from "react-dom/test-utils";
+import waitUntil from "async-wait-until";
 
 describe("Replication::ReplicationSettingsForm", () => {
   const client = new Client("dummyURL");
@@ -98,10 +100,10 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
 
-  it("shows the replication name if it is provided", () => {
-    expect(wrapper.find({ name: "name" }).find("input").prop("value")).toEqual(
-      "TestReplication",
-    );
+  it("shows the replication disabled name if it is provided", () => {
+    const input = wrapper.find({ name: "name" }).find("input");
+    expect(input.prop("value")).toEqual("TestReplication");
+    expect(input.prop("disabled")).toBeTruthy();
   });
 
   it("shows the selected source bucket if it is provided", async () => {
@@ -264,5 +266,90 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(component.state.formattedWhen).toEqual(newValue);
 
     setStateSpy.mockRestore();
+  });
+
+  describe("api", () => {
+    const expected_settings = {
+      dstBucket: "destinationBucket",
+      dstHost: "destinationHost",
+      dstToken: "destinationToken",
+      eachN: 10n,
+      eachS: 0.5,
+      entries: ["entry1", "entry2"],
+      exclude: {},
+      include: {},
+      srcBucket: "Bucket1",
+      when: {},
+    };
+
+    const form_settings = {
+      name: "NewReplication",
+      srcBucket: "Bucket1",
+      dstBucket: "destinationBucket",
+      dstHost: "destinationHost",
+      dstToken: "destinationToken",
+      entries: ["entry1", "entry2"],
+      eachN: 10n,
+      eachS: 0.5,
+      when: {},
+    };
+
+    it("calls createReplication on form submission", async () => {
+      const onCreatedCalled = [false];
+      const wrapper = mount(
+        <MemoryRouter>
+          <ReplicationSettingsForm
+            client={client}
+            onCreated={() => (onCreatedCalled[0] = true)}
+            sourceBuckets={["Bucket1", "Bucket2"]}
+            readOnly={false}
+          />
+        </MemoryRouter>,
+      );
+
+      const form = wrapper.find({ name: "replicationForm" }).at(0);
+
+      // fill the form fields
+      await act(async () => {
+        form.props().onFinish(form_settings);
+      });
+
+      await waitUntilFind(wrapper, "form");
+      await waitUntil(() => onCreatedCalled[0]);
+
+      expect(client.createReplication).toBeCalledWith(
+        "NewReplication",
+        expected_settings,
+      );
+
+      expect(onCreatedCalled[0]).toBe(true);
+    });
+
+    it("calls updateReplication on form submission", async () => {
+      const onCreatedCalled = [false];
+      const wrapper = mount(
+        <MemoryRouter>
+          <ReplicationSettingsForm
+            client={client}
+            onCreated={() => (onCreatedCalled[0] = true)}
+            sourceBuckets={["Bucket1", "Bucket2"]}
+            replicationName={"TestReplication"}
+            readOnly={false}
+          />
+        </MemoryRouter>,
+      );
+
+      await waitUntilFind(wrapper, "form");
+      const form = wrapper.find({ name: "replicationForm" }).at(0);
+      // fill the form fields
+      await act(async () => {
+        form.props().onFinish(form_settings);
+      });
+      await waitUntil(() => onCreatedCalled[0]);
+      expect(client.updateReplication).toBeCalledWith(
+        "TestReplication",
+        expected_settings,
+      );
+    });
   });
 });

@@ -80,8 +80,6 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     entries: [],
   };
 
-  refreshInterval: NodeJS.Timeout | null = null;
-
   codeMirrorInstance: any;
 
   /**
@@ -105,7 +103,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
 
     try {
-      let parsedWhen: Record<string, any> | undefined;
+      let parsedWhen: Record<string, any> = {};
       if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
         try {
           parsedWhen = JSON.parse(this.state.formattedWhen);
@@ -311,7 +309,9 @@ export default class ReplicationSettingsFormReplication extends React.Component<
               { required: true, message: "Please input the replication name!" },
             ]}
           >
-            <Input disabled={readOnly} />
+            <Input
+              disabled={readOnly || this.props.replicationName !== undefined}
+            />
           </Form.Item>
 
           <Row>
