@@ -100,7 +100,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(wrapper.find({ name: "eachS" }).exists()).toBeTruthy();
   });
 
-  it("shows the replication disables name if it is provided", () => {
+  it("shows the replication disabled name if it is provided", () => {
     const input = wrapper.find({ name: "name" }).find("input");
     expect(input.prop("value")).toEqual("TestReplication");
     expect(input.prop("disabled")).toBeTruthy();
