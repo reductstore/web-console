@@ -4,6 +4,7 @@ import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import TokenDetail from "./TokenDetail";
 import { MemoryRouter, Route } from "react-router-dom";
+import { act } from "react-dom/test-utils";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -27,7 +28,6 @@ describe("TokenDetail", () => {
         read: ["bucket-1"],
         write: ["bucket-2"],
       },
-      value: "mock-token-value",
     } as Token);
   });
 
@@ -103,5 +103,48 @@ describe("TokenDetail", () => {
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
     expect(removeButton.hostNodes().props().disabled).toBeTruthy();
+  });
+
+  it("shows error if clipboard copy fails", async () => {
+    const mockClipboard = {
+      writeText: jest.fn().mockRejectedValue(new Error("Clipboard error")),
+    };
+    Object.assign(navigator, { clipboard: mockClipboard });
+
+    const client = new Client("") as jest.Mocked<Client>;
+    client.getBucketList = jest
+      .fn()
+      .mockResolvedValue([{ name: "bucket-1" }, { name: "bucket-2" }]);
+    client.createToken = jest.fn().mockResolvedValue("mock-token-value");
+
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token?isNew=true"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
+
+    const createButton = await waitUntilFind(view, ".CreateButton");
+
+    await act(async () => {
+      createButton.hostNodes().props().onClick();
+    });
+    view.update();
+
+    const modalButton = view
+      .find("button")
+      .filterWhere((n) => n.text().includes("Copy To Clipboard And Close"));
+
+    expect(modalButton.exists()).toBe(true);
+
+    await act(async () => {
+      (modalButton as any).hostNodes().props().onClick();
+    });
+    view.update();
+    const error = await waitUntilFind(view, ".Alert");
+    expect(error.hostNodes().text()).toBe(
+      "Failed to copy token to clipboard. Please copy it manually.",
+    );
   });
 });
