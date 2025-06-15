@@ -3,6 +3,7 @@ import { Client, Token } from "reduct-js";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import TokenDetail from "./TokenDetail";
+import { MemoryRouter, Route } from "react-router-dom";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -26,11 +27,18 @@ describe("TokenDetail", () => {
         read: ["bucket-1"],
         write: ["bucket-2"],
       },
+      value: "mock-token-value",
     } as Token);
   });
 
   it("should show token details", async () => {
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const input = await waitUntilFind(view, { name: "name" });
     expect(input.hostNodes().props().value).toBe("token-1");
@@ -51,7 +59,13 @@ describe("TokenDetail", () => {
 
   it("should show error", async () => {
     client.getToken = jest.fn().mockRejectedValue(new Error("error"));
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const error = await waitUntilFind(view, ".Alert");
     expect(error.hostNodes().text()).toBe("error");
@@ -59,7 +73,13 @@ describe("TokenDetail", () => {
 
   it("should remove a token", async () => {
     client.deleteToken = jest.fn().mockResolvedValue(undefined);
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
     removeButton.hostNodes().props().onClick();
@@ -73,7 +93,13 @@ describe("TokenDetail", () => {
       createdAt: 100000,
       isProvisioned: true,
     } as Token);
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
     expect(removeButton.hostNodes().props().disabled).toBeTruthy();

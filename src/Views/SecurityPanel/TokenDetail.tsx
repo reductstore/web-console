@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -19,7 +19,8 @@ interface Props {
 }
 
 function useQueryParams() {
-  const params = new URLSearchParams(window ? window.location.search : {});
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
 
   return new Proxy(params, {
     get(target, prop) {
@@ -167,7 +168,11 @@ export default function TokenDetail(props: Readonly<Props>) {
       <Space>
         <Button onClick={() => history.push("/tokens")}>Back</Button>
         {isNew ? (
-          <Button type={"primary"} onClick={() => createToken()}>
+          <Button
+            className="CreateButton"
+            type={"primary"}
+            onClick={() => createToken()}
+          >
             Create
           </Button>
         ) : (
