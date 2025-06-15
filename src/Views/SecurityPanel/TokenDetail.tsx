@@ -233,7 +233,7 @@ export default function TokenDetail(props: Readonly<Props>) {
               type="success"
               message="This is your token value. Please, save it somewhere, because it will not be shown again."
             />
-            {tokenError ? (
+            {tokenError && (
               <Alert
                 className="Alert"
                 message={tokenError}
@@ -241,14 +241,12 @@ export default function TokenDetail(props: Readonly<Props>) {
                 closable
                 onClose={() => setTokenError(undefined)}
               />
-            ) : (
-              <div />
             )}
             <Input.TextArea
               value={tokenValue ? tokenValue : ""}
-              readOnly={true}
-              rows={4}
-            ></Input.TextArea>
+              readOnly
+              autoSize={{ minRows: 4 }}
+            />
           </Space>
         </Modal>
       </Space>,
