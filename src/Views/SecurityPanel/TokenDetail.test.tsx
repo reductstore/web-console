@@ -3,6 +3,8 @@ import { Client, Token } from "reduct-js";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import TokenDetail from "./TokenDetail";
+import { MemoryRouter, Route } from "react-router-dom";
+import { act } from "react-dom/test-utils";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -30,7 +32,13 @@ describe("TokenDetail", () => {
   });
 
   it("should show token details", async () => {
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const input = await waitUntilFind(view, { name: "name" });
     expect(input.hostNodes().props().value).toBe("token-1");
@@ -51,20 +59,80 @@ describe("TokenDetail", () => {
 
   it("should show error", async () => {
     client.getToken = jest.fn().mockRejectedValue(new Error("error"));
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const error = await waitUntilFind(view, ".Alert");
     expect(error.hostNodes().text()).toBe("error");
   });
 
-  it("should remove a token", async () => {
+  it("should show remove confirmation modal", async () => {
     client.deleteToken = jest.fn().mockResolvedValue(undefined);
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
-    removeButton.hostNodes().props().onClick();
+    await act(async () => {
+      removeButton.hostNodes().props().onClick();
+    });
+    view.update();
 
-    // No idea how to test modal with confirmation
+    const confirmationText = view
+      .find("p")
+      .filterWhere((n) => n.text().includes("For confirmation type"));
+
+    expect(confirmationText.exists()).toBe(true);
+    expect(confirmationText.text()).toBe("For confirmation type token-1");
+  });
+
+  it("should remove a token", async () => {
+    const mockDeleteToken = jest.fn().mockResolvedValue(undefined);
+    client.deleteToken = mockDeleteToken;
+
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/token-1"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
+
+    const removeButton = await waitUntilFind(view, ".RemoveButton");
+    await act(async () => {
+      removeButton.hostNodes().props().onClick();
+    });
+    view.update();
+
+    const renameModal = view.find('div[data-testid="remove-token-modal"]');
+    expect(renameModal.exists()).toBe(true);
+
+    const input = renameModal.find('input[data-testid="remove-confirm-input"]');
+    act(() => {
+      input.simulate("change", { target: { value: "token-1" } });
+    });
+    view.update();
+
+    const okButton = renameModal
+      .find("button")
+      .filterWhere((n) => n.text().includes("Remove Token"));
+    expect(okButton.exists()).toBe(true);
+
+    await act(async () => {
+      okButton.simulate("click");
+    });
+    view.update();
+
+    expect(mockDeleteToken).toHaveBeenCalledWith("token-1");
   });
 
   it("should disable remove button if provisioned", async () => {
@@ -73,9 +141,58 @@ describe("TokenDetail", () => {
       createdAt: 100000,
       isProvisioned: true,
     } as Token);
-    const view = mount(<TokenDetail client={client} />);
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
     expect(removeButton.hostNodes().props().disabled).toBeTruthy();
+  });
+
+  it("shows error if clipboard copy fails", async () => {
+    const mockClipboard = {
+      writeText: jest.fn().mockRejectedValue(new Error("Clipboard error")),
+    };
+    Object.assign(navigator, { clipboard: mockClipboard });
+
+    const client = new Client("") as jest.Mocked<Client>;
+    client.getBucketList = jest
+      .fn()
+      .mockResolvedValue([{ name: "bucket-1" }, { name: "bucket-2" }]);
+    client.createToken = jest.fn().mockResolvedValue("mock-token-value");
+
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/new_token?isNew=true"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
+
+    const createButton = await waitUntilFind(view, ".CreateButton");
+
+    await act(async () => {
+      createButton.hostNodes().props().onClick();
+    });
+    view.update();
+
+    const modalButton = view
+      .find("button")
+      .filterWhere((n) => n.text().includes("Copy To Clipboard And Close"));
+
+    expect(modalButton.exists()).toBe(true);
+
+    await act(async () => {
+      (modalButton as any).hostNodes().props().onClick();
+    });
+    view.update();
+    const error = await waitUntilFind(view, ".Alert");
+    expect(error.hostNodes().text()).toBe(
+      "Failed to copy token to clipboard. Please copy it manually.",
+    );
   });
 });
