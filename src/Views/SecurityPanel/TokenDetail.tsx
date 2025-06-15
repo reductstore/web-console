@@ -193,9 +193,10 @@ export default function TokenDetail(props: Readonly<Props>) {
           onCancel={() => setConfirmRemove(false)}
           closable={false}
           title={`Remove token "${token.name}"?`}
-          okText="Remove"
+          okText="Remove Token"
           confirmLoading={!confirmName}
           okType="danger"
+          data-testid="remove-token-modal"
         >
           <p>
             For confirmation type <b>{token.name}</b>
@@ -203,7 +204,8 @@ export default function TokenDetail(props: Readonly<Props>) {
           <Form.Item name="confirm">
             <Input
               onChange={(e) => setConfirmName(token?.name === e.target.value)}
-            ></Input>
+              data-testid="remove-confirm-input"
+            />
           </Form.Item>
         </Modal>
 

@@ -95,6 +95,46 @@ describe("TokenDetail", () => {
     expect(confirmationText.text()).toBe("For confirmation type token-1");
   });
 
+  it("should remove a token", async () => {
+    const mockDeleteToken = jest.fn().mockResolvedValue(undefined);
+    client.deleteToken = mockDeleteToken;
+
+    const view = mount(
+      <MemoryRouter initialEntries={["/tokens/token-1"]}>
+        <Route path="/tokens/:name">
+          <TokenDetail client={client} />
+        </Route>
+      </MemoryRouter>,
+    );
+
+    const removeButton = await waitUntilFind(view, ".RemoveButton");
+    await act(async () => {
+      removeButton.hostNodes().props().onClick();
+    });
+    view.update();
+
+    const renameModal = view.find('div[data-testid="remove-token-modal"]');
+    expect(renameModal.exists()).toBe(true);
+
+    const input = renameModal.find('input[data-testid="remove-confirm-input"]');
+    act(() => {
+      input.simulate("change", { target: { value: "token-1" } });
+    });
+    view.update();
+
+    const okButton = renameModal
+      .find("button")
+      .filterWhere((n) => n.text().includes("Remove Token"));
+    expect(okButton.exists()).toBe(true);
+
+    await act(async () => {
+      okButton.simulate("click");
+    });
+    view.update();
+
+    expect(mockDeleteToken).toHaveBeenCalledWith("token-1");
+  });
+
   it("should disable remove button if provisioned", async () => {
     client.getToken = jest.fn().mockResolvedValue({
       name: "token-1",
