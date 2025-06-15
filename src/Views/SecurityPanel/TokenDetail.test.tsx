@@ -71,7 +71,7 @@ describe("TokenDetail", () => {
     expect(error.hostNodes().text()).toBe("error");
   });
 
-  it("should remove a token", async () => {
+  it("should show remove confirmation modal", async () => {
     client.deleteToken = jest.fn().mockResolvedValue(undefined);
     const view = mount(
       <MemoryRouter initialEntries={["/tokens/new_token"]}>
@@ -82,9 +82,17 @@ describe("TokenDetail", () => {
     );
 
     const removeButton = await waitUntilFind(view, ".RemoveButton");
-    removeButton.hostNodes().props().onClick();
+    await act(async () => {
+      removeButton.hostNodes().props().onClick();
+    });
+    view.update();
 
-    // No idea how to test modal with confirmation
+    const confirmationText = view
+      .find("p")
+      .filterWhere((n) => n.text().includes("For confirmation type"));
+
+    expect(confirmationText.exists()).toBe(true);
+    expect(confirmationText.text()).toBe("For confirmation type token-1");
   });
 
   it("should disable remove button if provisioned", async () => {
