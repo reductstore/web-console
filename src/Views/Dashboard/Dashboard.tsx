@@ -169,9 +169,7 @@ export default function Dashboard(props: Readonly<Props>) {
         onTabChange={onTabChange}
         bordered
       >
-        {activeTabKey === "usage" && (
-          <UsageStatistics info={info} />
-        )}
+        {activeTabKey === "usage" && <UsageStatistics info={info} />}
         {activeTabKey === "license" && info.license && (
           <LicenseDetails license={info.license} usage={info.usage} />
         )}
