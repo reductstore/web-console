@@ -170,7 +170,7 @@ export default function Dashboard(props: Readonly<Props>) {
         bordered
       >
         {activeTabKey === "usage" && (
-          <UsageStatistics info={info} buckets={buckets} />
+          <UsageStatistics info={info} />
         )}
         {activeTabKey === "license" && info.license && (
           <LicenseDetails license={info.license} usage={info.usage} />

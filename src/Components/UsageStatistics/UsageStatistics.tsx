@@ -1,6 +1,6 @@
 import React from "react";
 import { Row, Col, Statistic } from "antd";
-import { ServerInfo, BucketInfo } from "reduct-js";
+import { ServerInfo } from "reduct-js";
 import humanizeDuration from "humanize-duration";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -8,10 +8,9 @@ import { bigintToNumber } from "../../Helpers/NumberUtils";
 
 interface UsageStatisticsProps {
   info: ServerInfo;
-  buckets: BucketInfo[];
 }
 
-const UsageStatistics: React.FC<UsageStatisticsProps> = ({ info, buckets }) => (
+const UsageStatistics: React.FC<UsageStatisticsProps> = ({ info }) => (
   <Row gutter={16}>
     <Col span={8}>
       <Statistic
@@ -20,7 +19,7 @@ const UsageStatistics: React.FC<UsageStatisticsProps> = ({ info, buckets }) => (
       />
     </Col>
     <Col span={8}>
-      <Statistic title="Buckets" value={buckets.length} />
+      <Statistic title="Buckets" value={bigintToNumber(info.bucketCount)} />
     </Col>
     <Col span={8}>
       <Statistic
