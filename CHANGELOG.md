@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - When condition editor disabled for provisioned replication settings, [PR-103](https://github.com/reductstore/web-console/pull/103)
+- Show correct total usage and bucket count even when user has limited access, [PR-112](https://github.com/reductstore/web-console/pull/112)
 
 ## [1.10.0] - 2025-05-07
 
