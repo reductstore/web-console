@@ -31,27 +31,21 @@ describe("UsageStatistics", () => {
   });
 
   it("should display the correct usage", () => {
-    const wrapper = mount(
-      <UsageStatistics info={serverInfo} buckets={buckets} />,
-    );
+    const wrapper = mount(<UsageStatistics info={serverInfo} />);
     expect(
       wrapper.find({ title: "Usage" }).find("Statistic").prop("value"),
     ).toEqual("50 GB");
   });
 
   it("should display the correct number of buckets", () => {
-    const wrapper = mount(
-      <UsageStatistics info={serverInfo} buckets={buckets} />,
-    );
+    const wrapper = mount(<UsageStatistics info={serverInfo} />);
     expect(
       wrapper.find({ title: "Buckets" }).find("Statistic").prop("value"),
     ).toEqual(buckets.length);
   });
 
   it("should display the correct uptime", () => {
-    const wrapper = mount(
-      <UsageStatistics info={serverInfo} buckets={buckets} />,
-    );
+    const wrapper = mount(<UsageStatistics info={serverInfo} />);
     expect(
       wrapper.find({ title: "Uptime" }).find("Statistic").prop("value"),
     ).toEqual("1 day");
