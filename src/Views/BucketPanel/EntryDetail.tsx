@@ -32,6 +32,8 @@ import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
+import streamSaver from "streamsaver";
+import mime from "mime";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -105,18 +107,33 @@ export default function EntryDetail(props: Readonly<Props>) {
   const handleDownload = async (record: any) => {
     try {
       const bucket = await props.client.getBucket(bucketName);
-      const data = await (
-        await bucket.beginRead(entryName, BigInt(record.key))
-      ).read();
-      const blob = new Blob([data], { type: record.contentType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${entryName}-${record.key}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const readableRecord = await bucket.beginRead(
+        entryName,
+        BigInt(record.key),
+      );
+
+      const ext = mime.getExtension(record.contentType || "") || "bin";
+      const fileName = `${entryName}-${record.key}.${ext}`;
+      const size = Number(readableRecord.size);
+      const contentType = record.contentType || "application/octet-stream";
+
+      if (size < 20 * 1024 * 1024) {
+        // Small file: load in memory
+        const data = await readableRecord.read();
+        const blob = new Blob([data], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Large file: stream it
+        const fileStream = streamSaver.createWriteStream(fileName, { size });
+        await readableRecord.stream.pipeTo(fileStream);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Download failed", err);
       message.error("Failed to download record");
     }
   };
