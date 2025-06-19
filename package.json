@@ -15,6 +15,7 @@
     "@types/react": "^17.0.67",
     "@types/react-dom": "^17.0.21",
     "@types/react-router-dom": "^5.3.3",
+    "@types/streamsaver": "^2.0.5",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
     "antd": "^5.23.4",
     "async-wait-until": "^2.0.12",
@@ -46,7 +47,7 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check ."
   },
-  "proxy": "https://play.reduct.store",
+  "proxy": "http://0.0.0.0:8383",
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -67,6 +68,8 @@
   },
   "dependencies": {
     "codemirror": "^5.65.18",
-    "react-codemirror2": "^8.0.1"
+    "mime": "^4.0.7",
+    "react-codemirror2": "^8.0.1",
+    "streamsaver": "^2.0.6"
   }
 }
