@@ -33,7 +33,7 @@ import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
-import mime from "mime";
+import { lookup as getMimeType } from "mime-types";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -112,7 +112,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         BigInt(record.key),
       );
 
-      const ext = mime.getExtension(record.contentType || "") || "bin";
+      const ext = getMimeType(record.contentType || "") || "bin";
       const fileName = `${entryName}-${record.key}.${ext}`;
       const size = Number(readableRecord.size);
       const contentType = record.contentType || "application/octet-stream";

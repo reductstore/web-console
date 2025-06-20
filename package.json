@@ -11,6 +11,7 @@
     "@types/enzyme": "^3.10.14",
     "@types/humanize-duration": "^3.27.1",
     "@types/jest": "^27.5.2",
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^18.18.4",
     "@types/react": "^17.0.67",
     "@types/react-dom": "^17.0.21",
@@ -68,7 +69,8 @@
   },
   "dependencies": {
     "codemirror": "^5.65.18",
-    "mime": "^4.0.7",
+    "mime-db": "^1.54.0",
+    "mime-types": "^3.0.1",
     "react-codemirror2": "^8.0.1",
     "streamsaver": "^2.0.6"
   }
