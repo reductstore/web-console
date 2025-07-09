@@ -69,7 +69,6 @@
   },
   "dependencies": {
     "codemirror": "^5.65.18",
-    "mime-db": "^1.54.0",
     "mime-types": "^3.0.1",
     "react-codemirror2": "^8.0.1",
     "streamsaver": "^2.0.6"
