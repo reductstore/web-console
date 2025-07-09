@@ -280,6 +280,36 @@ describe("EntryDetail", () => {
   });
 
   describe("Record Download", () => {
+    it("should download records smaller than 1MB", async () => {
+      const smallRecord = {
+        time: 1000n,
+        key: "1000",
+        contentType: "application/json",
+        size: 1024n, // 1KB
+        read: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+      };
+
+      (bucket.beginRead as jest.Mock).mockResolvedValueOnce(smallRecord);
+
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(DownloadOutlined).length > 0,
+        );
+      });
+
+      const downloadIcon = wrapper.find(DownloadOutlined).at(0);
+      expect(downloadIcon.exists()).toBe(true);
+
+      await act(async () => {
+        downloadIcon.simulate("click");
+        jest.runAllTimers();
+      });
+
+      expect(bucket.beginRead).toHaveBeenCalledWith("testEntry", 1000n);
+      expect(smallRecord.read).toHaveBeenCalled();
+    });
+
     it("should use stream for records larger than 1MB", async () => {
       const pipeToMock = jest.fn().mockResolvedValue(undefined);
       const largeRecord = {
@@ -310,11 +340,11 @@ describe("EntryDetail", () => {
         jest.runAllTimers();
       });
 
-      expect(pipeToMock).toHaveBeenCalled();
       expect(streamSaver.createWriteStream).toHaveBeenCalledWith(
         expect.stringMatching(/^testEntry-1000\.json$/),
         { size: 1048576 },
       );
+      expect(pipeToMock).toHaveBeenCalled();
     });
   });
 
