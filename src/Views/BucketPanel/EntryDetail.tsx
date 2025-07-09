@@ -18,6 +18,7 @@ import {
   Modal,
   Space,
   message,
+  Spin,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
@@ -73,6 +74,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -105,6 +107,9 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
 
   const handleDownload = async (record: any) => {
+    if (downloadingKey !== null) return;
+    setDownloadingKey(record.key);
+
     try {
       const bucket = await props.client.getBucket(bucketName);
       const readableRecord = await bucket.beginRead(
@@ -114,11 +119,26 @@ export default function EntryDetail(props: Readonly<Props>) {
       const ext = mime.extension(record.contentType || "") || "bin";
       const fileName = `${entryName}-${record.key}.${ext}`;
       const size = Number(readableRecord.size);
-      const fileStream = streamSaver.createWriteStream(fileName, { size });
-      await readableRecord.stream.pipeTo(fileStream);
+      if (size < 1024 * 1024) {
+        // Small file: use Blob and anchor
+        const data = await readableRecord.read();
+        const blob = new Blob([data], { type: record.contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${entryName}-${record.key}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Large file: stream to disk
+        const fileStream = streamSaver.createWriteStream(fileName, { size });
+        await readableRecord.stream.pipeTo(fileStream);
+      }
     } catch (err) {
       console.error("Download failed", err);
       message.error("Failed to download record");
+    } finally {
+      setDownloadingKey(null);
     }
   };
 
@@ -225,11 +245,15 @@ export default function EntryDetail(props: Readonly<Props>) {
       key: "actions",
       render: (text: any, record: any) => (
         <Space size="middle">
-          <DownloadOutlined
-            onClick={() => handleDownload(record)}
-            style={{ cursor: "pointer" }}
-            title="Download record"
-          />
+          {downloadingKey === record.key ? (
+            <Spin size="small" style={{ marginRight: 8 }} />
+          ) : (
+            <DownloadOutlined
+              onClick={() => handleDownload(record)}
+              style={{ cursor: "pointer" }}
+              title="Download record"
+            />
+          )}
           {hasWritePermission && (
             <EditOutlined
               onClick={() => handleEditLabels(record)}
