@@ -11,7 +11,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
-import React from "react";
+import streamSaver from "streamsaver";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
 type MockedRemoveRecord = RemoveRecordFn & {
@@ -43,6 +43,11 @@ const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
+
+// Mock the streamsaver library
+jest.mock("streamsaver", () => ({
+  createWriteStream: jest.fn(),
+}));
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -274,21 +279,43 @@ describe("EntryDetail", () => {
     expect(downloadIcons.length).toBe(2);
   });
 
-  it("should create a download link on download icon click", async () => {
-    await act(async () => {
-      jest.runOnlyPendingTimers();
-      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
-    });
+  describe("Record Download", () => {
+    it("should use stream for records larger than 1MB", async () => {
+      const pipeToMock = jest.fn().mockResolvedValue(undefined);
+      const largeRecord = {
+        time: 1000n,
+        key: "1000",
+        contentType: "application/json",
+        size: 1_048_576n, // 1MB
+        stream: { pipeTo: pipeToMock },
+      };
 
-    act(() => {
-      wrapper.find(DownloadOutlined).at(0).simulate("click");
-    });
-    wrapper.update();
+      (bucket.beginRead as jest.Mock).mockResolvedValueOnce(largeRecord);
+      (streamSaver.createWriteStream as jest.Mock).mockReturnValue({
+        writable: {},
+      });
 
-    const downloadLink = wrapper.find("a");
-    expect(downloadLink.length).toBe(3);
-    expect(downloadLink.at(0).props().children).toBe("testBucket");
-    expect(downloadLink.at(1)).toBeDefined();
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(DownloadOutlined).length > 0,
+        );
+      });
+
+      const downloadIcon = wrapper.find(DownloadOutlined).at(0);
+      expect(downloadIcon.exists()).toBe(true);
+
+      await act(async () => {
+        downloadIcon.simulate("click");
+        jest.runAllTimers();
+      });
+
+      expect(pipeToMock).toHaveBeenCalled();
+      expect(streamSaver.createWriteStream).toHaveBeenCalledWith(
+        expect.stringMatching(/^testEntry-1000\.json$/),
+        { size: 1048576 },
+      );
+    });
   });
 
   describe("Label Editing", () => {
