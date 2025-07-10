@@ -16,6 +16,7 @@ import {
 } from "@ant-design/icons";
 import { APIError, Client } from "reduct-js";
 import { Buffer } from "buffer";
+import { getContentTypeFromFilename } from "../../Helpers/contentType";
 import "./UploadFileForm.css";
 
 interface UploadFileFormProps {
@@ -75,9 +76,10 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       await bucket.getInfo();
 
       const arrayBuffer = await uploadFile.arrayBuffer();
+      const inferredType =
+        uploadFile.type || getContentTypeFromFilename(uploadFile.name);
       const writer = await bucket.beginWrite(values.entryName, {
-        contentType:
-          values.contentType || uploadFile.type || "application/octet-stream",
+        contentType: values.contentType || inferredType,
         labels: labels.reduce(
           (acc, label) => ({ ...acc, [label.key.trim()]: label.value }),
           {},
