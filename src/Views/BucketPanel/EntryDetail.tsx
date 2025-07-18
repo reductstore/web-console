@@ -34,7 +34,7 @@ import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
-import mime from "mime-types";
+import { getExtensionFromContentType } from "../../Helpers/contentType";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -116,8 +116,8 @@ export default function EntryDetail(props: Readonly<Props>) {
         entryName,
         BigInt(record.key),
       );
-      const ext = mime.extension(record.contentType || "") || "bin";
-      const fileName = `${entryName}-${record.key}.${ext}`;
+      const ext = getExtensionFromContentType(record.contentType || "");
+      const fileName = `${entryName}-${record.key}${ext}`;
       const size = Number(readableRecord.size);
       if (size < 1024 * 1024) {
         // Small file: use Blob and anchor
@@ -126,7 +126,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${entryName}-${record.key}`;
+        a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
       } else {

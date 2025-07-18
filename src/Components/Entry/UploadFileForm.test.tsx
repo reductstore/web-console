@@ -11,15 +11,19 @@ import { RcFile } from "antd/es/upload";
 // test timeout
 jest.setTimeout(20000);
 
-function makeMockFile(testContent: string) {
-  const file = new File([testContent], "test.txt", {
-    type: "text/plain",
+function makeMockFile(
+  testContent: string,
+  name = "test.txt",
+  type = "text/plain",
+) {
+  const file = new File([testContent], name, {
+    type,
   }) as unknown as RcFile;
 
   const mockFile: UploadFile = {
     uid: "1",
-    name: "test.txt",
-    type: "text/plain",
+    name,
+    type,
     size: file.size,
     originFileObj: file,
     status: "done" as UploadFileStatus,
@@ -444,5 +448,33 @@ describe("UploadFileForm", () => {
     );
     expect(mockWrite).toHaveBeenCalledWith(Buffer.from(testContent));
     expect(mockOnUploadSuccess).toHaveBeenCalled();
+  });
+
+  it("should infer content type from file extension", async () => {
+    const testContent = "binarydata";
+    const mockFile = makeMockFile(testContent, "demo.mcap", "");
+    const { mockBucket } = mockWriting(client);
+
+    await act(async () => {
+      wrapper = mount(
+        <UploadFileForm
+          client={client}
+          bucketName="testBucket"
+          entryName="testEntry"
+          availableEntries={["testEntry"]}
+          onUploadSuccess={mockOnUploadSuccess}
+        />,
+      );
+    });
+
+    await attachFile(wrapper, mockFile);
+    await submitForm(wrapper);
+
+    expect(mockBucket.beginWrite).toHaveBeenCalledWith(
+      "testEntry",
+      expect.objectContaining({
+        contentType: "application/mcap",
+      }),
+    );
   });
 });
