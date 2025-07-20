@@ -148,7 +148,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="ReadSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.read}
           options={bucketOptions}
           onChange={(value) => setPermissions({ read: value })}
@@ -159,7 +159,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="WriteSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.write}
           options={bucketOptions}
           onChange={(value) => setPermissions({ write: value })}
