@@ -18,7 +18,6 @@
 .ant-menu-item-active {
   background: var(--primary-fg) !important;
   color: var(--primary-bg) !important;
-  margin-left: 0 !important;
 }
 .MenuItem {
   color: var(--primary-fg);
