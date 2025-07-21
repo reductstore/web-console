@@ -3,7 +3,7 @@ import type { MenuProps } from "antd";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-export const getHelpMenuItems = (collapsed?: boolean): MenuItem[] => {
+export const getHelpMenuItems = (): MenuItem[] => {
   const helpItems: MenuItem[] = [
     {
       key: "getting-started",
@@ -67,16 +67,14 @@ export const getHelpMenuItems = (collapsed?: boolean): MenuItem[] => {
     },
   ];
 
-  return collapsed
-    ? [
-        {
-          key: "help",
-          icon: <QuestionCircleOutlined />,
-          label: "Help",
-          popupOffset: [8, 0],
-          children: helpItems,
-          className: "help-menu-item",
-        },
-      ]
-    : helpItems;
+  return [
+    {
+      key: "help",
+      icon: <QuestionCircleOutlined />,
+      label: "Help",
+      popupOffset: [8, 0],
+      children: helpItems,
+      className: "help-menu-item",
+    },
+  ];
 };

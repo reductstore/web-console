@@ -2,7 +2,7 @@ import { getHelpMenuItems } from "./HelpMenu";
 
 describe("HelpMenu", () => {
   it("should return help menu as submenu when collapsed", () => {
-    const items = getHelpMenuItems(true);
+    const items = getHelpMenuItems();
 
     expect(items).toHaveLength(1);
     expect(items[0]?.key).toBe("help");
@@ -10,8 +10,14 @@ describe("HelpMenu", () => {
   });
 
   it("should return help menu items directly when not collapsed", () => {
-    const items = getHelpMenuItems(false);
+    const helpItem = getHelpMenuItems();
 
+    const items =
+      helpItem[0] &&
+      "children" in helpItem[0] &&
+      Array.isArray(helpItem[0].children)
+        ? helpItem[0].children
+        : [];
     expect(items).toHaveLength(5);
     expect(items.map((item) => item?.key)).toEqual([
       "getting-started",
@@ -23,7 +29,13 @@ describe("HelpMenu", () => {
   });
 
   it("should have correct URLs for all menu items", () => {
-    const items = getHelpMenuItems(false);
+    const helpItem = getHelpMenuItems();
+    const items =
+      helpItem[0] &&
+      "children" in helpItem[0] &&
+      Array.isArray(helpItem[0].children)
+        ? helpItem[0].children
+        : [];
     const expectedUrls = {
       "getting-started": "https://www.reduct.store/docs/getting-started",
       Guides: "https://www.reduct.store/docs/guides",

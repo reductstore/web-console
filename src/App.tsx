@@ -117,11 +117,8 @@ export default class App extends React.Component<Props, State> {
             },
           );
         }
-
-        items.push(...getHelpMenuItems(true));
-      } else {
-        items.push(...getHelpMenuItems(false));
       }
+      items.push(...getHelpMenuItems());
 
       return items;
     };
@@ -182,6 +179,7 @@ export default class App extends React.Component<Props, State> {
                 selectable={false}
                 mode="inline"
                 items={getMenuItems()}
+                defaultOpenKeys={["help"]}
               />
               <div className="Divider" />
               {permissions && (
