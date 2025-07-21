@@ -24,6 +24,7 @@ interface Props extends RouteComponentProps {
 
 type State = {
   permissions?: TokenPermissions;
+  siderCollapsed: boolean;
 };
 
 const PRIMARY_COLOR = "#231b49";
@@ -31,7 +32,12 @@ const PRIMARY_COLOR = "#231b49";
 export default class App extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { permissions: { fullAccess: false } };
+    this.state = {
+      permissions: { fullAccess: false },
+      siderCollapsed: false,
+    };
+    this.handleSiderCollapse = this.handleSiderCollapse.bind(this);
+    this.handleToggleSider = this.handleToggleSider.bind(this);
   }
 
   componentDidMount() {
@@ -48,8 +54,19 @@ export default class App extends React.Component<Props, State> {
       .catch((err) => console.error(err));
   }
 
+  handleSiderCollapse(collapsed: boolean) {
+    this.setState({ siderCollapsed: collapsed });
+  }
+
+  handleToggleSider() {
+    this.setState((prevState) => ({
+      siderCollapsed: !prevState.siderCollapsed,
+    }));
+  }
+
   render() {
     const { backendApi, history } = this.props;
+    const { siderCollapsed } = this.state;
     const onLogout = async () => {
       backendApi.logout();
       this.setState({ permissions: undefined });
@@ -121,21 +138,44 @@ export default class App extends React.Component<Props, State> {
               colorBgContainer: PRIMARY_COLOR,
               colorText: "#cccccc",
               colorLink: PRIMARY_COLOR,
-              colorLinkHover: "#111",
             },
           },
         }}
       >
         <Layout style={{ minHeight: "100vh" }}>
-          <Layout.Sider className="Sider">
+          {/* Overlay for mobile menu */}
+          {siderCollapsed === false ? null : (
+            <div
+              className="SiderOverlay"
+              onClick={this.handleToggleSider}
+              aria-label="Close menu overlay"
+            />
+          )}
+          <Layout.Sider
+            className="Sider"
+            collapsible
+            collapsed={siderCollapsed}
+            onCollapse={this.handleSiderCollapse}
+            breakpoint="md"
+            collapsedWidth={60}
+            width={220}
+            trigger={null}
+            style={{ position: "relative", zIndex: 1200 }}
+          >
+            {/* Hide logo and meta on mobile via CSS */}
             <div className="LogoContainer">
-              <a
-                href="https://www.reduct.store"
-                title="https://www.reduct.store"
-              >
+              {!siderCollapsed && (
                 <Image src={this.normalizeStaticUrl(logo)} preview={false} />
-              </a>
+              )}
             </div>
+            {/* Mobile menu toggle button */}
+            <button
+              className="MobileMenuToggle"
+              aria-label="Toggle menu"
+              onClick={this.handleToggleSider}
+            >
+              <span className="MobileMenuIcon" />
+            </button>
             <div className="MenuContainer">
               <Menu
                 className="MenuItem MainMenu"
@@ -160,20 +200,33 @@ export default class App extends React.Component<Props, State> {
                 />
               )}
             </div>
-            <div className="Meta">
-              <div className="MetaItem">
-                Web Console{" "}
-                <a
-                  href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  v{version}
-                </a>
+            {!siderCollapsed && (
+              <div className="Meta">
+                <div className="MetaItem">
+                  Web Console{" "}
+                  <a
+                    href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    v{version}
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
           </Layout.Sider>
-          <Layout>
+          <Layout
+            style={{
+              zIndex: 1,
+              marginLeft:
+                typeof window !== "undefined" && window.innerWidth <= 768
+                  ? !siderCollapsed
+                    ? 220
+                    : 60
+                  : 0,
+              transition: "margin-left 0.2s",
+            }}
+          >
             <Layout.Content>
               <Routes
                 {...this.props}

@@ -73,6 +73,7 @@ export const getHelpMenuItems = (collapsed?: boolean): MenuItem[] => {
           key: "help",
           icon: <QuestionCircleOutlined />,
           label: "Help",
+          popupOffset: [8, 0],
           children: helpItems,
           className: "help-menu-item",
         },
