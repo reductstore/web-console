@@ -2,3 +2,10 @@
   width: 400px;
   margin: 20vh auto;
 }
+
+@media (max-width: 600px) {
+  .LoginForm {
+    width: 90%;
+    margin: 10vh auto;
+  }
+}
