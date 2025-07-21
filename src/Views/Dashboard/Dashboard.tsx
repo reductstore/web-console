@@ -27,6 +27,7 @@ export default function Dashboard(props: Readonly<Props>) {
   const history = useHistory();
 
   const [info, setInfo] = useState<ServerInfo | undefined>();
+  const [error, setError] = useState<string | undefined>();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [creatingBucket, setCreatingBucket] = useState(false);
 
@@ -56,6 +57,7 @@ export default function Dashboard(props: Readonly<Props>) {
   ];
 
   const getInfo = async () => {
+    setError(undefined);
     try {
       const { client } = props.backendApi;
       setInfo(await client.getInfo());
@@ -66,6 +68,7 @@ export default function Dashboard(props: Readonly<Props>) {
       );
     } catch (err) {
       console.error(err);
+      setError("Server (no connection)");
     }
   };
 
@@ -98,10 +101,6 @@ export default function Dashboard(props: Readonly<Props>) {
     history.push(`/buckets/${name}`);
   };
 
-  if (info === undefined) {
-    return <Card bordered title="Server (no connection)" />;
-  }
-
   const renderBuckets = () => (
     <div className="BucketList">
       {buckets.map((bucket, index) => (
@@ -131,49 +130,55 @@ export default function Dashboard(props: Readonly<Props>) {
   const { client } = props.backendApi;
   return (
     <div className="Panel">
-      <Card
-        id="ServerInfo"
-        title={
-          <>
-            Server{" "}
-            <a
-              href={`https://github.com/reductstore/reductstore/releases/tag/v${info.version}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              v{info.version}
-            </a>
-          </>
-        }
-        actions={allowedActions}
-        tabList={tabList}
-        activeTabKey={activeTabKey}
-        onTabChange={onTabChange}
-        bordered
-      >
-        {activeTabKey === "usage" && <UsageStatistics info={info} />}
-        {activeTabKey === "license" && info.license && (
-          <LicenseDetails license={info.license} usage={info.usage} />
-        )}
-        {activeTabKey === "license" && !info.license && <LicenseAlert />}
+      {error && <Card bordered title={error} />}
+      {info && !error && (
+        <>
+          <Card
+            id="ServerInfo"
+            title={
+              <>
+                Server{" "}
+                <a
+                  href={`https://github.com/reductstore/reductstore/releases/tag/v${info.version}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  v{info.version}
+                </a>
+              </>
+            }
+            actions={allowedActions}
+            tabList={tabList}
+            activeTabKey={activeTabKey}
+            onTabChange={onTabChange}
+            bordered
+          >
+            {activeTabKey === "usage" && <UsageStatistics info={info} />}
+            {activeTabKey === "license" && info.license && (
+              <LicenseDetails license={info.license} usage={info.usage} />
+            )}
+            {activeTabKey === "license" && !info.license && <LicenseAlert />}
 
-        <Modal
-          title="Add a new bucket"
-          open={creatingBucket}
-          footer={null}
-          onCancel={() => setCreatingBucket(false)}
-        >
-          <BucketSettingsForm
-            client={client}
-            onCreated={async () => {
-              setCreatingBucket(false);
-            }}
-          />
-        </Modal>
-      </Card>
-      <Divider />
-      <Typography.Title level={3}>Buckets</Typography.Title>
-      {renderBuckets()}
+            <Modal
+              title="Add a new bucket"
+              open={creatingBucket}
+              footer={null}
+              onCancel={() => setCreatingBucket(false)}
+            >
+              <BucketSettingsForm
+                client={client}
+                onCreated={async () => {
+                  setCreatingBucket(false);
+                }}
+              />
+            </Modal>
+          </Card>
+          <Divider />
+          <Typography.Title level={3}>Buckets</Typography.Title>
+
+          {renderBuckets()}
+        </>
+      )}
     </div>
   );
 }
