@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { IBackendAPI } from "../../BackendAPI";
 import { ServerInfo, BucketInfo, TokenPermissions } from "reduct-js";
-import { Card, Col, Divider, Modal, Row, Typography } from "antd";
+import { Card, Divider, Modal, Typography } from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
@@ -102,38 +102,20 @@ export default function Dashboard(props: Readonly<Props>) {
     return <Card bordered title="Server (no connection)" />;
   }
 
-  const renderBucket = (numberInRow = 2) => {
-    const fillRow = (row: number) => {
-      const cards = [];
-      for (let j = 0; j < numberInRow; ++j) {
-        const index = row * numberInRow + j;
-        if (index >= buckets.length) {
-          break;
-        }
-
-        const bucket = buckets[index];
-        cards.push(
-          <Col span={24 / numberInRow} key={index}>
-            <BucketCard
-              bucketInfo={bucket}
-              index={index}
-              key={index}
-              client={client}
-              onRemoved={removeBucket}
-              onShow={(name) => showBucket(name, history)}
-            />
-          </Col>,
-        );
-      }
-      return cards;
-    };
-
-    const rows = [];
-    for (let i = 0; i < buckets.length / numberInRow; ++i) {
-      rows.push(<Row key={i}> {fillRow(i)}</Row>);
-    }
-    return rows;
-  };
+  const renderBuckets = () => (
+    <div className="BucketList">
+      {buckets.map((bucket, index) => (
+        <BucketCard
+          key={bucket.name}
+          bucketInfo={bucket}
+          index={index}
+          client={client}
+          onRemoved={removeBucket}
+          onShow={(name) => showBucket(name, history)}
+        />
+      ))}
+    </div>
+  );
 
   const allowedActions = [];
   if (props.permissions && props.permissions.fullAccess) {
@@ -191,7 +173,7 @@ export default function Dashboard(props: Readonly<Props>) {
       </Card>
       <Divider />
       <Typography.Title level={3}>Buckets</Typography.Title>
-      {renderBucket()}
+      {renderBuckets()}
     </div>
   );
 }
