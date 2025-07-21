@@ -12,8 +12,9 @@ import {
   Typography,
   DatePicker,
   Button,
-  InputNumber,
-  Checkbox,
+  Input,
+  Select,
+  Dropdown,
   Alert,
   Modal,
   Space,
@@ -25,6 +26,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   DeleteOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -35,6 +37,7 @@ import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
+import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -61,6 +64,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [end, setEnd] = useState<bigint | undefined>(undefined);
 
   const [showUnix, setShowUnix] = useState(false);
+  const [startText, setStartText] = useState<string>("");
+  const [stopText, setStopText] = useState<string>("");
+  const [startError, setStartError] = useState(false);
+  const [stopError, setStopError] = useState(false);
+  const [showCustomRange, setShowCustomRange] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(
@@ -189,19 +197,106 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleDateChange = (dates: any) => {
-    if (dates) {
-      const startDate = dates[0].toDate();
-      const endDate = dates[1].toDate();
-      const startTimestamp =
-        startDate.getTime() - startDate.getTimezoneOffset() * 60000;
-      const endTimestamp =
-        endDate.getTime() - endDate.getTimezoneOffset() * 60000;
-      setStart(BigInt(startTimestamp) * 1000n);
-      setEnd(BigInt(endTimestamp) * 1000n);
+  const formatValue = (val: bigint | undefined, unix: boolean): string => {
+    if (val === undefined) return "";
+    return unix ? val.toString() : new Date(Number(val / 1000n)).toISOString();
+  };
+
+  const handleFormatChange = (value: string) => {
+    const unix = value === "Unix";
+    setShowUnix(unix);
+    setStartText(formatValue(start, unix));
+    setStopText(formatValue(end, unix));
+  };
+
+  const applyRange = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
+    const startVal = BigInt(from.valueOf() * 1000);
+    const endVal = BigInt(to.valueOf() * 1000);
+    setStart(startVal);
+    setEnd(endVal);
+    setStartText(formatValue(startVal, showUnix));
+    setStopText(formatValue(endVal, showUnix));
+    setStartError(false);
+    setStopError(false);
+  };
+
+  const handleCustomRangeChange = (dates: any) => {
+    if (dates && dates[0] && dates[1]) {
+      applyRange(dates[0].startOf("day"), dates[1].endOf("day"));
+      setShowCustomRange(false);
+    }
+  };
+
+  const handlePresetRange = (key: string) => {
+    const now = dayjs();
+    switch (key) {
+      case "last7":
+        applyRange(now.subtract(7, "day"), now);
+        break;
+      case "last30":
+        applyRange(now.subtract(30, "day"), now);
+        break;
+      case "today":
+        applyRange(now.startOf("day"), now.endOf("day"));
+        break;
+      case "yesterday": {
+        const y = now.subtract(1, "day");
+        applyRange(y.startOf("day"), y.endOf("day"));
+        break;
+      }
+      case "thisweek":
+        applyRange(now.startOf("week"), now.endOf("week"));
+        break;
+      case "lastweek": {
+        const w = now.subtract(1, "week");
+        applyRange(w.startOf("week"), w.endOf("week"));
+        break;
+      }
+      case "thismonth":
+        applyRange(now.startOf("month"), now.endOf("month"));
+        break;
+      case "lastmonth": {
+        const m = now.subtract(1, "month");
+        applyRange(m.startOf("month"), m.endOf("month"));
+        break;
+      }
+      case "custom":
+        setShowCustomRange(!showCustomRange);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const parseInput = (
+    value: string,
+    setter: (v: bigint | undefined) => void,
+    errSetter: (v: boolean) => void,
+  ) => {
+    if (!value) {
+      setter(undefined);
+      errSetter(false);
+      return;
+    }
+
+    if (showUnix) {
+      try {
+        const v = BigInt(value);
+        setter(v);
+        errSetter(false);
+      } catch {
+        setter(undefined);
+        errSetter(true);
+      }
     } else {
-      setStart(undefined);
-      setEnd(undefined);
+      const d = dayjs(value);
+      if (d.isValid()) {
+        setter(BigInt(d.valueOf() * 1000));
+        errSetter(false);
+      } else {
+        setter(undefined);
+        errSetter(true);
+      }
     }
   };
 
@@ -361,36 +456,72 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       <Typography.Title level={3}>Records</Typography.Title>
 
-      <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-        Unix Timestamp
-      </Checkbox>
       <div className="detailControls">
+        <Typography.Text strong>Display format</Typography.Text>
+        <Select
+          data-testid="format-select"
+          value={showUnix ? "Unix" : "UTC"}
+          onChange={handleFormatChange}
+          className="formatSelect"
+        >
+          <Select.Option value="UTC">UTC</Select.Option>
+          <Select.Option value="Unix">Unix</Select.Option>
+        </Select>
+
+        <Dropdown
+          menu={{
+            onClick: (e) => handlePresetRange(e.key),
+            items: [
+              { key: "last7", label: "Last 7 days" },
+              { key: "last30", label: "Last 30 days" },
+              { key: "today", label: "Today" },
+              { key: "yesterday", label: "Yesterday" },
+              { key: "thisweek", label: "This week" },
+              { key: "lastweek", label: "Last week" },
+              { key: "thismonth", label: "This month" },
+              { key: "lastmonth", label: "Last month" },
+              { key: "custom", label: "Custom…" },
+            ],
+          }}
+          trigger={["click"]}
+        >
+          <Button data-testid="range-button">
+            Select time range <DownOutlined />
+          </Button>
+        </Dropdown>
+
+        {showCustomRange && (
+          <DatePicker.RangePicker
+            onChange={handleCustomRangeChange}
+            className="datePicker"
+          />
+        )}
+
         <div className="timeInputs">
-          {showUnix ? (
-            <>
-              <InputNumber
-                placeholder="Start Time (Unix)"
-                onChange={(value) =>
-                  setStart(value ? BigInt(value) : undefined)
-                }
-                className="timeInput"
-                max={Number(end)}
-              />
-              <InputNumber
-                placeholder="End Time (Unix)"
-                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-                className="timeInput"
-                min={Number(start)}
-              />
-            </>
-          ) : (
-            <DatePicker.RangePicker
-              showTime
-              placeholder={["Start Time (UTC)", "End Time (UTC)"]}
-              onChange={handleDateChange}
-              className="datePicker"
+          <div>
+            <Typography.Text>Start</Typography.Text>
+            <Input
+              value={startText}
+              onChange={(e) => {
+                setStartText(e.target.value);
+                parseInput(e.target.value, setStart, setStartError);
+              }}
+              status={startError ? "error" : undefined}
+              className="timeInput"
             />
-          )}
+          </div>
+          <div>
+            <Typography.Text>Stop</Typography.Text>
+            <Input
+              value={stopText}
+              onChange={(e) => {
+                setStopText(e.target.value);
+                parseInput(e.target.value, setEnd, setStopError);
+              }}
+              status={stopError ? "error" : undefined}
+              className="timeInput"
+            />
+          </div>
         </div>
         <div className="jsonFilterSection">
           <Typography.Text>Filter Records (JSON):</Typography.Text>
