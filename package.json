@@ -18,7 +18,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/streamsaver": "^2.0.5",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
-    "antd": "^5.23.4",
+    "antd": "^5.26.6",
     "async-wait-until": "^2.0.12",
     "babel-jest": "^27.5.1",
     "buffer": "^6.0.3",
