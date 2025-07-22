@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hide condition fields in replication settings when `each_n` and `each_s` are null or undefined, [PR-106](https://github.com/reductstore/web-console/pull/106)
 - Use streams for downloading large records, [PR-113](https://github.com/reductstore/web-console/pull/113)
 - Handle .mcap files with correct content type on upload and download, [PR-114](https://github.com/reductstore/web-console/pull/114)
+- Add presets and custom range selection with the time range dropdown, [PR-116](https://github.com/reductstore/web-console/pull/116)
 
 ### Fixed
 
