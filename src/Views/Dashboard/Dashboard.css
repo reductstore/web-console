@@ -1,7 +1,12 @@
+.BucketList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1em;
+}
+
 .Panel {
   text-align: left;
-  width: 80em;
-  margin: 1em;
+  margin: 2em;
 }
 
 .Panel #ServerInfo a {

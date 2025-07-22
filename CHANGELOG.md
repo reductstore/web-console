@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Handle clipboard copy errors when displaying a token, [PR-111](https://github.com/reductstore/web-console/pull/111)
+- Responsive layout for sidebar, login screen, and bucket cards, [PR-115](https://github.com/reductstore/web-console/pull/115)
 
 ## [1.10.1] - 2025-05-20
 
