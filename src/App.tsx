@@ -157,7 +157,7 @@ export default class App extends React.Component<Props, State> {
             collapsedWidth={60}
             width={220}
             trigger={null}
-            style={{ position: "relative", zIndex: 1200 }}
+            style={{ position: "relative" }}
           >
             {/* Hide logo and meta on mobile via CSS */}
             <div className="LogoContainer">
