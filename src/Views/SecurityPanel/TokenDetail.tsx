@@ -118,8 +118,15 @@ export default function TokenDetail(props: Readonly<Props>) {
     let { fullAccess, read, write } = permissions;
     fullAccess =
       fullAccess === undefined ? token.permissions.fullAccess : fullAccess;
-    read = read === undefined ? token.permissions.read : read;
-    write = write === undefined ? token.permissions.write : write;
+    read =
+      read === undefined
+        ? token.permissions.read
+        : read?.map((item) => item.trim());
+    write =
+      write === undefined
+        ? token.permissions.write
+        : write?.map((item) => item.trim());
+
     setToken({ ...token, permissions: { fullAccess, read, write } });
   };
 
@@ -148,7 +155,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="ReadSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.read}
           options={bucketOptions}
           onChange={(value) => setPermissions({ read: value })}
@@ -159,7 +166,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="WriteSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.write}
           options={bucketOptions}
           onChange={(value) => setPermissions({ write: value })}

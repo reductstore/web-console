@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for wildcard and custom input for token write/read permissions, [PR-117](https://github.com/reductstore/web-console/pull/117)
+
 ### Changed
 
 - Hide condition fields in replication settings when `each_n` and `each_s` are null or undefined, [PR-106](https://github.com/reductstore/web-console/pull/106)
