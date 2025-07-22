@@ -408,6 +408,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         <div className="timeInputs">
           <Typography.Text strong>Time range</Typography.Text>
           <Input
+            placeholder="Start time (optional)"
             addonBefore="Start"
             value={startText}
             onChange={(e) => {
@@ -417,6 +418,7 @@ export default function EntryDetail(props: Readonly<Props>) {
             status={startError ? "error" : undefined}
           />
           <Input
+            placeholder="Stop time (optional)"
             addonBefore="Stop"
             value={stopText}
             onChange={(e) => {
