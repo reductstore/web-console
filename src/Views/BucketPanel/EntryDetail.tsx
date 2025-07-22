@@ -12,8 +12,9 @@ import {
   Typography,
   DatePicker,
   Button,
-  InputNumber,
-  Checkbox,
+  Input,
+  Select,
+  Dropdown,
   Alert,
   Modal,
   Space,
@@ -25,6 +26,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   DeleteOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -35,6 +37,7 @@ import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
+import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -61,6 +64,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [end, setEnd] = useState<bigint | undefined>(undefined);
 
   const [showUnix, setShowUnix] = useState(false);
+  const [startText, setStartText] = useState<string>("");
+  const [stopText, setStopText] = useState<string>("");
+  const [startError, setStartError] = useState(false);
+  const [stopError, setStopError] = useState(false);
+  const [showCustomRange, setShowCustomRange] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(
@@ -75,6 +83,15 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  const [visible, setVisible] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setVisible(panelVisible);
+    }, 10);
+  }, [panelVisible]);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -189,19 +206,137 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleDateChange = (dates: any) => {
-    if (dates) {
-      const startDate = dates[0].toDate();
-      const endDate = dates[1].toDate();
-      const startTimestamp =
-        startDate.getTime() - startDate.getTimezoneOffset() * 60000;
-      const endTimestamp =
-        endDate.getTime() - endDate.getTimezoneOffset() * 60000;
-      setStart(BigInt(startTimestamp) * 1000n);
-      setEnd(BigInt(endTimestamp) * 1000n);
+  const formatValue = (val: bigint | undefined, unix: boolean): string => {
+    if (val === undefined) return "";
+    return unix ? val.toString() : new Date(Number(val / 1000n)).toISOString();
+  };
+
+  const handleFormatChange = (value: string) => {
+    const unix = value === "Unix";
+    setShowUnix(unix);
+    setStartText(formatValue(start, unix));
+    setStopText(formatValue(end, unix));
+  };
+
+  const applyRange = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
+    const startVal = BigInt(from.valueOf() * 1000);
+    const endVal = BigInt(to.valueOf() * 1000);
+    setStart(startVal);
+    setEnd(endVal);
+    setStartText(formatValue(startVal, showUnix));
+    setStopText(formatValue(endVal, showUnix));
+    setStartError(false);
+    setStopError(false);
+  };
+
+  const handlePresetRange = (key: string) => {
+    const now = dayjs();
+    switch (key) {
+      case "last7":
+        applyRange(now.subtract(7, "day"), now);
+        break;
+      case "last30":
+        applyRange(now.subtract(30, "day"), now);
+        break;
+      case "today":
+        applyRange(now.startOf("day"), now.endOf("day"));
+        break;
+      case "yesterday": {
+        const y = now.subtract(1, "day");
+        applyRange(y.startOf("day"), y.endOf("day"));
+        break;
+      }
+      case "thisweek":
+        applyRange(now.startOf("week"), now.endOf("week"));
+        break;
+      case "lastweek": {
+        const w = now.subtract(1, "week");
+        applyRange(w.startOf("week"), w.endOf("week"));
+        break;
+      }
+      case "thismonth":
+        applyRange(now.startOf("month"), now.endOf("month"));
+        break;
+      case "lastmonth": {
+        const m = now.subtract(1, "month");
+        applyRange(m.startOf("month"), m.endOf("month"));
+        break;
+      }
+      case "custom":
+        setShowCustomRange(!showCustomRange);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const customDateMenuItem = {
+    key: "custom",
+    label: (
+      <div
+        style={{ position: "relative", overflow: "hidden" }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setPanelVisible(true);
+        }}
+      >
+        <div>Customize</div>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <DatePicker.RangePicker
+            open={panelVisible}
+            style={{
+              pointerEvents: "none",
+              opacity: 0,
+              position: "absolute",
+              bottom: -12,
+              insetInlineStart: 0,
+            }}
+            onChange={(dates) => {
+              if (dates && dates[0] && dates[1]) {
+                applyRange(dates[0].startOf("day"), dates[1].endOf("day"));
+                // setVisible(false);
+                setPanelVisible(false);
+              }
+            }}
+          />
+        </div>
+      </div>
+    ),
+  };
+
+  const parseInput = (
+    value: string,
+    setter: (v: bigint | undefined) => void,
+    errSetter: (v: boolean) => void,
+  ) => {
+    if (!value) {
+      setter(undefined);
+      errSetter(false);
+      return;
+    }
+
+    if (showUnix) {
+      try {
+        const v = BigInt(value);
+        setter(v);
+        errSetter(false);
+      } catch {
+        setter(undefined);
+        errSetter(true);
+      }
     } else {
-      setStart(undefined);
-      setEnd(undefined);
+      const d = dayjs(value);
+      if (d.isValid()) {
+        setter(BigInt(d.valueOf() * 1000));
+        errSetter(false);
+      } else {
+        setter(undefined);
+        errSetter(true);
+      }
     }
   };
 
@@ -311,7 +446,6 @@ export default function EntryDetail(props: Readonly<Props>) {
           hasWritePermission={hasWritePermission}
         />
       )}
-
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -360,40 +494,72 @@ export default function EntryDetail(props: Readonly<Props>) {
       </Modal>
 
       <Typography.Title level={3}>Records</Typography.Title>
-
-      <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-        Unix Timestamp
-      </Checkbox>
       <div className="detailControls">
+        <div className="displayFormat">
+          <Typography.Text strong>Display format</Typography.Text>
+          <Select
+            data-testid="format-select"
+            value={showUnix ? "Unix" : "UTC"}
+            onChange={handleFormatChange}
+            className="formatSelect"
+          >
+            <Select.Option value="UTC">UTC</Select.Option>
+            <Select.Option value="Unix">Unix</Select.Option>
+          </Select>
+        </div>
         <div className="timeInputs">
-          {showUnix ? (
-            <>
-              <InputNumber
-                placeholder="Start Time (Unix)"
-                onChange={(value) =>
-                  setStart(value ? BigInt(value) : undefined)
-                }
-                className="timeInput"
-                max={Number(end)}
-              />
-              <InputNumber
-                placeholder="End Time (Unix)"
-                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-                className="timeInput"
-                min={Number(start)}
-              />
-            </>
-          ) : (
-            <DatePicker.RangePicker
-              showTime
-              placeholder={["Start Time (UTC)", "End Time (UTC)"]}
-              onChange={handleDateChange}
-              className="datePicker"
-            />
-          )}
+          <Typography.Text strong>Time range</Typography.Text>
+          <Input
+            addonBefore="Start"
+            value={startText}
+            onChange={(e) => {
+              setStartText(e.target.value);
+              parseInput(e.target.value, setStart, setStartError);
+            }}
+            status={startError ? "error" : undefined}
+          />
+          <Input
+            addonBefore="Stop"
+            value={stopText}
+            onChange={(e) => {
+              setStopText(e.target.value);
+              parseInput(e.target.value, setEnd, setStopError);
+            }}
+            status={stopError ? "error" : undefined}
+          />
+          <Dropdown
+            arrow
+            open={visible}
+            trigger={["click"]}
+            destroyOnHidden
+            onOpenChange={(open) => {
+              setVisible(open);
+              if (!open) {
+                setPanelVisible(false);
+              }
+            }}
+            menu={{
+              onClick: (e) => handlePresetRange(e.key),
+              items: [
+                { key: "last7", label: "Last 7 days" },
+                { key: "last30", label: "Last 30 days" },
+                { key: "today", label: "Today" },
+                { key: "yesterday", label: "Yesterday" },
+                { key: "thisweek", label: "This week" },
+                { key: "lastweek", label: "Last week" },
+                { key: "thismonth", label: "This month" },
+                { key: "lastmonth", label: "Last month" },
+                customDateMenuItem,
+              ],
+            }}
+          >
+            <Button>
+              Select time range <DownOutlined />
+            </Button>
+          </Dropdown>
         </div>
         <div className="jsonFilterSection">
-          <Typography.Text>Filter Records (JSON):</Typography.Text>
+          <Typography.Text strong>Record filter</Typography.Text>
           <CodeMirror
             className="jsonEditor"
             value={whenCondition}

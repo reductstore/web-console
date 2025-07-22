@@ -1,40 +1,44 @@
+:root {
+  --entry-detail-block-spacing: 1.5em;
+  --entry-detail-inner-spacing: 0.5em;
+}
+
+/* --- Layout Containers --- */
 .entryDetail {
   margin: 1.4em;
 }
 
+/* --- Time Range & Inputs --- */
 .detailControls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-  margin-top: 0.5em;
+  gap: var(--entry-detail-block-spacing);
+  margin-bottom: var(--entry-detail-block-spacing);
 }
 
-.timeInputs {
-  display: flex;
-  gap: 10px;
-}
-
-.timeInput {
-  width: 200px;
+.formatSelect {
+  width: 120px;
 }
 
 .datePicker {
   width: 410px;
 }
 
-.limitInput {
-  width: 120px;
+.displayFormat,
+.timeInputs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--entry-detail-inner-spacing);
+  max-width: 300px;
 }
 
+/* --- JSON Editor --- */
 .jsonFilterSection {
-  margin: 10px 0;
   width: 100%;
 }
 
 .jsonEditor {
-  margin: 8px 0;
-  margin-bottom: 16px;
+  margin: var(--entry-detail-inner-spacing) 0;
   border: 1px solid #d9d9d9;
   border-radius: 2px;
 }
@@ -50,14 +54,16 @@
 
 .jsonExample {
   display: block;
-  margin-top: 8px;
+  margin-top: var(--entry-detail-inner-spacing);
   font-size: 12px;
 }
 
+/* --- Button --- */
 .fetchButton {
   display: block;
 }
 
+/* --- Tooltip Customization --- */
 .custom-tooltip .ant-tooltip-inner {
   background-color: #f0f0f0;
   color: #333;
