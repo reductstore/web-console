@@ -10,11 +10,9 @@ import {
 import {
   Table,
   Typography,
-  DatePicker,
   Button,
   Input,
   Select,
-  Dropdown,
   Alert,
   Modal,
   Space,
@@ -26,7 +24,6 @@ import {
   DownloadOutlined,
   EditOutlined,
   DeleteOutlined,
-  DownOutlined,
 } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -41,6 +38,7 @@ import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
 
 // Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
@@ -68,7 +66,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [stopText, setStopText] = useState<string>("");
   const [startError, setStartError] = useState(false);
   const [stopError, setStopError] = useState(false);
-  const [showCustomRange, setShowCustomRange] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(
@@ -83,15 +80,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
-
-  const [visible, setVisible] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setVisible(panelVisible);
-    }, 10);
-  }, [panelVisible]);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -216,96 +204,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     setShowUnix(unix);
     setStartText(formatValue(start, unix));
     setStopText(formatValue(end, unix));
-  };
-
-  const applyRange = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
-    const startVal = BigInt(from.valueOf() * 1000);
-    const endVal = BigInt(to.valueOf() * 1000);
-    setStart(startVal);
-    setEnd(endVal);
-    setStartText(formatValue(startVal, showUnix));
-    setStopText(formatValue(endVal, showUnix));
-    setStartError(false);
-    setStopError(false);
-  };
-
-  const handlePresetRange = (key: string) => {
-    const now = dayjs();
-    switch (key) {
-      case "last7":
-        applyRange(now.subtract(7, "day"), now);
-        break;
-      case "last30":
-        applyRange(now.subtract(30, "day"), now);
-        break;
-      case "today":
-        applyRange(now.startOf("day"), now.endOf("day"));
-        break;
-      case "yesterday": {
-        const y = now.subtract(1, "day");
-        applyRange(y.startOf("day"), y.endOf("day"));
-        break;
-      }
-      case "thisweek":
-        applyRange(now.startOf("week"), now.endOf("week"));
-        break;
-      case "lastweek": {
-        const w = now.subtract(1, "week");
-        applyRange(w.startOf("week"), w.endOf("week"));
-        break;
-      }
-      case "thismonth":
-        applyRange(now.startOf("month"), now.endOf("month"));
-        break;
-      case "lastmonth": {
-        const m = now.subtract(1, "month");
-        applyRange(m.startOf("month"), m.endOf("month"));
-        break;
-      }
-      case "custom":
-        setShowCustomRange(!showCustomRange);
-        break;
-      default:
-        break;
-    }
-  };
-
-  const customDateMenuItem = {
-    key: "custom",
-    label: (
-      <div
-        style={{ position: "relative", overflow: "hidden" }}
-        onClick={(e) => {
-          e.stopPropagation();
-          setPanelVisible(true);
-        }}
-      >
-        <div>Customize</div>
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <DatePicker.RangePicker
-            open={panelVisible}
-            style={{
-              pointerEvents: "none",
-              opacity: 0,
-              position: "absolute",
-              bottom: -12,
-              insetInlineStart: 0,
-            }}
-            onChange={(dates) => {
-              if (dates && dates[0] && dates[1]) {
-                applyRange(dates[0].startOf("day"), dates[1].endOf("day"));
-                // setVisible(false);
-                setPanelVisible(false);
-              }
-            }}
-          />
-        </div>
-      </div>
-    ),
   };
 
   const parseInput = (
@@ -527,36 +425,16 @@ export default function EntryDetail(props: Readonly<Props>) {
             }}
             status={stopError ? "error" : undefined}
           />
-          <Dropdown
-            arrow
-            open={visible}
-            trigger={["click"]}
-            destroyOnHidden
-            onOpenChange={(open) => {
-              setVisible(open);
-              if (!open) {
-                setPanelVisible(false);
-              }
+          <TimeRangeDropdown
+            onSelectRange={(start, end) => {
+              setStart(start);
+              setEnd(end);
+              setStartText(formatValue(start, showUnix));
+              setStopText(formatValue(end, showUnix));
+              setStartError(false);
+              setStopError(false);
             }}
-            menu={{
-              onClick: (e) => handlePresetRange(e.key),
-              items: [
-                { key: "last7", label: "Last 7 days" },
-                { key: "last30", label: "Last 30 days" },
-                { key: "today", label: "Today" },
-                { key: "yesterday", label: "Yesterday" },
-                { key: "thisweek", label: "This week" },
-                { key: "lastweek", label: "Last week" },
-                { key: "thismonth", label: "This month" },
-                { key: "lastmonth", label: "Last month" },
-                customDateMenuItem,
-              ],
-            }}
-          >
-            <Button>
-              Select time range <DownOutlined />
-            </Button>
-          </Dropdown>
+          />
         </div>
         <div className="jsonFilterSection">
           <Typography.Text strong>Record filter</Typography.Text>
