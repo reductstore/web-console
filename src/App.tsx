@@ -25,6 +25,7 @@ interface Props extends RouteComponentProps {
 type State = {
   permissions?: TokenPermissions;
   siderCollapsed: boolean;
+  windowWidth: number;
 };
 
 const PRIMARY_COLOR = "#231b49";
@@ -35,9 +36,11 @@ export default class App extends React.Component<Props, State> {
     this.state = {
       permissions: { fullAccess: false },
       siderCollapsed: false,
+      windowWidth: typeof window !== "undefined" ? window.innerWidth : 1024,
     };
     this.handleSiderCollapse = this.handleSiderCollapse.bind(this);
     this.handleToggleSider = this.handleToggleSider.bind(this);
+    this.handleResize = this.handleResize.bind(this);
   }
 
   componentDidMount() {
@@ -52,6 +55,15 @@ export default class App extends React.Component<Props, State> {
         }),
       )
       .catch((err) => console.error(err));
+    window.addEventListener("resize", this.handleResize);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.handleResize);
+  }
+
+  handleResize() {
+    this.setState({ windowWidth: window.innerWidth });
   }
 
   handleSiderCollapse(collapsed: boolean) {
@@ -66,7 +78,7 @@ export default class App extends React.Component<Props, State> {
 
   render() {
     const { backendApi, history } = this.props;
-    const { siderCollapsed } = this.state;
+    const { siderCollapsed, windowWidth } = this.state;
     const onLogout = async () => {
       backendApi.logout();
       this.setState({ permissions: undefined });
@@ -122,6 +134,11 @@ export default class App extends React.Component<Props, State> {
 
       return items;
     };
+
+    let marginLeft = 0;
+    if (windowWidth <= 768) {
+      marginLeft = !siderCollapsed ? 220 : 60;
+    }
 
     return (
       <ConfigProvider
@@ -216,12 +233,7 @@ export default class App extends React.Component<Props, State> {
           <Layout
             style={{
               zIndex: 1,
-              marginLeft:
-                typeof window !== "undefined" && window.innerWidth <= 768
-                  ? !siderCollapsed
-                    ? 220
-                    : 60
-                  : 0,
+              marginLeft,
               transition: "margin-left 0.2s",
             }}
           >
