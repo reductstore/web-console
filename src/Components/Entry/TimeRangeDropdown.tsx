@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Button, Dropdown, DatePicker } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc";
+import isoWeek from "dayjs/plugin/isoWeek";
+
+dayjs.extend(utc);
+dayjs.extend(isoWeek);
 
 interface Props {
   onSelectRange: (start: bigint, end: bigint) => void;
@@ -23,6 +28,11 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
     onSelectRange(start, end);
   };
 
+  const getUtcDay = (date: Dayjs, type: "start" | "end") =>
+    type === "start"
+      ? dayjs.utc(date.format("YYYY-MM-DD")).startOf("day")
+      : dayjs.utc(date.format("YYYY-MM-DD")).endOf("day");
+
   const handlePresetRange = (key: string) => {
     const now = dayjs();
     switch (key) {
@@ -33,27 +43,37 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
         applyRange(now.subtract(30, "day"), now);
         break;
       case "today":
-        applyRange(now.startOf("day"), now.endOf("day"));
+        applyRange(getUtcDay(now, "start"), getUtcDay(now, "end"));
         break;
       case "yesterday": {
         const y = now.subtract(1, "day");
-        applyRange(y.startOf("day"), y.endOf("day"));
+        applyRange(getUtcDay(y, "start"), getUtcDay(y, "end"));
         break;
       }
-      case "thisweek":
-        applyRange(now.startOf("week"), now.endOf("week"));
+      case "thisweek": {
+        const start = dayjs().isoWeekday(1);
+        const end = dayjs().isoWeekday(7);
+        applyRange(getUtcDay(start, "start"), getUtcDay(end, "end"));
         break;
+      }
       case "lastweek": {
-        const w = now.subtract(1, "week");
-        applyRange(w.startOf("week"), w.endOf("week"));
+        const start = dayjs().subtract(1, "week").isoWeekday(1);
+        const end = dayjs().subtract(1, "week").isoWeekday(7);
+        applyRange(getUtcDay(start, "start"), getUtcDay(end, "end"));
         break;
       }
       case "thismonth":
-        applyRange(now.startOf("month"), now.endOf("month"));
+        applyRange(
+          getUtcDay(now.startOf("month"), "start"),
+          getUtcDay(now.endOf("month"), "end"),
+        );
         break;
       case "lastmonth": {
         const m = now.subtract(1, "month");
-        applyRange(m.startOf("month"), m.endOf("month"));
+        applyRange(
+          getUtcDay(m.startOf("month"), "start"),
+          getUtcDay(m.endOf("month"), "end"),
+        );
         break;
       }
       case "custom":
@@ -89,7 +109,9 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
             }}
             onChange={(dates) => {
               if (dates?.[0] && dates?.[1]) {
-                applyRange(dates[0].startOf("day"), dates[1].endOf("day"));
+                const from = getUtcDay(dates[0], "start");
+                const to = getUtcDay(dates[1], "end");
+                applyRange(from, to);
                 setPanelVisible(false);
               }
             }}
