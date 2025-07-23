@@ -36,6 +36,15 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
   const handlePresetRange = (key: string) => {
     const now = dayjs();
     switch (key) {
+      case "last1":
+        applyRange(now.subtract(1, "hour"), now);
+        break;
+      case "last6":
+        applyRange(now.subtract(6, "hour"), now);
+        break;
+      case "last24":
+        applyRange(now.subtract(24, "hour"), now);
+        break;
       case "last7":
         applyRange(now.subtract(7, "day"), now);
         break;
@@ -136,6 +145,9 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
       menu={{
         onClick: (e) => handlePresetRange(e.key),
         items: [
+          { key: "last1", label: "Last 1 hour" },
+          { key: "last6", label: "Last 6 hours" },
+          { key: "last24", label: "Last 24 hours" },
           { key: "last7", label: "Last 7 days" },
           { key: "last30", label: "Last 30 days" },
           { key: "today", label: "Today" },
@@ -144,6 +156,7 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
           { key: "lastweek", label: "Last week" },
           { key: "thismonth", label: "This month" },
           { key: "lastmonth", label: "Last month" },
+          { type: "divider" },
           customDateMenuItem,
         ],
       }}

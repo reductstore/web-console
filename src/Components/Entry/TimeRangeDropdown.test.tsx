@@ -21,6 +21,54 @@ describe("TimeRangeDropdown", () => {
     expect(wrapper.find(Button).text()).toContain("Select time range");
   });
 
+  it("triggers onSelectRange for 'Last 1 hour'", () => {
+    mockOnSelectRange.mockClear();
+    const wrapper = mount(
+      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
+    );
+    wrapper.find(Button).simulate("click");
+    const menuItem = findMenuItem(wrapper, "Last 1 hour");
+    menuItem.simulate("click");
+    expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
+    const [start, end] = mockOnSelectRange.mock.calls[0] || [];
+    expect(typeof start).toBe("bigint");
+    expect(typeof end).toBe("bigint");
+    // 1 hour in microseconds
+    expect(end - start).toEqual(1n * 60n * 60n * 1_000_000n);
+  });
+
+  it("triggers onSelectRange for 'Last 6 hours'", () => {
+    mockOnSelectRange.mockClear();
+    const wrapper = mount(
+      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
+    );
+    wrapper.find(Button).simulate("click");
+    const menuItem = findMenuItem(wrapper, "Last 6 hours");
+    menuItem.simulate("click");
+    expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
+    const [start, end] = mockOnSelectRange.mock.calls[0] || [];
+    expect(typeof start).toBe("bigint");
+    expect(typeof end).toBe("bigint");
+    // 6 hours in microseconds
+    expect(end - start).toEqual(6n * 60n * 60n * 1_000_000n);
+  });
+
+  it("triggers onSelectRange for 'Last 24 hours'", () => {
+    mockOnSelectRange.mockClear();
+    const wrapper = mount(
+      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
+    );
+    wrapper.find(Button).simulate("click");
+    const menuItem = findMenuItem(wrapper, "Last 24 hours");
+    menuItem.simulate("click");
+    expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
+    const [start, end] = mockOnSelectRange.mock.calls[0] || [];
+    expect(typeof start).toBe("bigint");
+    expect(typeof end).toBe("bigint");
+    // 24 hours in microseconds
+    expect(end - start).toEqual(24n * 60n * 60n * 1_000_000n);
+  });
+
   it("triggers onSelectRange for 'Last 7 days'", () => {
     const wrapper = mount(
       <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
