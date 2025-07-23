@@ -69,7 +69,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(
-    '{\n  "$limit": 10\n}',
+    '{\n  "$limit": 10\n}\n',
   );
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
@@ -316,13 +316,13 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   // Format JSON exactly like in the When Condition component
   const formatJSON = (jsonString: string): string => {
-    if (!jsonString) return "{}";
+    if (!jsonString) return "{}\n";
 
     try {
       // Parse and re-stringify to ensure proper formatting
-      return JSON.stringify(JSON.parse(jsonString), null, 2);
+      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
     } catch {
-      return jsonString;
+      return jsonString + "\n";
     }
   };
 
@@ -393,53 +393,53 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       <Typography.Title level={3}>Records</Typography.Title>
       <div className="detailControls">
-        <div className="displayFormat">
-          <Typography.Text strong>Display format</Typography.Text>
-          <Select
-            data-testid="format-select"
-            value={showUnix ? "Unix" : "UTC"}
-            onChange={handleFormatChange}
-            className="formatSelect"
-          >
-            <Select.Option value="UTC">UTC</Select.Option>
-            <Select.Option value="Unix">Unix</Select.Option>
-          </Select>
+        <div className="timeSelectSection">
+          <div className="selectGroup">
+            <Select
+              data-testid="format-select"
+              value={showUnix ? "Unix" : "UTC"}
+              onChange={handleFormatChange}
+            >
+              <Select.Option value="UTC">UTC</Select.Option>
+              <Select.Option value="Unix">Unix</Select.Option>
+            </Select>
+            <TimeRangeDropdown
+              onSelectRange={(start, end) => {
+                setStart(start);
+                setEnd(end);
+                setStartText(formatValue(start, showUnix));
+                setStopText(formatValue(end, showUnix));
+                setStartError(false);
+                setStopError(false);
+              }}
+            />
+          </div>
+
+          <div className="timeInputs">
+            <Input
+              placeholder="Start time (optional)"
+              addonBefore="Start"
+              value={startText}
+              onChange={(e) => {
+                setStartText(e.target.value);
+                parseInput(e.target.value, setStart, setStartError);
+              }}
+              status={startError ? "error" : undefined}
+            />
+            <Input
+              placeholder="Stop time (optional)"
+              addonBefore="Stop"
+              value={stopText}
+              onChange={(e) => {
+                setStopText(e.target.value);
+                parseInput(e.target.value, setEnd, setStopError);
+              }}
+              status={stopError ? "error" : undefined}
+            />
+          </div>
         </div>
-        <div className="timeInputs">
-          <Typography.Text strong>Time range</Typography.Text>
-          <Input
-            placeholder="Start time (optional)"
-            addonBefore="Start"
-            value={startText}
-            onChange={(e) => {
-              setStartText(e.target.value);
-              parseInput(e.target.value, setStart, setStartError);
-            }}
-            status={startError ? "error" : undefined}
-          />
-          <Input
-            placeholder="Stop time (optional)"
-            addonBefore="Stop"
-            value={stopText}
-            onChange={(e) => {
-              setStopText(e.target.value);
-              parseInput(e.target.value, setEnd, setStopError);
-            }}
-            status={stopError ? "error" : undefined}
-          />
-          <TimeRangeDropdown
-            onSelectRange={(start, end) => {
-              setStart(start);
-              setEnd(end);
-              setStartText(formatValue(start, showUnix));
-              setStopText(formatValue(end, showUnix));
-              setStartError(false);
-              setStopError(false);
-            }}
-          />
-        </div>
+
         <div className="jsonFilterSection">
-          <Typography.Text strong>Record filter</Typography.Text>
           <CodeMirror
             className="jsonEditor"
             value={whenCondition}
@@ -463,12 +463,10 @@ export default function EntryDetail(props: Readonly<Props>) {
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
             Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
-            <br />
             Use <code>&label</code> for standard labels and <code>@label</code>{" "}
             for computed labels. Combine with operators like <code>$eq</code>,{" "}
-            <code>$gt</code>, <code>$lt</code>, <code>$and</code>, etc.
-            <br />
-            You can also use aggregation operators:
+            <code>$gt</code>, <code>$lt</code>, <code>$and</code>, etc. You can
+            also use aggregation operators:
             <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
             (every N seconds) to control replication frequency.
             <br />
