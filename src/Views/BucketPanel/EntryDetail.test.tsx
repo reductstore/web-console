@@ -197,7 +197,7 @@ describe("EntryDetail", () => {
       const cmValue = wrapper.find("Controlled").prop("value");
       expect(cmValue).toContain("$limit");
 
-      const exampleText = wrapper.find(".jsonExample").at(0).text();
+      const exampleText = wrapper.find(".jsonEditor").at(0).text();
       expect(exampleText).toContain("$limit");
     });
 
