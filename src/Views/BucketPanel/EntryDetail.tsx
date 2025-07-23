@@ -462,15 +462,25 @@ export default function EntryDetail(props: Readonly<Props>) {
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
-            {'Example: {"&label_name": { "$gt": 10 }, "$limit": 10 }'}
+            Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
             <br />
-            <a
-              href="https://www.reduct.store/docs/conditional-query"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Query Reference Documentation
-            </a>
+            Use <code>&label</code> for standard labels and <code>@label</code>{" "}
+            for computed labels. Combine with operators like <code>$eq</code>,{" "}
+            <code>$gt</code>, <code>$lt</code>, <code>$and</code>, etc.
+            <br />
+            You can also use aggregation operators:
+            <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
+            (every N seconds) to control replication frequency.
+            <br />
+            <strong>
+              <a
+                href="https://www.reduct.store/docs/conditional-query"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Conditional Query Reference →
+              </a>
+            </strong>
           </Typography.Text>
         </div>
         <div className="fetchButton">
