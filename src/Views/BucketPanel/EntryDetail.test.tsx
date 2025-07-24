@@ -163,28 +163,19 @@ describe("EntryDetail", () => {
     beforeEach(async () => {
       await act(async () => {
         jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-checkbox").length > 0,
-        );
+        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
       });
     });
 
-    it("should show the Unix timestamp toggle", () => {
-      const toggle = wrapper.find(".ant-checkbox-wrapper");
-      expect(toggle.exists()).toBe(true);
-      expect(toggle.text()).toContain("Unix Timestamp");
-    });
-
-    it("should show the date picker by default", () => {
-      const datePicker = wrapper.find(".ant-picker-range");
-      expect(datePicker.exists()).toBe(true);
-      expect(datePicker.props().className).toContain("ant-picker-range");
+    it("should show the display format select", () => {
+      const select = wrapper.find('Select[data-testid="format-select"]');
+      expect(select.exists()).toBe(true);
     });
 
     it("should show the fetch records button", () => {
-      const fetchButton = wrapper.find("button");
+      const fetchButton = wrapper.find(".fetchButton button");
       expect(fetchButton.exists()).toBe(true);
-      expect(fetchButton.at(0).text()).toBe("Fetch Records");
+      expect(fetchButton.text()).toBe("Fetch Records");
     });
 
     it("should not show a separate limit input", () => {
@@ -206,7 +197,7 @@ describe("EntryDetail", () => {
       const cmValue = wrapper.find("Controlled").prop("value");
       expect(cmValue).toContain("$limit");
 
-      const exampleText = wrapper.find(".jsonExample").at(0).text();
+      const exampleText = wrapper.find(".jsonEditor").at(0).text();
       expect(exampleText).toContain("$limit");
     });
 
@@ -260,9 +251,10 @@ describe("EntryDetail", () => {
       await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
     });
 
-    const checkbox = wrapper.find(".ant-checkbox-input");
+    const select = wrapper.find('Select[data-testid="format-select"]').at(0);
     act(() => {
-      checkbox.simulate("change", { target: { checked: true } });
+      const onChange = select.prop("onChange") as any;
+      if (onChange) onChange("Unix");
     });
 
     const rows = wrapper.find(".ant-table-row");

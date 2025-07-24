@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Flex, Input, Modal } from "antd";
+import { Alert, Button, Flex, Input, Modal } from "antd";
 
 interface RemoveConfirmationModalProps {
   name: string;
@@ -27,16 +27,24 @@ export default function RemoveConfirmationModal({
   return (
     <Modal
       open={open}
-      onOk={() => {
-        onRemove();
-      }}
-      onCancel={onCancel}
       closable={false}
       title={`Remove ${resourceType} "${name}"?`}
-      okText="Remove"
-      confirmLoading={!confirmName}
-      okType="danger"
       data-testid="delete-modal"
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        <Button
+          key="submit"
+          type="default"
+          danger
+          onClick={onRemove}
+          disabled={!confirmName}
+          loading={!confirmName}
+        >
+          Remove
+        </Button>,
+      ]}
     >
       <Flex vertical gap="small">
         {errorMessage && (

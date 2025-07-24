@@ -10,10 +10,9 @@ import {
 import {
   Table,
   Typography,
-  DatePicker,
   Button,
-  InputNumber,
-  Checkbox,
+  Input,
+  Select,
   Alert,
   Modal,
   Space,
@@ -35,9 +34,11 @@ import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
+import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
 
 // Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
@@ -61,10 +62,14 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [end, setEnd] = useState<bigint | undefined>(undefined);
 
   const [showUnix, setShowUnix] = useState(false);
+  const [startText, setStartText] = useState<string>("");
+  const [stopText, setStopText] = useState<string>("");
+  const [startError, setStartError] = useState(false);
+  const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(
-    '{\n  "$limit": 10\n}',
+    '{\n  "$limit": 10\n}\n',
   );
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
@@ -189,19 +194,47 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleDateChange = (dates: any) => {
-    if (dates) {
-      const startDate = dates[0].toDate();
-      const endDate = dates[1].toDate();
-      const startTimestamp =
-        startDate.getTime() - startDate.getTimezoneOffset() * 60000;
-      const endTimestamp =
-        endDate.getTime() - endDate.getTimezoneOffset() * 60000;
-      setStart(BigInt(startTimestamp) * 1000n);
-      setEnd(BigInt(endTimestamp) * 1000n);
+  const formatValue = (val: bigint | undefined, unix: boolean): string => {
+    if (val === undefined) return "";
+    return unix ? val.toString() : new Date(Number(val / 1000n)).toISOString();
+  };
+
+  const handleFormatChange = (value: string) => {
+    const unix = value === "Unix";
+    setShowUnix(unix);
+    setStartText(formatValue(start, unix));
+    setStopText(formatValue(end, unix));
+  };
+
+  const parseInput = (
+    value: string,
+    setter: (v: bigint | undefined) => void,
+    errSetter: (v: boolean) => void,
+  ) => {
+    if (!value) {
+      setter(undefined);
+      errSetter(false);
+      return;
+    }
+
+    if (showUnix) {
+      try {
+        const v = BigInt(value);
+        setter(v);
+        errSetter(false);
+      } catch {
+        setter(undefined);
+        errSetter(true);
+      }
     } else {
-      setStart(undefined);
-      setEnd(undefined);
+      const d = dayjs(value);
+      if (d.isValid()) {
+        setter(BigInt(d.valueOf() * 1000));
+        errSetter(false);
+      } else {
+        setter(undefined);
+        errSetter(true);
+      }
     }
   };
 
@@ -283,13 +316,13 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   // Format JSON exactly like in the When Condition component
   const formatJSON = (jsonString: string): string => {
-    if (!jsonString) return "{}";
+    if (!jsonString) return "{}\n";
 
     try {
       // Parse and re-stringify to ensure proper formatting
-      return JSON.stringify(JSON.parse(jsonString), null, 2);
+      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
     } catch {
-      return jsonString;
+      return jsonString + "\n";
     }
   };
 
@@ -311,7 +344,6 @@ export default function EntryDetail(props: Readonly<Props>) {
           hasWritePermission={hasWritePermission}
         />
       )}
-
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -360,40 +392,54 @@ export default function EntryDetail(props: Readonly<Props>) {
       </Modal>
 
       <Typography.Title level={3}>Records</Typography.Title>
-
-      <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-        Unix Timestamp
-      </Checkbox>
       <div className="detailControls">
-        <div className="timeInputs">
-          {showUnix ? (
-            <>
-              <InputNumber
-                placeholder="Start Time (Unix)"
-                onChange={(value) =>
-                  setStart(value ? BigInt(value) : undefined)
-                }
-                className="timeInput"
-                max={Number(end)}
-              />
-              <InputNumber
-                placeholder="End Time (Unix)"
-                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-                className="timeInput"
-                min={Number(start)}
-              />
-            </>
-          ) : (
-            <DatePicker.RangePicker
-              showTime
-              placeholder={["Start Time (UTC)", "End Time (UTC)"]}
-              onChange={handleDateChange}
-              className="datePicker"
+        <div className="timeSelectSection">
+          <div className="selectGroup">
+            <Select
+              data-testid="format-select"
+              value={showUnix ? "Unix" : "UTC"}
+              onChange={handleFormatChange}
+            >
+              <Select.Option value="UTC">UTC</Select.Option>
+              <Select.Option value="Unix">Unix</Select.Option>
+            </Select>
+            <TimeRangeDropdown
+              onSelectRange={(start, end) => {
+                setStart(start);
+                setEnd(end);
+                setStartText(formatValue(start, showUnix));
+                setStopText(formatValue(end, showUnix));
+                setStartError(false);
+                setStopError(false);
+              }}
             />
-          )}
+          </div>
+
+          <div className="timeInputs">
+            <Input
+              placeholder="Start time (optional)"
+              addonBefore="Start"
+              value={startText}
+              onChange={(e) => {
+                setStartText(e.target.value);
+                parseInput(e.target.value, setStart, setStartError);
+              }}
+              status={startError ? "error" : undefined}
+            />
+            <Input
+              placeholder="Stop time (optional)"
+              addonBefore="Stop"
+              value={stopText}
+              onChange={(e) => {
+                setStopText(e.target.value);
+                parseInput(e.target.value, setEnd, setStopError);
+              }}
+              status={stopError ? "error" : undefined}
+            />
+          </div>
         </div>
+
         <div className="jsonFilterSection">
-          <Typography.Text>Filter Records (JSON):</Typography.Text>
           <CodeMirror
             className="jsonEditor"
             value={whenCondition}
@@ -416,15 +462,23 @@ export default function EntryDetail(props: Readonly<Props>) {
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
-            {'Example: {"&label_name": { "$gt": 10 }, "$limit": 10 }'}
+            Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
+            Use <code>&label</code> for standard labels and <code>@label</code>{" "}
+            for computed labels. Combine with operators like <code>$eq</code>,{" "}
+            <code>$gt</code>, <code>$lt</code>, <code>$and</code>, etc. You can
+            also use aggregation operators:
+            <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
+            (every N seconds) to control replication frequency.
             <br />
-            <a
-              href="https://www.reduct.store/docs/conditional-query"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Query Reference Documentation
-            </a>
+            <strong>
+              <a
+                href="https://www.reduct.store/docs/conditional-query"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Conditional Query Reference →
+              </a>
+            </strong>
           </Typography.Text>
         </div>
         <div className="fetchButton">
