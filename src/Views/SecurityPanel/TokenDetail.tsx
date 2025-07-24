@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -19,7 +19,8 @@ interface Props {
 }
 
 function useQueryParams() {
-  const params = new URLSearchParams(window ? window.location.search : {});
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
 
   return new Proxy(params, {
     get(target, prop) {
@@ -39,6 +40,7 @@ export default function TokenDetail(props: Readonly<Props>) {
   const [tokenValue, setTokenValue] = useState<string>();
 
   const [error, setError] = useState<string>();
+  const [tokenError, setTokenError] = useState<string>();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
 
@@ -94,6 +96,11 @@ export default function TokenDetail(props: Readonly<Props>) {
       .catch((err) => setError(err.message));
   };
 
+  const cancelCreatedToken = () => {
+    const { client } = props;
+    client.deleteToken(token.name).catch((err) => setError(err.message));
+  };
+
   const setPermissions = (permissions?: {
     fullAccess?: boolean;
     read?: string[];
@@ -111,8 +118,15 @@ export default function TokenDetail(props: Readonly<Props>) {
     let { fullAccess, read, write } = permissions;
     fullAccess =
       fullAccess === undefined ? token.permissions.fullAccess : fullAccess;
-    read = read === undefined ? token.permissions.read : read;
-    write = write === undefined ? token.permissions.write : write;
+    read =
+      read === undefined
+        ? token.permissions.read
+        : read?.map((item) => item.trim());
+    write =
+      write === undefined
+        ? token.permissions.write
+        : write?.map((item) => item.trim());
+
     setToken({ ...token, permissions: { fullAccess, read, write } });
   };
 
@@ -141,7 +155,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="ReadSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.read}
           options={bucketOptions}
           onChange={(value) => setPermissions({ read: value })}
@@ -152,7 +166,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         <Select
           id="WriteSelect"
           disabled={!isNew}
-          mode="multiple"
+          mode="tags"
           value={token.permissions?.write}
           options={bucketOptions}
           onChange={(value) => setPermissions({ write: value })}
@@ -161,7 +175,11 @@ export default function TokenDetail(props: Readonly<Props>) {
       <Space>
         <Button onClick={() => history.push("/tokens")}>Back</Button>
         {isNew ? (
-          <Button type={"primary"} onClick={() => createToken()}>
+          <Button
+            className="CreateButton"
+            type={"primary"}
+            onClick={() => createToken()}
+          >
             Create
           </Button>
         ) : (
@@ -182,9 +200,10 @@ export default function TokenDetail(props: Readonly<Props>) {
           onCancel={() => setConfirmRemove(false)}
           closable={false}
           title={`Remove token "${token.name}"?`}
-          okText="Remove"
+          okText="Remove Token"
           confirmLoading={!confirmName}
           okType="danger"
+          data-testid="remove-token-modal"
         >
           <p>
             For confirmation type <b>{token.name}</b>
@@ -192,29 +211,56 @@ export default function TokenDetail(props: Readonly<Props>) {
           <Form.Item name="confirm">
             <Input
               onChange={(e) => setConfirmName(token?.name === e.target.value)}
-            ></Input>
+              data-testid="remove-confirm-input"
+            />
           </Form.Item>
         </Modal>
 
         <Modal
-          open={tokenValue !== undefined}
-          okText="Copy To Clipboard And Close"
-          onOk={() => {
-            navigator.clipboard.writeText(tokenValue ? tokenValue : "");
-            history.push("/tokens");
-          }}
+          open={!!tokenValue}
+          okText={tokenError ? "Close" : "Copy To Clipboard And Close"}
           closable={false}
+          onOk={async () => {
+            if (!tokenValue || tokenError) {
+              setTokenValue(undefined);
+              setTokenError(undefined);
+              history.push("/tokens");
+              return;
+            }
+            try {
+              await navigator.clipboard.writeText(tokenValue);
+              history.push("/tokens");
+            } catch (err) {
+              setTokenError(
+                "Failed to copy token to clipboard. Please copy it manually.",
+              );
+            }
+          }}
+          onCancel={async () => {
+            cancelCreatedToken();
+            setTokenError(undefined);
+            setTokenValue(undefined);
+          }}
         >
           <Space direction="vertical" size="large">
             <Alert
               type="success"
               message="This is your token value. Please, save it somewhere, because it will not be shown again."
             />
+            {tokenError && (
+              <Alert
+                className="Alert"
+                message={tokenError}
+                type="error"
+                closable
+                onClose={() => setTokenError(undefined)}
+              />
+            )}
             <Input.TextArea
               value={tokenValue ? tokenValue : ""}
-              readOnly={true}
-              rows={4}
-            ></Input.TextArea>
+              readOnly
+              autoSize={{ minRows: 4 }}
+            />
           </Space>
         </Modal>
       </Space>,

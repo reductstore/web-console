@@ -2,17 +2,16 @@ import React, { useState, useEffect, createContext, useContext } from "react";
 import { Modal, Typography, Alert, Table, Input, Button, Form } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import "./EditRecordLabelsModal.css";
-import { APIError } from "reduct-js";
 
 interface EditRecordLabelsModalProps {
   isVisible: boolean;
   onCancel: () => void;
   record: any;
-  client: any;
-  bucketName: string;
-  entryName: string;
   showUnix: boolean;
-  onLabelsUpdated: () => void;
+  onLabelsUpdated: (
+    newLabels: Record<string, string>,
+    timestamp: bigint,
+  ) => void;
 }
 
 const EditableContext = createContext<any>(null);
@@ -109,9 +108,6 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
   isVisible,
   onCancel,
   record,
-  client,
-  bucketName,
-  entryName,
   showUnix,
   onLabelsUpdated,
 }) => {
@@ -140,7 +136,7 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
     }
   }, [record]);
 
-  const handleUpdateLabels = async () => {
+  const handleUpdateLabels = () => {
     if (!record) return;
     setLabelUpdateError(null);
     try {
@@ -189,15 +185,10 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
 
       const { timestamp } = record;
 
-      const bucket = await client.getBucket(bucketName);
-      await bucket.update(entryName, timestamp, newLabels);
-
-      onLabelsUpdated();
+      onLabelsUpdated(newLabels, timestamp);
       onCancel();
     } catch (err) {
-      if (err instanceof APIError)
-        setLabelUpdateError(err.message || "API Error");
-      else if (err instanceof Error)
+      if (err instanceof Error)
         setLabelUpdateError(err.message || "Failed to update labels.");
       else setLabelUpdateError("Failed to update labels: " + String(err));
     }

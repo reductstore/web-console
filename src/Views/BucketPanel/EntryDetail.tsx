@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -11,15 +10,21 @@ import {
 import {
   Table,
   Typography,
-  DatePicker,
   Button,
-  InputNumber,
-  Checkbox,
+  Input,
+  Select,
   Alert,
   Modal,
+  Space,
+  message,
+  Spin,
 } from "antd";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  DownloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
@@ -27,9 +32,13 @@ import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
+import streamSaver from "streamsaver";
+import { getExtensionFromContentType } from "../../Helpers/contentType";
+import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
 
 // Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
@@ -51,29 +60,37 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
   const [end, setEnd] = useState<bigint | undefined>(undefined);
-  const [limit, setLimit] = useState<number | undefined>(10);
+
   const [showUnix, setShowUnix] = useState(false);
+  const [startText, setStartText] = useState<string>("");
+  const [stopText, setStopText] = useState<string>("");
+  const [startError, setStartError] = useState(false);
+  const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
-  const [whenCondition, setWhenCondition] = useState<string>("");
+  const [whenCondition, setWhenCondition] = useState<string>(
+    '{\n  "$limit": 10\n}\n',
+  );
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
     useState(false);
   const [currentRecord, setCurrentRecord] = useState<any>(null);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
-  const getRecords = async (start?: bigint, end?: bigint, limit?: number) => {
+  const getRecords = async (start?: bigint, end?: bigint) => {
     setIsLoading(true);
     setRecords([]);
     setWhenError("");
     try {
       const bucket = await props.client.getBucket(bucketName);
       const options = new QueryOptions();
-      options.limit = limit;
       options.head = true;
       options.strict = true;
       if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
@@ -90,25 +107,65 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
   const handleFetchRecordsClick = () => {
     if (!isLoading) {
-      getRecords(start, end, limit);
+      getRecords(start, end);
     }
   };
 
   const handleDownload = async (record: any) => {
+    if (downloadingKey !== null) return;
+    setDownloadingKey(record.key);
+
     try {
       const bucket = await props.client.getBucket(bucketName);
-      const data = await (
-        await bucket.beginRead(entryName, BigInt(record.key))
-      ).read();
-      const blob = new Blob([data], { type: record.contentType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${entryName}-${record.key}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const readableRecord = await bucket.beginRead(
+        entryName,
+        BigInt(record.key),
+      );
+      const ext = getExtensionFromContentType(record.contentType || "");
+      const fileName = `${entryName}-${record.key}${ext}`;
+      const size = Number(readableRecord.size);
+      if (size < 1024 * 1024) {
+        // Small file: use Blob and anchor
+        const data = await readableRecord.read();
+        const blob = new Blob([data], { type: record.contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Large file: stream to disk
+        const fileStream = streamSaver.createWriteStream(fileName, { size });
+        await readableRecord.stream.pipeTo(fileStream);
+      }
+    } catch (err) {
+      console.error("Download failed", err);
+      message.error("Failed to download record");
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
+
+  const handleDeleteClick = (record: any) => {
+    setRecordToDelete(record);
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleDeleteRecord = async () => {
+    if (!recordToDelete) return;
+
+    try {
+      setIsLoading(true);
+      const bucket = await props.client.getBucket(bucketName);
+      await bucket.removeRecord(entryName, BigInt(recordToDelete.key));
+      message.success("Record deleted successfully");
+      setIsDeleteModalVisible(false);
+      getRecords(start, end);
     } catch (err) {
       console.error(err);
+      message.error("Failed to delete record");
+      setIsLoading(false);
     }
   };
 
@@ -117,24 +174,67 @@ export default function EntryDetail(props: Readonly<Props>) {
     setIsEditLabelsModalVisible(true);
   };
 
-  const handleLabelsUpdated = () => {
-    // Refresh the records to show updated labels
-    getRecords(start, end, limit);
+  const handleLabelsUpdated = async (
+    newLabels: Record<string, string>,
+    timestamp: bigint,
+  ) => {
+    try {
+      const bucket = await props.client.getBucket(bucketName);
+      await bucket.update(entryName, timestamp, newLabels);
+
+      getRecords(start, end);
+      message.success("Record labels updated successfully");
+    } catch (err) {
+      console.error("Failed to update labels:", err);
+      if (err instanceof APIError) {
+        message.error(err.message || "API Error");
+      } else {
+        message.error("Failed to update record labels");
+      }
+    }
   };
 
-  const handleDateChange = (dates: any) => {
-    if (dates) {
-      const startDate = dates[0].toDate();
-      const endDate = dates[1].toDate();
-      const startTimestamp =
-        startDate.getTime() - startDate.getTimezoneOffset() * 60000;
-      const endTimestamp =
-        endDate.getTime() - endDate.getTimezoneOffset() * 60000;
-      setStart(BigInt(startTimestamp) * 1000n);
-      setEnd(BigInt(endTimestamp) * 1000n);
+  const formatValue = (val: bigint | undefined, unix: boolean): string => {
+    if (val === undefined) return "";
+    return unix ? val.toString() : new Date(Number(val / 1000n)).toISOString();
+  };
+
+  const handleFormatChange = (value: string) => {
+    const unix = value === "Unix";
+    setShowUnix(unix);
+    setStartText(formatValue(start, unix));
+    setStopText(formatValue(end, unix));
+  };
+
+  const parseInput = (
+    value: string,
+    setter: (v: bigint | undefined) => void,
+    errSetter: (v: boolean) => void,
+  ) => {
+    if (!value) {
+      setter(undefined);
+      errSetter(false);
+      return;
+    }
+
+    if (showUnix) {
+      try {
+        const v = BigInt(value);
+        setter(v);
+        errSetter(false);
+      } catch {
+        setter(undefined);
+        errSetter(true);
+      }
     } else {
-      setStart(undefined);
-      setEnd(undefined);
+      const d = dayjs(value);
+      if (d.isValid()) {
+        setter(BigInt(d.valueOf() * 1000));
+        errSetter(false);
+      } else {
+        setter(undefined);
+        errSetter(true);
+      }
     }
   };
 
@@ -157,7 +257,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
-    getRecords(start, end, limit);
+    getRecords(start, end);
   }, [bucketName, entryName]);
 
   const columns = [
@@ -174,15 +274,19 @@ export default function EntryDetail(props: Readonly<Props>) {
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
     { title: "Labels", dataIndex: "labels", key: "labels" },
     {
-      title: "",
+      title: "Actions",
       key: "actions",
       render: (text: any, record: any) => (
-        <div style={{ display: "flex", gap: "8px" }}>
-          <DownloadOutlined
-            onClick={() => handleDownload(record)}
-            style={{ cursor: "pointer" }}
-            title="Download record"
-          />
+        <Space size="middle">
+          {downloadingKey === record.key ? (
+            <Spin size="small" style={{ marginRight: 8 }} />
+          ) : (
+            <DownloadOutlined
+              onClick={() => handleDownload(record)}
+              style={{ cursor: "pointer" }}
+              title="Download record"
+            />
+          )}
           {hasWritePermission && (
             <EditOutlined
               onClick={() => handleEditLabels(record)}
@@ -190,7 +294,14 @@ export default function EntryDetail(props: Readonly<Props>) {
               title="Edit labels"
             />
           )}
-        </div>
+          {hasWritePermission && (
+            <DeleteOutlined
+              onClick={() => handleDeleteClick(record)}
+              style={{ cursor: "pointer", color: "#ff4d4f" }}
+              title="Delete record"
+            />
+          )}
+        </Space>
       ),
     },
   ];
@@ -205,13 +316,13 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   // Format JSON exactly like in the When Condition component
   const formatJSON = (jsonString: string): string => {
-    if (!jsonString) return "{}";
+    if (!jsonString) return "{}\n";
 
     try {
       // Parse and re-stringify to ensure proper formatting
-      return JSON.stringify(JSON.parse(jsonString), null, 2);
+      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
     } catch {
-      return jsonString;
+      return jsonString + "\n";
     }
   };
 
@@ -233,7 +344,6 @@ export default function EntryDetail(props: Readonly<Props>) {
           hasWritePermission={hasWritePermission}
         />
       )}
-
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -248,53 +358,88 @@ export default function EntryDetail(props: Readonly<Props>) {
           availableEntries={availableEntries}
           onUploadSuccess={() => {
             setIsUploadModalVisible(false);
-            getRecords(start, end, limit);
+            getRecords(start, end);
           }}
         />
       </Modal>
 
-      <Typography.Title level={3}>Records</Typography.Title>
+      <Modal
+        title="Delete Record"
+        open={isDeleteModalVisible}
+        onCancel={() => setIsDeleteModalVisible(false)}
+        onOk={handleDeleteRecord}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+        cancelText="Cancel"
+        centered
+      >
+        <Typography.Paragraph>
+          Are you sure you want to delete this record? This action cannot be
+          undone.
+        </Typography.Paragraph>
+        {recordToDelete && (
+          <div>
+            <Typography.Text strong>Timestamp: </Typography.Text>
+            <Typography.Text>
+              {showUnix
+                ? recordToDelete.key
+                : new Date(
+                    Number(recordToDelete.timestamp / 1000n),
+                  ).toISOString()}
+            </Typography.Text>
+          </div>
+        )}
+      </Modal>
 
-      <Checkbox onChange={(e) => setShowUnix(e.target.checked)}>
-        Unix Timestamp
-      </Checkbox>
+      <Typography.Title level={3}>Records</Typography.Title>
       <div className="detailControls">
-        <div className="timeInputs">
-          {showUnix ? (
-            <>
-              <InputNumber
-                placeholder="Start Time (Unix)"
-                onChange={(value) =>
-                  setStart(value ? BigInt(value) : undefined)
-                }
-                className="timeInput"
-                max={Number(end)}
-              />
-              <InputNumber
-                placeholder="End Time (Unix)"
-                onChange={(value) => setEnd(value ? BigInt(value) : undefined)}
-                className="timeInput"
-                min={Number(start)}
-              />
-            </>
-          ) : (
-            <DatePicker.RangePicker
-              showTime
-              placeholder={["Start Time (UTC)", "End Time (UTC)"]}
-              onChange={handleDateChange}
-              className="datePicker"
+        <div className="timeSelectSection">
+          <div className="selectGroup">
+            <Select
+              data-testid="format-select"
+              value={showUnix ? "Unix" : "UTC"}
+              onChange={handleFormatChange}
+            >
+              <Select.Option value="UTC">UTC</Select.Option>
+              <Select.Option value="Unix">Unix</Select.Option>
+            </Select>
+            <TimeRangeDropdown
+              onSelectRange={(start, end) => {
+                setStart(start);
+                setEnd(end);
+                setStartText(formatValue(start, showUnix));
+                setStopText(formatValue(end, showUnix));
+                setStartError(false);
+                setStopError(false);
+              }}
             />
-          )}
-          <InputNumber
-            min={1}
-            addonBefore="Limit"
-            onChange={(value) => setLimit(value ? Number(value) : undefined)}
-            className="limitInput"
-            defaultValue={limit}
-          />
+          </div>
+
+          <div className="timeInputs">
+            <Input
+              placeholder="Start time (optional)"
+              addonBefore="Start"
+              value={startText}
+              onChange={(e) => {
+                setStartText(e.target.value);
+                parseInput(e.target.value, setStart, setStartError);
+              }}
+              status={startError ? "error" : undefined}
+            />
+            <Input
+              placeholder="Stop time (optional)"
+              addonBefore="Stop"
+              value={stopText}
+              onChange={(e) => {
+                setStopText(e.target.value);
+                parseInput(e.target.value, setEnd, setStopError);
+              }}
+              status={stopError ? "error" : undefined}
+            />
+          </div>
         </div>
+
         <div className="jsonFilterSection">
-          <Typography.Text>Filter Records (JSON):</Typography.Text>
           <CodeMirror
             className="jsonEditor"
             value={whenCondition}
@@ -317,15 +462,23 @@ export default function EntryDetail(props: Readonly<Props>) {
           />
           {whenError && <Alert type="error" message={whenError} />}
           <Typography.Text type="secondary" className="jsonExample">
-            {'Example: {"&label_name": { "$gt": 10 }}'}
+            Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
+            Use <code>&label</code> for standard labels and <code>@label</code>{" "}
+            for computed labels. Combine with operators like <code>$eq</code>,{" "}
+            <code>$gt</code>, <code>$lt</code>, <code>$and</code>, etc. You can
+            also use aggregation operators:
+            <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
+            (every N seconds) to control replication frequency.
             <br />
-            <a
-              href="https://www.reduct.store/docs/conditional-query"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Query Reference Documentation
-            </a>
+            <strong>
+              <a
+                href="https://www.reduct.store/docs/conditional-query"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Conditional Query Reference →
+              </a>
+            </strong>
           </Typography.Text>
         </div>
         <div className="fetchButton">
@@ -341,9 +494,6 @@ export default function EntryDetail(props: Readonly<Props>) {
         isVisible={isEditLabelsModalVisible}
         onCancel={() => setIsEditLabelsModalVisible(false)}
         record={currentRecord}
-        client={props.client}
-        bucketName={bucketName}
-        entryName={entryName}
         showUnix={showUnix}
         onLabelsUpdated={handleLabelsUpdated}
       />

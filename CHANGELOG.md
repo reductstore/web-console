@@ -7,23 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.10.2] - 2025-06-09
+## [1.11.0] - 2025-06-15
+
+### Added
+
+- Support for wildcard and custom input for token write/read permissions, [PR-117](https://github.com/reductstore/web-console/pull/117)
+
+### Changed
+
+- Hide condition fields in replication settings when `each_n` and `each_s` are null or undefined, [PR-106](https://github.com/reductstore/web-console/pull/106)
+- Use streams for downloading large records, [PR-113](https://github.com/reductstore/web-console/pull/113)
+- Handle .mcap files with correct content type on upload and download, [PR-114](https://github.com/reductstore/web-console/pull/114)
+- Add presets and custom range selection with the time range dropdown, [PR-116](https://github.com/reductstore/web-console/pull/116)
 
 ### Fixed
 
 - Use dynamic public URL for static assets, [PR-107](https://github.com/reductstore/web-console/pull/107)
 - Disable name field for update and add tests, [PR-109](https://github.com/reductstore/web-console/pull/109)
+- Handle clipboard copy errors when displaying a token, [PR-111](https://github.com/reductstore/web-console/pull/111)
+- Responsive layout for sidebar, login screen, and bucket cards, [PR-115](https://github.com/reductstore/web-console/pull/115)
 
 ## [1.10.1] - 2025-05-20
 
 ### Fixed
 
 - When condition editor disabled for provisioned replication settings, [PR-103](https://github.com/reductstore/web-console/pull/103)
+- Show correct total usage and bucket count even when user has limited access, [PR-112](https://github.com/reductstore/web-console/pull/112)
 
 ## [1.10.0] - 2025-05-07
 
 ### Added:
 
+- Remove limit field and use $limit JSON operator in query conditions, [PR-101](https://github.com/reductstore/web-console/pull/101)
+- Add record deletion functionality, [PR-98](https://github.com/reductstore/web-console/pull/98)
 - RS-613: Add record label editing functionality, [PR-93](https://github.com/reductstore/web-console/pull/93)
 - RS-605: Add when conditions to replication settings in WebConsole, [PR-89](https://github.com/reductstore/web-console/pull/89)
 - RS-587: File upload dialog in EntryDetail view allowing users to upload files with metadata, [PR-82](https://github.com/reductstore/web-console/pull/82)
@@ -241,7 +257,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/reduct-storage/web-console/compare/v1.11.0...v1.10.1
 [1.10.1]: https://github.com/reduct-storage/web-console/compare/v1.10.1...v1.10.0
 [1.10.0]: https://github.com/reduct-storage/web-console/compare/v1.10.0...v1.9.2
 [1.9.2]: https://github.com/reduct-storage/web-console/compare/v1.9.2...v1.9.1

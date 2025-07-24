@@ -160,4 +160,37 @@ describe("Dashboard", () => {
     wrapper.update();
     expect(wrapper.find(".warningIcon").hostNodes()).toHaveLength(0);
   });
+
+  it("shows correct usage and bucket count even if bucket list is filtered", async () => {
+    client.getInfo = jest.fn().mockResolvedValue({
+      ...serverInfo,
+      bucketCount: 5n,
+      usage: 1000n * 1000n * 1000n * 50n, // 50 GB
+    });
+
+    client.getBucketList = jest.fn().mockResolvedValue([
+      {
+        name: "bucket_visible",
+        entryCount: 2,
+        size: 1000n,
+        oldestRecord: 10n,
+        latestRecord: 10000010n,
+      },
+    ]);
+
+    const wrapper = mount(
+      <Dashboard backendApi={backend} permissions={{ fullAccess: false }} />,
+    );
+
+    const serverInfoPanel = (
+      await waitUntilFind(wrapper, "#ServerInfo")
+    ).hostNodes();
+    expect(serverInfoPanel.text()).toContain("50 GB");
+    expect(serverInfoPanel.text()).toContain("5");
+
+    const bucket = (
+      await waitUntilFind(wrapper, "#bucket_visible")
+    ).hostNodes();
+    expect(bucket.text()).toContain("bucket_visible");
+  });
 });

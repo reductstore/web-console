@@ -1,63 +1,87 @@
+:root {
+  --entry-detail-block-spacing: 1.5em;
+  --entry-detail-inner-spacing: 1em;
+  --entry-detail-max-width: 100%;
+}
+
+/* --- Layout Containers --- */
 .entryDetail {
   margin: 1.4em;
 }
 
+/* --- Time Range & Inputs --- */
 .detailControls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-  margin-top: 0.5em;
+  gap: var(--entry-detail-block-spacing);
+  margin-bottom: var(--entry-detail-block-spacing);
+}
+
+.timeSelectSection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--entry-detail-inner-spacing);
+  max-width: var(--entry-detail-max-width);
+  width: 100%;
+}
+
+.selectGroup {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--entry-detail-inner-spacing);
+  flex-shrink: 0;
+  min-width: 200px;
 }
 
 .timeInputs {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: var(--entry-detail-inner-spacing);
 }
 
-.timeInput {
-  width: 200px;
+@media (max-width: 826px) {
+  .timeSelectSection {
+    flex-direction: column;
+    align-items: stretch;
+    width: 270px;
+  }
+  .selectGroup {
+    width: 100%;
+  }
+  .timeInputs {
+    grid-template-columns: 1fr;
+  }
 }
 
-.datePicker {
-  width: 410px;
-}
-
-.limitInput {
-  width: 120px;
-}
-
+/* --- JSON Editor --- */
 .jsonFilterSection {
-  margin: 10px 0;
   width: 100%;
 }
 
 .jsonEditor {
-  margin: 8px 0;
-  margin-bottom: 16px;
   border: 1px solid #d9d9d9;
   border-radius: 2px;
+  max-width: var(--entry-detail-max-width);
 }
 
 .jsonEditor .CodeMirror {
   height: auto;
-  min-height: 100px;
-}
-
-.CodeMirror-scroll {
-  min-height: 100px;
 }
 
 .jsonExample {
   display: block;
-  margin-top: 8px;
+  margin-top: var(--entry-detail-inner-spacing);
   font-size: 12px;
+  max-width: var(--entry-detail-max-width);
 }
 
+/* --- Button --- */
 .fetchButton {
   display: block;
 }
 
+/* --- Tooltip Customization --- */
 .custom-tooltip .ant-tooltip-inner {
   background-color: #f0f0f0;
   color: #333;

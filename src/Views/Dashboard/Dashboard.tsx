@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { IBackendAPI } from "../../BackendAPI";
 import { ServerInfo, BucketInfo, TokenPermissions } from "reduct-js";
-import { Card, Col, Divider, Modal, Row, Typography } from "antd";
+import { Card, Divider, Modal, Typography } from "antd";
 import "./Dashboard.css";
 import BucketCard from "../../Components/Bucket/BucketCard";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
@@ -27,6 +27,7 @@ export default function Dashboard(props: Readonly<Props>) {
   const history = useHistory();
 
   const [info, setInfo] = useState<ServerInfo | undefined>();
+  const [error, setError] = useState<string | undefined>();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [creatingBucket, setCreatingBucket] = useState(false);
 
@@ -56,6 +57,7 @@ export default function Dashboard(props: Readonly<Props>) {
   ];
 
   const getInfo = async () => {
+    setError(undefined);
     try {
       const { client } = props.backendApi;
       setInfo(await client.getInfo());
@@ -66,6 +68,7 @@ export default function Dashboard(props: Readonly<Props>) {
       );
     } catch (err) {
       console.error(err);
+      setError("Server (no connection)");
     }
   };
 
@@ -98,42 +101,20 @@ export default function Dashboard(props: Readonly<Props>) {
     history.push(`/buckets/${name}`);
   };
 
-  if (info === undefined) {
-    return <Card bordered title="Server (no connection)" />;
-  }
-
-  const renderBucket = (numberInRow = 2) => {
-    const fillRow = (row: number) => {
-      const cards = [];
-      for (let j = 0; j < numberInRow; ++j) {
-        const index = row * numberInRow + j;
-        if (index >= buckets.length) {
-          break;
-        }
-
-        const bucket = buckets[index];
-        cards.push(
-          <Col span={24 / numberInRow} key={index}>
-            <BucketCard
-              bucketInfo={bucket}
-              index={index}
-              key={index}
-              client={client}
-              onRemoved={removeBucket}
-              onShow={(name) => showBucket(name, history)}
-            />
-          </Col>,
-        );
-      }
-      return cards;
-    };
-
-    const rows = [];
-    for (let i = 0; i < buckets.length / numberInRow; ++i) {
-      rows.push(<Row key={i}> {fillRow(i)}</Row>);
-    }
-    return rows;
-  };
+  const renderBuckets = () => (
+    <div className="BucketList">
+      {buckets.map((bucket, index) => (
+        <BucketCard
+          key={bucket.name}
+          bucketInfo={bucket}
+          index={index}
+          client={client}
+          onRemoved={removeBucket}
+          onShow={(name) => showBucket(name, history)}
+        />
+      ))}
+    </div>
+  );
 
   const allowedActions = [];
   if (props.permissions && props.permissions.fullAccess) {
@@ -149,51 +130,55 @@ export default function Dashboard(props: Readonly<Props>) {
   const { client } = props.backendApi;
   return (
     <div className="Panel">
-      <Card
-        id="ServerInfo"
-        title={
-          <>
-            Server{" "}
-            <a
-              href={`https://github.com/reductstore/reductstore/releases/tag/v${info.version}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              v{info.version}
-            </a>
-          </>
-        }
-        actions={allowedActions}
-        tabList={tabList}
-        activeTabKey={activeTabKey}
-        onTabChange={onTabChange}
-        bordered
-      >
-        {activeTabKey === "usage" && (
-          <UsageStatistics info={info} buckets={buckets} />
-        )}
-        {activeTabKey === "license" && info.license && (
-          <LicenseDetails license={info.license} usage={info.usage} />
-        )}
-        {activeTabKey === "license" && !info.license && <LicenseAlert />}
+      {error && <Card bordered title={error} />}
+      {info && !error && (
+        <>
+          <Card
+            id="ServerInfo"
+            title={
+              <>
+                Server{" "}
+                <a
+                  href={`https://github.com/reductstore/reductstore/releases/tag/v${info.version}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  v{info.version}
+                </a>
+              </>
+            }
+            actions={allowedActions}
+            tabList={tabList}
+            activeTabKey={activeTabKey}
+            onTabChange={onTabChange}
+            bordered
+          >
+            {activeTabKey === "usage" && <UsageStatistics info={info} />}
+            {activeTabKey === "license" && info.license && (
+              <LicenseDetails license={info.license} usage={info.usage} />
+            )}
+            {activeTabKey === "license" && !info.license && <LicenseAlert />}
 
-        <Modal
-          title="Add a new bucket"
-          open={creatingBucket}
-          footer={null}
-          onCancel={() => setCreatingBucket(false)}
-        >
-          <BucketSettingsForm
-            client={client}
-            onCreated={async () => {
-              setCreatingBucket(false);
-            }}
-          />
-        </Modal>
-      </Card>
-      <Divider />
-      <Typography.Title level={3}>Buckets</Typography.Title>
-      {renderBucket()}
+            <Modal
+              title="Add a new bucket"
+              open={creatingBucket}
+              footer={null}
+              onCancel={() => setCreatingBucket(false)}
+            >
+              <BucketSettingsForm
+                client={client}
+                onCreated={async () => {
+                  setCreatingBucket(false);
+                }}
+              />
+            </Modal>
+          </Card>
+          <Divider />
+          <Typography.Title level={3}>Buckets</Typography.Title>
+
+          {renderBuckets()}
+        </>
+      )}
     </div>
   );
 }

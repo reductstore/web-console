@@ -433,42 +433,60 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Col>
           </Row>
 
-          <b>Conditions</b>
-          <Row>
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Every N-th record&nbsp;
-                    <Tooltip title="If set, only every N-th record is replicated.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="eachN"
-              >
-                <InputNumber disabled={readOnly} min={1} precision={0} />
-              </Form.Item>
-            </Col>
+          {this.state.settings?.eachN != null ||
+          this.state.settings?.eachS != null ? (
+            <>
+              <b>Conditions</b>
+              <Row>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Every N-th record&nbsp;
+                        <Tooltip title="If set, only every N-th record is replicated.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="eachN"
+                  >
+                    <InputNumber disabled={readOnly} min={1} precision={0} />
+                  </Form.Item>
+                </Col>
 
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Every S seconds&nbsp;
-                    <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="eachS"
-              >
-                <InputNumber disabled={readOnly} min={0.000001} />
-              </Form.Item>
-            </Col>
-          </Row>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Every S seconds&nbsp;
+                        <Tooltip title="If set, only one record is replicated every S seconds. Can be float.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="eachS"
+                  >
+                    <InputNumber disabled={readOnly} min={0.000001} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          ) : (
+            <>
+              <b>Conditional Replication</b>
+            </>
+          )}
 
-          <Form.Item label={<span>When Condition</span>}>
+          <Form.Item
+            label={
+              <span>
+                When&nbsp;
+                <Tooltip title="Define JSON-based rules to filter and control record replication. Supports label comparisons (e.g., &score > 0.5) and aggregation (e.g., every N-th record).">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </span>
+            }
+          >
             {!isTestEnvironment ? (
               <CodeMirror
                 className="jsonEditor"
@@ -510,15 +528,26 @@ export default class ReplicationSettingsFormReplication extends React.Component<
               <></>
             )}
             <Typography.Text type="secondary" className="jsonExample">
-              {'Example: {"&label_name": { "$gt": 10 }}'}
+              Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
               <br />
-              <a
-                href="https://www.reduct.store/docs/conditional-query"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Query Reference Documentation
-              </a>
+              Use <code>&label</code> for standard labels and{" "}
+              <code>@label</code> for computed labels. Combine with operators
+              like <code>$eq</code>, <code>$gt</code>, <code>$lt</code>,{" "}
+              <code>$and</code>, etc.
+              <br />
+              You can also use aggregation operators:
+              <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
+              (every N seconds) to control replication frequency.
+              <br />
+              <strong>
+                <a
+                  href="https://www.reduct.store/docs/conditional-query"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Conditional Query Reference →
+                </a>
+              </strong>
             </Typography.Text>
           </Form.Item>
 
