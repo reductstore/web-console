@@ -12,9 +12,24 @@ interface Props {
   onSelectRange: (start: bigint, end: bigint) => void;
 }
 
+const RANGE_MAP: Record<string, string> = {
+  last1: "Last 1 hour",
+  last6: "Last 6 hours",
+  last24: "Last 24 hours",
+  last7: "Last 7 days",
+  last30: "Last 30 days",
+  today: "Today",
+  yesterday: "Yesterday",
+  thisweek: "This week",
+  lastweek: "Last week",
+  thismonth: "This month",
+  lastmonth: "Last month",
+};
+
 export default function TimeRangeDropdown({ onSelectRange }: Props) {
   const [visible, setVisible] = useState(false);
   const [panelVisible, setPanelVisible] = useState(false);
+  const [currentRange, setCurrentRange] = useState<string | null>(null);
 
   useEffect(() => {
     setTimeout(() => {
@@ -34,6 +49,7 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
       : dayjs.utc(date.format("YYYY-MM-DD")).endOf("day");
 
   const handlePresetRange = (key: string) => {
+    setCurrentRange(RANGE_MAP[key]);
     const now = dayjs();
     switch (key) {
       case "last1":
@@ -145,24 +161,14 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
       menu={{
         onClick: (e) => handlePresetRange(e.key),
         items: [
-          { key: "last1", label: "Last 1 hour" },
-          { key: "last6", label: "Last 6 hours" },
-          { key: "last24", label: "Last 24 hours" },
-          { key: "last7", label: "Last 7 days" },
-          { key: "last30", label: "Last 30 days" },
-          { key: "today", label: "Today" },
-          { key: "yesterday", label: "Yesterday" },
-          { key: "thisweek", label: "This week" },
-          { key: "lastweek", label: "Last week" },
-          { key: "thismonth", label: "This month" },
-          { key: "lastmonth", label: "Last month" },
-          { type: "divider" },
+          ...Object.entries(RANGE_MAP).map(([key, label]) => ({ key, label })),
           customDateMenuItem,
         ],
       }}
     >
       <Button>
-        Select time range <DownOutlined />
+        {currentRange === null ? "Select time range" : currentRange}{" "}
+        <DownOutlined />
       </Button>
     </Dropdown>
   );
