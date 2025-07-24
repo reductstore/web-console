@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2025-06-15
+
 ### Added
 
 - Support for wildcard and custom input for token write/read permissions, [PR-117](https://github.com/reductstore/web-console/pull/117)
@@ -253,7 +255,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/reduct-storage/web-console/compare/v1.11.0...v1.10.1
 [1.10.1]: https://github.com/reduct-storage/web-console/compare/v1.10.1...v1.10.0
 [1.10.0]: https://github.com/reduct-storage/web-console/compare/v1.10.0...v1.9.2
 [1.9.2]: https://github.com/reduct-storage/web-console/compare/v1.9.2...v1.9.1
