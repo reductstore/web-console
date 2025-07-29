@@ -366,12 +366,20 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Modal
         title="Delete Record"
         open={isDeleteModalVisible}
-        onCancel={() => setIsDeleteModalVisible(false)}
-        onOk={handleDeleteRecord}
-        okText="Delete"
-        okButtonProps={{ danger: true }}
-        cancelText="Cancel"
         centered
+        footer={[
+          <Button key="back" onClick={() => setIsDeleteModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="default"
+            danger
+            onClick={handleDeleteRecord}
+          >
+            Delete
+          </Button>,
+        ]}
       >
         <Typography.Paragraph>
           Are you sure you want to delete this record? This action cannot be
