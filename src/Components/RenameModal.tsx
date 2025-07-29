@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Input, Modal, Alert, Flex } from "antd";
+import { Input, Modal, Alert, Flex, Button } from "antd";
 
 interface RenameModalProps {
   name: string;
@@ -32,12 +32,21 @@ export default function RenameModal({
   return (
     <Modal
       open={open}
-      onOk={() => onRename(newName.trim())}
-      onCancel={handleCancel}
       closable={false}
       title={`Rename ${resourceType} "${name}"?`}
-      okText="Save"
       data-testid="rename-modal"
+      footer={[
+        <Button key="back" onClick={handleCancel}>
+          Cancel
+        </Button>,
+        <Button
+          key="submit"
+          type="primary"
+          onClick={() => onRename(newName.trim())}
+        >
+          Save
+        </Button>,
+      ]}
     >
       <Flex vertical gap="small">
         {errorMessage && (

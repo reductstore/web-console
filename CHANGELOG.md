@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixes modal cancel behavior after antd update by explicitly defining custom footer buttons, [PR-122](https://github.com/reductstore/web-console/pull/122)
+
 ## [1.11.0] - 2025-06-15
 
 ### Added
