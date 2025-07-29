@@ -278,11 +278,16 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
   return (
     <Modal
       open={isVisible}
-      onCancel={onCancel}
-      onOk={handleUpdateLabels}
-      okText="Update Labels"
       width={600}
       className="edit-record-labels-modal"
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        <Button key="submit" type="primary" onClick={handleUpdateLabels}>
+          Update Labels
+        </Button>,
+      ]}
     >
       {record && (
         <>
