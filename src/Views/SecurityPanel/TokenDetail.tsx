@@ -196,14 +196,25 @@ export default function TokenDetail(props: Readonly<Props>) {
 
         <Modal
           open={confirmRemove}
-          onOk={removeToken}
-          onCancel={() => setConfirmRemove(false)}
           closable={false}
           title={`Remove token "${token.name}"?`}
-          okText="Remove Token"
           confirmLoading={!confirmName}
-          okType="danger"
           data-testid="remove-token-modal"
+          footer={[
+            <Button key="back" onClick={() => setConfirmRemove(false)}>
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="default"
+              danger
+              onClick={removeToken}
+              disabled={!confirmName}
+              loading={!confirmName}
+            >
+              Remove Token
+            </Button>,
+          ]}
         >
           <p>
             For confirmation type <b>{token.name}</b>
@@ -218,29 +229,41 @@ export default function TokenDetail(props: Readonly<Props>) {
 
         <Modal
           open={!!tokenValue}
-          okText={tokenError ? "Close" : "Copy To Clipboard And Close"}
           closable={false}
-          onOk={async () => {
-            if (!tokenValue || tokenError) {
-              setTokenValue(undefined);
-              setTokenError(undefined);
-              history.push("/tokens");
-              return;
-            }
-            try {
-              await navigator.clipboard.writeText(tokenValue);
-              history.push("/tokens");
-            } catch (err) {
-              setTokenError(
-                "Failed to copy token to clipboard. Please copy it manually.",
-              );
-            }
-          }}
-          onCancel={async () => {
-            cancelCreatedToken();
-            setTokenError(undefined);
-            setTokenValue(undefined);
-          }}
+          footer={[
+            <Button
+              key="back"
+              onClick={async () => {
+                cancelCreatedToken();
+                setTokenError(undefined);
+                setTokenValue(undefined);
+              }}
+            >
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              onClick={async () => {
+                if (!tokenValue || tokenError) {
+                  setTokenValue(undefined);
+                  setTokenError(undefined);
+                  history.push("/tokens");
+                  return;
+                }
+                try {
+                  await navigator.clipboard.writeText(tokenValue);
+                  history.push("/tokens");
+                } catch (err) {
+                  setTokenError(
+                    "Failed to copy token to clipboard. Please copy it manually.",
+                  );
+                }
+              }}
+            >
+              {tokenError ? "Close" : "Copy To Clipboard And Close"}
+            </Button>,
+          ]}
         >
           <Space direction="vertical" size="large">
             <Alert
