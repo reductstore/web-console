@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Make tables responsive, fix record preset selection, and allow `*` as a selectable option for token permissions, [PR-123](https://github.com/reductstore/web-console/pull/123)
+
 ## [1.11.1] - 2025-07-29
 
 ### Fixed
