@@ -11,11 +11,12 @@ import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Flex, Table, Typography, Modal } from "antd";
+import { Flex, Typography, Modal } from "antd";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
+import ScrollableTable from "../../Components/ScrollableTable";
 
 interface Props {
   client: Client;
@@ -152,6 +153,7 @@ export default function BucketDetail(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
+      fixed: "left",
       render: (name: string) => (
         <Link to={`/buckets/${info?.name}/entries/${name}`}>
           <b>{name}</b>
@@ -221,14 +223,15 @@ export default function BucketDetail(props: Readonly<Props>) {
 
       <Typography.Title level={3}>Entries</Typography.Title>
 
-      <Table
+      <ScrollableTable
+        scroll={{ x: "max-content" }}
         style={{ margin: "0.6em" }}
-        columns={columns}
+        columns={columns as any[]}
         dataSource={data}
         loading={isLoading}
       />
 
-      {/* Upload Modal */}
+      {/* Modals */}
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -244,7 +247,6 @@ export default function BucketDetail(props: Readonly<Props>) {
           onUploadSuccess={handleUploadSuccess}
         />
       </Modal>
-
       <RemoveConfirmationModal
         key={entryToRemove}
         name={entryToRemove}

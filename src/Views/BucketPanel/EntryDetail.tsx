@@ -8,7 +8,6 @@ import {
   TokenPermissions,
 } from "reduct-js";
 import {
-  Table,
   Typography,
   Button,
   Input,
@@ -39,6 +38,7 @@ import dayjs from "dayjs";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
+import ScrollableTable from "../../Components/ScrollableTable";
 
 // Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
@@ -265,6 +265,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       title: "Timestamp",
       dataIndex: "timestamp",
       key: "timestamp",
+      fixed: "left",
       render: (text: any, record: any) =>
         showUnix
           ? record.key
@@ -272,7 +273,39 @@ export default function EntryDetail(props: Readonly<Props>) {
     },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
-    { title: "Labels", dataIndex: "labels", key: "labels" },
+    {
+      title: "Labels",
+      dataIndex: "labels",
+      key: "labels",
+      render: (text: string) => {
+        if (!text) return "-";
+
+        let parsed: Record<string, unknown> | null = null;
+
+        try {
+          parsed = typeof text === "string" ? JSON.parse(text) : text;
+        } catch {
+          return (
+            <div style={{ maxWidth: 400, wordBreak: "break-word" }}>{text}</div>
+          );
+        }
+
+        if (!parsed || typeof parsed !== "object") return "-";
+
+        const entries = Object.entries(parsed);
+        if (entries.length === 0) return "-";
+
+        const labelText = entries
+          .map(([key, value]) => `${key}: ${String(value)}`)
+          .join(", ");
+
+        return (
+          <div style={{ maxWidth: 400, wordBreak: "break-word" }}>
+            {labelText}
+          </div>
+        );
+      },
+    },
     {
       title: "Actions",
       key: "actions",
@@ -495,7 +528,11 @@ export default function EntryDetail(props: Readonly<Props>) {
           </Button>
         </div>
       </div>
-      <Table columns={columns} dataSource={data} />
+      <ScrollableTable
+        scroll={{ x: "max-content" }}
+        columns={columns as any[]}
+        dataSource={data}
+      />
 
       {/* Modal for editing labels */}
       <EditRecordLabelsModal

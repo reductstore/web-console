@@ -237,12 +237,12 @@ describe("EntryDetail", () => {
     expect(rows.at(0).text()).toContain("1970-01-01T00:00:00.001Z");
     expect(rows.at(0).text()).toContain("1.0 KB");
     expect(rows.at(0).text()).toContain("application/json");
-    expect(rows.at(0).text()).toContain('"key": "value"');
+    expect(rows.at(0).text()).toContain("key: value");
 
     expect(rows.at(1).text()).toContain("1970-01-01T00:00:00.002Z");
     expect(rows.at(1).text()).toContain("2.0 KB");
     expect(rows.at(1).text()).toContain("text/plain");
-    expect(rows.at(1).text()).toContain('"type": "test"');
+    expect(rows.at(1).text()).toContain("type: test");
   });
 
   it("should toggle between ISO and Unix timestamps", async () => {
