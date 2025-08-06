@@ -1,7 +1,8 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
-import { Modal, Typography, Alert, Table, Input, Button, Form } from "antd";
+import { Modal, Typography, Alert, Input, Button, Form } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import "./EditRecordLabelsModal.css";
+import ScrollableTable from "../ScrollableTable";
 
 interface EditRecordLabelsModalProps {
   isVisible: boolean;
@@ -280,6 +281,7 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
       open={isVisible}
       width={600}
       className="edit-record-labels-modal"
+      onCancel={onCancel}
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -324,7 +326,8 @@ const EditRecordLabelsModal: React.FC<EditRecordLabelsModalProps> = ({
               icon={<PlusOutlined />}
               title="Add"
             />
-            <Table
+            <ScrollableTable
+              scroll={{ y: 300 }}
               components={components}
               rowClassName="editable-row"
               bordered
