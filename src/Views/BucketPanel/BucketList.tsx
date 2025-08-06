@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { APIError, BucketInfo, Client, TokenPermissions } from "reduct-js";
-import { Button, Flex, Modal, Table, Tag, Typography } from "antd";
+import { Button, Flex, Modal, Tag, Typography } from "antd";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 
@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 import RenameModal from "../../Components/RenameModal";
+import ScrollableTable from "../../Components/ScrollableTable";
 
 interface Props {
   client: Client;
@@ -119,12 +120,11 @@ export default function BucketList(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
+      fixed: "left",
       render: (name: string) => (
-        <Flex gap="small" key={`link-${name}`}>
-          <Link to={`buckets/${name}`}>
-            <b>{name}</b>
-          </Link>
-        </Flex>
+        <Link to={`/buckets/${name}`}>
+          <b>{name}</b>
+        </Link>
       ),
     },
 
@@ -190,21 +190,29 @@ export default function BucketList(props: Readonly<Props>) {
             title="Add"
           />
         ) : null}
-        <Modal
-          title="Add a new bucket"
-          open={creatingBucket}
-          footer={null}
-          onCancel={() => setCreatingBucket(false)}
-        >
-          <BucketSettingsForm
-            client={props.client}
-            onCreated={async () => {
-              setCreatingBucket(false);
-            }}
-          />
-        </Modal>
       </Typography.Title>
-      <Table columns={columns} dataSource={data} loading={isLoading} />
+      <ScrollableTable
+        scroll={{ x: "max-content" }}
+        style={{ margin: "0.6em" }}
+        columns={columns}
+        dataSource={data}
+        loading={isLoading}
+      />
+
+      {/* Modals */}
+      <Modal
+        title="Add a new bucket"
+        open={creatingBucket}
+        footer={null}
+        onCancel={() => setCreatingBucket(false)}
+      >
+        <BucketSettingsForm
+          client={props.client}
+          onCreated={async () => {
+            setCreatingBucket(false);
+          }}
+        />
+      </Modal>
       <RemoveConfirmationModal
         name={bucketToRemove}
         onRemove={() => removeBucket(bucketToRemove)}

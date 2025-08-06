@@ -59,8 +59,8 @@ describe("EntryCard", () => {
     );
 
     const timestamps = wrapper.find(".ant-statistic-content-value");
-    expect(timestamps.at(4).text()).toContain("1970-01-01T");
-    expect(timestamps.at(5).text()).toContain("1970-01-01T");
+    expect(timestamps.at(4).text()).toContain("1970-01-01");
+    expect(timestamps.at(5).text()).toContain("1970-01-01");
   });
 
   it("should display timestamps in Unix format when showUnix is true", async () => {

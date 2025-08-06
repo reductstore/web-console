@@ -157,9 +157,9 @@ export default function TokenDetail(props: Readonly<Props>) {
           disabled={!isNew}
           mode="tags"
           value={token.permissions?.read}
-          options={bucketOptions}
+          options={[...bucketOptions, { value: "*", label: "*" }]}
           onChange={(value) => setPermissions({ read: value })}
-        ></Select>
+        />
       </Space.Compact>,
       <Space.Compact block direction={"vertical"}>
         Write Access:
@@ -168,9 +168,9 @@ export default function TokenDetail(props: Readonly<Props>) {
           disabled={!isNew}
           mode="tags"
           value={token.permissions?.write}
-          options={bucketOptions}
+          options={[...bucketOptions, { value: "*", label: "*" }]}
           onChange={(value) => setPermissions({ write: value })}
-        ></Select>
+        />
       </Space.Compact>,
       <Space>
         <Button onClick={() => history.push("/tokens")}>Back</Button>

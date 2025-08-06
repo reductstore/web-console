@@ -26,9 +26,11 @@ export default function EntryCard(props: Readonly<Props>) {
 
   const printTimestamp = (timestamp: bigint) => {
     if (entryInfo.recordCount === 0n) return "---";
-    return showUnix
-      ? Number(timestamp)
-      : new Date(Number(timestamp / 1000n)).toISOString();
+    if (showUnix) return Number(timestamp);
+    return new Date(Number(timestamp / 1_000n))
+      .toISOString()
+      .replace("T", " ")
+      .substring(0, 19);
   };
 
   const handleClick = () => {
@@ -109,6 +111,11 @@ export default function EntryCard(props: Readonly<Props>) {
               title={`Oldest Record ${showUnix ? "(Unix)" : "(UTC)"}`}
               value={printTimestamp(entryInfo.oldestRecord)}
               groupSeparator=""
+              valueRender={(val) => (
+                <span style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
+                  {val}
+                </span>
+              )}
             />
           </Col>
           <Col span={8}>
@@ -116,6 +123,11 @@ export default function EntryCard(props: Readonly<Props>) {
               title={`Latest Record ${showUnix ? "(Unix)" : "(UTC)"}`}
               value={printTimestamp(entryInfo.latestRecord)}
               groupSeparator=""
+              valueRender={(val) => (
+                <span style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
+                  {val}
+                </span>
+              )}
             />
           </Col>
         </Row>
