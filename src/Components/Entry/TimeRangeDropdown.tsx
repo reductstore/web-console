@@ -24,18 +24,27 @@ const RANGE_MAP: Record<string, string> = {
   lastweek: "Last week",
   thismonth: "This month",
   lastmonth: "Last month",
+  custom: "Custom range",
 };
 
 export default function TimeRangeDropdown({ onSelectRange }: Props) {
-  const [visible, setVisible] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
-  const [currentRange, setCurrentRange] = useState<string | null>(null);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [rangeVisible, setRangeVisible] = useState(false);
+  const [currentRangeKey, setCurrentRangeKey] = useState<string | null>(null);
+  const [rangeLabel, setRangeLabel] = useState<string | null>(null);
 
   useEffect(() => {
+    if (dropdownVisible || rangeVisible || !currentRangeKey) return;
+    setRangeLabel(RANGE_MAP[currentRangeKey]);
+  }, [dropdownVisible, rangeVisible, currentRangeKey]);
+
+  const closeDropdown = () => {
+    // Hide range first and dropdown on next tick
+    setRangeVisible(false);
     setTimeout(() => {
-      setVisible(panelVisible);
-    }, 10);
-  }, [panelVisible]);
+      setDropdownVisible(false);
+    }, 0);
+  };
 
   const applyRange = (from: Dayjs, to: Dayjs) => {
     const start = BigInt(from.valueOf() * 1000);
@@ -49,7 +58,7 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
       : dayjs.utc(date.format("YYYY-MM-DD")).endOf("day");
 
   const handlePresetRange = (key: string) => {
-    setCurrentRange(RANGE_MAP[key]);
+    setCurrentRangeKey(key);
     const now = dayjs();
     switch (key) {
       case "last1":
@@ -101,9 +110,6 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
         );
         break;
       }
-      case "custom":
-        setPanelVisible(!panelVisible);
-        break;
     }
   };
 
@@ -111,21 +117,36 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
     key: "custom",
     label: (
       <div
-        style={{ position: "relative", overflow: "hidden" }}
+        style={{
+          position: "relative",
+          overflow: "hidden",
+        }}
         onClick={(e) => {
           e.stopPropagation();
-          setPanelVisible(true);
+          setRangeVisible(true);
         }}
       >
-        <div>Customize</div>
         <div
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          Custom range
+        </div>
+        <div
+          style={{
+            position: "relative",
+            overflow: "hidden",
+          }}
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
           <DatePicker.RangePicker
-            open={panelVisible}
+            open={rangeVisible}
             style={{
+              overflow: "hidden",
               pointerEvents: "none",
               opacity: 0,
               position: "absolute",
@@ -137,7 +158,7 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
                 const from = getUtcDay(dates[0], "start");
                 const to = getUtcDay(dates[1], "end");
                 applyRange(from, to);
-                setPanelVisible(false);
+                closeDropdown();
               }
             }}
           />
@@ -149,25 +170,25 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
   return (
     <Dropdown
       arrow
-      open={visible}
+      open={dropdownVisible}
       trigger={["click"]}
       destroyOnHidden
       onOpenChange={(open) => {
-        setVisible(open);
-        if (!open) {
-          setPanelVisible(false);
-        }
+        if (open) setDropdownVisible(true);
+        else closeDropdown();
       }}
       menu={{
         onClick: (e) => handlePresetRange(e.key),
         items: [
-          ...Object.entries(RANGE_MAP).map(([key, label]) => ({ key, label })),
+          ...Object.entries(RANGE_MAP)
+            .filter(([key]) => key !== "custom")
+            .map(([key, label]) => ({ key, label })),
           customDateMenuItem,
         ],
       }}
     >
       <Button>
-        {currentRange === null ? "Select time range" : currentRange}{" "}
+        {rangeLabel || "Select time range"}
         <DownOutlined />
       </Button>
     </Dropdown>
