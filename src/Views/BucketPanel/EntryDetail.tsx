@@ -60,6 +60,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [records, setRecords] = useState<ReadableRecord[]>([]);
   const [start, setStart] = useState<bigint | undefined>(undefined);
   const [end, setEnd] = useState<bigint | undefined>(undefined);
+  const [isCustomRange, setIsCustomRange] = useState(false);
 
   const [showUnix, setShowUnix] = useState(false);
   const [startText, setStartText] = useState<string>("");
@@ -211,12 +212,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     setter: (v: bigint | undefined) => void,
     errSetter: (v: boolean) => void,
   ) => {
+    setIsCustomRange(true);
+
     if (!value) {
       setter(undefined);
       errSetter(false);
       return;
     }
-
     if (showUnix) {
       try {
         const v = BigInt(value);
@@ -452,7 +454,9 @@ export default function EntryDetail(props: Readonly<Props>) {
                 setStopText(formatValue(end, showUnix));
                 setStartError(false);
                 setStopError(false);
+                setIsCustomRange(false);
               }}
+              isCustomRange={isCustomRange}
             />
           </div>
 

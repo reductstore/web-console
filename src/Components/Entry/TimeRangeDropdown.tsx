@@ -10,6 +10,7 @@ dayjs.extend(isoWeek);
 
 interface Props {
   onSelectRange: (start: bigint, end: bigint) => void;
+  isCustomRange?: boolean;
 }
 
 const RANGE_MAP: Record<string, string> = {
@@ -27,7 +28,10 @@ const RANGE_MAP: Record<string, string> = {
   custom: "Custom range",
 };
 
-export default function TimeRangeDropdown({ onSelectRange }: Props) {
+export default function TimeRangeDropdown({
+  onSelectRange,
+  isCustomRange,
+}: Props) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [rangeVisible, setRangeVisible] = useState(false);
   const [currentRangeKey, setCurrentRangeKey] = useState<string | null>(null);
@@ -37,6 +41,13 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
     if (dropdownVisible || rangeVisible || !currentRangeKey) return;
     setRangeLabel(RANGE_MAP[currentRangeKey]);
   }, [dropdownVisible, rangeVisible, currentRangeKey]);
+
+  useEffect(() => {
+    if (isCustomRange) {
+      setCurrentRangeKey("custom");
+      setRangeLabel("Custom range");
+    }
+  }, [isCustomRange]);
 
   const closeDropdown = () => {
     // Hide range first and dropdown on next tick
@@ -158,6 +169,7 @@ export default function TimeRangeDropdown({ onSelectRange }: Props) {
                 const from = getUtcDay(dates[0], "start");
                 const to = getUtcDay(dates[1], "end");
                 applyRange(from, to);
+                setCurrentRangeKey("custom");
                 closeDropdown();
               }
             }}
