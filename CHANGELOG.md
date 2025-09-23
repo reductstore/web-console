@@ -11,10 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for generating shareable links with configurable expiry time and filename, [PR-129](https://github.com/reductstore/web-console/pull/129)
 
-### Fixed
-
-- Correct share link URL with extra characters at the end, [PR-117](https://github.com/reductstore/reduct-js/pull/117)
-
 ## [1.11.2] - 2025-08-09
 
 ### Fixed
