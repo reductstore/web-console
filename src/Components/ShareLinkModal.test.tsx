@@ -148,4 +148,57 @@ describe("ShareLinkModal", () => {
       exact: false,
     });
   });
+
+  it("should copy the link to clipboard when copy button is clicked", async () => {
+    mockOnGenerate.mockResolvedValue("http://test-link");
+    const mockClipboard = {
+      writeText: jest.fn().mockResolvedValue(undefined),
+    };
+    Object.assign(navigator, { clipboard: mockClipboard });
+
+    const { getByText, getByTestId } = render(
+      <ShareLinkModal
+        open={true}
+        entryName="test-entry"
+        onGenerate={mockOnGenerate}
+        onCancel={mockOnCancel}
+        record={record}
+      />,
+    );
+
+    fireEvent.click(getByText("Generate Link"));
+
+    await waitFor(() => {
+      expect(getByTestId("generated-link")).toHaveValue("http://test-link");
+    });
+
+    fireEvent.click(getByTestId("copy-button"));
+
+    await waitFor(() => {
+      expect(mockClipboard.writeText).toHaveBeenCalledWith("http://test-link");
+    });
+  });
+
+  it("should render an open button with correct href after generating link", async () => {
+    mockOnGenerate.mockResolvedValue("http://test-link");
+
+    const { getByText, getByRole } = render(
+      <ShareLinkModal
+        open={true}
+        entryName="test-entry"
+        onGenerate={mockOnGenerate}
+        onCancel={mockOnCancel}
+        record={record}
+      />,
+    );
+
+    fireEvent.click(getByText("Generate Link"));
+
+    await waitFor(() => {
+      const openButton = getByRole("link", { name: /Open/i });
+      expect(openButton).toHaveAttribute("href", "http://test-link");
+      expect(openButton).toHaveAttribute("target", "_blank");
+      expect(openButton).toHaveAttribute("rel", "noopener noreferrer");
+    });
+  });
 });
