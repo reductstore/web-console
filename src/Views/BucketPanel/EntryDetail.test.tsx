@@ -9,6 +9,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   DeleteOutlined,
+  ShareAltOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
 import streamSaver from "streamsaver";
@@ -337,6 +338,67 @@ describe("EntryDetail", () => {
         { size: 1048576 },
       );
       expect(pipeToMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("Link Generation", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should show share icon for each record", () => {
+      const shareIcons = wrapper.find(ShareAltOutlined);
+      expect(shareIcons.length).toBeGreaterThanOrEqual(mockRecords.length);
+    });
+
+    it("should generate and copy share link when confirmed", async () => {
+      const mockLink = "http://localhost/share-link";
+      (bucket as any).createQueryLink = jest.fn().mockResolvedValue(mockLink);
+
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        configurable: true,
+      });
+
+      // Click share icon, open modal
+      const shareIcon = wrapper.find(ShareAltOutlined).at(0);
+      await act(async () => {
+        shareIcon.simulate("click");
+        jest.runAllTimers();
+      });
+      wrapper.update();
+
+      // Click "Generate Link"
+      const generateButton = wrapper
+        .find("button")
+        .filterWhere((btn) => btn.text().includes("Generate"))
+        .at(0);
+      await act(async () => {
+        generateButton.simulate("click");
+        jest.runAllTimers();
+      });
+      wrapper.update();
+
+      expect(bucket.createQueryLink).toHaveBeenCalled();
+      const input = wrapper.find('input[data-testid="generated-link"]');
+      expect(input.prop("value")).toBe(mockLink);
+
+      // Click "Copy"
+      const copyButton = wrapper
+        .find('button[data-testid="copy-button"]')
+        .at(0);
+      await act(async () => {
+        copyButton.simulate("click");
+      });
+      wrapper.update();
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockLink);
+      expect(message.success).toHaveBeenCalledWith("Link copied to clipboard");
     });
   });
 
