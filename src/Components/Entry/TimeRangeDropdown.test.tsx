@@ -2,6 +2,7 @@ import { mount } from "enzyme";
 import TimeRangeDropdown from "./TimeRangeDropdown";
 import { Button } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
+import dayjs from "dayjs";
 
 describe("TimeRangeDropdown", () => {
   beforeEach(() => mockJSDOM());
@@ -178,8 +179,10 @@ describe("TimeRangeDropdown", () => {
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
     expect(typeof end).toBe("bigint");
-    // Should be equal to 31 days in microseconds (minus 1 millisecond until 23:59:59,999)
-    expect(end - start).toEqual(31n * 24n * 60n * 60n * 1_000_000n - 1_000n);
+    const daysInMonth = dayjs().daysInMonth();
+    expect(end - start).toEqual(
+      BigInt(daysInMonth) * 24n * 60n * 60n * 1_000_000n - 1_000n,
+    );
   });
 
   it("triggers onSelectRange for 'Last month'", () => {
