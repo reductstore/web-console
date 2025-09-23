@@ -21,6 +21,7 @@ import {
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   DownloadOutlined,
+  ShareAltOutlined,
   EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
@@ -39,6 +40,7 @@ import dayjs from "dayjs";
 import prettierBytes from "prettier-bytes";
 import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
 import ScrollableTable from "../../Components/ScrollableTable";
+import ShareLinkModal from "../../Components/ShareLinkModal";
 
 // Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
@@ -81,6 +83,9 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  const [isShareModalVisible, setIsShareModalVisible] = useState(false);
+  const [recordToShare, setRecordToShare] = useState<any>(null);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -128,7 +133,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       if (size < 1024 * 1024) {
         // Small file: use Blob and anchor
         const data = await readableRecord.read();
-        const blob = new Blob([data], { type: record.contentType });
+        const blob = new Blob([data as BlobPart], { type: record.contentType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -146,6 +151,27 @@ export default function EntryDetail(props: Readonly<Props>) {
     } finally {
       setDownloadingKey(null);
     }
+  };
+
+  const handleShareClick = (record: any) => {
+    setRecordToShare(record);
+    setIsShareModalVisible(true);
+  };
+
+  const generateShareLink = async (
+    expireAt: Date,
+    fileName: string,
+  ): Promise<string> => {
+    const bucket = await props.client.getBucket(bucketName);
+    return bucket.createQueryLink(
+      entryName,
+      BigInt(recordToShare.key),
+      undefined,
+      undefined,
+      0,
+      expireAt,
+      fileName,
+    );
   };
 
   const handleDeleteClick = (record: any) => {
@@ -322,6 +348,11 @@ export default function EntryDetail(props: Readonly<Props>) {
               title="Download record"
             />
           )}
+          <ShareAltOutlined
+            onClick={() => handleShareClick(record)}
+            style={{ cursor: "pointer" }}
+            title="Share record"
+          />
           {hasWritePermission && (
             <EditOutlined
               onClick={() => handleEditLabels(record)}
@@ -505,7 +536,9 @@ export default function EntryDetail(props: Readonly<Props>) {
               setWhenCondition(formatJSON(value));
             }}
           />
-          {whenError && <Alert type="error" message={whenError} />}
+          {whenError && (
+            <Alert type="error" message={whenError} style={{ marginTop: 8 }} />
+          )}
           <Typography.Text type="secondary" className="jsonExample">
             Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
             Use <code>&label</code> for standard labels and <code>@label</code>{" "}
@@ -545,6 +578,15 @@ export default function EntryDetail(props: Readonly<Props>) {
         record={currentRecord}
         showUnix={showUnix}
         onLabelsUpdated={handleLabelsUpdated}
+      />
+
+      {/* Modal for sharing links */}
+      <ShareLinkModal
+        open={isShareModalVisible}
+        entryName={entryName}
+        record={recordToShare}
+        onGenerate={generateShareLink}
+        onCancel={() => setIsShareModalVisible(false)}
       />
     </div>
   );
