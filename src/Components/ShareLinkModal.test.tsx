@@ -1,7 +1,7 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react";
+import dayjs from "dayjs";
 import ShareLinkModal from "./ShareLinkModal";
-import RenameModal from "./RenameModal";
 
 describe("ShareLinkModal", () => {
   const mockOnGenerate = jest.fn();
@@ -111,5 +111,41 @@ describe("ShareLinkModal", () => {
     const alert = getByTestId("error-alert");
     expect(alert).toBeInTheDocument();
     expect(alert).toHaveTextContent("Something went wrong");
+  });
+
+  it("should highlight the default preset (24h)", () => {
+    const { getByTestId } = render(
+      <ShareLinkModal
+        open={true}
+        entryName="test-entry"
+        onGenerate={mockOnGenerate}
+        onCancel={mockOnCancel}
+        record={record}
+      />,
+    );
+
+    const btn24h = getByTestId("preset-24h");
+    expect(btn24h).toHaveAttribute("type", "button");
+    expect(btn24h).toHaveClass("ant-btn-primary", { exact: false });
+  });
+
+  it("should switch active preset when clicking another button", () => {
+    const { getByTestId } = render(
+      <ShareLinkModal
+        open={true}
+        entryName="test-entry"
+        onGenerate={mockOnGenerate}
+        onCancel={mockOnCancel}
+        record={record}
+      />,
+    );
+
+    const btn6h = getByTestId("preset-6h");
+    fireEvent.click(btn6h);
+
+    expect(btn6h).toHaveClass("ant-btn-primary", { exact: false });
+    expect(getByTestId("preset-24h")).not.toHaveClass("ant-btn-primary", {
+      exact: false,
+    });
   });
 });

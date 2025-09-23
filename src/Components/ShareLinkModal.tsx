@@ -24,6 +24,19 @@ interface ShareLinkModalProps {
   errorMessage?: string | null;
 }
 
+const PRESETS: {
+  key: string;
+  label: string;
+  add: dayjs.ManipulateType;
+  amount: number;
+}[] = [
+  { key: "1h", label: "1 Hour", add: "hour", amount: 1 },
+  { key: "6h", label: "6 Hours", add: "hour", amount: 6 },
+  { key: "24h", label: "24 Hours", add: "hour", amount: 24 },
+  { key: "7d", label: "7 Days", add: "day", amount: 7 },
+  { key: "30d", label: "30 Days", add: "day", amount: 30 },
+];
+
 export default function ShareLinkModal({
   open,
   entryName,
@@ -37,16 +50,20 @@ export default function ShareLinkModal({
   const [expireAt, setExpireAt] = useState<Dayjs | null>(
     dayjs().add(24, "hour"),
   );
+  const [activePreset, setActivePreset] = useState<string | null>("24h");
 
   const ext = getExtensionFromContentType(record.contentType || "");
-  const [fileName, setFileName] = useState(`${entryName}-${record.key}${ext}`);
+  const defaultFileName = `${entryName}-${record.key}${ext}`;
+
+  const [fileName, setFileName] = useState(defaultFileName);
   const [link, setLink] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const handleCancel = () => {
     setLink("");
-    setFileName(`${entryName}-${record.key}${record.ext}`);
+    setFileName(defaultFileName);
     setExpireAt(dayjs().add(24, "hour"));
+    setActivePreset("24h");
     onCancel();
   };
 
@@ -73,6 +90,19 @@ export default function ShareLinkModal({
     } catch {
       message.error("Failed to copy link");
     }
+  };
+
+  const handlePresetClick = (preset: string) => {
+    const config = PRESETS.find((p) => p.key === preset);
+    if (!config) return;
+    const newDate = dayjs().add(config.amount, config.add);
+    setExpireAt(newDate);
+    setActivePreset(preset);
+  };
+
+  const handleDateChange = (val: Dayjs | null) => {
+    setExpireAt(val);
+    setActivePreset(null);
   };
 
   return (
@@ -116,12 +146,26 @@ export default function ShareLinkModal({
         {!link ? (
           <Form layout="vertical">
             <Form.Item label="Expiry time">
-              <DatePicker
-                showTime
-                value={expireAt}
-                onChange={(val) => setExpireAt(val)}
-                data-testid="expiry-input"
-              />
+              <Space direction="vertical" size="small">
+                <Flex gap="small" wrap>
+                  {PRESETS.map((preset) => (
+                    <Button
+                      key={preset.key}
+                      data-testid={`preset-${preset.key}`}
+                      type={activePreset === preset.key ? "primary" : "default"}
+                      onClick={() => handlePresetClick(preset.key)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </Flex>
+                <DatePicker
+                  showTime
+                  value={expireAt}
+                  onChange={handleDateChange}
+                  data-testid="expiry-input"
+                />
+              </Space>
             </Form.Item>
             <Form.Item label="File name">
               <Input
