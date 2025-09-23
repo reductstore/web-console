@@ -1,6 +1,5 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react";
-import dayjs from "dayjs";
 import ShareLinkModal from "./ShareLinkModal";
 
 describe("ShareLinkModal", () => {
