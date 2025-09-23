@@ -198,7 +198,7 @@ export default function ShareLinkModal({
             </Space>
             {expireAt && (
               <Typography.Text type="secondary">
-                Expires at: {expireAt.toISOString()}
+                Expires at: {expireAt.format("YYYY-MM-DD HH:mm:ss")}
               </Typography.Text>
             )}
           </Space>
