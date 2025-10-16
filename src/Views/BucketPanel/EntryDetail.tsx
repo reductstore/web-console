@@ -186,7 +186,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         i++;
 
         // refresh table and chart every 10 records
-        if (i % 10 === 0) {
+        if (i % 20 === 0) {
           setRecords((prev) => [...prev, ...batch]);
           batch = [];
         }
