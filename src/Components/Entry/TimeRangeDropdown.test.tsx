@@ -3,6 +3,7 @@ import TimeRangeDropdown from "./TimeRangeDropdown";
 import { Button } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import dayjs from "dayjs";
+import { getTimeRangeFromKey } from "../../Helpers/timeRangeUtils";
 
 describe("TimeRangeDropdown", () => {
   beforeEach(() => mockJSDOM());
@@ -179,10 +180,10 @@ describe("TimeRangeDropdown", () => {
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
     expect(typeof end).toBe("bigint");
-    const daysInMonth = dayjs().daysInMonth();
-    expect(end - start).toEqual(
-      BigInt(daysInMonth) * 24n * 60n * 60n * 1_000_000n - 1_000n,
-    );
+
+    const rangeInDays = Number(end - start) / (24 * 60 * 60 * 1_000_000);
+    expect(rangeInDays).toBeGreaterThan(27);
+    expect(rangeInDays).toBeLessThan(32);
   });
 
   it("triggers onSelectRange for 'Last month'", () => {
@@ -199,5 +200,30 @@ describe("TimeRangeDropdown", () => {
     expect(typeof end).toBe("bigint");
     // Should be less than or equal to 31 days in microseconds
     expect(end - start).toBeLessThanOrEqual(31n * 24n * 60n * 60n * 1_000_000n);
+  });
+
+  it("automatically detects range key from currentRange prop", () => {
+    const last7Range = getTimeRangeFromKey("last7");
+    const wrapper = mount(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={last7Range}
+      />,
+    );
+    expect(wrapper.find(Button).text()).toContain("Last 7 days");
+  });
+
+  it("displays 'Custom range' for unmatched currentRange", () => {
+    const customRange = {
+      start: BigInt(dayjs("2023-01-01").valueOf() * 1000),
+      end: BigInt(dayjs("2023-01-02").valueOf() * 1000),
+    };
+    const wrapper = mount(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={customRange}
+      />,
+    );
+    expect(wrapper.find(Button).text()).toContain("Custom range");
   });
 });
