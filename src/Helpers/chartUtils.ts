@@ -96,15 +96,15 @@ export function pickBucketSizeMs(
  *
  * @param rangeMs - Time range in milliseconds
  * @param targetRecords - Target number of records to return (default: 1000)
- * @param minIntervalMs - Minimum interval in milliseconds (default: 5000ms = 5s)
+ * @param minIntervalMs - Minimum interval in milliseconds (default: 500ms)
  * @param maxIntervalMs - Maximum interval in milliseconds (default: 7 days)
  * @returns Human-readable time interval string (e.g., "10s", "5m", "1h", "1d") or null for small intervals
  */
 export function pickEachTInterval(
   rangeMs: number,
   targetRecords = 1000,
-  minIntervalMs = 5000,
-  maxIntervalMs = 7 * 24 * 60 * 60 * 1000,
+  minIntervalMs = 500,
+  maxIntervalMs = 7 * 24 * 60 * 60 * 1000, // 7 days
 ): string | null {
   if (!isFinite(rangeMs) || rangeMs <= 0) {
     return null;
@@ -119,6 +119,9 @@ export function pickEachTInterval(
   intervalMs = Math.min(maxIntervalMs, intervalMs);
 
   const niceIntervals = [
+    { ms: 500, str: "500ms" }, // 500 milliseconds
+    { ms: 1000, str: "1s" }, // 1 second
+    { ms: 2000, str: "2s" }, // 2 seconds
     { ms: 5000, str: "5s" }, // 5 seconds
     { ms: 10000, str: "10s" }, // 10 seconds
     { ms: 15000, str: "15s" }, // 15 seconds

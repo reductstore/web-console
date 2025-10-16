@@ -606,11 +606,9 @@ describe("EntryDetail", () => {
     it("should update $each_t when time range changes and condition only contains $each_t", async () => {
       const timeRangeComponents = wrapper.find("TimeRangeDropdown");
       if (timeRangeComponents.exists()) {
-        // Simulate selecting a smaller time range
         await act(async () => {
           const props = timeRangeComponents.at(0).props() as any;
           if (props.onSelectRange) {
-            // Simulate 1 hour range instead of 7 days
             const oneHour = BigInt(60 * 60 * 1000 * 1000);
             const now = BigInt(Date.now() * 1000);
             props.onSelectRange(now - oneHour, now);
@@ -619,12 +617,11 @@ describe("EntryDetail", () => {
 
         wrapper.update();
 
-        // Check if the condition was updated
         const updatedCodeMirror = wrapper.find(".react-codemirror2");
         const updatedTextArea = updatedCodeMirror.find("textarea");
         const updatedConditionValue = updatedTextArea.prop("value") as string;
 
-        expect(updatedConditionValue.trim()).toBe("{}");
+        expect(updatedConditionValue.trim()).toBe('{\n  "$each_t": "5s"\n}');
       }
     });
 

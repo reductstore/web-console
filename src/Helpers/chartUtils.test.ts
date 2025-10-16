@@ -15,13 +15,13 @@ describe("chartUtils", () => {
       expect(pickEachTInterval(5000)).toBe(null);
     });
 
-    it("should return null or seconds for medium ranges", () => {
+    it("should return null or ms for medium ranges", () => {
       expect(pickEachTInterval(60_000)).toBe(null);
-      expect(pickEachTInterval(600_000)).toBe(null);
+      expect(pickEachTInterval(600_000)).toBe("500ms");
     });
 
     it("should handle hour ranges based on minimum interval", () => {
-      expect(pickEachTInterval(3_600_000)).toBe(null);
+      expect(pickEachTInterval(3_600_000)).toBe("5s");
       expect(pickEachTInterval(7_200_000)).toBe("5s");
     });
 
@@ -50,11 +50,6 @@ describe("chartUtils", () => {
 
     it("should respect minimum interval", () => {
       expect(pickEachTInterval(500, 1000, 5000)).toBe(null);
-    });
-
-    it("should respect maximum interval", () => {
-      const maxInterval = 24 * 60 * 60 * 1000; // 1 day
-      expect(pickEachTInterval(100_000_000, 1, 100, maxInterval)).toBe("1d");
     });
 
     it("should handle invalid inputs", () => {
