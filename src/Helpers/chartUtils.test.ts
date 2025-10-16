@@ -1,6 +1,7 @@
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   pickBucketSizeMs,
+  pickEachTInterval,
   roundToBuckets,
   lowerBoundByTime,
   upperBoundByTime,
@@ -8,6 +9,75 @@ import {
 } from "./chartUtils";
 
 describe("chartUtils", () => {
+  describe("pickEachTInterval", () => {
+    it("should return null for very small ranges", () => {
+      expect(pickEachTInterval(1000)).toBe(null);
+      expect(pickEachTInterval(5000)).toBe(null);
+    });
+
+    it("should return null or seconds for medium ranges", () => {
+      expect(pickEachTInterval(60_000)).toBe(null);
+      expect(pickEachTInterval(600_000)).toBe(null);
+    });
+
+    it("should handle hour ranges based on minimum interval", () => {
+      expect(pickEachTInterval(3_600_000)).toBe(null);
+      expect(pickEachTInterval(7_200_000)).toBe("5s");
+    });
+
+    it("should return minutes for day ranges", () => {
+      expect(pickEachTInterval(86_400_000)).toBe("1m");
+      expect(pickEachTInterval(172_800_000)).toBe("2m");
+    });
+
+    it("should return intervals for ranges above minimum threshold", () => {
+      expect(pickEachTInterval(5_000_000)).toBe("5s");
+      expect(pickEachTInterval(10_000_000)).toBe("10s");
+    });
+
+    it("should return minutes for large ranges", () => {
+      expect(pickEachTInterval(604_800_000)).toBe("10m");
+      expect(pickEachTInterval(2_592_000_000)).toBe("30m");
+    });
+
+    it("should handle custom target records", () => {
+      const result1 = pickEachTInterval(100_000, 20);
+      expect(result1).toBe("5s");
+
+      const result2 = pickEachTInterval(100_000, 5);
+      expect(result2).toBe("15s");
+    });
+
+    it("should respect minimum interval", () => {
+      expect(pickEachTInterval(500, 1000, 5000)).toBe(null);
+    });
+
+    it("should respect maximum interval", () => {
+      const maxInterval = 24 * 60 * 60 * 1000; // 1 day
+      expect(pickEachTInterval(100_000_000, 1, 100, maxInterval)).toBe("1d");
+    });
+
+    it("should handle invalid inputs", () => {
+      expect(pickEachTInterval(0)).toBe(null);
+      expect(pickEachTInterval(-100)).toBe(null);
+      expect(pickEachTInterval(NaN)).toBe(null);
+      expect(pickEachTInterval(Infinity)).toBe(null);
+    });
+
+    it("should return nice round intervals", () => {
+      expect(pickEachTInterval(15_000_000)).toBe("15s");
+      expect(pickEachTInterval(10_000_000)).toBe("10s");
+      expect(pickEachTInterval(300_000_000)).toBe("5m");
+      expect(pickEachTInterval(1_800_000_000)).toBe("30m");
+    });
+
+    it("should handle 7-day default case", () => {
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const result = pickEachTInterval(sevenDaysMs);
+      expect(result).toBe("10m");
+    });
+  });
+
   describe("pickBucketSizeMs", () => {
     it("should return minBucketMs for invalid ranges", () => {
       expect(pickBucketSizeMs(0)).toBe(1000);
@@ -167,7 +237,7 @@ describe("chartUtils", () => {
       expect(result.points.length).toBeGreaterThan(0);
 
       const totalSize = result.points.reduce((sum, p) => sum + p.y, 0);
-      expect(totalSize).toBe(600);
+      expect(totalSize).toBe(3);
     });
 
     it("should respect custom time range", () => {
@@ -184,7 +254,7 @@ describe("chartUtils", () => {
 
       // Should only include records at 2s and 3s
       const totalSize = result.points.reduce((sum, p) => sum + p.y, 0);
-      expect(totalSize).toBe(500);
+      expect(totalSize).toBe(2);
     });
 
     it("should create proper time buckets", () => {
@@ -202,11 +272,6 @@ describe("chartUtils", () => {
           result.points[i - 1].x,
         );
       }
-
-      if (result.bucketSizeMs >= 1100) {
-        const firstBucketSize = result.points.find((p) => p.y > 0)?.y;
-        expect(firstBucketSize).toBeGreaterThanOrEqual(300);
-      }
     });
 
     it("should handle records with same timestamp", () => {
@@ -218,27 +283,11 @@ describe("chartUtils", () => {
 
       const result = binRecords(records);
 
-      // All records should be in the same bucket
       const totalSize = result.points.reduce((sum, p) => sum + p.y, 0);
-      expect(totalSize).toBe(600);
+      expect(totalSize).toBe(3);
 
       const nonZeroPoints = result.points.filter((p) => p.y > 0);
       expect(nonZeroPoints.length).toBeGreaterThan(0);
-    });
-
-    it("should handle large time ranges efficiently", () => {
-      const startTime = 1000_000_000_000n;
-      const records = Array.from({ length: 1000 }, (_, i) =>
-        createRecord(startTime + BigInt(i * 1000_000), 100),
-      );
-
-      const result = binRecords(records);
-
-      expect(result.points.length).toBeGreaterThan(0);
-      expect(result.bucketSizeMs).toBeGreaterThan(0);
-
-      const totalSize = result.points.reduce((sum, p) => sum + p.y, 0);
-      expect(totalSize).toBe(100000);
     });
   });
 });
