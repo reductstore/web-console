@@ -23,11 +23,7 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import "chartjs-adapter-dayjs-4";
 import dayjs from "../../Helpers/dayjsConfig";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import {
-  binRecords,
-  roundToBuckets,
-  type Point,
-} from "../../Helpers/chartUtils";
+import { binRecords, type Point } from "../../Helpers/chartUtils";
 import { ReloadOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import "./DataVolumeChart.css";
@@ -124,15 +120,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       return !isLoading && points.filter((p) => p.y > 0).length > 1;
     }, [isLoading, points]);
 
-    const { min: roundedMinMs, max: roundedMaxMs } = useMemo(() => {
-      const left = startMs ?? (points.length ? points[0].x : undefined);
-      const right =
-        endMs ?? (points.length ? points[points.length - 1].x : undefined);
-      if (left == null || right == null)
-        return { min: undefined as any, max: undefined as any };
-      return roundToBuckets(left, right, bucketSizeMs);
-    }, [startMs, endMs, points, bucketSizeMs]);
-
     const chartOptions: ChartOptions<"line"> = useMemo(
       () => ({
         responsive: true,
@@ -147,8 +134,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
             type: "time",
             bounds: "ticks",
             grace: bucketSizeMs,
-            min: roundedMinMs,
-            max: roundedMaxMs,
             ticks: {
               maxRotation: 0,
               autoSkip: true,
@@ -231,8 +216,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         startMs,
         toUs,
         maxY,
-        roundedMinMs,
-        roundedMaxMs,
         isLoading,
         records,
         enableZoom,

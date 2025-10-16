@@ -3,19 +3,6 @@ import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 export type Point = { x: number; y: number };
 
 /**
- * Round time range to bucket boundaries
- * @param minMs - Minimum time in milliseconds
- * @param maxMs - Maximum time in milliseconds
- * @param sizeMs - Bucket size in milliseconds
- * @returns Object with rounded min and max values
- */
-export function roundToBuckets(minMs: number, maxMs: number, sizeMs: number) {
-  const min = Math.floor(minMs / sizeMs) * sizeMs - sizeMs / 100;
-  const max = Math.floor(maxMs / sizeMs) * sizeMs + sizeMs / 100;
-  return { min, max };
-}
-
-/**
  * Find the first index where record.time >= targetUs using binary search
  * @param records - Array of records sorted by time
  * @param targetUs - Target time in microseconds
@@ -58,14 +45,14 @@ export function upperBoundByTime(
 /**
  * Calculate optimal bucket size in milliseconds for time-based histograms
  * @param rangeMs - Total time range in milliseconds
- * @param targetBuckets - Target number of buckets (default: 100)
+ * @param targetBuckets - Target number of buckets (default: 20)
  * @param minBucketMs - Minimum bucket size in milliseconds (default: 1000)
  * @param maxBucketMs - Maximum bucket size in milliseconds (default: Number.MAX_SAFE_INTEGER)
  * @returns Optimal bucket size in milliseconds
  */
 export function pickBucketSizeMs(
   rangeMs: number,
-  targetBuckets = 100,
+  targetBuckets = 10,
   minBucketMs = 1000,
   maxBucketMs = Number.MAX_SAFE_INTEGER,
 ): number {
@@ -95,14 +82,14 @@ export function pickBucketSizeMs(
  * Returns null for very small intervals where aggregation is not beneficial.
  *
  * @param rangeMs - Time range in milliseconds
- * @param targetRecords - Target number of records to return (default: 1000)
+ * @param targetRecords - Target number of records to return (default: 200)
  * @param minIntervalMs - Minimum interval in milliseconds (default: 500ms)
  * @param maxIntervalMs - Maximum interval in milliseconds (default: 7 days)
  * @returns Human-readable time interval string (e.g., "10s", "5m", "1h", "1d") or null for small intervals
  */
 export function pickEachTInterval(
   rangeMs: number,
-  targetRecords = 1000,
+  targetRecords = 100,
   minIntervalMs = 500,
   maxIntervalMs = 7 * 24 * 60 * 60 * 1000, // 7 days
 ): string | null {

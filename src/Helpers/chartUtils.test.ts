@@ -2,7 +2,6 @@ import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   pickBucketSizeMs,
   pickEachTInterval,
-  roundToBuckets,
   lowerBoundByTime,
   upperBoundByTime,
   binRecords,
@@ -16,28 +15,28 @@ describe("chartUtils", () => {
     });
 
     it("should return null or ms for medium ranges", () => {
-      expect(pickEachTInterval(60_000)).toBe(null);
-      expect(pickEachTInterval(600_000)).toBe("500ms");
+      expect(pickEachTInterval(60_000)).toBe("500ms");
+      expect(pickEachTInterval(600_000)).toBe("5s");
     });
 
     it("should handle hour ranges based on minimum interval", () => {
-      expect(pickEachTInterval(3_600_000)).toBe("5s");
-      expect(pickEachTInterval(7_200_000)).toBe("5s");
+      expect(pickEachTInterval(3_600_000)).toBe("30s");
+      expect(pickEachTInterval(7_200_000)).toBe("1m");
     });
 
     it("should return minutes for day ranges", () => {
-      expect(pickEachTInterval(86_400_000)).toBe("1m");
-      expect(pickEachTInterval(172_800_000)).toBe("2m");
+      expect(pickEachTInterval(86_400_000)).toBe("15m");
+      expect(pickEachTInterval(172_800_000)).toBe("30m");
     });
 
     it("should return intervals for ranges above minimum threshold", () => {
-      expect(pickEachTInterval(5_000_000)).toBe("5s");
-      expect(pickEachTInterval(10_000_000)).toBe("10s");
+      expect(pickEachTInterval(5_000_000)).toBe("1m");
+      expect(pickEachTInterval(10_000_000)).toBe("2m");
     });
 
     it("should return minutes for large ranges", () => {
-      expect(pickEachTInterval(604_800_000)).toBe("10m");
-      expect(pickEachTInterval(2_592_000_000)).toBe("30m");
+      expect(pickEachTInterval(604_800_000)).toBe("2h");
+      expect(pickEachTInterval(2_592_000_000)).toBe("6h");
     });
 
     it("should handle custom target records", () => {
@@ -60,16 +59,15 @@ describe("chartUtils", () => {
     });
 
     it("should return nice round intervals", () => {
-      expect(pickEachTInterval(15_000_000)).toBe("15s");
-      expect(pickEachTInterval(10_000_000)).toBe("10s");
-      expect(pickEachTInterval(300_000_000)).toBe("5m");
-      expect(pickEachTInterval(1_800_000_000)).toBe("30m");
+      expect(pickEachTInterval(10_000_000)).toBe("2m");
+      expect(pickEachTInterval(300_000_000)).toBe("1h");
+      expect(pickEachTInterval(1_800_000_000)).toBe("6h");
     });
 
     it("should handle 7-day default case", () => {
       const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
       const result = pickEachTInterval(sevenDaysMs);
-      expect(result).toBe("10m");
+      expect(result).toBe("2h");
     });
   });
 
@@ -101,32 +99,6 @@ describe("chartUtils", () => {
       const result1 = pickBucketSizeMs(100_000, 50);
       const result2 = pickBucketSizeMs(100_000, 20);
       expect(result1).toBeLessThan(result2);
-    });
-  });
-
-  describe("roundToBuckets", () => {
-    it("should round min down and max up to bucket boundaries", () => {
-      const result = roundToBuckets(1234, 5678, 1000);
-      expect(result.min).toBe(990);
-      expect(result.max).toBe(5010);
-    });
-
-    it("should handle exact bucket boundaries", () => {
-      const result = roundToBuckets(2000, 5000, 1000);
-      expect(result.min).toBe(1990);
-      expect(result.max).toBe(5010);
-    });
-
-    it("should work with different bucket sizes", () => {
-      const result = roundToBuckets(1234, 5678, 500);
-      expect(result.min).toBe(995);
-      expect(result.max).toBe(5505);
-    });
-
-    it("should handle fractional inputs", () => {
-      const result = roundToBuckets(1234.56, 5678.9, 1000);
-      expect(result.min).toBe(990);
-      expect(result.max).toBe(5010);
     });
   });
 

@@ -222,30 +222,6 @@ describe("DataVolumeChart", () => {
   });
 
   describe("Time Range", () => {
-    it("should use provided startMs and endMs for chart bounds", () => {
-      const records = [
-        createMockRecord(1000000n, 1024n),
-        createMockRecord(2000000n, 2048n),
-      ];
-      const startMs = 1000;
-      const endMs = 2000;
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          startMs={startMs}
-          endMs={endMs}
-        />,
-      );
-
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
-
-      expect(options.scales.x.min).toBeDefined();
-      expect(options.scales.x.max).toBeDefined();
-    });
-
     it("should handle undefined startMs and endMs", () => {
       const records = [
         createMockRecord(1000000n, 1024n),
@@ -371,25 +347,6 @@ describe("DataVolumeChart", () => {
       expect(updatedData.datasets[0].data.length).not.toBe(
         initialData.datasets[0].data.length,
       );
-    });
-
-    it("should update chart options when time range changes", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart {...defaultProps} records={records} />,
-      );
-
-      wrapper.setProps({ startMs: 1000, endMs: 2000 });
-      wrapper.update();
-
-      const updatedChart = wrapper.find('[data-testid="chart"]');
-      const updatedOptions = JSON.parse(
-        updatedChart.prop("data-chart-options"),
-      );
-
-      expect(updatedOptions.scales.x.min).toBeDefined();
-      expect(updatedOptions.scales.x.max).toBeDefined();
     });
   });
 

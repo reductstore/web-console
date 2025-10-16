@@ -238,7 +238,7 @@ describe("EntryDetail", () => {
       );
 
       const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toBe('{\n  "$each_t": "10m"\n}\n');
+      expect(cmValue).toBe('{\n  "$each_t": "2h"\n}\n');
 
       const exampleText = wrapper.find(".jsonExample").first().text();
       expect(exampleText).toContain("Example:");
@@ -261,7 +261,7 @@ describe("EntryDetail", () => {
           head: true,
           strict: true,
           when: expect.objectContaining({
-            $each_t: "10m",
+            $each_t: "2h",
           }),
         }),
       );
@@ -621,7 +621,7 @@ describe("EntryDetail", () => {
         const updatedTextArea = updatedCodeMirror.find("textarea");
         const updatedConditionValue = updatedTextArea.prop("value") as string;
 
-        expect(updatedConditionValue.trim()).toBe('{\n  "$each_t": "5s"\n}');
+        expect(updatedConditionValue.trim()).toBe('{\n  "$each_t": "30s"\n}');
       }
     });
 
