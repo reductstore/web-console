@@ -238,13 +238,13 @@ describe("EntryDetail", () => {
       );
 
       const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toBe("{}\n");
+      expect(cmValue).toBe('{\n  "$each_t": "10m"\n}\n');
 
       const exampleText = wrapper.find(".jsonExample").first().text();
       expect(exampleText).toContain("Example:");
     });
 
-    it("should call bucket.query with empty when condition by default", async () => {
+    it("should call bucket.query with default $each_t when condition", async () => {
       const fetchButton = wrapper.find(".fetchButton button");
       expect(fetchButton.exists()).toBe(true);
 
@@ -260,7 +260,9 @@ describe("EntryDetail", () => {
         expect.objectContaining({
           head: true,
           strict: true,
-          when: {},
+          when: expect.objectContaining({
+            $each_t: "10m",
+          }),
         }),
       );
     });
@@ -577,6 +579,95 @@ describe("EntryDetail", () => {
 
       const chartData = JSON.parse(chart.prop("data-chart-data"));
       expect(chartData.datasets[0].data.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("When Condition", () => {
+    it("should initialize with default $each_t value based on time range", () => {
+      // Check the CodeMirror component value
+      const codeMirror = wrapper.find(".react-codemirror2");
+      expect(codeMirror.exists()).toBe(true);
+
+      const textArea = codeMirror.find("textarea");
+      expect(textArea.exists()).toBe(true);
+
+      const conditionValue = textArea.prop("value") as string;
+      expect(conditionValue).toBeDefined();
+      expect(typeof conditionValue).toBe("string");
+      expect(conditionValue).toContain("$each_t");
+      expect(() => JSON.parse(conditionValue)).not.toThrow();
+
+      const parsed = JSON.parse(conditionValue);
+      expect(parsed).toHaveProperty("$each_t");
+      expect(typeof parsed["$each_t"]).toBe("string");
+      expect(parsed["$each_t"]).toMatch(/^\d+(\.\d+)?(ms|s|m|h|d)$/);
+    });
+
+    it("should update $each_t when time range changes and condition only contains $each_t", async () => {
+      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
+      if (timeRangeComponents.exists()) {
+        // Simulate selecting a smaller time range
+        await act(async () => {
+          const props = timeRangeComponents.at(0).props() as any;
+          if (props.onSelectRange) {
+            // Simulate 1 hour range instead of 7 days
+            const oneHour = BigInt(60 * 60 * 1000 * 1000);
+            const now = BigInt(Date.now() * 1000);
+            props.onSelectRange(now - oneHour, now);
+          }
+        });
+
+        wrapper.update();
+
+        // Check if the condition was updated
+        const updatedCodeMirror = wrapper.find(".react-codemirror2");
+        const updatedTextArea = updatedCodeMirror.find("textarea");
+        const updatedConditionValue = updatedTextArea.prop("value") as string;
+
+        expect(updatedConditionValue.trim()).toBe("{}");
+      }
+    });
+
+    it("should not auto-update when condition contains other fields", () => {
+      // Set a custom condition with additional fields
+      const customCondition = {
+        $each_t: "1m",
+        "&label": { $eq: "test" },
+      };
+
+      const codeMirror = wrapper.find(".react-codemirror2");
+      const textArea = codeMirror.find("textarea");
+
+      act(() => {
+        const onChange = textArea.prop("onChange") as any;
+        if (onChange) {
+          onChange({
+            target: { value: JSON.stringify(customCondition, null, 2) },
+          });
+        }
+      });
+
+      // Try to trigger a time range change
+      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
+      if (timeRangeComponents.exists()) {
+        act(() => {
+          const props = timeRangeComponents.at(0).props() as any;
+          if (props.onChange) {
+            const oneHour = BigInt(60 * 60 * 1000 * 1000);
+            const now = BigInt(Date.now() * 1000);
+            props.onChange(now - oneHour, now, true);
+          }
+        });
+      }
+
+      wrapper.update();
+
+      // The condition should remain unchanged
+      const finalCodeMirror = wrapper.find(".react-codemirror2");
+      const finalTextArea = finalCodeMirror.find("textarea");
+      const finalCondition = JSON.parse(finalTextArea.prop("value") as string);
+
+      expect(finalCondition).toEqual(customCondition);
     });
   });
 

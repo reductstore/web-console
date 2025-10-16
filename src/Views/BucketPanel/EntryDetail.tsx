@@ -47,6 +47,7 @@ import {
   DEFAULT_RANGE_KEY,
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
+import { pickEachTInterval } from "../../Helpers/chartUtils";
 
 interface CustomPermissions {
   write?: string[];
@@ -93,6 +94,28 @@ export default function EntryDetail(props: Readonly<Props>) {
       startText: formatValue(start, showUnix),
       stopText: formatValue(end, showUnix),
     });
+
+    try {
+      const currentCondition = JSON.parse(whenCondition.trim() || "{}");
+      const keys = Object.keys(currentCondition);
+      if (keys.length === 0 || (keys.length === 1 && keys[0] === "$each_t")) {
+        const rangeMs =
+          start && end
+            ? Number((end - start) / 1000n)
+            : Number((defaultRange.end - defaultRange.start) / 1000n);
+        const eachTValue = pickEachTInterval(rangeMs);
+
+        if (eachTValue) {
+          const newCondition =
+            JSON.stringify({ $each_t: eachTValue }, null, 2) + "\n";
+          setWhenCondition(newCondition);
+        } else {
+          setWhenCondition("{}\n");
+        }
+      }
+    } catch {
+      // If current condition is not valid JSON, don't auto-update
+    }
   };
 
   const updateTimeRangeText = (
@@ -110,7 +133,17 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
-  const [whenCondition, setWhenCondition] = useState<string>("{}\n");
+  const [whenCondition, setWhenCondition] = useState<string>(() => {
+    const rangeMs = Number((defaultRange.end - defaultRange.start) / 1000n);
+    const eachTValue = pickEachTInterval(rangeMs);
+
+    if (eachTValue) {
+      return JSON.stringify({ $each_t: eachTValue }, null, 2) + "\n";
+    } else {
+      return "{}\n";
+    }
+  });
+
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
@@ -143,7 +176,6 @@ export default function EntryDetail(props: Readonly<Props>) {
       options.strict = true;
       if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
 
-      const BATCH_SIZE = 50;
       let batch: ReadableRecord[] = [];
       let i = 0;
 
@@ -153,10 +185,10 @@ export default function EntryDetail(props: Readonly<Props>) {
         batch.push(record);
         i++;
 
-        if (i % BATCH_SIZE === 0) {
+        // refresh table and chart every 50 records
+        if (i % 50 === 0) {
           setRecords((prev) => [...prev, ...batch]);
           batch = [];
-          await new Promise((r) => setTimeout(r, 0));
         }
       }
       if (batch.length) {
