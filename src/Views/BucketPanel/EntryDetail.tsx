@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -34,15 +34,20 @@ import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
 import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
-import dayjs from "dayjs";
 
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 import TimeRangeDropdown from "../../Components/Entry/TimeRangeDropdown";
 import ScrollableTable from "../../Components/ScrollableTable";
 import ShareLinkModal from "../../Components/ShareLinkModal";
+import DataVolumeChart from "../../Components/Entry/DataVolumeChart";
+import dayjs from "../../Helpers/dayjsConfig";
+import {
+  getDefaultTimeRange,
+  DEFAULT_RANGE_KEY,
+} from "../../Helpers/timeRangeUtils";
+import { formatValue } from "../../Helpers/timeFormatUtils";
 
-// Define CustomPermissions to match TokenPermissions
 interface CustomPermissions {
   write?: string[];
   fullAccess: boolean;
@@ -60,20 +65,52 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
   const history = useHistory();
   const [records, setRecords] = useState<ReadableRecord[]>([]);
-  const [start, setStart] = useState<bigint | undefined>(undefined);
-  const [end, setEnd] = useState<bigint | undefined>(undefined);
-  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [filteredRecords, setFilteredRecords] = useState<ReadableRecord[]>([]);
+
+  const defaultRange = useMemo(() => {
+    return getDefaultTimeRange();
+  }, []);
+
+  const [timeRange, setTimeRangeState] = useState(() => ({
+    start: defaultRange.start as bigint | undefined,
+    end: defaultRange.end as bigint | undefined,
+    isCustomRange: false,
+    startText: formatValue(defaultRange.start, false),
+    stopText: formatValue(defaultRange.end, false),
+  }));
 
   const [showUnix, setShowUnix] = useState(false);
-  const [startText, setStartText] = useState<string>("");
-  const [stopText, setStopText] = useState<string>("");
+
+  const setTimeRange = (
+    start: bigint | undefined,
+    end: bigint | undefined,
+    isCustomRange = false,
+  ) => {
+    setTimeRangeState({
+      start,
+      end,
+      isCustomRange,
+      startText: formatValue(start, showUnix),
+      stopText: formatValue(end, showUnix),
+    });
+  };
+
+  const updateTimeRangeText = (
+    field: "startText" | "stopText",
+    value: string,
+  ) => {
+    setTimeRangeState((prev) => ({
+      ...prev,
+      [field]: value,
+      isCustomRange: true,
+    }));
+  };
+
   const [startError, setStartError] = useState(false);
   const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
-  const [whenCondition, setWhenCondition] = useState<string>(
-    '{\n  "$limit": 10\n}\n',
-  );
+  const [whenCondition, setWhenCondition] = useState<string>("{}\n");
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
@@ -90,30 +127,54 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
+  let latestRequestId = 0;
   const getRecords = async (start?: bigint, end?: bigint) => {
+    const requestId = ++latestRequestId;
+
     setIsLoading(true);
-    setRecords([]);
     setWhenError("");
+    setRecords([]);
+
     try {
       const bucket = await props.client.getBucket(bucketName);
+
       const options = new QueryOptions();
       options.head = true;
       options.strict = true;
       if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
+
+      const BATCH_SIZE = 50;
+      let batch: ReadableRecord[] = [];
+      let i = 0;
+
       for await (const record of bucket.query(entryName, start, end, options)) {
-        setRecords((records) => [...records, record]);
+        if (requestId !== latestRequestId) return;
+
+        batch.push(record);
+        i++;
+
+        if (i % BATCH_SIZE === 0) {
+          setRecords((prev) => [...prev, ...batch]);
+          batch = [];
+          await new Promise((r) => setTimeout(r, 0));
+        }
+      }
+      if (batch.length) {
+        if (requestId !== latestRequestId) return;
+        setRecords((prev) => [...prev, ...batch]);
       }
     } catch (err) {
       if (err instanceof APIError && err.message) setWhenError(err.message);
       else if (err instanceof SyntaxError) setWhenError(err.message);
       else setWhenError("Failed to fetch records.");
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequestId) setIsLoading(false);
     }
   };
+
   const handleFetchRecordsClick = () => {
     if (!isLoading) {
-      getRecords(start, end);
+      getRecords(timeRange.start, timeRange.end);
     }
   };
 
@@ -188,7 +249,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       await bucket.removeRecord(entryName, BigInt(recordToDelete.key));
       message.success("Record deleted successfully");
       setIsDeleteModalVisible(false);
-      getRecords(start, end);
+      getRecords(timeRange.start, timeRange.end);
     } catch (err) {
       console.error(err);
       message.error("Failed to delete record");
@@ -209,7 +270,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       const bucket = await props.client.getBucket(bucketName);
       await bucket.update(entryName, timestamp, newLabels);
 
-      getRecords(start, end);
+      getRecords(timeRange.start, timeRange.end);
       message.success("Record labels updated successfully");
     } catch (err) {
       console.error("Failed to update labels:", err);
@@ -221,46 +282,76 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const formatValue = (val: bigint | undefined, unix: boolean): string => {
-    if (val === undefined) return "";
-    return unix ? val.toString() : new Date(Number(val / 1000n)).toISOString();
-  };
-
   const handleFormatChange = (value: string) => {
     const unix = value === "Unix";
     setShowUnix(unix);
-    setStartText(formatValue(start, unix));
-    setStopText(formatValue(end, unix));
+    setTimeRangeState((prev) => ({
+      ...prev,
+      startText: formatValue(prev.start, unix),
+      stopText: formatValue(prev.end, unix),
+    }));
   };
 
   const parseInput = (
     value: string,
-    setter: (v: bigint | undefined) => void,
+    field: "start" | "end",
     errSetter: (v: boolean) => void,
   ) => {
-    setIsCustomRange(true);
+    setTimeRangeState((prev) => ({ ...prev, isCustomRange: true }));
 
     if (!value) {
-      setter(undefined);
+      const newStart = field === "start" ? undefined : timeRange.start;
+      const newEnd = field === "end" ? undefined : timeRange.end;
+      setTimeRangeState((prev) => ({
+        ...prev,
+        start: newStart,
+        end: newEnd,
+      }));
       errSetter(false);
       return;
     }
+
     if (showUnix) {
       try {
         const v = BigInt(value);
-        setter(v);
+        const newStart = field === "start" ? v : timeRange.start;
+        const newEnd = field === "end" ? v : timeRange.end;
+        setTimeRangeState((prev) => ({
+          ...prev,
+          start: newStart,
+          end: newEnd,
+        }));
         errSetter(false);
       } catch {
-        setter(undefined);
+        const newStart = field === "start" ? undefined : timeRange.start;
+        const newEnd = field === "end" ? undefined : timeRange.end;
+        setTimeRangeState((prev) => ({
+          ...prev,
+          start: newStart,
+          end: newEnd,
+        }));
         errSetter(true);
       }
     } else {
       const d = dayjs(value);
       if (d.isValid()) {
-        setter(BigInt(d.valueOf() * 1000));
+        const v = BigInt(d.valueOf()) * 1000n;
+        const newStart = field === "start" ? v : timeRange.start;
+        const newEnd = field === "end" ? v : timeRange.end;
+        setTimeRangeState((prev) => ({
+          ...prev,
+          start: newStart,
+          end: newEnd,
+        }));
         errSetter(false);
       } else {
-        setter(undefined);
+        const newStart = field === "start" ? undefined : timeRange.start;
+        const newEnd = field === "end" ? undefined : timeRange.end;
+        setTimeRangeState((prev) => ({
+          ...prev,
+          start: newStart,
+          end: newEnd,
+        }));
         errSetter(true);
       }
     }
@@ -285,8 +376,19 @@ export default function EntryDetail(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
-    getRecords(start, end);
+    getRecords(timeRange.start, timeRange.end);
   }, [bucketName, entryName]);
+
+  useEffect(() => {
+    const filtered = records.filter((record) => {
+      if (timeRange.start !== undefined && record.time < timeRange.start)
+        return false;
+      if (timeRange.end !== undefined && record.time > timeRange.end)
+        return false;
+      return true;
+    });
+    setFilteredRecords(filtered);
+  }, [records, timeRange.start, timeRange.end]);
 
   const columns = [
     {
@@ -297,7 +399,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       render: (text: any, record: any) =>
         showUnix
           ? record.key
-          : new Date(Number(record.timestamp / 1000n)).toISOString(),
+          : dayjs(Number(record.timestamp / 1000n)).toISOString(),
     },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
@@ -372,7 +474,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     },
   ];
 
-  const data = records.map((record) => ({
+  const data = filteredRecords.map((record) => ({
     key: record.time.toString(),
     timestamp: record.time,
     size: prettierBytes(Number(record.size)),
@@ -424,7 +526,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           availableEntries={availableEntries}
           onUploadSuccess={() => {
             setIsUploadModalVisible(false);
-            getRecords(start, end);
+            getRecords(timeRange.start, timeRange.end);
           }}
         />
       </Modal>
@@ -479,15 +581,12 @@ export default function EntryDetail(props: Readonly<Props>) {
             </Select>
             <TimeRangeDropdown
               onSelectRange={(start, end) => {
-                setStart(start);
-                setEnd(end);
-                setStartText(formatValue(start, showUnix));
-                setStopText(formatValue(end, showUnix));
+                setTimeRange(start, end, false);
                 setStartError(false);
                 setStopError(false);
-                setIsCustomRange(false);
               }}
-              isCustomRange={isCustomRange}
+              initialRangeKey={DEFAULT_RANGE_KEY}
+              currentRange={{ start: timeRange.start, end: timeRange.end }}
             />
           </div>
 
@@ -495,20 +594,20 @@ export default function EntryDetail(props: Readonly<Props>) {
             <Input
               placeholder="Start time (optional)"
               addonBefore="Start"
-              value={startText}
+              value={timeRange.startText}
               onChange={(e) => {
-                setStartText(e.target.value);
-                parseInput(e.target.value, setStart, setStartError);
+                updateTimeRangeText("startText", e.target.value);
+                parseInput(e.target.value, "start", setStartError);
               }}
               status={startError ? "error" : undefined}
             />
             <Input
               placeholder="Stop time (optional)"
               addonBefore="Stop"
-              value={stopText}
+              value={timeRange.stopText}
               onChange={(e) => {
-                setStopText(e.target.value);
-                parseInput(e.target.value, setEnd, setStopError);
+                updateTimeRangeText("stopText", e.target.value);
+                parseInput(e.target.value, "end", setStopError);
               }}
               status={stopError ? "error" : undefined}
             />
@@ -565,6 +664,21 @@ export default function EntryDetail(props: Readonly<Props>) {
           </Button>
         </div>
       </div>
+      <DataVolumeChart
+        records={filteredRecords}
+        setTimeRange={setTimeRange}
+        startMs={
+          timeRange.start !== undefined
+            ? Number(timeRange.start / 1000n)
+            : undefined
+        }
+        endMs={
+          timeRange.end !== undefined
+            ? Number(timeRange.end / 1000n)
+            : undefined
+        }
+        isLoading={isLoading}
+      />
       <ScrollableTable
         scroll={{ x: "max-content" }}
         columns={columns as any[]}

@@ -36,16 +36,50 @@ jest.mock("react-codemirror2", () => ({
   },
 }));
 
+jest.mock("react-chartjs-2", () => ({
+  Line: ({ data, options, ...props }: any) => (
+    <div
+      data-testid="data-volume-chart"
+      data-chart-data={JSON.stringify(data)}
+      data-chart-options={JSON.stringify(options)}
+      {...props}
+    />
+  ),
+}));
+
+jest.mock("chart.js", () => ({
+  Chart: {
+    register: jest.fn(),
+  },
+  LineController: jest.fn(),
+  LineElement: jest.fn(),
+  PointElement: jest.fn(),
+  LinearScale: jest.fn(),
+  TimeScale: jest.fn(),
+  LogarithmicScale: jest.fn(),
+  Tooltip: jest.fn(),
+  Legend: jest.fn(),
+}));
+
+jest.mock("chartjs-plugin-zoom", () => ({}));
+jest.mock("chartjs-adapter-dayjs-4", () => ({}));
+
+jest.mock("prettier-bytes", () => {
+  return (bytes: number) => {
+    if (bytes === 1024) return "1.0 KB";
+    if (bytes === 2048) return "2.0 KB";
+    return `${bytes} bytes`;
+  };
+});
+
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
-// Mock the useParams hook for all tests
 const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
 
-// Mock the streamsaver library
 jest.mock("streamsaver", () => ({
   createWriteStream: jest.fn(),
 }));
@@ -88,6 +122,8 @@ describe("EntryDetail", () => {
     update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
+  const BASE_TIME = new Date("1970-01-08T00:00:00.000Z");
+
   const mockRecords = [
     {
       time: 1000n,
@@ -110,7 +146,13 @@ describe("EntryDetail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    jest.setSystemTime(BASE_TIME);
     mockJSDOM();
+
+    global.requestAnimationFrame = jest.fn((cb) => {
+      cb(0);
+      return 0;
+    });
 
     // No need to mock getTokenPermissions anymore as we pass permissions directly
 
@@ -184,7 +226,7 @@ describe("EntryDetail", () => {
       expect(limitInput.exists()).toBe(false);
     });
 
-    it("should show the CodeMirror editor with $limit in default JSON", () => {
+    it("should show the CodeMirror editor with empty JSON by default", () => {
       const codeMirror = wrapper.find(".react-codemirror2");
       expect(codeMirror.exists()).toBe(true);
       const cmInstance = wrapper.find("Controlled").prop("options");
@@ -196,13 +238,13 @@ describe("EntryDetail", () => {
       );
 
       const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toContain("$limit");
+      expect(cmValue).toBe("{}\n");
 
-      const exampleText = wrapper.find(".jsonEditor").at(0).text();
-      expect(exampleText).toContain("$limit");
+      const exampleText = wrapper.find(".jsonExample").first().text();
+      expect(exampleText).toContain("Example:");
     });
 
-    it("should call bucket.query with the correct when condition", async () => {
+    it("should call bucket.query with empty when condition by default", async () => {
       const fetchButton = wrapper.find(".fetchButton button");
       expect(fetchButton.exists()).toBe(true);
 
@@ -213,14 +255,12 @@ describe("EntryDetail", () => {
 
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
-        undefined,
-        undefined,
+        0n,
+        604800000000n,
         expect.objectContaining({
           head: true,
           strict: true,
-          when: expect.objectContaining({
-            $limit: 10,
-          }),
+          when: {},
         }),
       );
     });
@@ -504,6 +544,39 @@ describe("EntryDetail", () => {
         mockRecords[0].time,
         expect.any(Object),
       );
+    });
+  });
+
+  describe("Data Volume Chart", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should render the DataVolumeChart component", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+    });
+
+    it("should pass correct props to DataVolumeChart", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+
+      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      expect(chartData).toHaveProperty("datasets");
+      expect(chartData.datasets).toHaveLength(1);
+    });
+
+    it("should show chart data when records are available", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+
+      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      expect(chartData.datasets[0].data.length).toBeGreaterThan(0);
     });
   });
 
