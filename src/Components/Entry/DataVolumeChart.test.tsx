@@ -162,7 +162,7 @@ describe("DataVolumeChart", () => {
       expect(options.scales).toHaveProperty("x");
       expect(options.scales).toHaveProperty("y");
       expect(options.scales.x.type).toBe("time");
-      expect(options.scales.y.type).toBe("logarithmic");
+      expect(options.scales.y.type).toBe("linear");
       expect(options.plugins).toHaveProperty("zoom");
     });
 

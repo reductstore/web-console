@@ -22,8 +22,6 @@ import {
 import zoomPlugin from "chartjs-plugin-zoom";
 import "chartjs-adapter-dayjs-4";
 import dayjs from "../../Helpers/dayjsConfig";
-// @ts-ignore
-import prettierBytes from "prettier-bytes";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   binRecords,
@@ -122,9 +120,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       return m || lastMaxY.current || 1;
     }, [points, records]);
 
-    const nextLogY = (v: number) =>
-      Math.pow(10, Math.ceil(Math.log10(Math.max(v, 1))));
-
     const enableZoom = useMemo(() => {
       return !isLoading && points.filter((p) => p.y > 0).length > 1;
     }, [isLoading, points]);
@@ -170,12 +165,15 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
             },
           },
           y: {
-            min: 1,
+            beginAtZero: true,
             display: true,
-            type: "logarithmic",
-            suggestedMax: nextLogY(maxY),
+            type: "linear",
+            title: { display: true, text: "Number of Records" },
             ticks: {
-              callback: (v) => (typeof v === "number" ? prettierBytes(v) : ""),
+              callback: (v) => {
+                if (typeof v === "number" && !Number.isInteger(v)) return "";
+                return typeof v === "number" ? `${v}` : "";
+              },
             },
           },
         },
@@ -184,10 +182,8 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
           tooltip: {
             callbacks: {
               label: (ctx) => {
-                const volume = ctx.parsed.y as number | undefined;
-                return typeof volume !== "number"
-                  ? ""
-                  : ` ${prettierBytes(volume)}`;
+                const size = ctx.parsed.y as number | undefined;
+                return typeof size !== "number" ? "" : ` ${size}`;
               },
               title: (items) => {
                 if (!items.length) return "";
