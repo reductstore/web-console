@@ -1,0 +1,13 @@
+.recordsChart {
+  margin-bottom: var(--entry-detail-block-spacing);
+  position: relative;
+  height: 150px;
+  width: 100%;
+}
+
+.resetZoomBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
