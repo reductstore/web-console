@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bucket,
   BucketInfo,
@@ -11,12 +11,19 @@ import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Flex, Typography, Modal } from "antd";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { Button, Flex, Input, Typography, Modal, Divider } from "antd";
+import type { TablePaginationConfig } from "antd";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import ScrollableTable from "../../Components/ScrollableTable";
+import { usePaginationStore } from "../../stores/paginationStore";
+import "./BucketDetail.css";
 
 interface Props {
   client: Client;
@@ -37,6 +44,32 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const paginationStorageKey = `bucket-${name}-entries-pagination`;
+  const { setPageSize, getPageSize } = usePaginationStore();
+  const pageSize = getPageSize(paginationStorageKey);
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      setPageSize(paginationStorageKey, newPageSize);
+      setCurrentPage(1);
+    },
+    [paginationStorageKey, setPageSize],
+  );
+
+  const handleTableChange = useCallback(
+    (tablePagination: TablePaginationConfig) => {
+      if (tablePagination.current) {
+        setCurrentPage(tablePagination.current);
+      }
+      if (tablePagination.pageSize && tablePagination.pageSize !== pageSize) {
+        handlePageSizeChange(tablePagination.pageSize);
+      }
+    },
+    [handlePageSizeChange, pageSize],
+  );
 
   const getEntries = async () => {
     setIsLoading(true);
@@ -127,12 +160,18 @@ export default function BucketDetail(props: Readonly<Props>) {
   }, [name]);
 
   useEffect(() => {
-    getEntries().then();
-    const interval = setInterval(() => getEntries(), 5000);
-    return () => clearInterval(interval);
-  }, []);
+    setCurrentPage(1);
+  }, [searchTerm]);
 
-  const data = entries.map((entry) => {
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) =>
+        entry.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    [entries, searchTerm],
+  );
+
+  const data = filteredEntries.map((entry) => {
     const printIsoDate = (timestamp: bigint) =>
       entry.recordCount !== 0n
         ? new Date(Number(timestamp / 1000n)).toISOString()
@@ -192,7 +231,7 @@ export default function BucketDetail(props: Readonly<Props>) {
               />
               <DeleteOutlined
                 key={entry.name}
-                style={{ color: "red" }}
+                className="removeButton"
                 title="Remove entry"
                 onClick={() => handleOpenRemoveModal(entry.name)}
               />
@@ -205,7 +244,7 @@ export default function BucketDetail(props: Readonly<Props>) {
   ];
 
   return (
-    <div style={{ margin: "1.4em" }}>
+    <div className="bucketDetail">
       {info ? (
         <BucketCard
           bucketInfo={info}
@@ -220,15 +259,44 @@ export default function BucketDetail(props: Readonly<Props>) {
       ) : (
         <div />
       )}
-
-      <Typography.Title level={3}>Entries</Typography.Title>
+      <Divider />
+      <Flex justify="space-between" align="center" className="entriesHeader">
+        <Typography.Title level={3} className="entriesTitle">
+          Entries
+        </Typography.Title>
+        <Flex gap="small" align="center">
+          <Input
+            allowClear
+            placeholder="Search entries"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="searchInput"
+            aria-label="Search entries"
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => getEntries()}
+            loading={isLoading}
+          >
+            Refresh
+          </Button>
+        </Flex>
+      </Flex>
 
       <ScrollableTable
         scroll={{ x: "max-content" }}
-        style={{ margin: "0.6em" }}
+        className="entriesTable"
         columns={columns as any[]}
         dataSource={data}
         loading={isLoading}
+        rowKey="name"
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50", "100"],
+        }}
+        onChange={handleTableChange}
       />
 
       {/* Modals */}
