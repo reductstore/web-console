@@ -45,10 +45,8 @@ export default function TimeRangeDropdown({
   }, []);
 
   useEffect(() => {
-    if (currentRange?.start && currentRange?.end) {
-      const detectedKey = detectRangeKey(currentRange.start, currentRange.end);
-      setRangeLabel(RANGE_MAP[detectedKey]);
-    }
+    const detectedKey = detectRangeKey(currentRange?.start, currentRange?.end);
+    setRangeLabel(RANGE_MAP[detectedKey]);
   }, [currentRange]);
 
   const presets = useMemo(

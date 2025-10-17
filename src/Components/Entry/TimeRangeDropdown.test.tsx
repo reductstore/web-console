@@ -20,7 +20,7 @@ describe("TimeRangeDropdown", () => {
     const wrapper = mount(
       <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
     );
-    expect(wrapper.find(Button).text()).toContain("Select time range");
+    expect(wrapper.find(Button).text()).toContain("Custom range");
   });
 
   it("triggers onSelectRange for 'Last 1 hour'", () => {
