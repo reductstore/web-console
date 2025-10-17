@@ -98,7 +98,7 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
     }, [points, records]);
 
     const enableZoom = useMemo(
-      () => !isLoading && points.filter((p) => p.y > 0).length > 1,
+      () => !isLoading,
       [isLoading, points],
     );
 
@@ -114,29 +114,29 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         scales: {
           x: showUnix
             ? {
-                type: "linear",
-                bounds: "ticks",
-                ticks: {
-                  maxRotation: 0,
-                  autoSkip: true,
-                  callback: (v) => `${Math.trunc(v as number)}`,
-                },
-              }
-            : {
-                type: "time",
-                bounds: "ticks",
-                ticks: { maxRotation: 0, autoSkip: true },
-                time: {
-                  displayFormats: {
-                    millisecond: "HH:mm:ss.SSS",
-                    second: "HH:mm:ss",
-                    minute: "HH:mm",
-                    hour: "MMM D, HH:mm",
-                    day: "MMM D",
-                  },
-                  tooltipFormat: "YYYY-MM-DD HH:mm:ss",
-                },
+              type: "linear",
+              bounds: "ticks",
+              ticks: {
+                maxRotation: 0,
+                autoSkip: true,
+                callback: (v) => `${Math.trunc(v as number)}`,
               },
+            }
+            : {
+              type: "time",
+              bounds: "ticks",
+              ticks: { maxRotation: 0, autoSkip: true },
+              time: {
+                displayFormats: {
+                  millisecond: "HH:mm:ss.SSS",
+                  second: "HH:mm:ss",
+                  minute: "HH:mm",
+                  hour: "MMM D, HH:mm",
+                  day: "MMM D",
+                },
+                tooltipFormat: "YYYY-MM-DD HH:mm:ss",
+              },
+            },
           y: {
             beginAtZero: true,
             display: true,

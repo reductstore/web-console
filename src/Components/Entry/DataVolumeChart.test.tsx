@@ -202,23 +202,6 @@ describe("DataVolumeChart", () => {
 
       expect(options.plugins.zoom.zoom.drag.enabled).toBe(true);
     });
-
-    it("should disable zoom drag when there is only one data point", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          isLoading={false}
-        />,
-      );
-
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
-
-      expect(options.plugins.zoom.zoom.drag.enabled).toBe(false);
-    });
   });
 
   describe("Time Range", () => {
