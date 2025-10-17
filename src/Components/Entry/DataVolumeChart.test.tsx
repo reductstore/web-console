@@ -271,12 +271,13 @@ describe("DataVolumeChart", () => {
         <DataVolumeChart
           {...defaultProps}
           records={records}
-          startMs={1000}
-          endMs={2000}
+          start={1000n}
+          end={2000n}
+          isLoading={true}
         />,
       );
 
-      wrapper.setProps({ startMs: 1200, endMs: 1800 });
+      wrapper.setProps({ start: 1200n, end: 1800n, isLoading: false });
       wrapper.update();
 
       expect(wrapper.find(ReloadOutlined)).toHaveLength(1);
@@ -289,12 +290,12 @@ describe("DataVolumeChart", () => {
         <DataVolumeChart
           {...defaultProps}
           records={records}
-          startMs={1000}
-          endMs={2000}
+          start={1000n}
+          end={2000n}
         />,
       );
 
-      wrapper.setProps({ startMs: 1200, endMs: 1800 });
+      wrapper.setProps({ start: 1200n, end: 1800n });
       wrapper.update();
 
       const resetButton = wrapper.find(ReloadOutlined).closest("button");
@@ -310,12 +311,12 @@ describe("DataVolumeChart", () => {
         <DataVolumeChart
           {...defaultProps}
           records={records}
-          startMs={1000}
-          endMs={2000}
+          start={1000n}
+          end={2000n}
         />,
       );
 
-      wrapper.setProps({ startMs: 1200, endMs: 1800 });
+      wrapper.setProps({ start: 1200n, end: 1800n });
       wrapper.update();
 
       const resetButton = wrapper.find(".resetZoomBtn").first();

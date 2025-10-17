@@ -37,27 +37,26 @@ ChartJS.register(
 
 export interface DataVolumeChartProps {
   records: ReadableRecord[];
-  setTimeRange: (
-    start: bigint | undefined,
-    end: bigint | undefined,
-    isCustomRange?: boolean,
-  ) => void;
-  startMs?: number;
-  endMs?: number;
+  setTimeRange: (start: bigint | undefined, end: bigint | undefined) => void;
+  start?: bigint;
+  end?: bigint;
   isLoading?: boolean;
+  showUnix?: boolean;
 }
 
 const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
-  ({ records, setTimeRange, startMs, endMs, isLoading }) => {
+  ({ records, setTimeRange, start, end, isLoading, showUnix }) => {
     const baselineUs = useRef<{ start?: bigint; end?: bigint } | null>(null);
     const updateBaseline = useRef(true);
     const [mountedOnce, setMountedOnce] = useState(false);
     const lastMaxY = useRef(1);
 
-    const { points, bucketSizeMs } = useMemo(
-      () => binRecords(records, startMs, endMs),
-      [records, startMs, endMs],
-    );
+    const { points, bucketSize } = useMemo(() => {
+      const convert = showUnix
+        ? (us: bigint) => Number(us)
+        : (us: bigint) => Number(us / 1000n);
+      return binRecords(records, start, end, convert);
+    }, [records, start, end, showUnix]);
 
     useEffect(() => {
       if (records.length) setMountedOnce(true);
@@ -65,14 +64,10 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
 
     useEffect(() => {
       if (isLoading || updateBaseline.current) {
-        baselineUs.current = {
-          start:
-            startMs == null ? undefined : BigInt(Math.trunc(startMs * 1000)),
-          end: endMs == null ? undefined : BigInt(Math.trunc(endMs * 1000)),
-        };
+        baselineUs.current = { start, end };
       }
       updateBaseline.current = false;
-    }, [startMs, endMs, isLoading]);
+    }, [start, end, isLoading]);
 
     const chartData: ChartData<"line", Point[], unknown> = useMemo(
       () => ({
@@ -80,17 +75,14 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
           {
             type: "line",
             data: points,
-
             borderColor: "#DB817B",
             pointBackgroundColor: "#DB817B",
             pointHoverBackgroundColor: "#DB817Bcc",
             pointBorderColor: "#ffffff",
             pointHoverBorderColor: "#ffffffcc",
-
             borderWidth: 1.5,
             pointRadius: 2.5,
             pointHoverRadius: 3,
-
             tension: 0.3,
           },
         ],
@@ -105,9 +97,10 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       return m || lastMaxY.current || 1;
     }, [points, records]);
 
-    const enableZoom = useMemo(() => {
-      return !isLoading && points.filter((p) => p.y > 0).length > 1;
-    }, [isLoading, points]);
+    const enableZoom = useMemo(
+      () => !isLoading && points.filter((p) => p.y > 0).length > 1,
+      [isLoading, points],
+    );
 
     const chartOptions: ChartOptions<"line"> = useMemo(
       () => ({
@@ -119,25 +112,31 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         interaction: { mode: "index", intersect: false },
         animation: { duration: 300, easing: "easeOutQuart" },
         scales: {
-          x: {
-            type: "time",
-            bounds: "ticks",
-            grace: bucketSizeMs,
-            ticks: {
-              maxRotation: 0,
-              autoSkip: true,
-            },
-            time: {
-              displayFormats: {
-                millisecond: "HH:mm:ss.SSS",
-                second: "HH:mm:ss",
-                minute: "HH:mm",
-                hour: "MMM D, HH:mm",
-                day: "MMM D",
+          x: showUnix
+            ? {
+                type: "linear",
+                bounds: "ticks",
+                ticks: {
+                  maxRotation: 0,
+                  autoSkip: true,
+                  callback: (v) => `${Math.trunc(v as number)}`,
+                },
+              }
+            : {
+                type: "time",
+                bounds: "ticks",
+                ticks: { maxRotation: 0, autoSkip: true },
+                time: {
+                  displayFormats: {
+                    millisecond: "HH:mm:ss.SSS",
+                    second: "HH:mm:ss",
+                    minute: "HH:mm",
+                    hour: "MMM D, HH:mm",
+                    day: "MMM D",
+                  },
+                  tooltipFormat: "YYYY-MM-DD HH:mm:ss",
+                },
               },
-              tooltipFormat: "YYYY-MM-DD HH:mm:ss",
-            },
-          },
           y: {
             beginAtZero: true,
             display: true,
@@ -163,14 +162,17 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
                 if (!items.length) return "";
                 const v = items[0].parsed.x as number | undefined;
                 if (v == null || Number.isNaN(v)) return "";
-                const start = dayjs(v);
-                const end = start.add(bucketSizeMs, "millisecond");
-                return `${start.format("YYYY-MM-DD HH:mm:ss")} - ${end.format("HH:mm:ss")}`;
+                if (showUnix) return `${Math.trunc(v)}`;
+                const startD = dayjs(v);
+                const endD = startD.add(
+                  Number(bucketSize / 1000n),
+                  "millisecond",
+                );
+                return `${startD.format("YYYY-MM-DD HH:mm:ss")} - ${endD.format("HH:mm:ss")}`;
               },
             },
           },
           zoom: {
-            limits: { x: { minRange: bucketSizeMs * 2 } },
             zoom: {
               drag: {
                 enabled: enableZoom,
@@ -183,44 +185,40 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
                 const min = scale?.min as number | undefined;
                 const max = scale?.max as number | undefined;
                 if (min == null || max == null) return;
-                const nextStartUs = msToMicroseconds(min);
-                const nextEndUs = msToMicroseconds(max);
-                const currStartUs = msToMicroseconds(startMs);
-                const currEndUs = msToMicroseconds(endMs);
-                if (nextStartUs === currStartUs && nextEndUs === currEndUs)
-                  return;
+                const toUs = (x: number) =>
+                  showUnix ? BigInt(Math.trunc(x)) : msToMicroseconds(x);
+                const nextstart = toUs(min);
+                const nextend = toUs(max);
+                if (nextstart === start && nextend === end) return;
                 updateBaseline.current = false;
-                requestAnimationFrame(() =>
-                  setTimeRange(nextStartUs, nextEndUs, true),
-                );
+                requestAnimationFrame(() => setTimeRange(nextstart, nextend));
               },
             },
           },
         },
       }),
       [
-        bucketSizeMs,
-        endMs,
+        bucketSize,
+        end,
         setTimeRange,
-        startMs,
+        start,
         maxY,
         isLoading,
         records,
         enableZoom,
+        showUnix,
       ],
     );
 
     const showReset = useMemo(() => {
       const b = baselineUs.current;
-      const currStartUs = msToMicroseconds(startMs);
-      const currEndUs = msToMicroseconds(endMs);
       if (b == null || isLoading) return false;
-      return b?.start !== currStartUs || b?.end !== currEndUs;
-    }, [startMs, endMs, isLoading]);
+      return b?.start !== start || b?.end !== end;
+    }, [start, end, isLoading]);
 
     const handleResetZoom = () => {
       const b = baselineUs.current;
-      requestAnimationFrame(() => setTimeRange(b?.start, b?.end, true));
+      requestAnimationFrame(() => setTimeRange(b?.start, b?.end));
     };
 
     if (!records.length && !mountedOnce) return null;
