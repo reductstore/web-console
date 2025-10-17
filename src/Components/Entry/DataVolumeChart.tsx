@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useCallback,
-  useRef,
-  useEffect,
-  useState,
-} from "react";
+import React, { useMemo, useRef, useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -27,6 +21,7 @@ import { binRecords, type Point } from "../../Helpers/chartUtils";
 import { ReloadOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import "./DataVolumeChart.css";
+import { msToMicroseconds } from "../../Helpers/NumberUtils";
 
 ChartJS.register(
   LineController,
@@ -101,12 +96,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         ],
       }),
       [points],
-    );
-
-    const toUs = useCallback(
-      (v?: number) =>
-        v == null || Number.isNaN(v) ? undefined : BigInt(Math.trunc(v * 1000)),
-      [],
     );
 
     const maxY = useMemo(() => {
@@ -194,10 +183,10 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
                 const min = scale?.min as number | undefined;
                 const max = scale?.max as number | undefined;
                 if (min == null || max == null) return;
-                const nextStartUs = toUs(min);
-                const nextEndUs = toUs(max);
-                const currStartUs = toUs(startMs);
-                const currEndUs = toUs(endMs);
+                const nextStartUs = msToMicroseconds(min);
+                const nextEndUs = msToMicroseconds(max);
+                const currStartUs = msToMicroseconds(startMs);
+                const currEndUs = msToMicroseconds(endMs);
                 if (nextStartUs === currStartUs && nextEndUs === currEndUs)
                   return;
                 updateBaseline.current = false;
@@ -214,7 +203,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         endMs,
         setTimeRange,
         startMs,
-        toUs,
         maxY,
         isLoading,
         records,
@@ -224,11 +212,11 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
 
     const showReset = useMemo(() => {
       const b = baselineUs.current;
-      const currStartUs = toUs(startMs);
-      const currEndUs = toUs(endMs);
+      const currStartUs = msToMicroseconds(startMs);
+      const currEndUs = msToMicroseconds(endMs);
       if (b == null || isLoading) return false;
       return b?.start !== currStartUs || b?.end !== currEndUs;
-    }, [startMs, endMs, toUs, isLoading]);
+    }, [startMs, endMs, isLoading]);
 
     const handleResetZoom = () => {
       const b = baselineUs.current;
