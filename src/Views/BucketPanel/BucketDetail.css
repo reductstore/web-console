@@ -1,0 +1,24 @@
+.bucketDetail {
+  margin: 1.4em;
+}
+
+.entriesHeader {
+  margin-bottom: 0.6em;
+  margin-left: 0;
+}
+
+.entriesTitle {
+  margin: 0;
+}
+
+.searchInput {
+  width: 240px;
+}
+
+.entriesTable {
+  margin: 0.6em;
+}
+
+.removeButton {
+  color: red;
+}
