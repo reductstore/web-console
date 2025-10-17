@@ -43,150 +43,138 @@ export function upperBoundByTime(
 }
 
 /**
- * Calculate optimal bucket size in milliseconds for time-based histograms
- * @param rangeMs - Total time range in milliseconds
+ * Calculate optimal bucket size in microseconds for time-based histograms
+ * @param rangeUs - Total time range in microseconds
  * @param targetBuckets - Target number of buckets (default: 20)
- * @param minBucketMs - Minimum bucket size in milliseconds (default: 1000)
- * @param maxBucketMs - Maximum bucket size in milliseconds (default: Number.MAX_SAFE_INTEGER)
- * @returns Optimal bucket size in milliseconds
+ * @param maxBucketUs - Maximum bucket size in microseconds (default: Number.MAX_SAFE_INTEGER)
+ * @returns Optimal bucket size in microseconds
  */
-export function pickBucketSizeMs(
-  rangeMs: number,
-  targetBuckets = 10,
-  minBucketMs = 1000,
-  maxBucketMs = Number.MAX_SAFE_INTEGER,
-): number {
-  if (!Number.isFinite(rangeMs) || rangeMs <= 0) return minBucketMs;
+export function pickBucketSize(
+  rangeUs: bigint,
+  targetBuckets = 12,
+  maxBucketUs = BigInt(Number.MAX_SAFE_INTEGER),
+): bigint {
+  if (rangeUs <= 0n) return 0n;
 
-  const desired = Math.max(
-    Math.ceil(rangeMs / Math.max(1, targetBuckets)),
-    minBucketMs,
-  );
+  const desired = rangeUs / BigInt(Math.max(1, targetBuckets));
 
-  let scale = 1_000;
-  while (scale <= maxBucketMs) {
-    for (const f of [1, 2, 5]) {
+  let scale = 1n;
+  while (scale <= maxBucketUs) {
+    for (const f of [1n, 2n, 3n, 5n]) {
       const step = f * scale;
-      if (step >= desired) return Math.min(step, maxBucketMs);
+      if (step >= desired) return step < maxBucketUs ? step : maxBucketUs;
     }
-    scale *= 10;
+    scale *= 10n;
   }
 
-  return maxBucketMs;
+  return maxBucketUs;
 }
 
 /**
- * Picks an appropriate $each_t interval for time-based aggregation queries.
- * Calculates the time interval needed to get approximately targetRecords from the given time range.
- * Uses nice round numbers like 1s, 5s, 10s, 30s, 1m, 5m, 10m, 30m, 1h, 2h, 6h, 12h, 1d, etc.
- * Returns null for very small intervals where aggregation is not beneficial.
- *
- * @param rangeMs - Time range in milliseconds
- * @param targetRecords - Target number of records to return (default: 200)
- * @param minIntervalMs - Minimum interval in milliseconds (default: 500ms)
- * @param maxIntervalMs - Maximum interval in milliseconds (default: 7 days)
- * @returns Human-readable time interval string (e.g., "10s", "5m", "1h", "1d") or null for small intervals
+ * Pick a suitable time interval string (e.g., '5s', '1m') for $__interval
+ * @param start - Start time in microseconds
+ * @param end - End time in microseconds
+ * @param targetRecords - Target number of records (default: 150)
+ * @returns Time interval string or 0s if invalid range
  */
 export function pickEachTInterval(
-  rangeMs: number,
-  targetRecords = 100,
-  minIntervalMs = 500,
-  maxIntervalMs = 7 * 24 * 60 * 60 * 1000, // 7 days
-): string | null {
-  if (!isFinite(rangeMs) || rangeMs <= 0) {
-    return "0s";
-  }
+  start?: bigint,
+  end?: bigint,
+  targetRecords = 120,
+): string {
+  if (start == null || end == null) return "0s";
 
-  let intervalMs = rangeMs / targetRecords;
+  const range = end - start;
+  if (range <= 0n) return "0s";
 
-  if (intervalMs < minIntervalMs) {
-    return "0s";
-  }
+  const target = BigInt(Math.max(1, targetRecords));
+  const week = 7n * 24n * 60n * 60n * 1_000_000n;
 
-  intervalMs = Math.min(maxIntervalMs, intervalMs);
+  let desired = range / target;
+  if (desired <= 0n) return "0s";
+  if (desired > week) desired = week;
 
-  const niceIntervals = [
-    { ms: 500, str: "500ms" },
-    { ms: 1000, str: "1s" },
-    { ms: 2000, str: "2s" },
-    { ms: 5000, str: "5s" },
-    { ms: 10000, str: "10s" },
-    { ms: 15000, str: "15s" },
-    { ms: 30000, str: "30s" },
-    { ms: 60000, str: "1m" },
-    { ms: 120000, str: "2m" },
-    { ms: 300000, str: "5m" },
-    { ms: 600000, str: "10m" },
-    { ms: 900000, str: "15m" },
-    { ms: 1800000, str: "30m" },
-    { ms: 3600000, str: "1h" },
-    { ms: 7200000, str: "2h" },
-    { ms: 10800000, str: "3h" },
-    { ms: 21600000, str: "6h" },
-    { ms: 43200000, str: "12h" },
-    { ms: 86400000, str: "1d" },
-    { ms: 172800000, str: "2d" },
-    { ms: 259200000, str: "3d" },
-    { ms: 604800000, str: "7d" },
-  ];
-
-  let [bestInterval] = niceIntervals;
-  let bestDiff = Math.abs(intervalMs - bestInterval.ms);
-
-  for (const interval of niceIntervals) {
-    const diff = Math.abs(intervalMs - interval.ms);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestInterval = interval;
+  const candidates: bigint[] = [];
+  for (let scale = 1n; scale <= week; scale *= 10n) {
+    for (const f of [1n, 2n, 3n, 5n]) {
+      const v = f * scale;
+      if (v <= week) candidates.push(v);
     }
   }
 
-  return bestInterval.str;
+  let best = candidates[candidates.length - 1];
+  for (const v of candidates) {
+    if (v >= desired) {
+      best = v;
+      break;
+    }
+  }
+
+  const us = 1n;
+  const ms = 1_000n * us;
+  const s = 1_000n * ms;
+  const m = 60n * s;
+  const h = 60n * m;
+  const d = 24n * h;
+
+  const fmt = (val: bigint): string => {
+    if (val >= d) return `${Number(val / d)}d`;
+    if (val >= h) return `${Number(val / h)}h`;
+    if (val >= m) return `${Number(val / m)}m`;
+    if (val >= s) return `${Number(val / s)}s`;
+    if (val >= ms) return `${Number(val / ms)}ms`;
+    return `${val}us`;
+  };
+
+  return fmt(best);
 }
 
 /**
- * Bin records into time buckets for visualization
+ * Bin records into time buckets for visualization using microseconds
  * @param records - Array of records sorted by time
- * @param startMs - Optional start time in milliseconds
- * @param endMs - Optional end time in milliseconds
+ * @param start - Optional start time in microseconds
+ * @param end - Optional end time in microseconds
+ * @param convert - Function to convert microseconds to desired x-axis value (default: milliseconds)
  * @returns Points array with number of records bucketed by time
  */
 export function binRecords(
   records: ReadableRecord[],
-  startMs?: number,
-  endMs?: number,
-): { points: Point[]; bucketSizeMs: number } {
-  if (!records.length) return { points: [], bucketSizeMs: 1_000 };
+  start?: bigint,
+  end?: bigint,
+  convert: (us: bigint) => number = (us) => Number(us / 1000n),
+): { points: Point[]; bucketSize: bigint } {
+  if (!records.length) return { points: [], bucketSize: 1_000_000n };
 
-  const first = Number(records[0].time / 1000n);
-  const last = Number(records[records.length - 1].time / 1000n);
+  const first = records[0].time;
+  const last = records[records.length - 1].time;
 
-  const minMs = startMs ?? first;
-  const maxMs = endMs ?? last;
+  const minUs = start ?? first;
+  const maxUs = end ?? last;
 
-  const size = pickBucketSizeMs(Math.max(1, maxMs - minMs));
+  const rangeUs = maxUs - minUs;
+  const bucketSize = pickBucketSize(rangeUs > 0n ? rangeUs : 1n);
 
-  const minUs = BigInt(Math.trunc(minMs * 1000));
-  const maxUs = BigInt(Math.trunc(maxMs * 1000));
   const startIdx = lowerBoundByTime(records, minUs);
   const endIdx = upperBoundByTime(records, maxUs);
 
-  const firstBucketStart = Math.floor(minMs / size) * size;
-  const bucketCount = Math.floor((maxMs - firstBucketStart) / size) + 1;
+  const firstBucketstart = (minUs / bucketSize) * bucketSize;
+  const bucketCount = Number((maxUs - firstBucketstart) / bucketSize) + 1;
 
-  if (bucketCount <= 0) return { points: [], bucketSizeMs: size };
+  if (bucketCount <= 0) return { points: [], bucketSize };
 
   const totals = new Float64Array(bucketCount);
 
   for (let i = startIdx; i < endIdx; i++) {
-    const tMs = Number(records[i].time / 1000n);
-    const idx = Math.floor((tMs - firstBucketStart) / size);
+    const tUs = records[i].time;
+    const idx = Number((tUs - firstBucketstart) / bucketSize);
     if (idx >= 0 && idx < bucketCount) totals[idx] += 1;
   }
 
   const points: Point[] = new Array(bucketCount);
-  for (let i = 0; i < bucketCount; i++)
-    points[i] = { x: firstBucketStart + i * size, y: totals[i] };
+  for (let i = 0; i < bucketCount; i++) {
+    const bucketstart = firstBucketstart + BigInt(i) * bucketSize;
+    points[i] = { x: convert(bucketstart), y: totals[i] };
+  }
 
-  return { points, bucketSizeMs: size };
+  return { points, bucketSize };
 }
