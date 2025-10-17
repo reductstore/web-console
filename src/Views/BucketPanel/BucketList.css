@@ -1,0 +1,19 @@
+.bucketList {
+  margin: 2em;
+}
+
+.bucketsTitle {
+  margin: 0;
+}
+
+.addButton {
+  float: right;
+}
+
+.bucketsTable {
+  margin: 0.6em;
+}
+
+.removeButton {
+  color: red;
+}

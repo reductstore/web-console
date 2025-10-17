@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { APIError, BucketInfo, Client, TokenPermissions } from "reduct-js";
 import { Button, Flex, Modal, Tag, Typography } from "antd";
+import type { TablePaginationConfig } from "antd";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 
@@ -12,6 +13,8 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 import RenameModal from "../../Components/RenameModal";
 import ScrollableTable from "../../Components/ScrollableTable";
+import { usePaginationStore } from "../../stores/paginationStore";
+import "./BucketList.css";
 
 interface Props {
   client: Client;
@@ -23,14 +26,39 @@ interface Props {
  */
 export default function BucketList(props: Readonly<Props>) {
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
-  const [creatingBucket, setCreatingBucket] = useState(false);
-  const [bucketToRemove, setBucketToRemove] = useState("");
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [bucketToRename, setBucketToRename] = useState("");
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [removeError, setRemoveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [bucketToRemove, setBucketToRemove] = useState<string>("");
+  const [bucketToRename, setBucketToRename] = useState<string>("");
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [creatingBucket, setCreatingBucket] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const paginationStorageKey = "bucket-list-pagination";
+  const { setPageSize, getPageSize } = usePaginationStore();
+  const pageSize = getPageSize(paginationStorageKey);
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      setPageSize(paginationStorageKey, newPageSize);
+      setCurrentPage(1); // Reset to first page when page size changes
+    },
+    [paginationStorageKey, setPageSize],
+  );
+
+  const handleTableChange = useCallback(
+    (tablePagination: TablePaginationConfig) => {
+      if (tablePagination.current) {
+        setCurrentPage(tablePagination.current);
+      }
+      if (tablePagination.pageSize && tablePagination.pageSize !== pageSize) {
+        handlePageSizeChange(tablePagination.pageSize);
+      }
+    },
+    [handlePageSizeChange, pageSize],
+  );
 
   const getBuckets = async () => {
     try {
@@ -168,7 +196,7 @@ export default function BucketList(props: Readonly<Props>) {
               <DeleteOutlined
                 key={`remove-${record.name}`}
                 title="Remove"
-                style={{ color: "red" }}
+                className="removeButton"
                 onClick={() => handleOpenRemoveModal(record.name)}
               />
             </Flex>
@@ -179,12 +207,12 @@ export default function BucketList(props: Readonly<Props>) {
   ];
 
   return (
-    <div style={{ margin: "2em" }}>
-      <Typography.Title level={3}>
+    <div className="bucketList">
+      <Typography.Title level={3} className="bucketsTitle">
         Buckets
         {props.permissions?.fullAccess ? (
           <Button
-            style={{ float: "right" }}
+            className="addButton"
             icon={<PlusOutlined />}
             onClick={() => setCreatingBucket(true)}
             title="Add"
@@ -193,10 +221,17 @@ export default function BucketList(props: Readonly<Props>) {
       </Typography.Title>
       <ScrollableTable
         scroll={{ x: "max-content" }}
-        style={{ margin: "0.6em" }}
+        className="bucketsTable"
         columns={columns}
         dataSource={data}
         loading={isLoading}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50", "100"],
+        }}
+        onChange={handleTableChange}
       />
 
       {/* Modals */}
