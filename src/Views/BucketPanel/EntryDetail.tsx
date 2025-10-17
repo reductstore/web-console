@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -131,7 +131,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
     } catch {
-      return jsonString + "\n";
+      return jsonString;
     }
   };
 
@@ -153,6 +153,7 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [recordToShare, setRecordToShare] = useState<any>(null);
+  const fetchCtrlRef = useRef<AbortController | null>(null);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -188,9 +189,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  let latestRequestId = 0;
   const getRecords = async (start?: bigint, end?: bigint) => {
-    const requestId = ++latestRequestId;
+    if (fetchCtrlRef.current) {
+      fetchCtrlRef.current.abort();
+    }
+
+    fetchCtrlRef.current = new AbortController();
+    const abortSignal = fetchCtrlRef.current.signal;
 
     setIsLoading(true);
     setWhenError("");
@@ -206,14 +211,13 @@ export default function EntryDetail(props: Readonly<Props>) {
       if (whenCondition.trim()) {
         const processedCondition = substituteMacros(whenCondition, start, end);
         options.when = JSON.parse(processedCondition);
-        console.log("Using when condition:", options.when);
       }
 
       let batch: ReadableRecord[] = [];
       let i = 0;
 
       for await (const record of bucket.query(entryName, start, end, options)) {
-        if (requestId !== latestRequestId) return;
+        if (abortSignal.aborted) return;
 
         batch.push(record);
         i++;
@@ -225,20 +229,31 @@ export default function EntryDetail(props: Readonly<Props>) {
         }
       }
       if (batch.length) {
-        if (requestId !== latestRequestId) return;
+        if (abortSignal.aborted) return;
         setRecords((prev) => [...prev, ...batch]);
       }
     } catch (err) {
+      if (abortSignal.aborted) return;
+
       if (err instanceof APIError && err.message) setWhenError(err.message);
       else if (err instanceof SyntaxError) setWhenError(err.message);
       else setWhenError("Failed to fetch records.");
     } finally {
-      if (requestId === latestRequestId) setIsLoading(false);
+      if (!abortSignal.aborted) {
+        setIsLoading(false);
+        fetchCtrlRef.current = null;
+      }
     }
   };
 
   const handleFetchRecordsClick = () => {
-    if (!isLoading) {
+    if (isLoading) {
+      if (fetchCtrlRef.current) {
+        fetchCtrlRef.current.abort();
+        fetchCtrlRef.current = null;
+      }
+      setIsLoading(false);
+    } else {
       getRecords(timeRange.start, timeRange.end);
     }
   };
@@ -454,6 +469,15 @@ export default function EntryDetail(props: Readonly<Props>) {
     });
     setFilteredRecords(filtered);
   }, [records, timeRange.start, timeRange.end]);
+
+  // abort ongoing fetch on unmount
+  useEffect(() => {
+    return () => {
+      if (fetchCtrlRef.current) {
+        fetchCtrlRef.current.abort();
+      }
+    };
+  }, []);
 
   const columns = [
     {
@@ -716,8 +740,18 @@ export default function EntryDetail(props: Readonly<Props>) {
           </Typography.Text>
         </div>
         <div className="fetchButton">
-          <Button onClick={handleFetchRecordsClick} type="primary">
-            Fetch Records
+          <Button
+            onClick={handleFetchRecordsClick}
+            type={isLoading ? "default" : "primary"}
+            danger={isLoading}
+            style={{
+              // fixed width to prevent ResizeObserver errors
+              width: 120,
+              whiteSpace: "nowrap",
+              textAlign: "center",
+            }}
+          >
+            {isLoading ? "Cancel" : "Fetch Records"}
           </Button>
         </div>
       </div>
