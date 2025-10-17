@@ -229,4 +229,37 @@ describe("BucketDetail", () => {
     detail.update();
     expect(detail.find(".ant-spin").exists()).toBe(false);
   });
+
+  it("should display all entries with sortable columns", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(2);
+
+    expect(detail.render().text()).toContain("EntryWithData");
+    expect(detail.render().text()).toContain("EmptyEntry");
+  });
+
+  it("should display entries with correct data formatting", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const tableText = detail.render().text();
+
+    expect(tableText).toContain("100");
+    expect(tableText).toContain("0");
+    expect(tableText).toContain("2");
+    expect(tableText).toMatch(/\d+(\.\d+)?\s*[KMGT]?B/);
+  });
 });
