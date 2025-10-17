@@ -47,4 +47,14 @@ describe("msToMicroseconds", () => {
     const result = msToMicroseconds(-5);
     expect(result).toBe(-5000n);
   });
+
+  it("should return undefined when input is undefined", () => {
+    const result = msToMicroseconds(undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it("should convert float milliseconds to microseconds correctly", () => {
+    const result = msToMicroseconds(1.5);
+    expect(result).toBe(1500n);
+  });
 });
