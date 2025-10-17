@@ -5,6 +5,9 @@
 .entriesHeader {
   margin-bottom: 0.6em;
   margin-left: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .entriesTitle {

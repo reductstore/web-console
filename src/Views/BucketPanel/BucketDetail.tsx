@@ -382,7 +382,7 @@ export default function BucketDetail(props: Readonly<Props>) {
         <div />
       )}
       <Divider />
-      <Flex justify="space-between" align="center" className="entriesHeader">
+      <Flex className="entriesHeader">
         <Typography.Title level={3} className="entriesTitle">
           Entries
         </Typography.Title>
@@ -390,9 +390,7 @@ export default function BucketDetail(props: Readonly<Props>) {
           icon={<ReloadOutlined />}
           onClick={() => getEntries()}
           loading={isLoading}
-        >
-          Refresh
-        </Button>
+        />
       </Flex>
 
       <ScrollableTable
