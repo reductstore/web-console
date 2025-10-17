@@ -98,20 +98,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       const currentCondition = JSON.parse(whenCondition.trim() || "{}");
       const keys = Object.keys(currentCondition);
-      if (keys.length === 0 || (keys.length === 1 && keys[0] === "$each_t")) {
-        const rangeMs =
-          start && end
-            ? Number((end - start) / 1000n)
-            : Number((defaultRange.end - defaultRange.start) / 1000n);
-        const eachTValue = pickEachTInterval(rangeMs);
-
-        if (eachTValue) {
-          const newCondition =
-            JSON.stringify({ $each_t: eachTValue }, null, 2) + "\n";
-          setWhenCondition(newCondition);
-        } else {
-          setWhenCondition("{}\n");
-        }
+      if (
+        keys.length === 0 ||
+        (keys.length === 1 &&
+          keys[0] === "$each_t" &&
+          (currentCondition["$each_t"] === "$__interval" ||
+            typeof currentCondition["$each_t"] === "number"))
+      ) {
+        const newCondition =
+          JSON.stringify({ $each_t: "$__interval" }, null, 2) + "\n";
+        setWhenCondition(newCondition);
       }
     } catch {
       // If current condition is not valid JSON, don't auto-update
@@ -129,20 +125,21 @@ export default function EntryDetail(props: Readonly<Props>) {
     }));
   };
 
+  const formatJSON = (jsonString?: string): string => {
+    if (!jsonString)
+      return JSON.stringify({ $each_t: "$__interval" }, null, 2) + "\n";
+    try {
+      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
+    } catch {
+      return jsonString + "\n";
+    }
+  };
+
   const [startError, setStartError] = useState(false);
   const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
-  const [whenCondition, setWhenCondition] = useState<string>(() => {
-    const rangeMs = Number((defaultRange.end - defaultRange.start) / 1000n);
-    const eachTValue = pickEachTInterval(rangeMs);
-
-    if (eachTValue) {
-      return JSON.stringify({ $each_t: eachTValue }, null, 2) + "\n";
-    } else {
-      return "{}\n";
-    }
-  });
+  const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
 
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
@@ -160,6 +157,37 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
+  const substituteMacros = (
+    conditionString: string,
+    start?: bigint,
+    end?: bigint,
+  ): string => {
+    if (!conditionString.trim()) return conditionString;
+
+    try {
+      const rangeMs =
+        start && end
+          ? Number((end - start) / 1000n)
+          : Number((defaultRange.end - defaultRange.start) / 1000n);
+      const intervalValue = pickEachTInterval(rangeMs);
+
+      let processedCondition = conditionString;
+      if (intervalValue) {
+        processedCondition = processedCondition.replace(
+          /"\$__interval"/g,
+          `"${intervalValue}"`,
+        );
+        processedCondition = processedCondition.replace(
+          /\$__interval/g,
+          `"${intervalValue}"`,
+        );
+      }
+      return processedCondition;
+    } catch {
+      return conditionString;
+    }
+  };
+
   let latestRequestId = 0;
   const getRecords = async (start?: bigint, end?: bigint) => {
     const requestId = ++latestRequestId;
@@ -174,7 +202,12 @@ export default function EntryDetail(props: Readonly<Props>) {
       const options = new QueryOptions();
       options.head = true;
       options.strict = true;
-      if (whenCondition.trim()) options.when = JSON.parse(whenCondition);
+
+      if (whenCondition.trim()) {
+        const processedCondition = substituteMacros(whenCondition, start, end);
+        options.when = JSON.parse(processedCondition);
+        console.log("Using when condition:", options.when);
+      }
 
       let batch: ReadableRecord[] = [];
       let i = 0;
@@ -185,7 +218,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         batch.push(record);
         i++;
 
-        // refresh table and chart every 10 records
+        // refresh components (table and chart) every 20 records
         if (i % 20 === 0) {
           setRecords((prev) => [...prev, ...batch]);
           batch = [];
@@ -514,18 +547,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     labels: JSON.stringify(record.labels, null, 2),
   }));
 
-  // Format JSON exactly like in the When Condition component
-  const formatJSON = (jsonString: string): string => {
-    if (!jsonString) return "{}\n";
-
-    try {
-      // Parse and re-stringify to ensure proper formatting
-      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
-    } catch {
-      return jsonString + "\n";
-    }
-  };
-
   const hasWritePermission =
     permissions.fullAccess ||
     (permissions.write && permissions.write.includes(bucketName));
@@ -678,6 +699,10 @@ export default function EntryDetail(props: Readonly<Props>) {
             also use aggregation operators:
             <code>$each_n</code> (every N-th record) and <code>$each_t</code>{" "}
             (every N seconds) to control replication frequency.
+            <br />
+            <strong>Macros:</strong> Use <code>$__interval</code> to
+            automatically use the chart's time interval. Example:{" "}
+            <code>{'{"$each_t": "$__interval"}'}</code>.
             <br />
             <strong>
               <a

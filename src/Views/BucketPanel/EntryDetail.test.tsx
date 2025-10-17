@@ -238,7 +238,7 @@ describe("EntryDetail", () => {
       );
 
       const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toBe('{\n  "$each_t": "2h"\n}\n');
+      expect(cmValue).toBe('{\n  "$each_t": "$__interval"\n}\n');
 
       const exampleText = wrapper.find(".jsonExample").first().text();
       expect(exampleText).toContain("Example:");
@@ -583,7 +583,7 @@ describe("EntryDetail", () => {
   });
 
   describe("When Condition", () => {
-    it("should initialize with default $each_t value based on time range", () => {
+    it("should initialize with default $each_t macro", () => {
       // Check the CodeMirror component value
       const codeMirror = wrapper.find(".react-codemirror2");
       expect(codeMirror.exists()).toBe(true);
@@ -600,10 +600,10 @@ describe("EntryDetail", () => {
       const parsed = JSON.parse(conditionValue);
       expect(parsed).toHaveProperty("$each_t");
       expect(typeof parsed["$each_t"]).toBe("string");
-      expect(parsed["$each_t"]).toMatch(/^\d+(\.\d+)?(ms|s|m|h|d)$/);
+      expect(parsed["$each_t"]).toBe("$__interval");
     });
 
-    it("should update $each_t when time range changes and condition only contains $each_t", async () => {
+    it("should keep $each_t macro when time range changes", async () => {
       const timeRangeComponents = wrapper.find("TimeRangeDropdown");
       if (timeRangeComponents.exists()) {
         await act(async () => {
@@ -621,7 +621,9 @@ describe("EntryDetail", () => {
         const updatedTextArea = updatedCodeMirror.find("textarea");
         const updatedConditionValue = updatedTextArea.prop("value") as string;
 
-        expect(updatedConditionValue.trim()).toBe('{\n  "$each_t": "30s"\n}');
+        expect(updatedConditionValue.trim()).toBe(
+          '{\n  "$each_t": "$__interval"\n}',
+        );
       }
     });
 

@@ -106,28 +106,28 @@ export function pickEachTInterval(
   intervalMs = Math.min(maxIntervalMs, intervalMs);
 
   const niceIntervals = [
-    { ms: 500, str: "500ms" }, // 500 milliseconds
-    { ms: 1000, str: "1s" }, // 1 second
-    { ms: 2000, str: "2s" }, // 2 seconds
-    { ms: 5000, str: "5s" }, // 5 seconds
-    { ms: 10000, str: "10s" }, // 10 seconds
-    { ms: 15000, str: "15s" }, // 15 seconds
-    { ms: 30000, str: "30s" }, // 30 seconds
-    { ms: 60000, str: "1m" }, // 1 minute
-    { ms: 120000, str: "2m" }, // 2 minutes
-    { ms: 300000, str: "5m" }, // 5 minutes
-    { ms: 600000, str: "10m" }, // 10 minutes
-    { ms: 900000, str: "15m" }, // 15 minutes
-    { ms: 1800000, str: "30m" }, // 30 minutes
-    { ms: 3600000, str: "1h" }, // 1 hour
-    { ms: 7200000, str: "2h" }, // 2 hours
-    { ms: 10800000, str: "3h" }, // 3 hours
-    { ms: 21600000, str: "6h" }, // 6 hours
-    { ms: 43200000, str: "12h" }, // 12 hours
-    { ms: 86400000, str: "1d" }, // 1 day
-    { ms: 172800000, str: "2d" }, // 2 days
-    { ms: 259200000, str: "3d" }, // 3 days
-    { ms: 604800000, str: "7d" }, // 7 days
+    { ms: 500, str: "500ms" },
+    { ms: 1000, str: "1s" },
+    { ms: 2000, str: "2s" },
+    { ms: 5000, str: "5s" },
+    { ms: 10000, str: "10s" },
+    { ms: 15000, str: "15s" },
+    { ms: 30000, str: "30s" },
+    { ms: 60000, str: "1m" },
+    { ms: 120000, str: "2m" },
+    { ms: 300000, str: "5m" },
+    { ms: 600000, str: "10m" },
+    { ms: 900000, str: "15m" },
+    { ms: 1800000, str: "30m" },
+    { ms: 3600000, str: "1h" },
+    { ms: 7200000, str: "2h" },
+    { ms: 10800000, str: "3h" },
+    { ms: 21600000, str: "6h" },
+    { ms: 43200000, str: "12h" },
+    { ms: 86400000, str: "1d" },
+    { ms: 172800000, str: "2d" },
+    { ms: 259200000, str: "3d" },
+    { ms: 604800000, str: "7d" },
   ];
 
   let [bestInterval] = niceIntervals;
