@@ -94,13 +94,13 @@ export function pickEachTInterval(
   maxIntervalMs = 7 * 24 * 60 * 60 * 1000, // 7 days
 ): string | null {
   if (!isFinite(rangeMs) || rangeMs <= 0) {
-    return null;
+    return "0s";
   }
 
   let intervalMs = rangeMs / targetRecords;
 
   if (intervalMs < minIntervalMs) {
-    return null;
+    return "0s";
   }
 
   intervalMs = Math.min(maxIntervalMs, intervalMs);

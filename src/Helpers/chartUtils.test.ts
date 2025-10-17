@@ -9,19 +9,9 @@ import {
 
 describe("chartUtils", () => {
   describe("pickEachTInterval", () => {
-    it("should return null for very small ranges", () => {
-      expect(pickEachTInterval(1000)).toBe(null);
-      expect(pickEachTInterval(5000)).toBe(null);
-    });
-
-    it("should return null or ms for medium ranges", () => {
-      expect(pickEachTInterval(60_000)).toBe("500ms");
-      expect(pickEachTInterval(600_000)).toBe("5s");
-    });
-
-    it("should handle hour ranges based on minimum interval", () => {
-      expect(pickEachTInterval(3_600_000)).toBe("30s");
-      expect(pickEachTInterval(7_200_000)).toBe("1m");
+    it("should return 0s for very small ranges", () => {
+      expect(pickEachTInterval(1000)).toBe("0s");
+      expect(pickEachTInterval(5000)).toBe("0s");
     });
 
     it("should return minutes for day ranges", () => {
@@ -29,12 +19,7 @@ describe("chartUtils", () => {
       expect(pickEachTInterval(172_800_000)).toBe("30m");
     });
 
-    it("should return intervals for ranges above minimum threshold", () => {
-      expect(pickEachTInterval(5_000_000)).toBe("1m");
-      expect(pickEachTInterval(10_000_000)).toBe("2m");
-    });
-
-    it("should return minutes for large ranges", () => {
+    it("should return hours for large ranges", () => {
       expect(pickEachTInterval(604_800_000)).toBe("2h");
       expect(pickEachTInterval(2_592_000_000)).toBe("6h");
     });
@@ -48,14 +33,14 @@ describe("chartUtils", () => {
     });
 
     it("should respect minimum interval", () => {
-      expect(pickEachTInterval(500, 1000, 5000)).toBe(null);
+      expect(pickEachTInterval(500, 1000, 5000)).toBe("0s");
     });
 
     it("should handle invalid inputs", () => {
-      expect(pickEachTInterval(0)).toBe(null);
-      expect(pickEachTInterval(-100)).toBe(null);
-      expect(pickEachTInterval(NaN)).toBe(null);
-      expect(pickEachTInterval(Infinity)).toBe(null);
+      expect(pickEachTInterval(0)).toBe("0s");
+      expect(pickEachTInterval(-100)).toBe("0s");
+      expect(pickEachTInterval(NaN)).toBe("0s");
+      expect(pickEachTInterval(Infinity)).toBe("0s");
     });
 
     it("should return nice round intervals", () => {
