@@ -75,22 +75,16 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [timeRange, setTimeRangeState] = useState(() => ({
     start: defaultRange.start as bigint | undefined,
     end: defaultRange.end as bigint | undefined,
-    isCustomRange: false,
     startText: formatValue(defaultRange.start, false),
     stopText: formatValue(defaultRange.end, false),
   }));
 
   const [showUnix, setShowUnix] = useState(false);
 
-  const setTimeRange = (
-    start: bigint | undefined,
-    end: bigint | undefined,
-    isCustomRange = false,
-  ) => {
+  const setTimeRange = (start: bigint | undefined, end: bigint | undefined) => {
     setTimeRangeState({
       start,
       end,
-      isCustomRange,
       startText: formatValue(start, showUnix),
       stopText: formatValue(end, showUnix),
     });
@@ -121,7 +115,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     setTimeRangeState((prev) => ({
       ...prev,
       [field]: value,
-      isCustomRange: true,
     }));
   };
 
@@ -166,23 +159,17 @@ export default function EntryDetail(props: Readonly<Props>) {
     if (!conditionString.trim()) return conditionString;
 
     try {
-      const rangeMs =
-        start && end
-          ? Number((end - start) / 1000n)
-          : Number((defaultRange.end - defaultRange.start) / 1000n);
-      const intervalValue = pickEachTInterval(rangeMs);
+      const intervalValue = pickEachTInterval(start, end);
 
       let processedCondition = conditionString;
-      if (intervalValue) {
-        processedCondition = processedCondition.replace(
-          /"\$__interval"/g,
-          `"${intervalValue}"`,
-        );
-        processedCondition = processedCondition.replace(
-          /\$__interval/g,
-          `"${intervalValue}"`,
-        );
-      }
+      processedCondition = processedCondition.replace(
+        /"\$__interval"/g,
+        `"${intervalValue}"`,
+      );
+      processedCondition = processedCondition.replace(
+        /\$__interval/g,
+        `"${intervalValue}"`,
+      );
       return processedCondition;
     } catch {
       return conditionString;
@@ -204,26 +191,46 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       const bucket = await props.client.getBucket(bucketName);
 
+      let rangeStart = start;
+      let rangeEnd = end;
+
+      if (rangeStart == null || rangeEnd == null) {
+        const entry = await bucket
+          .getEntryList()
+          .then((entries) => entries.find((e) => e.name === entryName));
+
+        rangeStart ??= entry?.oldestRecord;
+        rangeEnd ??= entry?.latestRecord;
+      }
+
       const options = new QueryOptions();
       options.head = true;
       options.strict = true;
 
       if (whenCondition.trim()) {
-        const processedCondition = substituteMacros(whenCondition, start, end);
+        const processedCondition = substituteMacros(
+          whenCondition,
+          rangeStart,
+          rangeEnd,
+        );
         options.when = JSON.parse(processedCondition);
       }
 
       let batch: ReadableRecord[] = [];
-      let i = 0;
+      let count = 0;
 
-      for await (const record of bucket.query(entryName, start, end, options)) {
+      for await (const record of bucket.query(
+        entryName,
+        rangeStart,
+        rangeEnd,
+        options,
+      )) {
         if (abortSignal.aborted) return;
-
         batch.push(record);
-        i++;
+        count++;
 
         // refresh components (table and chart) every 20 records
-        if (i % 20 === 0) {
+        if (count % 20 === 0) {
           setRecords((prev) => [...prev, ...batch]);
           batch = [];
         }
@@ -377,8 +384,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     field: "start" | "end",
     errSetter: (v: boolean) => void,
   ) => {
-    setTimeRangeState((prev) => ({ ...prev, isCustomRange: true }));
-
     if (!value) {
       const newStart = field === "start" ? undefined : timeRange.start;
       const newEnd = field === "end" ? undefined : timeRange.end;
@@ -413,8 +418,12 @@ export default function EntryDetail(props: Readonly<Props>) {
         errSetter(true);
       }
     } else {
+      // Validate ISO date format more strictly
+      // Reject simple numbers like "2025" and require proper date format
+      const isSimpleNumber = /^\d{1,4}$/.test(value.trim());
       const d = dayjs(value);
-      if (d.isValid()) {
+
+      if (d.isValid() && !isSimpleNumber) {
         const v = BigInt(d.valueOf()) * 1000n;
         const newStart = field === "start" ? v : timeRange.start;
         const newEnd = field === "end" ? v : timeRange.end;
@@ -658,7 +667,7 @@ export default function EntryDetail(props: Readonly<Props>) {
             </Select>
             <TimeRangeDropdown
               onSelectRange={(start, end) => {
-                setTimeRange(start, end, false);
+                setTimeRange(start, end);
                 setStartError(false);
                 setStopError(false);
               }}
@@ -758,17 +767,10 @@ export default function EntryDetail(props: Readonly<Props>) {
       <DataVolumeChart
         records={filteredRecords}
         setTimeRange={setTimeRange}
-        startMs={
-          timeRange.start !== undefined
-            ? Number(timeRange.start / 1000n)
-            : undefined
-        }
-        endMs={
-          timeRange.end !== undefined
-            ? Number(timeRange.end / 1000n)
-            : undefined
-        }
+        start={timeRange.start}
+        end={timeRange.end}
         isLoading={isLoading}
+        showUnix={showUnix}
       />
       <ScrollableTable
         scroll={{ x: "max-content" }}
