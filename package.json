@@ -49,7 +49,7 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check ."
   },
-  "proxy": "http://0.0.0.0:8383",
+  "proxy": "https://test.reduct.store",
   "eslintConfig": {
     "extends": [
       "react-app",

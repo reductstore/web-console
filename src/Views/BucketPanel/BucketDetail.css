@@ -22,3 +22,31 @@
 .removeButton {
   color: red;
 }
+
+.filterDropdown {
+  padding: 8px;
+}
+
+.filterDropdownInput {
+  margin-bottom: 8px;
+  display: block;
+}
+
+.filterDropdownSpace {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filterDropdownButton {
+  width: 90px;
+}
+
+.filterIcon {
+  color: inherit;
+  font-size: 16px;
+}
+
+.filterIconActive {
+  color: #db817b;
+  font-size: 16px;
+}
