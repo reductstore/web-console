@@ -195,13 +195,21 @@ export default function BucketDetail(props: Readonly<Props>) {
           onChange={(e) =>
             setSelectedKeys(e.target.value ? [e.target.value] : [])
           }
-          onPressEnter={() => confirm()}
+          onPressEnter={() => {
+            requestAnimationFrame(() => {
+              confirm();
+            });
+          }}
           className="filterDropdownInput"
         />
         <Space className="filterDropdownSpace">
           <Button
             type="primary"
-            onClick={() => confirm()}
+            onClick={() => {
+              requestAnimationFrame(() => {
+                confirm();
+              });
+            }}
             icon={<SearchOutlined />}
             size="small"
             className="filterDropdownButton"
@@ -210,8 +218,10 @@ export default function BucketDetail(props: Readonly<Props>) {
           </Button>
           <Button
             onClick={() => {
-              clearFilters && clearFilters();
-              confirm();
+              requestAnimationFrame(() => {
+                clearFilters && clearFilters();
+                confirm();
+              });
             }}
             size="small"
             className="filterDropdownButton"
