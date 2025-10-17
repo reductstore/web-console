@@ -130,11 +130,14 @@ export function getDefaultTimeRange(now: Dayjs = dayjs()): TimeRange {
  * @returns The matching range key or 'custom' if no match found
  */
 export function detectRangeKey(
-  start: bigint,
-  end: bigint,
+  start?: bigint,
+  end?: bigint,
   marginMinutes = 10,
   now: Dayjs = dayjs(),
 ): string {
+  if (start === undefined || end === undefined) {
+    return "custom";
+  }
   const marginMicroseconds = BigInt(marginMinutes * 60 * 1000 * 1000);
   const presetKeys = Object.keys(RANGE_MAP).filter((key) => key !== "custom");
 
