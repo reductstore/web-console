@@ -229,4 +229,118 @@ describe("BucketDetail", () => {
     detail.update();
     expect(detail.find(".ant-spin").exists()).toBe(false);
   });
+
+  it("should filter entries based on search term", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    let rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(2);
+
+    const searchInput = detail.find('input[placeholder="Search entries"]');
+    expect(searchInput.exists()).toBe(true);
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "EntryWithData" } });
+    });
+    detail.update();
+
+    rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(1);
+    expect(rows.at(0).render().text()).toContain("EntryWithData");
+  });
+
+  it("should filter entries case-insensitively", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const searchInput = detail.find('input[placeholder="Search entries"]');
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "entrywithdata" } });
+    });
+    detail.update();
+
+    const rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(1);
+    expect(rows.at(0).render().text()).toContain("EntryWithData");
+  });
+
+  it("should show no entries when search term matches nothing", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const searchInput = detail.find('input[placeholder="Search entries"]');
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "nonexistent" } });
+    });
+    detail.update();
+
+    const rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(0);
+  });
+
+  it("should show partial matches in entry names", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const searchInput = detail.find('input[placeholder="Search entries"]');
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "Entry" } });
+    });
+    detail.update();
+
+    const rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(2);
+  });
+
+  it("should clear search and show all entries when search term is empty", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+
+    const searchInput = detail.find('input[placeholder="Search entries"]');
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "EntryWithData" } });
+    });
+    detail.update();
+
+    let rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(1);
+
+    act(() => {
+      searchInput.simulate("change", { target: { value: "" } });
+    });
+    detail.update();
+
+    rows = detail.find(".ant-table-row");
+    expect(rows.length).toEqual(2);
+  });
 });
