@@ -74,41 +74,18 @@
   color: #faad14;
 }
 
-.action-icon.revert-icon:hover {
-  color: #d48806;
-  background-color: #fff7e6;
-}
-
-.action-icon.save-icon {
-  color: #52c41a;
-}
-
-.action-icon.save-icon:hover {
-  color: #389e0d;
-  background-color: #f6ffed;
-}
-
 .action-icon.delete-icon {
   color: #ff4d4f;
 }
 
-.action-icon.delete-icon:hover {
-  color: #cf1322;
-  background-color: #fff2f0;
-}
-
 .action-icon.add-below-icon {
-  color: #1890ff;
-}
-
-.action-icon.add-below-icon:hover {
-  color: #096dd9;
-  background-color: #e6f7ff;
+  color: #71bafeff;
 }
 
 /* Disabled state for action icons */
 .action-icon:disabled {
-  opacity: 0.4;
+  background-color: transparent !important;
+  color: inherit;
   cursor: not-allowed;
 }
 
