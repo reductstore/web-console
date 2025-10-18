@@ -1,13 +1,13 @@
 .recordsChart {
-  margin-bottom: var(--entry-detail-block-spacing);
+  margin-bottom: 2em;
   position: relative;
   height: 150px;
   width: 100%;
 }
 
-.resetZoomBtn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
+.intervalLabel {
+  background-color: var(--antd-bg-container);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }

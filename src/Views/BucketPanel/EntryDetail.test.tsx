@@ -221,6 +221,24 @@ describe("EntryDetail", () => {
       expect(fetchButton.text()).toBe("Fetch Records");
     });
 
+    it("should show reset button when time range differs from default", async () => {
+      const timeInputs = wrapper.find(".timeInputs Input");
+      if (timeInputs.length > 0) {
+        const startInput = timeInputs.at(0);
+        await act(async () => {
+          const onChange = startInput.prop("onChange") as any;
+          if (onChange) {
+            onChange({ target: { value: "2023-01-01T00:00:00Z" } });
+          }
+        });
+        wrapper.update();
+
+        const resetButton = wrapper.find(".fetchButton Button").at(1);
+        expect(resetButton.exists()).toBe(true);
+        expect(resetButton.prop("title")).toBe("Reset to default range");
+      }
+    });
+
     it("should not show a separate limit input", () => {
       const limitInput = wrapper.find(".limitInput");
       expect(limitInput.exists()).toBe(false);
@@ -571,6 +589,10 @@ describe("EntryDetail", () => {
       const chartData = JSON.parse(chart.prop("data-chart-data"));
       expect(chartData).toHaveProperty("datasets");
       expect(chartData.datasets).toHaveLength(1);
+
+      // Verify chart doesn't have reset-related props
+      expect(chart.prop("onResetZoom")).toBeUndefined();
+      expect(chart.prop("showResetButton")).toBeUndefined();
     });
 
     it("should show chart data when records are available", () => {

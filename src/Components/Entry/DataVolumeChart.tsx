@@ -18,10 +18,9 @@ import "chartjs-adapter-dayjs-4";
 import dayjs from "../../Helpers/dayjsConfig";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import { binRecords, type Point } from "../../Helpers/chartUtils";
-import { ReloadOutlined } from "@ant-design/icons";
-import { Button } from "antd";
 import "./DataVolumeChart.css";
 import { msToMicroseconds } from "../../Helpers/NumberUtils";
+import { Typography } from "antd";
 
 ChartJS.register(
   LineController,
@@ -38,16 +37,17 @@ ChartJS.register(
 export interface DataVolumeChartProps {
   records: ReadableRecord[];
   setTimeRange: (start: bigint | undefined, end: bigint | undefined) => void;
-  start?: bigint;
-  end?: bigint;
   isLoading?: boolean;
   showUnix?: boolean;
+  fetchRecords?: () => void;
+  interval?: string | null;
 }
 
 const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
-  ({ records, setTimeRange, start, end, isLoading, showUnix }) => {
-    const baselineUs = useRef<{ start?: bigint; end?: bigint } | null>(null);
-    const updateBaseline = useRef(true);
+  ({ records, setTimeRange, isLoading, showUnix, interval }) => {
+    const start = records?.length ? records[0].time : undefined;
+    const end = records?.length ? records[records.length - 1].time : undefined;
+
     const [mountedOnce, setMountedOnce] = useState(false);
     const lastMaxY = useRef(1);
 
@@ -61,13 +61,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
     useEffect(() => {
       if (records.length) setMountedOnce(true);
     }, [records]);
-
-    useEffect(() => {
-      if (isLoading || updateBaseline.current) {
-        baselineUs.current = { start, end };
-      }
-      updateBaseline.current = false;
-    }, [start, end, isLoading]);
 
     const chartData: ChartData<"line", Point[], unknown> = useMemo(
       () => ({
@@ -97,10 +90,7 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       return m || lastMaxY.current || 1;
     }, [points, records]);
 
-    const enableZoom = useMemo(
-      () => !isLoading,
-      [isLoading, points],
-    );
+    const enableZoom = useMemo(() => !isLoading, [isLoading, points]);
 
     const chartOptions: ChartOptions<"line"> = useMemo(
       () => ({
@@ -114,29 +104,29 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
         scales: {
           x: showUnix
             ? {
-              type: "linear",
-              bounds: "ticks",
-              ticks: {
-                maxRotation: 0,
-                autoSkip: true,
-                callback: (v) => `${Math.trunc(v as number)}`,
-              },
-            }
-            : {
-              type: "time",
-              bounds: "ticks",
-              ticks: { maxRotation: 0, autoSkip: true },
-              time: {
-                displayFormats: {
-                  millisecond: "HH:mm:ss.SSS",
-                  second: "HH:mm:ss",
-                  minute: "HH:mm",
-                  hour: "MMM D, HH:mm",
-                  day: "MMM D",
+                type: "linear",
+                bounds: "ticks",
+                ticks: {
+                  maxRotation: 0,
+                  autoSkip: true,
+                  callback: (v) => `${Math.trunc(v as number)}`,
                 },
-                tooltipFormat: "YYYY-MM-DD HH:mm:ss",
+              }
+            : {
+                type: "time",
+                bounds: "ticks",
+                ticks: { maxRotation: 0, autoSkip: true },
+                time: {
+                  displayFormats: {
+                    millisecond: "HH:mm:ss.SSS",
+                    second: "HH:mm:ss",
+                    minute: "HH:mm",
+                    hour: "MMM D, HH:mm",
+                    day: "MMM D",
+                  },
+                  tooltipFormat: "YYYY-MM-DD HH:mm:ss",
+                },
               },
-            },
           y: {
             beginAtZero: true,
             display: true,
@@ -151,19 +141,28 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
           },
         },
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: false,
+          },
           tooltip: {
             callbacks: {
               label: (ctx) => {
                 const size = ctx.parsed.y as number | undefined;
-                return typeof size !== "number" ? "" : ` ${size}`;
+                return typeof size !== "number"
+                  ? ""
+                  : size > 1
+                    ? ` ${size} records`
+                    : ` ${size} record`;
               },
               title: (items) => {
                 if (!items.length) return "";
                 const v = items[0].parsed.x as number | undefined;
                 if (v == null || Number.isNaN(v)) return "";
                 if (showUnix) return `${Math.trunc(v)}`;
-                const startD = dayjs(v);
+                const startD = dayjs(v).subtract(
+                  Number(bucketSize / 2000n),
+                  "millisecond",
+                );
                 const endD = startD.add(
                   Number(bucketSize / 1000n),
                   "millisecond",
@@ -190,7 +189,6 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
                 const nextstart = toUs(min);
                 const nextend = toUs(max);
                 if (nextstart === start && nextend === end) return;
-                updateBaseline.current = false;
                 requestAnimationFrame(() => setTimeRange(nextstart, nextend));
               },
             },
@@ -199,9 +197,9 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       }),
       [
         bucketSize,
-        end,
         setTimeRange,
         start,
+        end,
         maxY,
         isLoading,
         records,
@@ -210,31 +208,15 @@ const DataVolumeChart: React.FC<DataVolumeChartProps> = React.memo(
       ],
     );
 
-    const showReset = useMemo(() => {
-      const b = baselineUs.current;
-      if (b == null || isLoading) return false;
-      return b?.start !== start || b?.end !== end;
-    }, [start, end, isLoading]);
-
-    const handleResetZoom = () => {
-      const b = baselineUs.current;
-      requestAnimationFrame(() => setTimeRange(b?.start, b?.end));
-    };
-
     if (!records.length && !mountedOnce) return null;
     return (
       <div className="recordsChart">
-        <Line data={chartData} options={chartOptions} />
-        {showReset && (
-          <Button
-            icon={<ReloadOutlined />}
-            size="small"
-            shape="circle"
-            onClick={handleResetZoom}
-            className="resetZoomBtn"
-            aria-label="Reset zoom to last range"
-          />
+        {interval && (
+          <Typography.Text code className="intervalLabel">
+            Interval: {interval}
+          </Typography.Text>
         )}
+        <Line data={chartData} options={chartOptions} />
       </div>
     );
   },

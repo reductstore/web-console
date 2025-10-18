@@ -36,6 +36,7 @@
 
 .timeInputs {
   display: grid;
+  align-items: center;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
   gap: var(--entry-detail-inner-spacing);
 }

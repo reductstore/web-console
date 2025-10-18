@@ -24,6 +24,7 @@ import {
   ShareAltOutlined,
   EditOutlined,
   DeleteOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -77,35 +78,23 @@ export default function EntryDetail(props: Readonly<Props>) {
     end: defaultRange.end as bigint | undefined,
     startText: formatValue(defaultRange.start, false),
     stopText: formatValue(defaultRange.end, false),
+    interval: null as string | null,
   }));
 
   const [showUnix, setShowUnix] = useState(false);
 
-  const setTimeRange = (start: bigint | undefined, end: bigint | undefined) => {
-    setTimeRangeState({
+  const setTimeRange = (
+    start: bigint | undefined,
+    end: bigint | undefined,
+    interval?: string | null,
+  ) => {
+    setTimeRangeState((prev) => ({
       start,
       end,
       startText: formatValue(start, showUnix),
       stopText: formatValue(end, showUnix),
-    });
-
-    try {
-      const currentCondition = JSON.parse(whenCondition.trim() || "{}");
-      const keys = Object.keys(currentCondition);
-      if (
-        keys.length === 0 ||
-        (keys.length === 1 &&
-          keys[0] === "$each_t" &&
-          (currentCondition["$each_t"] === "$__interval" ||
-            typeof currentCondition["$each_t"] === "number"))
-      ) {
-        const newCondition =
-          JSON.stringify({ $each_t: "$__interval" }, null, 2) + "\n";
-        setWhenCondition(newCondition);
-      }
-    } catch {
-      // If current condition is not valid JSON, don't auto-update
-    }
+      interval: interval ?? prev.interval,
+    }));
   };
 
   const updateTimeRangeText = (
@@ -151,16 +140,35 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
+  const extractIntervalFromCondition = (condition: string): string | null => {
+    if (!condition.trim()) return null;
+
+    try {
+      const parsed = JSON.parse(condition);
+      if (parsed && typeof parsed === "object") {
+        if (parsed.$each_t) {
+          return typeof parsed.$each_t === "string" ? parsed.$each_t : null;
+        }
+        for (const value of Object.values(parsed)) {
+          if (value && typeof value === "object" && (value as any).$each_t) {
+            const interval = (value as any).$each_t;
+            return typeof interval === "string" ? interval : null;
+          }
+        }
+      }
+    } catch {
+      // Invalid JSON, return null
+    }
+    return null;
+  };
+
   const substituteMacros = (
     conditionString: string,
-    start?: bigint,
-    end?: bigint,
+    intervalValue: string,
   ): string => {
     if (!conditionString.trim()) return conditionString;
 
     try {
-      const intervalValue = pickEachTInterval(start, end);
-
       let processedCondition = conditionString;
       processedCondition = processedCondition.replace(
         /"\$__interval"/g,
@@ -191,28 +199,18 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       const bucket = await props.client.getBucket(bucketName);
 
-      let rangeStart = start;
-      let rangeEnd = end;
-
-      if (rangeStart == null || rangeEnd == null) {
-        const entry = await bucket
-          .getEntryList()
-          .then((entries) => entries.find((e) => e.name === entryName));
-
-        rangeStart ??= entry?.oldestRecord;
-        rangeEnd ??= entry?.latestRecord;
-      }
+      const rangeStart = start ?? entryInfo?.oldestRecord;
+      const rangeEnd = end ?? entryInfo?.latestRecord;
 
       const options = new QueryOptions();
       options.head = true;
       options.strict = true;
 
       if (whenCondition.trim()) {
-        const processedCondition = substituteMacros(
-          whenCondition,
-          rangeStart,
-          rangeEnd,
-        );
+        const macroValue = pickEachTInterval(rangeStart, rangeEnd);
+        const processedCondition = substituteMacros(whenCondition, macroValue);
+        const each_t = extractIntervalFromCondition(processedCondition);
+        setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
         options.when = JSON.parse(processedCondition);
       }
 
@@ -250,18 +248,6 @@ export default function EntryDetail(props: Readonly<Props>) {
         setIsLoading(false);
         fetchCtrlRef.current = null;
       }
-    }
-  };
-
-  const handleFetchRecordsClick = () => {
-    if (isLoading) {
-      if (fetchCtrlRef.current) {
-        fetchCtrlRef.current.abort();
-        fetchCtrlRef.current = null;
-      }
-      setIsLoading(false);
-    } else {
-      getRecords(timeRange.start, timeRange.end);
     }
   };
 
@@ -584,6 +570,15 @@ export default function EntryDetail(props: Readonly<Props>) {
     permissions.fullAccess ||
     (permissions.write && permissions.write.includes(bucketName));
 
+  const showResetButton =
+    timeRange.start !== defaultRange.start ||
+    timeRange.end !== defaultRange.end;
+
+  const handleResetZoom = () => {
+    setTimeRange(defaultRange.start, defaultRange.end);
+    getRecords(defaultRange.start, defaultRange.end);
+  };
+
   return (
     <div className="entryDetail">
       {entryInfo && (
@@ -750,7 +745,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
         <div className="fetchButton">
           <Button
-            onClick={handleFetchRecordsClick}
+            onClick={() => getRecords(timeRange.start, timeRange.end)}
             type={isLoading ? "default" : "primary"}
             danger={isLoading}
             style={{
@@ -762,15 +757,26 @@ export default function EntryDetail(props: Readonly<Props>) {
           >
             {isLoading ? "Cancel" : "Fetch Records"}
           </Button>
+          {showResetButton && (
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleResetZoom}
+              title="Reset to default range"
+              type="default"
+              style={{ marginLeft: 8 }}
+            />
+          )}
         </div>
       </div>
       <DataVolumeChart
         records={filteredRecords}
-        setTimeRange={setTimeRange}
-        start={timeRange.start}
-        end={timeRange.end}
+        setTimeRange={(start, end) => {
+          setTimeRange(start, end);
+          getRecords(start, end);
+        }}
         isLoading={isLoading}
         showUnix={showUnix}
+        interval={timeRange.interval}
       />
       <ScrollableTable
         scroll={{ x: "max-content" }}

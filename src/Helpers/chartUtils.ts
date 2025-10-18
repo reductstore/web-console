@@ -130,7 +130,7 @@ export function pickEachTInterval(
 }
 
 /**
- * Bin records into time buckets for visualization using microseconds
+ * Bin records into time buckets (centered x-values) and count number of records per bucket
  * @param records - Array of records sorted by time
  * @param start - Optional start time in microseconds
  * @param end - Optional end time in microseconds
@@ -142,6 +142,7 @@ export function binRecords(
   start?: bigint,
   end?: bigint,
   convert: (us: bigint) => number = (us) => Number(us / 1000n),
+  centerX = true,
 ): { points: Point[]; bucketSize: bigint } {
   if (!records.length) return { points: [], bucketSize: 1_000_000n };
 
@@ -157,8 +158,8 @@ export function binRecords(
   const startIdx = lowerBoundByTime(records, minUs);
   const endIdx = upperBoundByTime(records, maxUs);
 
-  const firstBucketstart = (minUs / bucketSize) * bucketSize;
-  const bucketCount = Number((maxUs - firstBucketstart) / bucketSize) + 1;
+  const firstBucketStart = (minUs / bucketSize) * bucketSize;
+  const bucketCount = Number((maxUs - firstBucketStart) / bucketSize) + 1;
 
   if (bucketCount <= 0) return { points: [], bucketSize };
 
@@ -166,14 +167,16 @@ export function binRecords(
 
   for (let i = startIdx; i < endIdx; i++) {
     const tUs = records[i].time;
-    const idx = Number((tUs - firstBucketstart) / bucketSize);
+    const idx = Number((tUs - firstBucketStart) / bucketSize);
     if (idx >= 0 && idx < bucketCount) totals[idx] += 1;
   }
 
   const points: Point[] = new Array(bucketCount);
+  const half = bucketSize / 2n;
   for (let i = 0; i < bucketCount; i++) {
-    const bucketstart = firstBucketstart + BigInt(i) * bucketSize;
-    points[i] = { x: convert(bucketstart), y: totals[i] };
+    const bucketStart = firstBucketStart + BigInt(i) * bucketSize;
+    const xUs = bucketStart + half;
+    points[i] = { x: convert(xUs), y: totals[i] };
   }
 
   return { points, bucketSize };

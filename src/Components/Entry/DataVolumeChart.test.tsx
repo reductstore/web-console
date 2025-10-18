@@ -3,7 +3,6 @@ import { mount } from "enzyme";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import DataVolumeChart from "./DataVolumeChart";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { ReloadOutlined } from "@ant-design/icons";
 
 jest.mock("react-chartjs-2", () => ({
   Line: ({ data, options, ...props }: any) => (
@@ -219,91 +218,6 @@ describe("DataVolumeChart", () => {
       const options = JSON.parse(chart.prop("data-chart-options"));
 
       expect(options.scales.x).toBeDefined();
-    });
-  });
-
-  describe("Reset Zoom Button", () => {
-    it("should not show reset button when not zoomed", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart {...defaultProps} records={records} />,
-      );
-
-      expect(wrapper.find(ReloadOutlined)).toHaveLength(0);
-    });
-
-    it("should not show reset button when loading", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          isLoading={true}
-        />,
-      );
-
-      expect(wrapper.find(ReloadOutlined)).toHaveLength(0);
-    });
-
-    it("should show reset button when time range changes", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          start={1000n}
-          end={2000n}
-          isLoading={true}
-        />,
-      );
-
-      wrapper.setProps({ start: 1200n, end: 1800n, isLoading: false });
-      wrapper.update();
-
-      expect(wrapper.find(ReloadOutlined)).toHaveLength(1);
-    });
-
-    it("should call setTimeRange when reset button is clicked", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          start={1000n}
-          end={2000n}
-        />,
-      );
-
-      wrapper.setProps({ start: 1200n, end: 1800n });
-      wrapper.update();
-
-      const resetButton = wrapper.find(ReloadOutlined).closest("button");
-      resetButton.simulate("click");
-
-      expect(mockSetTimeRange).toHaveBeenCalled();
-    });
-
-    it("should have proper accessibility attributes on reset button", () => {
-      const records = [createMockRecord(1000000n, 1024n)];
-
-      const wrapper = mount(
-        <DataVolumeChart
-          {...defaultProps}
-          records={records}
-          start={1000n}
-          end={2000n}
-        />,
-      );
-
-      wrapper.setProps({ start: 1200n, end: 1800n });
-      wrapper.update();
-
-      const resetButton = wrapper.find(".resetZoomBtn").first();
-      expect(resetButton.prop("aria-label")).toBe("Reset zoom to last range");
     });
   });
 
