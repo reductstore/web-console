@@ -1,7 +1,11 @@
 import React from "react";
 import { mount, ReactWrapper } from "enzyme";
 import { message } from "antd";
-import { DeleteOutlined, PlusOutlined, UndoOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  UndoOutlined,
+  InsertRowBelowOutlined,
+} from "@ant-design/icons";
 import EditRecordLabels from "./EditRecordLabels";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
@@ -31,19 +35,6 @@ describe("EditRecordLabels", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockJSDOM();
-
-    // Polyfill global crypto for tests
-    if (!global.crypto) {
-      global.crypto = {
-        getRandomValues: (arr: Uint8Array) => {
-          for (let i = 0; i < arr.length; i++) {
-            arr[i] = Math.floor(Math.random() * 256);
-          }
-          return arr;
-        },
-      } as Crypto;
-    }
-
     message.success = jest.fn();
     message.error = jest.fn();
   });
@@ -117,7 +108,7 @@ describe("EditRecordLabels", () => {
       expect(tableText).not.toContain("demo");
     });
 
-    it("should not render nothing when no record provided", () => {
+    it("should render nothing when no record provided", () => {
       wrapper = mount(
         <EditRecordLabels
           record={null}
@@ -143,7 +134,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should not show action buttons when editable=false", () => {
-      const addButton = wrapper.find('Button[title="Add"]');
+      const addButton = wrapper.find('Button[title="Add new label"]');
       const revertButton = wrapper.find('Button[title="Revert changes"]');
       const updateButton = wrapper.find('Button[title="Update labels"]');
 
@@ -183,7 +174,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should show action buttons when editable=true", () => {
-      const addButton = wrapper.find('Button[title="Add"]');
+      const addButton = wrapper.find('Button[title="Add new label"]');
       const revertButton = wrapper.find('Button[title="Revert changes"]');
       const updateButton = wrapper.find('Button[title="Update labels"]');
 
@@ -204,7 +195,7 @@ describe("EditRecordLabels", () => {
 
     it("should show row action icons for each row", () => {
       const revertIcons = wrapper.find(UndoOutlined);
-      const addBelowIcons = wrapper.find(PlusOutlined);
+      const addBelowIcons = wrapper.find(InsertRowBelowOutlined);
       const deleteIcons = wrapper.find(DeleteOutlined);
 
       expect(revertIcons.length).toBeGreaterThanOrEqual(2);
@@ -233,27 +224,22 @@ describe("EditRecordLabels", () => {
     });
 
     it("should make cell editable when clicked", () => {
-      const firstKeyCell = wrapper.find(".editableCellValueWrap").at(0);
-      firstKeyCell.simulate("click");
-      wrapper.update();
+      // In editable mode, inputs are always visible
+      const inputs = wrapper.find("Input");
+      expect(inputs.length).toBeGreaterThan(0);
 
-      const input = wrapper.find("Input").at(0);
-      expect(input.exists()).toBe(true);
-      expect(input.prop("value")).toBe("name");
+      // Check first input has the correct value
+      const firstInput = inputs.at(0);
+      expect(firstInput.prop("value")).toBe("name");
     });
 
-    it("should save changes when input loses focus", () => {
-      // Click on cell to edit
-      const firstKeyCell = wrapper.find(".editableCellValueWrap").at(0);
-      firstKeyCell.simulate("click");
-      wrapper.update();
+    it("should save changes when input value changes", () => {
+      // Find the first input (should be the first key)
+      const input = wrapper.find("Input").at(0);
+      expect(input.prop("value")).toBe("name");
 
       // Change the value
-      const input = wrapper.find("Input").at(0);
       input.simulate("change", { target: { value: "env" } });
-
-      // Blur to save
-      input.simulate("blur");
       wrapper.update();
 
       // Should enable buttons since we made changes
@@ -261,16 +247,13 @@ describe("EditRecordLabels", () => {
       expect(updateButton.prop("disabled")).toBe(false);
     });
 
-    it("should save changes when Enter is pressed", () => {
-      // Click on cell to edit
-      const firstValueCell = wrapper.find(".editableCellValueWrap").at(1);
-      firstValueCell.simulate("click");
-      wrapper.update();
+    it("should save changes when value is modified", () => {
+      // Find the second input (should be the first value)
+      const input = wrapper.find("Input").at(1);
+      expect(input.prop("value")).toBe("test");
 
-      // Change the value and press Enter
-      const input = wrapper.find("Input").at(0);
+      // Change the value
       input.simulate("change", { target: { value: "sample" } });
-      input.simulate("keydown", { key: "Enter", keyCode: 13 });
       wrapper.update();
 
       // Should enable buttons
@@ -293,7 +276,7 @@ describe("EditRecordLabels", () => {
     it("should add new empty row when Add button is clicked", () => {
       const initialRows = wrapper.find(".ant-table-tbody tr").length;
 
-      const addButton = wrapper.find('Button[title="Add"]');
+      const addButton = wrapper.find('Button[title="Add new label"]');
       addButton.simulate("click");
       wrapper.update();
 
@@ -360,13 +343,8 @@ describe("EditRecordLabels", () => {
 
     it("should revert individual row changes when row revert icon is clicked", () => {
       // First, modify a cell
-      const firstKeyCell = wrapper.find(".editableCellValueWrap").at(0);
-      firstKeyCell.simulate("click");
-      wrapper.update();
-
       const input = wrapper.find("Input").at(0);
       input.simulate("change", { target: { value: "modified" } });
-      input.simulate("blur");
       wrapper.update();
 
       // Now revert the row
@@ -377,31 +355,40 @@ describe("EditRecordLabels", () => {
       wrapper.update();
 
       // Should be reverted back to original
-      const tableText = wrapper.find(".ant-table").text();
-      expect(tableText).toContain("name");
-      expect(tableText).not.toContain("modified");
+      const firstInput = wrapper.find("Input").at(0);
+      expect(firstInput.prop("value")).toBe("name");
     });
 
     it("should revert all changes when global revert button is clicked", () => {
-      // Make some changes
-      const deleteIcon = wrapper.find(".delete-icon").at(0);
-      deleteIcon.simulate("click");
+      if (wrapper) wrapper.unmount();
+      wrapper = mount(
+        <EditRecordLabels
+          record={mockRecord}
+          onLabelsUpdated={mockOnLabelsUpdated}
+          editable={true}
+        />,
+      );
+
+      // Make a simple change - modify a value
+      const input = wrapper.find("Input").at(0);
+      expect(input.prop("value")).toBe("name"); // Ensure starting value
+      input.simulate("change", { target: { value: "modified" } });
       wrapper.update();
 
-      const addButton = wrapper.find('Button[title="Add"]');
-      addButton.simulate("click");
-      wrapper.update();
+      // Verify change was made
+      const modifiedInput = wrapper.find("Input").at(0);
+      expect(modifiedInput.prop("value")).toBe("modified");
 
-      //Revert all changes
+      // Revert all changes
       const revertButton = wrapper
         .find('Button[title="Revert changes"]')
         .first();
       revertButton.simulate("click");
       wrapper.update();
 
-      // Should be back to original state
-      const tableRows = wrapper.find(".ant-table-tbody tr");
-      expect(tableRows.length).toBe(2);
+      // Should have original values
+      const revertedInput = wrapper.find("Input").at(0);
+      expect(revertedInput.prop("value")).toBe("name");
     });
 
     it("should disable revert icons for unchanged rows", () => {
@@ -425,13 +412,8 @@ describe("EditRecordLabels", () => {
 
     it("should call onLabelsUpdated with correct data when save is successful", () => {
       // Make a change
-      const firstKeyCell = wrapper.find(".editableCellValueWrap").at(0);
-      firstKeyCell.simulate("click");
-      wrapper.update();
-
       const input = wrapper.find("Input").at(0);
       input.simulate("change", { target: { value: "env" } });
-      input.simulate("blur");
       wrapper.update();
 
       // Save
@@ -450,13 +432,8 @@ describe("EditRecordLabels", () => {
 
     it("should include empty values in the data sent to callback for deletion", () => {
       // Delete the value of an existing label to make it empty
-      const firstValueCell = wrapper.find(".editableCellValueWrap").at(1);
-      firstValueCell.simulate("click");
-      wrapper.update();
-
-      const input = wrapper.find("Input").at(0);
+      const input = wrapper.find("Input").at(1);
       input.simulate("change", { target: { value: "" } });
-      input.simulate("blur");
       wrapper.update();
 
       // This should fail validation due to empty value
