@@ -1,0 +1,118 @@
+.labelsTitle {
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.labelTableContainer {
+  margin-bottom: 16px;
+}
+
+.labelTableContainer .ant-table {
+  font-size: 14px;
+}
+
+.labelTableContainer .ant-table-thead > tr > th {
+  font-size: 14px;
+}
+
+.labelTableContainer .ant-table-tbody > tr > td {
+  font-size: 14px;
+}
+
+.errorMessage {
+  margin-top: 16px;
+}
+
+.editableCellValueWrap {
+  padding: 5px 12px;
+  cursor: pointer;
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.placeholderText {
+  color: #bfbfbf;
+}
+
+.editFormItem {
+  margin: 0;
+}
+
+.editInput {
+  width: 100%;
+}
+
+.buttonContainer {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.buttonContainer .ant-btn {
+  margin-bottom: 0 !important;
+}
+
+/* Row-level action icons */
+.row-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.action-icon {
+  min-width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon.revert-icon {
+  color: #faad14;
+}
+
+.action-icon.revert-icon:hover {
+  color: #d48806;
+  background-color: #fff7e6;
+}
+
+.action-icon.save-icon {
+  color: #52c41a;
+}
+
+.action-icon.save-icon:hover {
+  color: #389e0d;
+  background-color: #f6ffed;
+}
+
+.action-icon.delete-icon {
+  color: #ff4d4f;
+}
+
+.action-icon.delete-icon:hover {
+  color: #cf1322;
+  background-color: #fff2f0;
+}
+
+.action-icon.add-below-icon {
+  color: #1890ff;
+}
+
+.action-icon.add-below-icon:hover {
+  color: #096dd9;
+  background-color: #e6f7ff;
+}
+
+/* Disabled state for action icons */
+.action-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-icon:disabled:hover {
+  background-color: transparent !important;
+  color: inherit;
+}
