@@ -190,17 +190,23 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
       }
 
       if (emptyKeyItems.length > 0) {
-        setLabelUpdateError(`Empty key found in row(s): ${emptyKeyItems.join(", ")}`);
+        setLabelUpdateError(
+          `Empty key found in row(s): ${emptyKeyItems.join(", ")}`,
+        );
         return;
       }
 
       if (emptyValueItems.length > 0) {
-        setLabelUpdateError(`Empty value found in row(s): ${emptyValueItems.join(", ")}. Please provide a value for each label.`);
+        setLabelUpdateError(
+          `Empty value found in row(s): ${emptyValueItems.join(", ")}. Please provide a value for each label.`,
+        );
         return;
       }
 
       if (duplicateKeys.length > 0) {
-        setLabelUpdateError(`Duplicate keys found: ${duplicateKeys.join(", ")}`);
+        setLabelUpdateError(
+          `Duplicate keys found: ${duplicateKeys.join(", ")}`,
+        );
         return;
       }
 
@@ -211,13 +217,15 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
       });
 
       const displayLabels = Object.fromEntries(
-        Object.entries(newLabels).filter(([, value]) => value.trim() !== "")
+        Object.entries(newLabels).filter(([, value]) => value.trim() !== ""),
       );
       setLastSavedLabels(JSON.stringify(displayLabels));
 
       onLabelsUpdated(newLabels, record.timestamp);
     } catch (err) {
-      setLabelUpdateError(err instanceof Error ? err.message : "Failed to update labels");
+      setLabelUpdateError(
+        err instanceof Error ? err.message : "Failed to update labels",
+      );
     }
   };
 
@@ -352,46 +360,46 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
     },
     ...(editable
       ? [
-        {
-          title: "Actions",
-          dataIndex: "operation",
-          width: "20%",
-          render: (_: any, record: LabelItem) => (
-            <Space size="small" className="row-actions">
-              <Button
-                type="text"
-                size="small"
-                icon={<UndoOutlined />}
-                onClick={() => handleRowRevert(record.id)}
-                title={
-                  record.isModified || record.isNew
-                    ? "Revert changes"
-                    : "No changes to revert"
-                }
-                className="action-icon revert-icon"
-                disabled={!(record.isModified || record.isNew)}
-              />
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => handleAddBelow(record.id)}
-                title="Add entry below"
-                className="action-icon add-below-icon"
-              />
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(record.id)}
-                title="Delete"
-                className="action-icon delete-icon"
-              />
-            </Space>
-          ),
-        },
-      ]
+          {
+            title: "Actions",
+            dataIndex: "operation",
+            width: "20%",
+            render: (_: any, record: LabelItem) => (
+              <Space size="small" className="row-actions">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<UndoOutlined />}
+                  onClick={() => handleRowRevert(record.id)}
+                  title={
+                    record.isModified || record.isNew
+                      ? "Revert changes"
+                      : "No changes to revert"
+                  }
+                  className="action-icon revert-icon"
+                  disabled={!(record.isModified || record.isNew)}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleAddBelow(record.id)}
+                  title="Add entry below"
+                  className="action-icon add-below-icon"
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDelete(record.id)}
+                  title="Delete"
+                  className="action-icon delete-icon"
+                />
+              </Space>
+            ),
+          },
+        ]
       : []),
   ];
 

@@ -332,15 +332,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     timestamp: bigint,
   ) => {
     try {
-      const originalRecord = records.find(r => r.time === timestamp);
+      const originalRecord = records.find((r) => r.time === timestamp);
       const originalLabels = originalRecord?.labels || {};
-      const originalLabelsObj = typeof originalLabels === 'string'
-        ? JSON.parse(originalLabels)
-        : originalLabels || {};
+      const originalLabelsObj =
+        typeof originalLabels === "string"
+          ? JSON.parse(originalLabels)
+          : originalLabels || {};
 
       const updateLabels: Record<string, string> = { ...newLabels };
 
-      Object.keys(originalLabelsObj).forEach(originalKey => {
+      Object.keys(originalLabelsObj).forEach((originalKey) => {
         if (!(originalKey in newLabels)) {
           updateLabels[originalKey] = "";
         }
@@ -350,7 +351,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       await bucket.update(entryName, timestamp, updateLabels);
 
       const displayLabels = Object.fromEntries(
-        Object.entries(newLabels).filter(([, value]) => value.trim() !== "")
+        Object.entries(newLabels).filter(([, value]) => value.trim() !== ""),
       );
 
       setRecords((prevRecords) =>
@@ -667,8 +668,8 @@ export default function EntryDetail(props: Readonly<Props>) {
               {showUnix
                 ? recordToDelete.key
                 : new Date(
-                  Number(recordToDelete.timestamp / 1000n),
-                ).toISOString()}
+                    Number(recordToDelete.timestamp / 1000n),
+                  ).toISOString()}
             </Typography.Text>
           </div>
         )}
