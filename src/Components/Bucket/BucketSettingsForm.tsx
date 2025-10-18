@@ -74,7 +74,6 @@ class BucketSettingsForm extends React.Component<
   }): Promise<void> {
     const { history } = this.props;
 
-    console.log(values);
     let maxBlockSize = undefined;
     if (values.maxBlockSize) {
       maxBlockSize =
@@ -100,7 +99,6 @@ class BucketSettingsForm extends React.Component<
       quotaSize,
       maxBlockRecords,
     };
-    console.log(settings);
     const { bucketName, client } = this.props;
     try {
       // We create a new bucket if the bucket name wasn't set in properties
