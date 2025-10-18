@@ -48,7 +48,7 @@ import {
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
 import { pickEachTInterval } from "../../Helpers/chartUtils";
-import EditRecordLabels from "../../Components/EditRecordLabels/EditRecordLabels";
+import EditRecordLabels from "../../Components/EditRecordLabels";
 
 interface CustomPermissions {
   write?: string[];
@@ -341,6 +341,7 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       const updateLabels: Record<string, string> = { ...newLabels };
 
+      // empty string values indicate label deletion
       Object.keys(originalLabelsObj).forEach((originalKey) => {
         if (!(originalKey in newLabels)) {
           updateLabels[originalKey] = "";
@@ -642,6 +643,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Modal
         title="Delete Record"
         open={isDeleteModalVisible}
+        onCancel={() => setIsDeleteModalVisible(false)}
         centered
         footer={[
           <Button key="back" onClick={() => setIsDeleteModalVisible(false)}>
