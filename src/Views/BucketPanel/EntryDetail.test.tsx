@@ -483,17 +483,15 @@ describe("EntryDetail", () => {
 
       const editIcon = wrapper.find(EditOutlined).at(0);
       expect(editIcon.exists()).toBe(true);
+      expect(editIcon.prop("title")).toBe("Edit labels");
 
       const { onClick } = editIcon.props();
       expect(typeof onClick).toBe("function");
 
       act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
+        (onClick as any)({
+          stopPropagation: jest.fn(),
+        });
       });
       wrapper.update();
 
@@ -504,9 +502,11 @@ describe("EntryDetail", () => {
       expect(modalContent).toContain("Timestamp");
       expect(modalContent).toContain("Content Type");
       expect(modalContent).toContain("Size");
+      expect(modalContent).toContain("Labels:");
+      expect(modalContent).toContain("Cancel");
 
       // Check for the label table instead of CodeMirror
-      const labelTable = modal.find(".edit-record-labels-modal .ant-table");
+      const labelTable = modal.find(".editRecordLabelsModal .ant-table");
       expect(labelTable.exists()).toBe(true);
     });
 
@@ -520,6 +520,7 @@ describe("EntryDetail", () => {
       mockReader.labels = { key: "value" };
 
       bucket.update = jest.fn().mockResolvedValue(undefined);
+      message.success = jest.fn();
 
       (bucket.beginRead as jest.Mock).mockResolvedValue(mockReader);
 
@@ -532,37 +533,33 @@ describe("EntryDetail", () => {
       const { onClick } = editIcon.props();
 
       act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
+        (onClick as any)({
+          stopPropagation: jest.fn(),
+        });
       });
       wrapper.update();
 
       const modal = wrapper.find(".ant-modal");
       expect(modal.exists()).toBe(true);
 
-      const buttons = modal.find(".ant-modal-footer").find("button");
-      expect(buttons.length).toBeGreaterThan(1);
-
-      const okButton = buttons.at(1);
-      expect(okButton.exists()).toBe(true);
-
-      const okButtonOnClick = okButton.props().onClick;
+      const updateButton = modal
+        .find("button")
+        .filterWhere((btn) => btn.text() === "Update Labels");
+      expect(updateButton.exists()).toBe(true);
 
       await act(async () => {
-        (okButtonOnClick as any)();
+        updateButton.simulate("click");
         jest.runAllTimers();
       });
 
       expect(bucket.update).toHaveBeenCalled();
-
       expect(bucket.update).toHaveBeenCalledWith(
         "testEntry",
         mockRecords[0].time,
         expect.any(Object),
+      );
+      expect(message.success).toHaveBeenCalledWith(
+        "Record labels updated successfully",
       );
     });
   });
