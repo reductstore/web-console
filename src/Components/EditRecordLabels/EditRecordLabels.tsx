@@ -1,13 +1,16 @@
-import React, { useState, useEffect, createContext } from "react";
-import { Alert, Input, Button, Form, Space, Typography } from "antd";
+import React, { useState, useEffect } from "react";
+import { Alert, Button, Space, Typography } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
+  InsertRowBelowOutlined,
   UndoOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
 import "./EditRecordLabels.css";
 import ScrollableTable from "../ScrollableTable";
+import EditableRow from "./EditableRow";
+import EditableCell from "./EditableCell";
 
 interface EditRecordLabelsProps {
   record: any;
@@ -19,82 +22,6 @@ interface EditRecordLabelsProps {
   editable?: boolean;
 }
 
-const EditableContext = createContext<any>(null);
-
-const EditableRow: React.FC<any> = ({ index, ...props }) => {
-  const [form] = Form.useForm();
-  return (
-    <Form form={form} component={false}>
-      <EditableContext.Provider value={form}>
-        <tr {...props} />
-      </EditableContext.Provider>
-    </Form>
-  );
-};
-
-const EditableCell: React.FC<any> = ({
-  title,
-  editable,
-  children,
-  dataIndex,
-  record,
-  handleSave,
-  ...restProps
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [localValue, setLocalValue] = useState<string>(
-    record?.[dataIndex] ?? "",
-  );
-  const inputRef = React.useRef<any>(null);
-
-  useEffect(() => {
-    if (editing) {
-      setLocalValue(record?.[dataIndex] ?? "");
-      inputRef.current?.focus();
-    }
-  }, [editing, record, dataIndex]);
-
-  useEffect(() => {
-    if (!editing) {
-      setLocalValue(record?.[dataIndex] ?? "");
-    }
-  }, [record?.[dataIndex], editing, dataIndex, record]);
-
-  const toggleEdit = () => setEditing((e) => !e);
-
-  const save = () => {
-    if (!handleSave) return;
-    handleSave({ ...record, [dataIndex]: localValue });
-    setEditing(false);
-  };
-
-  let childNode = children;
-
-  if (editable) {
-    childNode = editing ? (
-      <Input
-        ref={inputRef}
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onPressEnter={save}
-        onBlur={save}
-        placeholder={dataIndex === "key" ? "Enter key" : "Enter value"}
-        className="editInput"
-      />
-    ) : (
-      <div className="editableCellValueWrap" onClick={toggleEdit}>
-        {children || (
-          <span className="placeholderText">
-            {dataIndex === "key" ? "Enter key" : "Enter value"}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  return <td {...restProps}>{childNode}</td>;
-};
-
 interface LabelItem {
   id: string;
   key: string;
@@ -105,7 +32,7 @@ interface LabelItem {
   isNew?: boolean;
 }
 
-const normalizeLabels = (obj: any) => {
+const filterValidLabels = (obj: any) => {
   const src = typeof obj === "string" ? JSON.parse(obj) : obj || {};
   return Object.fromEntries(
     Object.entries(src).filter(([, v]) => v !== "" && v != null),
@@ -124,7 +51,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
   const hasChangesToUpdate = () => {
     if (!record) return false;
     try {
-      const originalLabels = normalizeLabels(record.labels);
+      const originalLabels = filterValidLabels(record.labels);
       const currentLabels: Record<string, string> = {};
       labelItems.forEach((item) => {
         if (item.key.trim()) currentLabels[item.key] = item.value;
@@ -140,14 +67,13 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
 
     const currentLabelsStr = JSON.stringify(record.labels);
 
-    // Don't reset if this is the result of our own save operation
     if (currentLabelsStr === lastSavedLabels) {
       return;
     }
 
     setLabelUpdateError(null);
     try {
-      const clean = normalizeLabels(record.labels);
+      const clean = filterValidLabels(record.labels);
       const items = Object.entries(clean).map(([key, value]) => ({
         id: `lbl-${String(record.timestamp)}-${key}`,
         key,
@@ -160,7 +86,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
     } catch {
       setLabelItems([]);
     }
-  }, [record?.timestamp, JSON.stringify(record?.labels), lastSavedLabels]);
+  }, [record?.timestamp, record?.labels]);
 
   const handleUpdateLabels = () => {
     if (!record) return;
@@ -213,14 +139,9 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
       const newLabels: Record<string, string> = {};
       labelItems.forEach((item) => {
         const k = item.key?.trim();
-        if (k) newLabels[k] = item.value ?? "";
+        if (k) newLabels[k] = item.value;
       });
-
-      const displayLabels = Object.fromEntries(
-        Object.entries(newLabels).filter(([, value]) => value.trim() !== ""),
-      );
-      setLastSavedLabels(JSON.stringify(displayLabels));
-
+      setLastSavedLabels(JSON.stringify(newLabels));
       onLabelsUpdated(newLabels, record.timestamp);
     } catch (err) {
       setLabelUpdateError(
@@ -241,7 +162,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
         isModified = row.key.trim() !== "" || row.value.trim() !== "";
       } else {
         try {
-          const labelsObj = normalizeLabels(record?.labels);
+          const labelsObj = filterValidLabels(record?.labels);
           const originalKey = originalItem.originalKey || row.key;
           const originalValue = String(labelsObj[originalKey] || "");
           isModified = row.key !== originalKey || row.value !== originalValue;
@@ -261,10 +182,10 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
     setLabelItems(labelItems.filter((item) => item.id !== id));
   };
 
-  const handleAdd = () => {
+  const handleAdd = (targetId?: string) => {
     setLabelUpdateError(null);
 
-    const newId = `lbl-new-${crypto.randomUUID?.() ?? Date.now()}`;
+    const newId = `lbl-new-${Date.now()}`;
     const newItem: LabelItem = {
       id: newId,
       key: "",
@@ -273,21 +194,10 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
       isModified: false,
       isNew: true,
     };
-    setLabelItems([...labelItems, newItem]);
-  };
-
-  const handleAddBelow = (targetId: string) => {
-    setLabelUpdateError(null);
-
-    const newId = `lbl-new-${crypto.randomUUID?.() ?? Date.now()}`;
-    const newItem: LabelItem = {
-      id: newId,
-      key: "",
-      value: "",
-      originalKey: undefined,
-      isModified: false,
-      isNew: true,
-    };
+    if (!targetId) {
+      setLabelItems([...labelItems, newItem]);
+      return;
+    }
     const targetIndex = labelItems.findIndex((item) => item.id === targetId);
     const newData = [...labelItems];
     newData.splice(targetIndex + 1, 0, newItem);
@@ -297,7 +207,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
   const handleRevert = () => {
     if (!record) return;
     try {
-      const clean = normalizeLabels(record.labels);
+      const clean = filterValidLabels(record.labels);
       const items = Object.entries(clean).map(([key, value]) => ({
         id: `lbl-${String(record.timestamp)}-${key}`,
         key,
@@ -308,8 +218,8 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
       }));
       setLabelItems(items);
       setLabelUpdateError(null);
-    } catch {
-      // Ignore
+    } catch (error) {
+      console.error("Failed to revert labels", error);
     }
   };
 
@@ -326,7 +236,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
         setLabelItems(filtered);
       } else {
         try {
-          const labelsObj = normalizeLabels(record.labels);
+          const labelsObj = filterValidLabels(record.labels);
           const originalValue = labelsObj[item.originalKey || item.key] || "";
           const revertedItem = {
             ...item,
@@ -336,8 +246,8 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
           };
           newData.splice(index, 1, revertedItem);
           setLabelItems(newData);
-        } catch {
-          // Ignore
+        } catch (error) {
+          console.error("Failed to revert row", error);
         }
       }
     }
@@ -372,19 +282,19 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                   icon={<UndoOutlined />}
                   onClick={() => handleRowRevert(record.id)}
                   title={
-                    record.isModified || record.isNew
+                    record.isModified
                       ? "Revert changes"
                       : "No changes to revert"
                   }
                   className="action-icon revert-icon"
-                  disabled={!(record.isModified || record.isNew)}
+                  disabled={!record.isModified}
                 />
                 <Button
                   type="text"
                   size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => handleAddBelow(record.id)}
-                  title="Add entry below"
+                  icon={<InsertRowBelowOutlined />}
+                  onClick={() => handleAdd(record.id)}
+                  title="Insert row below"
                   className="action-icon add-below-icon"
                 />
                 <Button
@@ -393,7 +303,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                   danger
                   icon={<DeleteOutlined />}
                   onClick={() => handleDelete(record.id)}
-                  title="Delete"
+                  title="Delete label"
                   className="action-icon delete-icon"
                 />
               </Space>
@@ -455,9 +365,9 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
             <div className="buttonContainer">
               <Space>
                 <Button
-                  onClick={handleAdd}
+                  onClick={() => handleAdd()}
                   icon={<PlusOutlined />}
-                  title="Add"
+                  title="Add new label"
                 />
                 <Button
                   onClick={handleRevert}
