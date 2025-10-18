@@ -130,7 +130,7 @@ export default function Dashboard(props: Readonly<Props>) {
   const { client } = props.backendApi;
   return (
     <div className="Panel">
-      {error && <Card bordered title={error} />}
+      {error && <Card variant="outlined" title={error} />}
       {info && !error && (
         <>
           <Card
@@ -151,7 +151,7 @@ export default function Dashboard(props: Readonly<Props>) {
             tabList={tabList}
             activeTabKey={activeTabKey}
             onTabChange={onTabChange}
-            bordered
+            variant="outlined"
           >
             {activeTabKey === "usage" && <UsageStatistics info={info} />}
             {activeTabKey === "license" && info.license && (

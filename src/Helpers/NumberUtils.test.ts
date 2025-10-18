@@ -1,4 +1,4 @@
-import { bigintToNumber } from "./NumberUtils";
+import { bigintToNumber, msToMicroseconds } from "./NumberUtils";
 
 describe("bigintToNumber", () => {
   it("should convert a small bigint to a number accurately", () => {
@@ -24,5 +24,37 @@ describe("bigintToNumber", () => {
     const result = bigintToNumber(0n);
     expect(result).toBe(0);
     expect(typeof result).toBe("number");
+  });
+});
+
+describe("msToMicroseconds", () => {
+  it("should convert milliseconds to microseconds correctly", () => {
+    const result = msToMicroseconds(1);
+    expect(result).toBe(1000n);
+  });
+
+  it("should handle zero milliseconds", () => {
+    const result = msToMicroseconds(0);
+    expect(result).toBe(0n);
+  });
+
+  it("should handle large millisecond values", () => {
+    const result = msToMicroseconds(123456789);
+    expect(result).toBe(123456789000n);
+  });
+
+  it("should handle negative millisecond values", () => {
+    const result = msToMicroseconds(-5);
+    expect(result).toBe(-5000n);
+  });
+
+  it("should return undefined when input is undefined", () => {
+    const result = msToMicroseconds(undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it("should convert float milliseconds to microseconds correctly", () => {
+    const result = msToMicroseconds(1.5);
+    expect(result).toBe(1500n);
   });
 });

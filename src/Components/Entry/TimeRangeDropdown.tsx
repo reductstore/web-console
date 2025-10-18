@@ -1,61 +1,75 @@
-import React, { useState, useEffect } from "react";
-import { Button, Dropdown, DatePicker } from "antd";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Button, DatePicker, Space, Grid, Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import { DownOutlined } from "@ant-design/icons";
-import dayjs, { Dayjs } from "dayjs";
-import utc from "dayjs/plugin/utc";
-import isoWeek from "dayjs/plugin/isoWeek";
+import dayjs, { Dayjs } from "../../Helpers/dayjsConfig";
+import {
+  getTimeRangeFromKey,
+  RANGE_MAP,
+  detectRangeKey,
+} from "../../Helpers/timeRangeUtils";
 
-dayjs.extend(utc);
-dayjs.extend(isoWeek);
+type RangeValue = Parameters<
+  NonNullable<React.ComponentProps<typeof DatePicker.RangePicker>["onChange"]>
+>[0];
 
 interface Props {
   onSelectRange: (start: bigint, end: bigint) => void;
-  isCustomRange?: boolean;
+  initialRangeKey?: string;
+  currentRange?: { start: bigint | undefined; end: bigint | undefined };
 }
-
-const RANGE_MAP: Record<string, string> = {
-  last1: "Last 1 hour",
-  last6: "Last 6 hours",
-  last24: "Last 24 hours",
-  last7: "Last 7 days",
-  last30: "Last 30 days",
-  today: "Today",
-  yesterday: "Yesterday",
-  thisweek: "This week",
-  lastweek: "Last week",
-  thismonth: "This month",
-  lastmonth: "Last month",
-  custom: "Custom range",
-};
 
 export default function TimeRangeDropdown({
   onSelectRange,
-  isCustomRange,
+  initialRangeKey,
+  currentRange,
 }: Props) {
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [rangeVisible, setRangeVisible] = useState(false);
-  const [currentRangeKey, setCurrentRangeKey] = useState<string | null>(null);
-  const [rangeLabel, setRangeLabel] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [rangeLabel, setRangeLabel] = useState<string | undefined>(
+    initialRangeKey ? RANGE_MAP[initialRangeKey] : undefined,
+  );
+  const [tempDates, setTempDates] = useState<RangeValue>(null);
+
+  const isMounted = useRef(true);
+  const suppressNextOpen = useRef(false);
+
+  const screens = Grid.useBreakpoint();
+  const isSmall = !screens.md;
 
   useEffect(() => {
-    if (dropdownVisible || rangeVisible || !currentRangeKey) return;
-    setRangeLabel(RANGE_MAP[currentRangeKey]);
-  }, [dropdownVisible, rangeVisible, currentRangeKey]);
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
-    if (isCustomRange) {
-      setCurrentRangeKey("custom");
-      setRangeLabel("Custom range");
-    }
-  }, [isCustomRange]);
+    const detectedKey = detectRangeKey(currentRange?.start, currentRange?.end);
+    setRangeLabel(RANGE_MAP[detectedKey]);
+  }, [currentRange]);
 
-  const closeDropdown = () => {
-    // Hide range first and dropdown on next tick
-    setRangeVisible(false);
-    setTimeout(() => {
-      setDropdownVisible(false);
-    }, 0);
-  };
+  const presets = useMemo(
+    () =>
+      Object.entries(RANGE_MAP)
+        .filter(([k]) => k !== "custom")
+        .map(([key, label]) => {
+          try {
+            const r = getTimeRangeFromKey(key);
+            const start = dayjs(Number(r.start / 1000n));
+            const end = dayjs(Number(r.end / 1000n));
+            return { key, label, value: [start, end] as [Dayjs, Dayjs] };
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean) as {
+        key: string;
+        label: string;
+        value: [Dayjs, Dayjs];
+      }[],
+    [],
+  );
 
   const applyRange = (from: Dayjs, to: Dayjs) => {
     const start = BigInt(from.valueOf() * 1000);
@@ -63,146 +77,115 @@ export default function TimeRangeDropdown({
     onSelectRange(start, end);
   };
 
-  const getUtcDay = (date: Dayjs, type: "start" | "end") =>
-    type === "start"
-      ? dayjs.utc(date.format("YYYY-MM-DD")).startOf("day")
-      : dayjs.utc(date.format("YYYY-MM-DD")).endOf("day");
-
-  const handlePresetRange = (key: string) => {
-    setCurrentRangeKey(key);
-    const now = dayjs();
-    switch (key) {
-      case "last1":
-        applyRange(now.subtract(1, "hour"), now);
-        break;
-      case "last6":
-        applyRange(now.subtract(6, "hour"), now);
-        break;
-      case "last24":
-        applyRange(now.subtract(24, "hour"), now);
-        break;
-      case "last7":
-        applyRange(now.subtract(7, "day"), now);
-        break;
-      case "last30":
-        applyRange(now.subtract(30, "day"), now);
-        break;
-      case "today":
-        applyRange(getUtcDay(now, "start"), getUtcDay(now, "end"));
-        break;
-      case "yesterday": {
-        const y = now.subtract(1, "day");
-        applyRange(getUtcDay(y, "start"), getUtcDay(y, "end"));
-        break;
-      }
-      case "thisweek": {
-        const start = dayjs().isoWeekday(1);
-        const end = dayjs().isoWeekday(7);
-        applyRange(getUtcDay(start, "start"), getUtcDay(end, "end"));
-        break;
-      }
-      case "lastweek": {
-        const start = dayjs().subtract(1, "week").isoWeekday(1);
-        const end = dayjs().subtract(1, "week").isoWeekday(7);
-        applyRange(getUtcDay(start, "start"), getUtcDay(end, "end"));
-        break;
-      }
-      case "thismonth":
-        applyRange(
-          getUtcDay(now.startOf("month"), "start"),
-          getUtcDay(now.endOf("month"), "end"),
-        );
-        break;
-      case "lastmonth": {
-        const m = now.subtract(1, "month");
-        applyRange(
-          getUtcDay(m.startOf("month"), "start"),
-          getUtcDay(m.endOf("month"), "end"),
-        );
-        break;
-      }
-    }
+  const handlePresetPick = (key: string) => {
+    const preset = presets.find((p) => p.key === key);
+    if (!preset) return;
+    const [from, to] = preset.value;
+    applyRange(from, to);
+    setRangeLabel(preset.label);
   };
 
-  const customDateMenuItem = {
-    key: "custom",
-    label: (
-      <div
-        style={{
-          position: "relative",
-          overflow: "hidden",
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          setRangeVisible(true);
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-          }}
-        >
-          Custom range
-        </div>
-        <div
-          style={{
-            position: "relative",
-            overflow: "hidden",
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <DatePicker.RangePicker
-            open={rangeVisible}
-            style={{
-              overflow: "hidden",
-              pointerEvents: "none",
-              opacity: 0,
-              position: "absolute",
-              bottom: -12,
-              insetInlineStart: 0,
-            }}
-            onChange={(dates) => {
-              if (dates?.[0] && dates?.[1]) {
-                const from = getUtcDay(dates[0], "start");
-                const to = getUtcDay(dates[1], "end");
-                applyRange(from, to);
-                setCurrentRangeKey("custom");
-                closeDropdown();
-              }
-            }}
-          />
-        </div>
-      </div>
-    ),
-  };
+  const displayLabel = rangeLabel || "Select time range";
+
+  const menuItems: MenuProps["items"] = presets.map((p) => ({
+    key: p.key,
+    label: p.label,
+  }));
 
   return (
-    <Dropdown
-      arrow
-      open={dropdownVisible}
-      trigger={["click"]}
-      destroyOnHidden
-      onOpenChange={(open) => {
-        if (open) setDropdownVisible(true);
-        else closeDropdown();
-      }}
-      menu={{
-        onClick: (e) => handlePresetRange(e.key),
-        items: [
-          ...Object.entries(RANGE_MAP)
-            .filter(([key]) => key !== "custom")
-            .map(([key, label]) => ({ key, label })),
-          customDateMenuItem,
-        ],
-      }}
-    >
-      <Button>
-        {rangeLabel || "Select time range"}
-        <DownOutlined />
-      </Button>
-    </Dropdown>
+    <div style={{ display: "inline-block", position: "relative" }}>
+      {isSmall ? (
+        <Dropdown
+          open={menuOpen}
+          onOpenChange={(open) => setMenuOpen(open)}
+          menu={{
+            items: menuItems,
+            onClick: ({ key }) => {
+              handlePresetPick(String(key));
+              setMenuOpen(false);
+            },
+          }}
+          placement="bottomLeft"
+          trigger={["click"]}
+        >
+          <Button onClick={() => setMenuOpen(true)}>
+            {displayLabel}
+            <DownOutlined />
+          </Button>
+        </Dropdown>
+      ) : (
+        <>
+          <Button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPickerOpen((prev) => {
+                if (prev) {
+                  suppressNextOpen.current = true;
+                  return false;
+                }
+                return true;
+              });
+            }}
+          >
+            {displayLabel}
+            <DownOutlined />
+          </Button>
+          <Space
+            direction="vertical"
+            size={12}
+            style={{
+              position: "absolute",
+              insetInlineStart: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: 0,
+              border: 0,
+              opacity: 0,
+              pointerEvents: "none",
+              overflow: "hidden",
+            }}
+          >
+            <DatePicker.RangePicker
+              open={pickerOpen}
+              onOpenChange={(open) => {
+                if (!isMounted.current) return;
+                if (open && suppressNextOpen.current) {
+                  suppressNextOpen.current = false;
+                  return;
+                }
+                setPickerOpen(open);
+                if (!open) setTempDates(null);
+              }}
+              value={tempDates}
+              onCalendarChange={(vals) => {
+                if (!isMounted.current) return;
+                const v = vals as RangeValue;
+                setTempDates(v);
+              }}
+              onChange={(dates) => {
+                if (!isMounted.current) return;
+                const from = dates?.[0] as Dayjs | null;
+                const to = dates?.[1] as Dayjs | null;
+                if (from && to) {
+                  applyRange(from, to);
+                  const key = detectRangeKey(
+                    BigInt(from.valueOf() * 1000),
+                    BigInt(to.valueOf() * 1000),
+                  );
+                  setRangeLabel(RANGE_MAP[key]);
+                }
+                setPickerOpen(false);
+              }}
+              presets={presets.map(({ label, value }) => ({ label, value }))}
+              allowClear={false}
+              showTime={false}
+            />
+          </Space>
+        </>
+      )}
+    </div>
   );
 }

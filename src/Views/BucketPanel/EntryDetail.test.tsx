@@ -36,16 +36,50 @@ jest.mock("react-codemirror2", () => ({
   },
 }));
 
+jest.mock("react-chartjs-2", () => ({
+  Line: ({ data, options, ...props }: any) => (
+    <div
+      data-testid="data-volume-chart"
+      data-chart-data={JSON.stringify(data)}
+      data-chart-options={JSON.stringify(options)}
+      {...props}
+    />
+  ),
+}));
+
+jest.mock("chart.js", () => ({
+  Chart: {
+    register: jest.fn(),
+  },
+  LineController: jest.fn(),
+  LineElement: jest.fn(),
+  PointElement: jest.fn(),
+  LinearScale: jest.fn(),
+  TimeScale: jest.fn(),
+  LogarithmicScale: jest.fn(),
+  Tooltip: jest.fn(),
+  Legend: jest.fn(),
+}));
+
+jest.mock("chartjs-plugin-zoom", () => ({}));
+jest.mock("chartjs-adapter-dayjs-4", () => ({}));
+
+jest.mock("prettier-bytes", () => {
+  return (bytes: number) => {
+    if (bytes === 1024) return "1.0 KB";
+    if (bytes === 2048) return "2.0 KB";
+    return `${bytes} bytes`;
+  };
+});
+
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
-// Mock the useParams hook for all tests
 const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
 
-// Mock the streamsaver library
 jest.mock("streamsaver", () => ({
   createWriteStream: jest.fn(),
 }));
@@ -88,6 +122,8 @@ describe("EntryDetail", () => {
     update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
+  const BASE_TIME = new Date("1970-01-08T00:00:00.000Z");
+
   const mockRecords = [
     {
       time: 1000n,
@@ -110,7 +146,13 @@ describe("EntryDetail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    jest.setSystemTime(BASE_TIME);
     mockJSDOM();
+
+    global.requestAnimationFrame = jest.fn((cb) => {
+      cb(0);
+      return 0;
+    });
 
     // No need to mock getTokenPermissions anymore as we pass permissions directly
 
@@ -179,12 +221,30 @@ describe("EntryDetail", () => {
       expect(fetchButton.text()).toBe("Fetch Records");
     });
 
+    it("should show reset button when time range differs from default", async () => {
+      const timeInputs = wrapper.find(".timeInputs Input");
+      if (timeInputs.length > 0) {
+        const startInput = timeInputs.at(0);
+        await act(async () => {
+          const onChange = startInput.prop("onChange") as any;
+          if (onChange) {
+            onChange({ target: { value: "2023-01-01T00:00:00Z" } });
+          }
+        });
+        wrapper.update();
+
+        const resetButton = wrapper.find(".fetchButton Button").at(1);
+        expect(resetButton.exists()).toBe(true);
+        expect(resetButton.prop("title")).toBe("Reset to default range");
+      }
+    });
+
     it("should not show a separate limit input", () => {
       const limitInput = wrapper.find(".limitInput");
       expect(limitInput.exists()).toBe(false);
     });
 
-    it("should show the CodeMirror editor with $limit in default JSON", () => {
+    it("should show the CodeMirror editor with empty JSON by default", () => {
       const codeMirror = wrapper.find(".react-codemirror2");
       expect(codeMirror.exists()).toBe(true);
       const cmInstance = wrapper.find("Controlled").prop("options");
@@ -196,13 +256,13 @@ describe("EntryDetail", () => {
       );
 
       const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toContain("$limit");
+      expect(cmValue).toBe('{\n  "$each_t": "$__interval"\n}\n');
 
-      const exampleText = wrapper.find(".jsonEditor").at(0).text();
-      expect(exampleText).toContain("$limit");
+      const exampleText = wrapper.find(".jsonExample").first().text();
+      expect(exampleText).toContain("Example:");
     });
 
-    it("should call bucket.query with the correct when condition", async () => {
+    it("should call bucket.query with default $each_t when condition", async () => {
       const fetchButton = wrapper.find(".fetchButton button");
       expect(fetchButton.exists()).toBe(true);
 
@@ -213,13 +273,13 @@ describe("EntryDetail", () => {
 
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
-        undefined,
-        undefined,
+        0n,
+        604800000000n,
         expect.objectContaining({
           head: true,
           strict: true,
           when: expect.objectContaining({
-            $limit: 10,
+            $each_t: "2h",
           }),
         }),
       );
@@ -504,6 +564,131 @@ describe("EntryDetail", () => {
         mockRecords[0].time,
         expect.any(Object),
       );
+    });
+  });
+
+  describe("Data Volume Chart", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should render the DataVolumeChart component", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+    });
+
+    it("should pass correct props to DataVolumeChart", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+
+      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      expect(chartData).toHaveProperty("datasets");
+      expect(chartData.datasets).toHaveLength(1);
+
+      // Verify chart doesn't have reset-related props
+      expect(chart.prop("onResetZoom")).toBeUndefined();
+      expect(chart.prop("showResetButton")).toBeUndefined();
+    });
+
+    it("should show chart data when records are available", () => {
+      const chart = wrapper.find('[data-testid="data-volume-chart"]');
+      expect(chart.exists()).toBe(true);
+
+      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      expect(chartData.datasets[0].data.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("When Condition", () => {
+    it("should initialize with default $each_t macro", () => {
+      // Check the CodeMirror component value
+      const codeMirror = wrapper.find(".react-codemirror2");
+      expect(codeMirror.exists()).toBe(true);
+
+      const textArea = codeMirror.find("textarea");
+      expect(textArea.exists()).toBe(true);
+
+      const conditionValue = textArea.prop("value") as string;
+      expect(conditionValue).toBeDefined();
+      expect(typeof conditionValue).toBe("string");
+      expect(conditionValue).toContain("$each_t");
+      expect(() => JSON.parse(conditionValue)).not.toThrow();
+
+      const parsed = JSON.parse(conditionValue);
+      expect(parsed).toHaveProperty("$each_t");
+      expect(typeof parsed["$each_t"]).toBe("string");
+      expect(parsed["$each_t"]).toBe("$__interval");
+    });
+
+    it("should keep $each_t macro when time range changes", async () => {
+      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
+      if (timeRangeComponents.exists()) {
+        await act(async () => {
+          const props = timeRangeComponents.at(0).props() as any;
+          if (props.onSelectRange) {
+            const oneHour = BigInt(60 * 60 * 1000 * 1000);
+            const now = BigInt(Date.now() * 1000);
+            props.onSelectRange(now - oneHour, now);
+          }
+        });
+
+        wrapper.update();
+
+        const updatedCodeMirror = wrapper.find(".react-codemirror2");
+        const updatedTextArea = updatedCodeMirror.find("textarea");
+        const updatedConditionValue = updatedTextArea.prop("value") as string;
+
+        expect(updatedConditionValue.trim()).toBe(
+          '{\n  "$each_t": "$__interval"\n}',
+        );
+      }
+    });
+
+    it("should not auto-update when condition contains other fields", () => {
+      // Set a custom condition with additional fields
+      const customCondition = {
+        $each_t: "1m",
+        "&label": { $eq: "test" },
+      };
+
+      const codeMirror = wrapper.find(".react-codemirror2");
+      const textArea = codeMirror.find("textarea");
+
+      act(() => {
+        const onChange = textArea.prop("onChange") as any;
+        if (onChange) {
+          onChange({
+            target: { value: JSON.stringify(customCondition, null, 2) },
+          });
+        }
+      });
+
+      // Try to trigger a time range change
+      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
+      if (timeRangeComponents.exists()) {
+        act(() => {
+          const props = timeRangeComponents.at(0).props() as any;
+          if (props.onChange) {
+            const oneHour = BigInt(60 * 60 * 1000 * 1000);
+            const now = BigInt(Date.now() * 1000);
+            props.onChange(now - oneHour, now, true);
+          }
+        });
+      }
+
+      wrapper.update();
+
+      // The condition should remain unchanged
+      const finalCodeMirror = wrapper.find(".react-codemirror2");
+      const finalTextArea = finalCodeMirror.find("textarea");
+      const finalCondition = JSON.parse(finalTextArea.prop("value") as string);
+
+      expect(finalCondition).toEqual(customCondition);
     });
   });
 
