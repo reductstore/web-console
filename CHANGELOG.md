@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for generating shareable links with configurable expiry time and filename, [PR-129](https://github.com/reductstore/web-console/pull/129)
 - Visualization of data volume over time using a line chart, [PR-134](https://github.com/reductstore/web-console/pull/134)
 - Add search bar, refresh button, and pagination state persistence, [PR-135](https://github.com/reductstore/web-console/pull/135)
+- Use JSON5 to set `when` conditions, [PR-139](https://github.com/reductstore/web-console/pull/139)
 
 ## [1.11.2] - 2025-08-09
 
