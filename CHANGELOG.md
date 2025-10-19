@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added expandable table rows to display and edit labels directly within the table view, [PR-136](https://github.com/reductstore/web-console/pull/136)
 
 ### Fixed
+
 - Fix control buttons with write permissions when token with wildcard is used, [PR-138](https://github.com/reductstore/web-console/pull/138)
 - Fix controls buttons with write permissions when token with wildcard is used, [PR-138](https://github.com/reductstore/web-console/pull/138)
 
