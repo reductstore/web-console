@@ -49,6 +49,7 @@ import {
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
 import { pickEachTInterval } from "../../Helpers/chartUtils";
+import { checkWritePermission } from "../../Helpers/permissionUtils";
 
 interface CustomPermissions {
   write?: string[];
@@ -566,9 +567,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     labels: JSON.stringify(record.labels, null, 2),
   }));
 
-  const hasWritePermission =
-    permissions.fullAccess ||
-    (permissions.write && permissions.write.includes(bucketName));
+  const hasWritePermission = checkWritePermission(permissions, bucketName);
 
   const showResetButton =
     timeRange.start !== defaultRange.start ||

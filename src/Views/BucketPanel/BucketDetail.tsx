@@ -25,6 +25,7 @@ import RenameModal from "../../Components/RenameModal";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 import ScrollableTable from "../../Components/ScrollableTable";
 import { usePaginationStore } from "../../stores/paginationStore";
+import { checkWritePermission } from "../../Helpers/permissionUtils";
 import "./BucketDetail.css";
 
 interface Props {
@@ -145,11 +146,7 @@ export default function BucketDetail(props: Readonly<Props>) {
     setIsRemoveModalOpen(true);
   };
 
-  const hasWritePermission =
-    props.permissions?.fullAccess ||
-    (props.permissions?.write &&
-      info &&
-      props.permissions.write.includes(info.name));
+  const hasWritePermission = info ? checkWritePermission(props.permissions, info.name) : false;
 
   const handleUploadSuccess = () => {
     setIsUploadModalVisible(false);
@@ -348,12 +345,7 @@ export default function BucketDetail(props: Readonly<Props>) {
     {
       title: "",
       render: (_: any, entry: { name: string }) => {
-        if (
-          props.permissions?.fullAccess ||
-          (props.permissions?.write &&
-            info &&
-            props.permissions?.write?.indexOf(info?.name) !== -1)
-        ) {
+        if (info && checkWritePermission(props.permissions, info.name)) {
           return (
             <Flex gap="middle">
               <EditOutlined
