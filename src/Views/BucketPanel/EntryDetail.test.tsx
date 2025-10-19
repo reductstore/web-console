@@ -7,7 +7,6 @@ import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
 import {
   DownloadOutlined,
-  EditOutlined,
   DeleteOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
@@ -472,98 +471,80 @@ describe("EntryDetail", () => {
       });
     });
 
-    it("should show edit labels icon for each record", () => {
-      const editIcons = wrapper.find(EditOutlined);
-      expect(editIcons.length).toBe(2);
+    it("should have expandable rows for label editing", () => {
+      const table = wrapper.find("ScrollableTable");
+      expect(table.exists()).toBe(true);
+
+      const expandableConfig = table.prop("expandable") as any;
+      expect(expandableConfig).toBeDefined();
+      expect(typeof expandableConfig.expandedRowRender).toBe("function");
     });
 
-    it("should open edit labels modal when edit icon is clicked", () => {
-      const recordRow = wrapper.find(".ant-table-row").at(0);
-      expect(recordRow.exists()).toBe(true);
+    it("should render EditRecordLabels component when row is expanded with correct permissions", () => {
+      const table = wrapper.find("ScrollableTable");
+      const expandableConfig = table.prop("expandable") as any;
 
-      const editIcon = wrapper.find(EditOutlined).at(0);
-      expect(editIcon.exists()).toBe(true);
+      const mockRecord = {
+        key: "1000",
+        timestamp: 1000n,
+        size: "1.0 KB",
+        contentType: "application/json",
+        labels: JSON.stringify({ key: "value" }),
+      };
 
-      const { onClick } = editIcon.props();
-      expect(typeof onClick).toBe("function");
-
-      act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
-      });
-      wrapper.update();
-
-      const modal = wrapper.find(".ant-modal");
-      expect(modal.exists()).toBe(true);
-
-      const modalContent = modal.find(".ant-modal-body").text();
-      expect(modalContent).toContain("Timestamp");
-      expect(modalContent).toContain("Content Type");
-      expect(modalContent).toContain("Size");
-
-      // Check for the label table instead of CodeMirror
-      const labelTable = modal.find(".edit-record-labels-modal .ant-table");
-      expect(labelTable.exists()).toBe(true);
+      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
+      expect(expandedContent).toBeDefined();
+      expect(expandedContent.type.name).toBe("EditRecordLabels");
+      expect(expandedContent.props.record).toBe(mockRecord);
+      expect(expandedContent.props.editable).toBe(true);
+      expect(typeof expandedContent.props.onLabelsUpdated).toBe("function");
     });
 
-    it("should verify record labels can be updated", async () => {
-      const originalData = new Uint8Array([1, 2, 3, 4]);
+    it("should pass handleLabelsUpdated callback to EditRecordLabels component", () => {
+      const table = wrapper.find("ScrollableTable");
+      const expandableConfig = table.prop("expandable") as any;
 
-      jest.clearAllMocks();
+      const mockRecord = {
+        key: "1000",
+        timestamp: 1000n,
+        size: "1.0 KB",
+        contentType: "application/json",
+        labels: JSON.stringify({ key: "value" }),
+      };
 
-      mockReader.read.mockResolvedValue(originalData);
-      mockReader.contentType = "application/json";
-      mockReader.labels = { key: "value" };
+      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
+      const { onLabelsUpdated } = expandedContent.props;
 
-      bucket.update = jest.fn().mockResolvedValue(undefined);
+      expect(typeof onLabelsUpdated).toBe("function");
+    });
 
-      (bucket.beginRead as jest.Mock).mockResolvedValue(mockReader);
+    it("should render EditRecordLabels as read-only when user lacks write permissions", () => {
+      const noWritePermissions = {
+        fullAccess: false,
+        write: [],
+      };
 
-      const recordRows = wrapper.find(".ant-table-row");
-      expect(recordRows.length).toBeGreaterThan(0);
-
-      const editIcon = wrapper.find(EditOutlined).at(0);
-      expect(editIcon.exists()).toBe(true);
-
-      const { onClick } = editIcon.props();
-
-      act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
-      });
-      wrapper.update();
-
-      const modal = wrapper.find(".ant-modal");
-      expect(modal.exists()).toBe(true);
-
-      const buttons = modal.find(".ant-modal-footer").find("button");
-      expect(buttons.length).toBeGreaterThan(1);
-
-      const okButton = buttons.at(1);
-      expect(okButton.exists()).toBe(true);
-
-      const okButtonOnClick = okButton.props().onClick;
-
-      await act(async () => {
-        (okButtonOnClick as any)();
-        jest.runAllTimers();
-      });
-
-      expect(bucket.update).toHaveBeenCalled();
-
-      expect(bucket.update).toHaveBeenCalledWith(
-        "testEntry",
-        mockRecords[0].time,
-        expect.any(Object),
+      const wrapperNoWrite = mount(
+        <MemoryRouter>
+          <EntryDetail client={client} permissions={noWritePermissions} />
+        </MemoryRouter>,
       );
+
+      const table = wrapperNoWrite.find("ScrollableTable");
+      const expandableConfig = table.prop("expandable") as any;
+
+      const mockRecord = {
+        key: "1000",
+        timestamp: 1000n,
+        size: "1.0 KB",
+        contentType: "application/json",
+        labels: JSON.stringify({ key: "value" }),
+      };
+
+      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
+      expect(expandedContent.props.editable).toBe(false);
+
+      wrapperNoWrite.unmount();
     });
   });
 

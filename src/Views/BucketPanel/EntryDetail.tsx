@@ -22,7 +22,6 @@ import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   DownloadOutlined,
   ShareAltOutlined,
-  EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
@@ -32,7 +31,7 @@ import "./EntryDetail.css";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
-import EditRecordLabelsModal from "../../Components/EditRecordLabelsModal";
+
 import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 
@@ -49,6 +48,7 @@ import {
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
 import { pickEachTInterval } from "../../Helpers/chartUtils";
+import EditRecordLabels from "../../Components/EditRecordLabels";
 
 interface CustomPermissions {
   write?: string[];
@@ -125,9 +125,6 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const [whenError, setWhenError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
-  const [isEditLabelsModalVisible, setIsEditLabelsModalVisible] =
-    useState(false);
-  const [currentRecord, setCurrentRecord] = useState<any>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
@@ -330,20 +327,42 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleEditLabels = (record: any) => {
-    setCurrentRecord(record);
-    setIsEditLabelsModalVisible(true);
-  };
-
   const handleLabelsUpdated = async (
     newLabels: Record<string, string>,
     timestamp: bigint,
   ) => {
     try {
-      const bucket = await props.client.getBucket(bucketName);
-      await bucket.update(entryName, timestamp, newLabels);
+      const originalRecord = records.find((r) => r.time === timestamp);
+      const originalLabels = originalRecord?.labels || {};
+      const originalLabelsObj =
+        typeof originalLabels === "string"
+          ? JSON.parse(originalLabels)
+          : originalLabels || {};
 
-      getRecords(timeRange.start, timeRange.end);
+      const updateLabels: Record<string, string> = { ...newLabels };
+
+      // empty string values indicate label deletion
+      Object.keys(originalLabelsObj).forEach((originalKey) => {
+        if (!(originalKey in newLabels)) {
+          updateLabels[originalKey] = "";
+        }
+      });
+
+      const bucket = await props.client.getBucket(bucketName);
+      await bucket.update(entryName, timestamp, updateLabels);
+
+      const displayLabels = Object.fromEntries(
+        Object.entries(newLabels).filter(([, value]) => value.trim() !== ""),
+      );
+
+      setRecords((prevRecords) =>
+        prevRecords.map((record) => {
+          if (record.time === timestamp) {
+            (record.labels as any) = displayLabels;
+          }
+          return record;
+        }),
+      );
       message.success("Record labels updated successfully");
     } catch (err) {
       console.error("Failed to update labels:", err);
@@ -474,6 +493,49 @@ export default function EntryDetail(props: Readonly<Props>) {
     };
   }, []);
 
+  const renderLabels = (text: string) => {
+    if (!text) return "-";
+
+    let parsed: Record<string, unknown> | null = null;
+
+    try {
+      parsed = typeof text === "string" ? JSON.parse(text) : text;
+    } catch {
+      return (
+        <div style={{ maxWidth: 400, wordBreak: "break-word" }}>{text}</div>
+      );
+    }
+
+    if (!parsed || typeof parsed !== "object") return "-";
+
+    const entries = Object.entries(parsed);
+    if (entries.length === 0) return "-";
+
+    const pairs = entries.map(([key, value]) => `${key}: ${String(value)}`);
+    let result = "";
+    let truncated = false;
+
+    for (const pair of pairs) {
+      const tentative = result ? `${result}, ${pair}` : pair;
+      if (tentative.length > 50) {
+        truncated = true;
+        if (!result) {
+          result = pair.slice(0, 47) + "...";
+        }
+        break;
+      }
+      result = tentative;
+    }
+
+    if (truncated && !result.endsWith("...")) {
+      result += "...";
+    }
+
+    return (
+      <div style={{ maxWidth: 400, wordBreak: "break-word" }}>{result}</div>
+    );
+  };
+
   const columns = [
     {
       title: "Timestamp",
@@ -491,34 +553,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       title: "Labels",
       dataIndex: "labels",
       key: "labels",
-      render: (text: string) => {
-        if (!text) return "-";
-
-        let parsed: Record<string, unknown> | null = null;
-
-        try {
-          parsed = typeof text === "string" ? JSON.parse(text) : text;
-        } catch {
-          return (
-            <div style={{ maxWidth: 400, wordBreak: "break-word" }}>{text}</div>
-          );
-        }
-
-        if (!parsed || typeof parsed !== "object") return "-";
-
-        const entries = Object.entries(parsed);
-        if (entries.length === 0) return "-";
-
-        const labelText = entries
-          .map(([key, value]) => `${key}: ${String(value)}`)
-          .join(", ");
-
-        return (
-          <div style={{ maxWidth: 400, wordBreak: "break-word" }}>
-            {labelText}
-          </div>
-        );
-      },
+      render: (text: string) => renderLabels(text),
     },
     {
       title: "Actions",
@@ -539,13 +574,6 @@ export default function EntryDetail(props: Readonly<Props>) {
             style={{ cursor: "pointer" }}
             title="Share record"
           />
-          {hasWritePermission && (
-            <EditOutlined
-              onClick={() => handleEditLabels(record)}
-              style={{ cursor: "pointer" }}
-              title="Edit labels"
-            />
-          )}
           {hasWritePermission && (
             <DeleteOutlined
               onClick={() => handleDeleteClick(record)}
@@ -615,6 +643,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       <Modal
         title="Delete Record"
         open={isDeleteModalVisible}
+        onCancel={() => setIsDeleteModalVisible(false)}
         centered
         footer={[
           <Button key="back" onClick={() => setIsDeleteModalVisible(false)}>
@@ -782,15 +811,16 @@ export default function EntryDetail(props: Readonly<Props>) {
         scroll={{ x: "max-content" }}
         columns={columns as any[]}
         dataSource={data}
-      />
-
-      {/* Modal for editing labels */}
-      <EditRecordLabelsModal
-        isVisible={isEditLabelsModalVisible}
-        onCancel={() => setIsEditLabelsModalVisible(false)}
-        record={currentRecord}
-        showUnix={showUnix}
-        onLabelsUpdated={handleLabelsUpdated}
+        expandable={{
+          expandedRowRender: (record: any) => (
+            <EditRecordLabels
+              key={`edit-labels-${record.key}`}
+              record={record}
+              onLabelsUpdated={handleLabelsUpdated}
+              editable={hasWritePermission}
+            />
+          ),
+        }}
       />
 
       {/* Modal for sharing links */}
