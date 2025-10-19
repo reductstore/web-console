@@ -146,7 +146,9 @@ export default function BucketDetail(props: Readonly<Props>) {
     setIsRemoveModalOpen(true);
   };
 
-  const hasWritePermission = info ? checkWritePermission(props.permissions, info.name) : false;
+  const hasWritePermission = info
+    ? checkWritePermission(props.permissions, info.name)
+    : false;
 
   const handleUploadSuccess = () => {
     setIsUploadModalVisible(false);
