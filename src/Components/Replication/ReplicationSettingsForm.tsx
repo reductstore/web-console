@@ -23,6 +23,7 @@ import "./ReplicationSettingsForm.css";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
+import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
 
 const isTestEnvironment = process.env.NODE_ENV === "test";
 
@@ -70,17 +71,15 @@ const convertWhenToString = (when: any): string => {
 /**
  * A form to create or update a replication
  */
-export default class ReplicationSettingsFormReplication extends React.Component<
+export default class ReplicationSettingsForm extends React.Component<
   Props,
   State
 > {
   state: State = {
     settings: undefined,
-    formattedWhen: "",
+    formattedWhen: "{}\n",
     entries: [],
   };
-
-  codeMirrorInstance: any;
 
   /**
    * Called when Create/Update button is pressed
@@ -105,17 +104,12 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     try {
       let parsedWhen: Record<string, any> = {};
       if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
-        try {
-          parsedWhen = JSON.parse(this.state.formattedWhen);
-          // Validate that parsedWhen is an object
-          if (typeof parsedWhen !== "object" || parsedWhen === null) {
-            this.setState({ error: "When Condition must be a JSON object" });
-            return;
-          }
-        } catch (err) {
-          this.setState({ error: "Invalid JSON in When Condition" });
+        const processResult = processWhenCondition(this.state.formattedWhen);
+        if (!processResult.success) {
+          this.setState({ error: processResult.error });
           return;
         }
+        parsedWhen = processResult.value;
       }
 
       const replicationSettings: ReplicationSettings = {
@@ -147,41 +141,24 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     }
   };
 
-  // Force re-fetching data from the server
+  // Fetch replication data from ReductStore
   loadReplicationData = async () => {
     const { replicationName, client } = this.props;
     if (replicationName) {
       try {
-        // Force request with no cache to ensure latest data
         const replication: FullReplicationInfo =
           await client.getReplication(replicationName);
         const { settings } = replication;
 
-        // Use the utility function and format properly
         let whenString = convertWhenToString(settings.when);
+        const formatResult = parseAndFormat(whenString);
+        whenString = formatResult.error ? whenString : formatResult.formatted;
 
-        // Ensure it's properly formatted JSON
-        try {
-          whenString = JSON.stringify(JSON.parse(whenString), null, 2);
-        } catch {
-          // If parsing fails, keep original string
-        }
-
-        // Always update state with fresh data when loaded
-
-        this.setState(
-          {
-            settings,
-            formattedWhen: whenString,
-            entries: settings.entries || [],
-          },
-          () => {
-            // After state update, refresh the code mirror instance
-            if (this.codeMirrorInstance) {
-              this.codeMirrorInstance.refresh();
-            }
-          },
-        );
+        this.setState({
+          settings,
+          formattedWhen: whenString,
+          entries: settings.entries || [],
+        });
       } catch (err) {
         this.handleError(err);
       }
@@ -265,35 +242,35 @@ export default class ReplicationSettingsFormReplication extends React.Component<
     if (this.props.readOnly) {
       return;
     }
-    this.setState((prevState) => ({ ...prevState, formattedWhen: value }));
+    this.setState((prevState) => ({
+      ...prevState,
+      formattedWhen: value,
+      error: undefined,
+    }));
   };
 
   formatJSON = (jsonString: string): string => {
-    try {
-      return JSON.stringify(JSON.parse(jsonString), null, 2);
-    } catch {
+    const result = parseAndFormat(jsonString);
+    if (result.error) {
+      this.setState({ error: result.error });
       return jsonString;
     }
+
+    if (this.state.error) {
+      this.setState({ error: undefined });
+    }
+    return result.formatted;
   };
 
   render() {
     const { error } = this.state;
     const { replicationName, readOnly, sourceBuckets } = this.props;
     if (this.state.settings === undefined && replicationName) {
-      // If settings are not loaded yet for update
-      return <div></div>;
+      return <></>;
     }
 
     return (
       <>
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            closable
-            onClose={() => this.setState({ error: undefined })}
-          />
-        )}
         <Form
           name="replicationForm"
           onFinish={this.onFinish}
@@ -487,7 +464,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
               </span>
             }
           >
-            {!isTestEnvironment ? (
+            {!isTestEnvironment && (
               <CodeMirror
                 className="jsonEditor"
                 value={this.state.formattedWhen}
@@ -496,36 +473,25 @@ export default class ReplicationSettingsFormReplication extends React.Component<
                   theme: "default",
                   lineNumbers: true,
                   lineWrapping: true,
-                  viewportMargin: Infinity,
                   matchBrackets: true,
-                  autoCloseBrackets: true,
-                  readOnly: readOnly || false,
+                  readOnly: readOnly ? "nocursor" : false,
                 }}
-                onBeforeChange={(editor: any, data: any, value: string) => {
-                  this.handleWhenConditionChange(value);
-                }}
+                onBeforeChange={(_, __, value: string) =>
+                  this.handleWhenConditionChange(value)
+                }
                 onBlur={(editor: any) => {
-                  this.handleWhenConditionChange(
-                    this.formatJSON(editor.getValue()),
-                  );
+                  const value = editor.getValue() || "";
+                  const result = parseAndFormat(value);
+                  this.setState({
+                    formattedWhen: result.error ? value : result.formatted,
+                    error: result.error || undefined,
+                  });
                 }}
-                editorDidMount={(editor) => {
-                  this.codeMirrorInstance = editor;
-                  // Format content in the editor
-                  const value = editor.getValue();
-                  try {
-                    const formatted = this.formatJSON(value);
-                    if (formatted !== value) {
-                      editor.setValue(formatted);
-                    }
-                  } catch {
-                    // If formatting fails, keep the original value
-                  }
-                  editor.refresh();
-                }}
+                onViewportChange={(editor) => editor.refresh()}
               />
-            ) : (
-              <></>
+            )}
+            {error && (
+              <Alert message={error} type="error" style={{ marginTop: 8 }} />
             )}
             <Typography.Text type="secondary" className="jsonExample">
               Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
@@ -656,11 +622,7 @@ export default class ReplicationSettingsFormReplication extends React.Component<
             </Form.Item>
           ) : null}
           <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={error !== undefined || readOnly}
-            >
+            <Button type="primary" htmlType="submit" disabled={readOnly}>
               {replicationName ? "Update Replication" : "Create Replication"}
             </Button>
           </Form.Item>
