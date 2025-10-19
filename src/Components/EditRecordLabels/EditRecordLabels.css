@@ -1,0 +1,95 @@
+.labelsTitle {
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.labelTableContainer {
+  margin-bottom: 16px;
+}
+
+.labelTableContainer .ant-table {
+  font-size: 14px;
+}
+
+.labelTableContainer .ant-table-thead > tr > th {
+  font-size: 14px;
+}
+
+.labelTableContainer .ant-table-tbody > tr > td {
+  font-size: 14px;
+}
+
+.errorMessage {
+  margin-top: 16px;
+}
+
+.editableCellValueWrap {
+  padding: 5px 12px;
+  cursor: pointer;
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.placeholderText {
+  color: #bfbfbf;
+}
+
+.editFormItem {
+  margin: 0;
+}
+
+.editInput {
+  width: 100%;
+}
+
+.buttonContainer {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.buttonContainer .ant-btn {
+  margin-bottom: 0 !important;
+}
+
+/* Row-level action icons */
+.row-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.action-icon {
+  min-width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon.revert-icon {
+  color: #faad14;
+}
+
+.action-icon.delete-icon {
+  color: #ff4d4f;
+}
+
+.action-icon.add-below-icon {
+  color: #71bafeff;
+}
+
+/* Disabled state for action icons */
+.action-icon:disabled {
+  background-color: transparent !important;
+  color: inherit;
+  cursor: not-allowed;
+}
+
+.action-icon:disabled:hover {
+  background-color: transparent !important;
+  color: inherit;
+}
