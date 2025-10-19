@@ -48,13 +48,14 @@ import {
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
 import { pickEachTInterval } from "../../Helpers/chartUtils";
-import EditRecordLabels from "../../Components/";
+
 import {
   extractIntervalFromCondition,
   formatAsStrictJSON,
   parseAndFormat,
   processWhenCondition,
 } from "../../Helpers/json5Utils";
+import EditRecordLabels from "../../Components/EditRecordLabels";
 
 interface CustomPermissions {
   write?: string[];
