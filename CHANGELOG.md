@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Visualization of data volume over time using a line chart, [PR-134](https://github.com/reductstore/web-console/pull/134)
 - Add search bar, refresh button, and pagination state persistence, [PR-135](https://github.com/reductstore/web-console/pull/135)
 
+### Fixed
+
+- Fix controls buttons with write permissions when token with wildcard is used, [PR-138](https://github.com/reductstore/web-console/pull/138)
+
 ## [1.11.2] - 2025-08-09
 
 ### Fixed
