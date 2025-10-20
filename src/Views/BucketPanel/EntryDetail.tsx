@@ -49,6 +49,12 @@ import {
 import { formatValue } from "../../Helpers/timeFormatUtils";
 import { pickEachTInterval } from "../../Helpers/chartUtils";
 import { checkWritePermission } from "../../Helpers/permissionUtils";
+import {
+  extractIntervalFromCondition,
+  formatAsStrictJSON,
+  parseAndFormat,
+  processWhenCondition,
+} from "../../Helpers/json5Utils";
 import EditRecordLabels from "../../Components/EditRecordLabels";
 
 interface CustomPermissions {
@@ -109,13 +115,19 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
 
   const formatJSON = (jsonString?: string): string => {
-    if (!jsonString)
-      return JSON.stringify({ $each_t: "$__interval" }, null, 2) + "\n";
-    try {
-      return JSON.stringify(JSON.parse(jsonString), null, 2) + "\n";
-    } catch {
+    if (!jsonString) return formatAsStrictJSON({ $each_t: "$__interval" });
+
+    const result = parseAndFormat(jsonString);
+    if (result.error) {
+      setWhenError(result.error);
       return jsonString;
     }
+
+    if (whenError) {
+      setWhenError("");
+    }
+
+    return result.formatted;
   };
 
   const [startError, setStartError] = useState(false);
@@ -138,48 +150,20 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
-  const extractIntervalFromCondition = (condition: string): string | null => {
-    if (!condition.trim()) return null;
-
-    try {
-      const parsed = JSON.parse(condition);
-      if (parsed && typeof parsed === "object") {
-        if (parsed.$each_t) {
-          return typeof parsed.$each_t === "string" ? parsed.$each_t : null;
-        }
-        for (const value of Object.values(parsed)) {
-          if (value && typeof value === "object" && (value as any).$each_t) {
-            const interval = (value as any).$each_t;
-            return typeof interval === "string" ? interval : null;
-          }
-        }
-      }
-    } catch {
-      // Invalid JSON, return null
-    }
-    return null;
-  };
-
-  const substituteMacros = (
+  const processConditionWithMacros = (
     conditionString: string,
     intervalValue: string,
-  ): string => {
-    if (!conditionString.trim()) return conditionString;
-
-    try {
-      let processedCondition = conditionString;
-      processedCondition = processedCondition.replace(
-        /"\$__interval"/g,
-        `"${intervalValue}"`,
-      );
-      processedCondition = processedCondition.replace(
-        /\$__interval/g,
-        `"${intervalValue}"`,
-      );
-      return processedCondition;
-    } catch {
-      return conditionString;
+  ): { success: boolean; processedCondition?: any; error?: string } => {
+    if (!conditionString.trim()) {
+      return { success: true, processedCondition: {} };
     }
+
+    const result = processWhenCondition(conditionString, intervalValue);
+    return {
+      success: result.success,
+      processedCondition: result.value,
+      error: result.error,
+    };
   };
 
   const getRecords = async (start?: bigint, end?: bigint) => {
@@ -206,10 +190,26 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       if (whenCondition.trim()) {
         const macroValue = pickEachTInterval(rangeStart, rangeEnd);
-        const processedCondition = substituteMacros(whenCondition, macroValue);
-        const each_t = extractIntervalFromCondition(processedCondition);
+        const conditionResult = processConditionWithMacros(
+          whenCondition,
+          macroValue,
+        );
+
+        if (!conditionResult.success) {
+          setWhenError(conditionResult.error || "Invalid condition");
+          setIsLoading(false);
+          return;
+        }
+
+        const each_t = extractIntervalFromCondition(
+          conditionResult.processedCondition,
+        );
         setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
-        options.when = JSON.parse(processedCondition);
+        options.when = conditionResult.processedCondition;
+
+        if (whenError) {
+          setWhenError("");
+        }
       }
 
       let batch: ReadableRecord[] = [];
@@ -734,14 +734,19 @@ export default function EntryDetail(props: Readonly<Props>) {
               lineWrapping: true,
               viewportMargin: Infinity,
               matchBrackets: true,
-              autoCloseBrackets: true,
             }}
             onBeforeChange={(editor: any, data: any, value: string) => {
               setWhenCondition(value);
+              if (whenError) {
+                setWhenError("");
+              }
             }}
             onBlur={(editor: any) => {
               const value = editor.getValue() || "";
-              setWhenCondition(formatJSON(value));
+              const formatted = formatJSON(value);
+              if (formatted !== value) {
+                setWhenCondition(formatted);
+              }
             }}
           />
           {whenError && (
