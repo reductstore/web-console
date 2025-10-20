@@ -32,7 +32,6 @@ import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
 
-import streamSaver from "streamsaver";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 
 // @ts-ignore
@@ -254,28 +253,29 @@ export default function EntryDetail(props: Readonly<Props>) {
 
     try {
       const bucket = await props.client.getBucket(bucketName);
-      const readableRecord = await bucket.beginRead(
-        entryName,
-        BigInt(record.key),
-      );
       const ext = getExtensionFromContentType(record.contentType || "");
       const fileName = `${entryName}-${record.key}${ext}`;
-      const size = Number(readableRecord.size);
-      if (size < 1024 * 1024) {
-        // Small file: use Blob and anchor
-        const data = await readableRecord.read();
-        const blob = new Blob([data as BlobPart], { type: record.contentType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        // Large file: stream to disk
-        const fileStream = streamSaver.createWriteStream(fileName, { size });
-        await readableRecord.stream.pipeTo(fileStream);
-      }
+      // Set expiration time for 1 hour from now
+      const expireAt = new Date(Date.now() + 60 * 60 * 1000);
+      const shareLink = await bucket.createQueryLink(
+        entryName,
+        BigInt(record.key),
+        undefined,
+        undefined,
+        0,
+        expireAt,
+        fileName,
+      );
+
+      const a = document.createElement("a");
+      a.href = shareLink;
+      a.download = fileName;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // cannot track download completion, wait for 2 seconds
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (err) {
       console.error("Download failed", err);
       message.error("Failed to download record");

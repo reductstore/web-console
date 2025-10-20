@@ -11,7 +11,6 @@ import {
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
-import streamSaver from "streamsaver";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
 type MockedRemoveRecord = RemoveRecordFn & {
@@ -78,10 +77,6 @@ const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
-
-jest.mock("streamsaver", () => ({
-  createWriteStream: jest.fn(),
-}));
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
@@ -331,73 +326,40 @@ describe("EntryDetail", () => {
     expect(downloadIcons.length).toBe(2);
   });
 
-  describe("Record Download", () => {
-    it("should download records smaller than 1MB", async () => {
-      const smallRecord = {
-        time: 1000n,
-        key: "1000",
-        contentType: "application/json",
-        size: 1024n, // 1KB
-        read: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-      };
+  it("should download records using share link", async () => {
+    const mockShareLink = "http://localhost/download-link";
+    (bucket as any).createQueryLink = jest
+      .fn()
+      .mockResolvedValue(mockShareLink);
 
-      (bucket.beginRead as jest.Mock).mockResolvedValueOnce(smallRecord);
+    const clickSpy = jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation();
 
-      await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(DownloadOutlined).length > 0,
-        );
-      });
-
-      const downloadIcon = wrapper.find(DownloadOutlined).at(0);
-      expect(downloadIcon.exists()).toBe(true);
-
-      await act(async () => {
-        downloadIcon.simulate("click");
-        jest.runAllTimers();
-      });
-
-      expect(bucket.beginRead).toHaveBeenCalledWith("testEntry", 1000n);
-      expect(smallRecord.read).toHaveBeenCalled();
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+      await waitUntil(() => wrapper.update().find(DownloadOutlined).length > 0);
     });
 
-    it("should use stream for records larger than 1MB", async () => {
-      const pipeToMock = jest.fn().mockResolvedValue(undefined);
-      const largeRecord = {
-        time: 1000n,
-        key: "1000",
-        contentType: "application/json",
-        size: 1_048_576n, // 1MB
-        stream: { pipeTo: pipeToMock },
-      };
-
-      (bucket.beginRead as jest.Mock).mockResolvedValueOnce(largeRecord);
-      (streamSaver.createWriteStream as jest.Mock).mockReturnValue({
-        writable: {},
-      });
-
-      await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(DownloadOutlined).length > 0,
-        );
-      });
-
-      const downloadIcon = wrapper.find(DownloadOutlined).at(0);
-      expect(downloadIcon.exists()).toBe(true);
-
-      await act(async () => {
-        downloadIcon.simulate("click");
-        jest.runAllTimers();
-      });
-
-      expect(streamSaver.createWriteStream).toHaveBeenCalledWith(
-        expect.stringMatching(/^testEntry-1000\.json$/),
-        { size: 1048576 },
-      );
-      expect(pipeToMock).toHaveBeenCalled();
+    const downloadIcon = wrapper.find(DownloadOutlined).at(0);
+    expect(downloadIcon.exists()).toBe(true);
+    await act(async () => {
+      downloadIcon.simulate("click");
+      jest.runAllTimers();
     });
+    wrapper.update();
+
+    expect(bucket.createQueryLink).toHaveBeenCalledWith(
+      "testEntry",
+      1000n,
+      undefined,
+      undefined,
+      0,
+      expect.any(Date),
+      "testEntry-1000.json",
+    );
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
   });
 
   describe("Link Generation", () => {
