@@ -106,7 +106,9 @@ describe("RecordPreview", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     wrapper.update();
 
-    expect(global.fetch).toHaveBeenCalledWith("http://test-url");
+    expect(global.fetch).toHaveBeenCalledWith("http://test-url", {
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it("should show error on fetch failure", async () => {
