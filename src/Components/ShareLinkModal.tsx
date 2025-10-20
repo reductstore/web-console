@@ -67,21 +67,6 @@ export default function ShareLinkModal({
     onCancel();
   };
 
-  const handleGenerate = async () => {
-    if (!expireAt) return;
-    setLoading(true);
-    try {
-      const generated = await onGenerate(expireAt.toDate(), fileName.trim());
-      setLink(generated);
-      message.success("Link generated successfully");
-    } catch (err) {
-      console.error("Failed to generate share link:", err);
-      message.error("Failed to generate link");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCopy = async () => {
     if (!link) return;
     try {
@@ -89,6 +74,21 @@ export default function ShareLinkModal({
       message.success("Link copied to clipboard");
     } catch {
       message.error("Failed to copy link");
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!expireAt) return;
+    setLoading(true);
+    try {
+      const generated = await onGenerate(expireAt.toDate(), fileName.trim());
+      setLink(generated);
+      handleCopy();
+    } catch (err) {
+      console.error("Failed to generate share link:", err);
+      message.error("Failed to generate link");
+    } finally {
+      setLoading(false);
     }
   };
 
