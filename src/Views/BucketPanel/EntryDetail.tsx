@@ -152,6 +152,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
 
+  const generateFileName = (recordKey: string, contentType: string): string => {
+    const ext = getExtensionFromContentType(contentType || "");
+    return `${entryName}-${recordKey}${ext}`;
+  };
+
   const processConditionWithMacros = (
     conditionString: string,
     intervalValue: string,
