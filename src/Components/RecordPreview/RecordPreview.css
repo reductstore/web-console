@@ -1,0 +1,64 @@
+.recordPreviewCard {
+  margin-bottom: 16px;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.previewContent {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.previewLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 12px;
+}
+
+.previewImageContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  background-color: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.imagePlaceholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  min-width: 100px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.previewTextContainer {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.previewText {
+  padding: 12px;
+  margin: 0;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: transparent;
+  border: none;
+}
