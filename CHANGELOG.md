@@ -17,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix control buttons with write permissions when token with wildcard is used, [PR-138](https://github.com/reductstore/web-console/pull/138)
-- Fix controls buttons with write permissions when token with wildcard is used, [PR-138](https://github.com/reductstore/web-console/pull/138)
 
 ## [1.11.2] - 2025-08-09
 
