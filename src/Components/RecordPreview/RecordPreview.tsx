@@ -26,13 +26,7 @@ const isTextType = (contentType: string): boolean => {
   const type = contentType.toLowerCase().split(";")[0].trim();
   return (
     type.startsWith("text/") ||
-    [
-      "application/json",
-      "application/ld+json",
-      "application/manifest+json",
-      "application/xml",
-      "application/xhtml+xml"
-    ].includes(type) ||
+    ["application/json", "application/xml"].includes(type) ||
     type.endsWith("+json") ||
     type.endsWith("+xml")
   );
@@ -61,7 +55,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     return false;
   };
 
-  const fetchPreview = async () => {
+  const fetchPreview = async (abortSignal?: AbortSignal) => {
     if (!canPreview()) {
       setError("File too large or unsupported format for preview");
       return;
@@ -82,21 +76,42 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
         fileName,
       );
 
+      if (abortSignal?.aborted) {
+        return;
+      }
+
       if (isImageType(contentType)) {
         setPreviewContent(generatedQueryLink);
       } else if (isTextType(contentType)) {
-        const response = await fetch(generatedQueryLink);
+        const response = await fetch(generatedQueryLink, {
+          signal: abortSignal,
+        });
+
+        if (abortSignal?.aborted) {
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`Failed to fetch preview: ${response.statusText}`);
         }
         const text = await response.text();
+
+        if (abortSignal?.aborted) {
+          return;
+        }
+
         setPreviewContent(text);
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       console.error("Preview fetch failed", err);
       setError(err instanceof Error ? err.message : "Failed to load preview");
     } finally {
-      setIsLoading(false);
+      if (!abortSignal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -104,7 +119,8 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     if (!isPreviewVisible) {
       setIsPreviewVisible(true);
       if (!previewContent && !error) {
-        fetchPreview();
+        const abortController = new AbortController();
+        fetchPreview(abortController.signal);
       }
     } else {
       setIsPreviewVisible(false);
@@ -113,7 +129,12 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
 
   useEffect(() => {
     if (canPreview() && !previewContent && !error) {
-      fetchPreview();
+      const abortController = new AbortController();
+      fetchPreview(abortController.signal);
+
+      return () => {
+        abortController.abort();
+      };
     }
   }, []);
 
