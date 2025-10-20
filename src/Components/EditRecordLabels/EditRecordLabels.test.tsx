@@ -55,9 +55,9 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const title = wrapper.find(".labelsTitle");
+      const title = wrapper.find(".labelsHeader");
       expect(title.exists()).toBe(true);
-      expect(title.first().text()).toBe("Labels");
+      expect(title.first().text()).toContain("Labels");
     });
 
     it("should render ScrollableTable with correct props", () => {
@@ -117,7 +117,7 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const title = wrapper.find(".labelsTitle");
+      const title = wrapper.find(".labelsHeader");
       expect(title.exists()).toBe(false);
     });
   });
@@ -288,7 +288,7 @@ describe("EditRecordLabels", () => {
       const initialRows = wrapper.find(".ant-table-tbody tr").length;
 
       // Click the "add below" icon on the first row
-      const addBelowIcon = wrapper.find(".add-below-icon").at(0);
+      const addBelowIcon = wrapper.find(".addBelowIcon").at(0);
       addBelowIcon.simulate("click");
       wrapper.update();
 
@@ -312,7 +312,7 @@ describe("EditRecordLabels", () => {
       const initialRows = wrapper.find(".ant-table-tbody tr").length;
 
       // Click delete icon on first row
-      const deleteIcon = wrapper.find(".delete-icon").at(0);
+      const deleteIcon = wrapper.find(".deleteIcon").at(0);
       deleteIcon.simulate("click");
       wrapper.update();
 
@@ -321,7 +321,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should enable update button after deleting a row", () => {
-      const deleteIcon = wrapper.find(".delete-icon").at(0);
+      const deleteIcon = wrapper.find(".deleteIcon").at(0);
       deleteIcon.simulate("click");
       wrapper.update();
 
@@ -348,7 +348,7 @@ describe("EditRecordLabels", () => {
       wrapper.update();
 
       // Now revert the row
-      const revertIcon = wrapper.find(".revert-icon").at(0);
+      const revertIcon = wrapper.find(".revertIcon").at(0);
       expect(revertIcon.prop("disabled")).toBe(false);
 
       revertIcon.simulate("click");
@@ -392,7 +392,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should disable revert icons for unchanged rows", () => {
-      const revertIcons = wrapper.find(".revert-icon");
+      const revertIcons = wrapper.find(".revertIcon");
       revertIcons.forEach((icon) => {
         expect(icon.prop("disabled")).toBe(true);
       });

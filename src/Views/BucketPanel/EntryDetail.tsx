@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
+  Bucket,
   Client,
   EntryInfo,
   QueryOptions,
@@ -55,6 +56,7 @@ import {
   processWhenCondition,
 } from "../../Helpers/json5Utils";
 import EditRecordLabels from "../../Components/EditRecordLabels";
+import RecordPreview from "../../Components/RecordPreview";
 
 interface CustomPermissions {
   write?: string[];
@@ -73,7 +75,6 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
   const history = useHistory();
   const [records, setRecords] = useState<ReadableRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<ReadableRecord[]>([]);
 
   const defaultRange = useMemo(() => {
     return getDefaultTimeRange();
@@ -144,10 +145,16 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [recordToShare, setRecordToShare] = useState<any>(null);
+  const [bucket, setBucket] = useState<Bucket | null>(null);
   const fetchCtrlRef = useRef<AbortController | null>(null);
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
+
+  const generateFileName = (recordKey: string, contentType: string): string => {
+    const ext = getExtensionFromContentType(contentType || "");
+    return `${entryName}-${recordKey}${ext}`;
+  };
 
   const processConditionWithMacros = (
     conditionString: string,
@@ -178,7 +185,8 @@ export default function EntryDetail(props: Readonly<Props>) {
     setRecords([]);
 
     try {
-      const bucket = await props.client.getBucket(bucketName);
+      const bucketInstance = await props.client.getBucket(bucketName);
+      setBucket(bucketInstance);
 
       const rangeStart = start ?? entryInfo?.oldestRecord;
       const rangeEnd = end ?? entryInfo?.latestRecord;
@@ -214,7 +222,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       let batch: ReadableRecord[] = [];
       let count = 0;
 
-      for await (const record of bucket.query(
+      for await (const record of bucketInstance.query(
         entryName,
         rangeStart,
         rangeEnd,
@@ -254,8 +262,7 @@ export default function EntryDetail(props: Readonly<Props>) {
 
     try {
       const bucket = await props.client.getBucket(bucketName);
-      const ext = getExtensionFromContentType(record.contentType || "");
-      const fileName = `${entryName}-${record.key}${ext}`;
+      const fileName = generateFileName(record.key, record.contentType);
       // Set expiration time for 1 hour from now
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const shareLink = await bucket.createQueryLink(
@@ -267,7 +274,6 @@ export default function EntryDetail(props: Readonly<Props>) {
         expireAt,
         fileName,
       );
-
       const a = document.createElement("a");
       a.href = shareLink;
       a.download = fileName;
@@ -475,17 +481,6 @@ export default function EntryDetail(props: Readonly<Props>) {
     getRecords(timeRange.start, timeRange.end);
   }, [bucketName, entryName]);
 
-  useEffect(() => {
-    const filtered = records.filter((record) => {
-      if (timeRange.start !== undefined && record.time < timeRange.start)
-        return false;
-      if (timeRange.end !== undefined && record.time > timeRange.end)
-        return false;
-      return true;
-    });
-    setFilteredRecords(filtered);
-  }, [records, timeRange.start, timeRange.end]);
-
   // abort ongoing fetch on unmount
   useEffect(() => {
     return () => {
@@ -588,12 +583,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     },
   ];
 
-  const data = filteredRecords.map((record) => ({
+  const data = records.map((record) => ({
     key: record.time.toString(),
     timestamp: record.time,
     size: prettierBytes(Number(record.size)),
     contentType: record.contentType,
     labels: JSON.stringify(record.labels, null, 2),
+    record: record,
   }));
 
   const hasWritePermission = checkWritePermission(permissions, bucketName);
@@ -803,7 +799,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
       </div>
       <DataVolumeChart
-        records={filteredRecords}
+        records={records}
         setTimeRange={(start, end) => {
           setTimeRange(start, end);
           getRecords(start, end);
@@ -818,12 +814,27 @@ export default function EntryDetail(props: Readonly<Props>) {
         dataSource={data}
         expandable={{
           expandedRowRender: (record: any) => (
-            <EditRecordLabels
-              key={`edit-labels-${record.key}`}
-              record={record}
-              onLabelsUpdated={handleLabelsUpdated}
-              editable={hasWritePermission}
-            />
+            <div key={`expanded-row-${record.key}`}>
+              {bucket && (
+                <RecordPreview
+                  contentType={record.record.contentType || ""}
+                  size={Number(record.record.size)}
+                  fileName={generateFileName(
+                    record.key,
+                    record.record.contentType,
+                  )}
+                  entryName={entryName}
+                  timestamp={BigInt(record.key)}
+                  bucket={bucket}
+                />
+              )}
+              <EditRecordLabels
+                key={`edit-labels-${record.key}`}
+                record={record}
+                onLabelsUpdated={handleLabelsUpdated}
+                editable={hasWritePermission}
+              />
+            </div>
           ),
         }}
       />

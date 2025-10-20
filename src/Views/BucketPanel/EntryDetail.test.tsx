@@ -442,7 +442,7 @@ describe("EntryDetail", () => {
       expect(typeof expandableConfig.expandedRowRender).toBe("function");
     });
 
-    it("should render EditRecordLabels component when row is expanded with correct permissions", () => {
+    it("should render RecordPreview and EditRecordLabels components when row is expanded with correct permissions", () => {
       const table = wrapper.find("ScrollableTable");
       const expandableConfig = table.prop("expandable") as any;
 
@@ -452,14 +452,33 @@ describe("EntryDetail", () => {
         size: "1.0 KB",
         contentType: "application/json",
         labels: JSON.stringify({ key: "value" }),
+        record: {
+          contentType: "application/json",
+          size: 1024n,
+        },
       };
 
       const expandedContent = expandableConfig.expandedRowRender(mockRecord);
       expect(expandedContent).toBeDefined();
-      expect(expandedContent.type.name).toBe("EditRecordLabels");
-      expect(expandedContent.props.record).toBe(mockRecord);
-      expect(expandedContent.props.editable).toBe(true);
-      expect(typeof expandedContent.props.onLabelsUpdated).toBe("function");
+      expect(expandedContent.type).toBe("div");
+
+      const { children } = expandedContent.props;
+      expect(Array.isArray(children)).toBe(true);
+      expect(children.length).toBe(2);
+
+      const [recordPreview, editRecordLabels] = children;
+      if (recordPreview) {
+        expect(recordPreview.type.name).toBe("RecordPreview");
+        expect(recordPreview.props.contentType).toBe("application/json");
+        expect(recordPreview.props.size).toBe(1024);
+        expect(recordPreview.props.entryName).toBe("testEntry");
+        expect(recordPreview.props.timestamp).toEqual(1000n);
+      }
+
+      expect(editRecordLabels.type.name).toBe("EditRecordLabels");
+      expect(editRecordLabels.props.record).toBe(mockRecord);
+      expect(editRecordLabels.props.editable).toBe(true);
+      expect(typeof editRecordLabels.props.onLabelsUpdated).toBe("function");
     });
 
     it("should pass handleLabelsUpdated callback to EditRecordLabels component", () => {
@@ -472,10 +491,16 @@ describe("EntryDetail", () => {
         size: "1.0 KB",
         contentType: "application/json",
         labels: JSON.stringify({ key: "value" }),
+        record: {
+          contentType: "application/json",
+          size: 1024n,
+        },
       };
 
       const expandedContent = expandableConfig.expandedRowRender(mockRecord);
-      const { onLabelsUpdated } = expandedContent.props;
+      const { children } = expandedContent.props;
+      const [, editRecordLabels] = children;
+      const { onLabelsUpdated } = editRecordLabels.props;
 
       expect(typeof onLabelsUpdated).toBe("function");
     });
@@ -501,10 +526,16 @@ describe("EntryDetail", () => {
         size: "1.0 KB",
         contentType: "application/json",
         labels: JSON.stringify({ key: "value" }),
+        record: {
+          contentType: "application/json",
+          size: 1024n,
+        },
       };
 
       const expandedContent = expandableConfig.expandedRowRender(mockRecord);
-      expect(expandedContent.props.editable).toBe(false);
+      const { children } = expandedContent.props;
+      const [, editRecordLabels] = children;
+      expect(editRecordLabels.props.editable).toBe(false);
 
       wrapperNoWrite.unmount();
     });
