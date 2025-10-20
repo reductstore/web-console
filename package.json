@@ -47,8 +47,7 @@
     "eject": "react-app-rewired eject",
     "lint": "eslint . --ext ts,tsx --ignore-path .gitignore",
     "fmt": "prettier --write .",
-    "fmt:check": "prettier --check .",
-    "reinstall": "rm -rf node_modules package-lock.json && npm cache clean --force && npm install"
+    "fmt:check": "prettier --check ."
   },
   "proxy": "https://test.reduct.store",
   "eslintConfig": {
