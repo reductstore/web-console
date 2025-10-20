@@ -274,13 +274,14 @@ export default function EntryDetail(props: Readonly<Props>) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      // cannot track download completion, wait for 2 seconds
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (err) {
       console.error("Download failed", err);
       message.error("Failed to download record");
     } finally {
-      setDownloadingKey(null);
+      // cannot track download completion, wait for 2 seconds
+      setTimeout(() => {
+        setDownloadingKey(null);
+      }, 2000);
     }
   };
 
