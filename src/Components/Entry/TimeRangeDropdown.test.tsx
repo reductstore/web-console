@@ -148,8 +148,10 @@ describe("TimeRangeDropdown", () => {
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
     expect(typeof end).toBe("bigint");
-    // Should be equal to 7 days in microseconds (minus 1 millisecond until 23:59:59,999)
-    expect(end - start).toEqual(7n * 24n * 60n * 60n * 1_000_000n - 1_000n);
+    // accounting for daylight saving time changes
+    const rangeInDays = Number(end - start) / (24 * 60 * 60 * 1_000_000);
+    expect(rangeInDays).toBeGreaterThan(6.5);
+    expect(rangeInDays).toBeLessThan(7.5);
   });
 
   it("triggers onSelectRange for 'Last week'", () => {
