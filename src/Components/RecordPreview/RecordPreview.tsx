@@ -22,13 +22,19 @@ const isImageType = (contentType: string): boolean => {
 };
 
 const isTextType = (contentType: string): boolean => {
+  if (!contentType) return false;
+  const type = contentType.toLowerCase().split(";")[0].trim();
   return (
-    contentType.startsWith("text/") ||
-    contentType === "application/json" ||
-    contentType === "application/xml" ||
-    contentType === "application/javascript" ||
-    contentType.includes("xml") ||
-    contentType.includes("json")
+    type.startsWith("text/") ||
+    [
+      "application/json",
+      "application/ld+json",
+      "application/manifest+json",
+      "application/xml",
+      "application/xhtml+xml"
+    ].includes(type) ||
+    type.endsWith("+json") ||
+    type.endsWith("+xml")
   );
 };
 
