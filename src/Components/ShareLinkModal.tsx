@@ -67,10 +67,11 @@ export default function ShareLinkModal({
     onCancel();
   };
 
-  const handleCopy = async () => {
-    if (!link) return;
+  const handleCopy = async (customLink?: string) => {
+    const linkToCopy = customLink || link;
+    if (!linkToCopy) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(linkToCopy);
       message.success("Link copied to clipboard");
     } catch {
       message.error("Failed to copy link");
@@ -83,7 +84,7 @@ export default function ShareLinkModal({
     try {
       const generated = await onGenerate(expireAt.toDate(), fileName.trim());
       setLink(generated);
-      handleCopy();
+      handleCopy(generated);
     } catch (err) {
       console.error("Failed to generate share link:", err);
       message.error("Failed to generate link");
@@ -182,7 +183,7 @@ export default function ShareLinkModal({
             <Space>
               <Button
                 icon={<CopyOutlined />}
-                onClick={handleCopy}
+                onClick={() => handleCopy()}
                 data-testid="copy-button"
               >
                 Copy
