@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2025-10-20
+
 ### Added
 
 - Support for generating shareable links with configurable expiry time and filename, [PR-129](https://github.com/reductstore/web-console/pull/129)
@@ -283,7 +285,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.11.2...HEAD
+[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/reduct-storage/web-console/compare/v1.12.0...v1.11.2
 [1.11.2]: https://github.com/reduct-storage/web-console/compare/v1.11.2...v1.11.1
 [1.11.1]: https://github.com/reduct-storage/web-console/compare/v1.11.1...v1.11.0
 [1.11.0]: https://github.com/reduct-storage/web-console/compare/v1.11.0...v1.10.1
