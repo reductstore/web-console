@@ -142,7 +142,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     if (isLoading) {
       return (
         <div className="previewLoading">
-          <Spin size="large" />
+          <Spin />
           <Typography.Text>Loading preview...</Typography.Text>
         </div>
       );
