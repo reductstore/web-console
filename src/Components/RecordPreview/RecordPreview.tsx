@@ -136,7 +136,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
         abortController.abort();
       };
     }
-  }, []);
+  }, []); // abort controller on unmount
 
   const renderPreviewContent = () => {
     if (isLoading) {
