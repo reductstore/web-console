@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Alert, Button, Space, Typography } from "antd";
+import { Alert, Button, Space, Typography, Card } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -275,7 +275,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
             dataIndex: "operation",
             width: "20%",
             render: (_: any, record: LabelItem) => (
-              <Space size="small" className="row-actions">
+              <Space size="small" className="rowActions">
                 <Button
                   type="text"
                   size="small"
@@ -286,7 +286,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                       ? "Revert changes"
                       : "No changes to revert"
                   }
-                  className="action-icon revert-icon"
+                  className="actionIcon revertIcon"
                   disabled={!record.isModified}
                 />
                 <Button
@@ -295,7 +295,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                   icon={<InsertRowBelowOutlined />}
                   onClick={() => handleAdd(record.id)}
                   title="Insert row below"
-                  className="action-icon add-below-icon"
+                  className="actionIcon addBelowIcon"
                 />
                 <Button
                   type="text"
@@ -304,7 +304,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                   icon={<DeleteOutlined />}
                   onClick={() => handleDelete(record.id)}
                   title="Delete label"
-                  className="action-icon delete-icon"
+                  className="actionIcon deleteIcon"
                 />
               </Space>
             ),
@@ -337,43 +337,23 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
   return (
     <>
       {record && (
-        <>
-          <Typography.Text strong className="labelsTitle">
-            Labels
-          </Typography.Text>
-          <div className="labelTableContainer">
-            <ScrollableTable
-              scroll={{ y: 300 }}
-              components={components}
-              rowClassName="editableRow"
-              size="small"
-              bordered
-              dataSource={labelItems}
-              columns={columnsWithEditable as any}
-              pagination={false}
-              rowKey="id"
-            />
-          </div>
-          {labelUpdateError && (
-            <Alert
-              type="error"
-              message={labelUpdateError}
-              className="errorMessage"
-            />
-          )}
-          {editable && (
-            <div className="buttonContainer">
+        <Card size="small" className="labelsCard">
+          <div className="labelsHeader">
+            <Typography.Text strong>Labels</Typography.Text>
+            {editable && (
               <Space>
                 <Button
                   onClick={() => handleAdd()}
                   icon={<PlusOutlined />}
                   title="Add new label"
+                  size="small"
                 />
                 <Button
                   onClick={handleRevert}
                   icon={<UndoOutlined />}
                   title="Revert changes"
                   disabled={!hasChangesToUpdate()}
+                  size="small"
                 />
                 <Button
                   type="primary"
@@ -381,11 +361,34 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
                   disabled={!hasChangesToUpdate()}
                   icon={<SaveOutlined />}
                   title="Update labels"
+                  size="small"
                 />
               </Space>
+            )}
+          </div>
+          <div className="labelsContent">
+            <div className="labelTableContainer">
+              <ScrollableTable
+                scroll={{ y: 300 }}
+                components={components}
+                rowClassName="editableRow"
+                size="small"
+                bordered
+                dataSource={labelItems}
+                columns={columnsWithEditable as any}
+                pagination={false}
+                rowKey="id"
+              />
             </div>
-          )}
-        </>
+            {labelUpdateError && (
+              <Alert
+                type="error"
+                message={labelUpdateError}
+                className="errorMessage"
+              />
+            )}
+          </div>
+        </Card>
       )}
     </>
   );
