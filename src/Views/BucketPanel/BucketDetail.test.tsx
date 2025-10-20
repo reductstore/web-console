@@ -262,4 +262,61 @@ describe("BucketDetail", () => {
     expect(tableText).toContain("2");
     expect(tableText).toMatch(/\d+(\.\d+)?\s*[KMGT]?B/);
   });
+
+  // New tests for wildcard permission matching
+  it("should show remove entry button with wildcard permissions", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["Bucket*"] }}
+        />
+      </MemoryRouter>,
+    );
+    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
+
+    expect(removeButton.hostNodes().length).toEqual(2);
+  });
+
+  it("should show rename entry button with wildcard permissions", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["*WithData"] }}
+        />
+      </MemoryRouter>,
+    );
+    const renameButton = await waitUntilFind(detail, { title: "Rename entry" });
+
+    expect(renameButton.hostNodes().length).toEqual(2);
+  });
+
+  it("should hide remove entry button with non-matching wildcard permissions", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["test-*", "other-*"] }}
+        />
+      </MemoryRouter>,
+    );
+    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
+
+    expect(removeButton).toBeUndefined();
+  });
+
+  it("should hide rename entry button with non-matching wildcard permissions", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["test-*", "other-*"] }}
+        />
+      </MemoryRouter>,
+    );
+    const renameButton = await waitUntilFind(detail, { title: "Rename entry" });
+
+    expect(renameButton).toBeUndefined();
+  });
 });
