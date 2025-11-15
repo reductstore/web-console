@@ -361,6 +361,7 @@ describe("EntryDetail", () => {
       0,
       expect.any(Date),
       "testEntry-1000.json",
+      "https://example.com",
     );
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
