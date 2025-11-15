@@ -12,6 +12,7 @@ interface RecordPreviewProps {
   entryName: string;
   timestamp: bigint;
   bucket: Bucket;
+  apiUrl: string;
 }
 
 const MAX_TEXT_SIZE = 1024 * 1024; // 1MB limit for text preview
@@ -39,6 +40,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   entryName,
   timestamp,
   bucket,
+  apiUrl,
 }) => {
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
@@ -74,8 +76,8 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
         0,
         expireAt,
         fileName,
+        apiUrl,
       );
-
       if (abortSignal?.aborted) {
         return;
       }

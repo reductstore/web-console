@@ -20,6 +20,7 @@ import { getHelpMenuItems } from "./Components/HelpMenu";
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
   publicUrl: string;
+  apiUrl: string;
 }
 
 type State = {

@@ -65,6 +65,7 @@ interface CustomPermissions {
 
 interface Props {
   client: Client;
+  apiUrl: string;
   permissions?: CustomPermissions;
 }
 
@@ -273,6 +274,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         0,
         expireAt,
         fileName,
+        props.apiUrl,
       );
       const a = document.createElement("a");
       a.href = shareLink;
@@ -826,6 +828,7 @@ export default function EntryDetail(props: Readonly<Props>) {
                   entryName={entryName}
                   timestamp={BigInt(record.key)}
                   bucket={bucket}
+                  apiUrl={props.apiUrl}
                 />
               )}
               <EditRecordLabels

@@ -19,6 +19,7 @@ describe("RecordPreview", () => {
     entryName: "test-entry",
     timestamp: 1000n,
     bucket: mockBucket,
+    apiUrl: "http://localhost:8383",
   };
 
   beforeEach(() => {

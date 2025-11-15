@@ -183,7 +183,11 @@ describe("EntryDetail", () => {
 
     wrapper = mount(
       <MemoryRouter>
-        <EntryDetail client={client} permissions={permissions} />
+        <EntryDetail
+          client={client}
+          permissions={permissions}
+          apiUrl="https://example.com"
+        />
       </MemoryRouter>,
     );
   });
@@ -513,7 +517,11 @@ describe("EntryDetail", () => {
 
       const wrapperNoWrite = mount(
         <MemoryRouter>
-          <EntryDetail client={client} permissions={noWritePermissions} />
+          <EntryDetail
+            client={client}
+            permissions={noWritePermissions}
+            apiUrl="https://example.com"
+          />
         </MemoryRouter>,
       );
 
