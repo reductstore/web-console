@@ -312,6 +312,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       0,
       expireAt,
       fileName,
+      props.apiUrl,
     );
   };
 
