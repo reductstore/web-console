@@ -84,7 +84,7 @@ export default function ShareLinkModal({
     try {
       const generated = await onGenerate(expireAt.toDate(), fileName.trim());
       setLink(generated);
-      handleCopy(generated);
+      await handleCopy(generated);
     } catch (err) {
       console.error("Failed to generate share link:", err);
       message.error("Failed to generate link");

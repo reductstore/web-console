@@ -183,7 +183,11 @@ describe("EntryDetail", () => {
 
     wrapper = mount(
       <MemoryRouter>
-        <EntryDetail client={client} permissions={permissions} />
+        <EntryDetail
+          client={client}
+          permissions={permissions}
+          apiUrl="https://example.com"
+        />
       </MemoryRouter>,
     );
   });
@@ -357,6 +361,7 @@ describe("EntryDetail", () => {
       0,
       expect.any(Date),
       "testEntry-1000.json",
+      "https://example.com",
     );
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
@@ -513,7 +518,11 @@ describe("EntryDetail", () => {
 
       const wrapperNoWrite = mount(
         <MemoryRouter>
-          <EntryDetail client={client} permissions={noWritePermissions} />
+          <EntryDetail
+            client={client}
+            permissions={noWritePermissions}
+            apiUrl="https://example.com"
+          />
         </MemoryRouter>,
       );
 

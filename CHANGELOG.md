@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix download button and record preview using base URL from browser, [PR-152](https://github.com/reductstore/web-console/pull/152)
+
 ## [1.12.0] - 2025-10-20
 
 ### Added

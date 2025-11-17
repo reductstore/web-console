@@ -15,6 +15,7 @@ import EntryDetail from "../Views/BucketPanel/EntryDetail";
 
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
+  apiUrl: string;
   onLogin: () => void;
   permissions?: TokenPermissions;
 }
