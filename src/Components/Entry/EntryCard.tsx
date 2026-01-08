@@ -5,7 +5,13 @@ import {
   LoadingOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { APIError, EntryInfo, Status, TokenPermissions, Client } from "reduct-js";
+import {
+  APIError,
+  EntryInfo,
+  Status,
+  TokenPermissions,
+  Client,
+} from "reduct-js";
 import { useHistory } from "react-router-dom";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
