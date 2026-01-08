@@ -695,19 +695,14 @@ describe("EntryDetail", () => {
       const recordRow = wrapper.find(".ant-table-row").at(0);
       expect(recordRow.exists()).toBe(true);
 
-      const deleteIcon = wrapper.find(DeleteOutlined).at(0);
+      const deleteIcon = recordRow.find(DeleteOutlined).at(0);
       expect(deleteIcon.exists()).toBe(true);
 
       const { onClick } = deleteIcon.props();
       expect(typeof onClick).toBe("function");
 
       act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
+        (onClick as any)();
       });
       wrapper.update();
 
@@ -716,7 +711,7 @@ describe("EntryDetail", () => {
 
       // Check the modal title
       const modalTitle = modal.find(".ant-modal-title").text();
-      expect(modalTitle).toContain("Remove entry");
+      expect(modalTitle).toContain("Delete Record");
     });
 
     it("should delete record when confirmation is confirmed", async () => {
