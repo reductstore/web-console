@@ -1,11 +1,12 @@
 import React from "react";
 import { mount } from "enzyme";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
-import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
+import { Bucket, BucketInfo, Client, EntryInfo, Status } from "reduct-js";
 import BucketDetail from "./BucketDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
 import { act } from "react-dom/test-utils";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"), // use actual for all non-hook parts
@@ -63,9 +64,11 @@ describe("BucketDetail", () => {
     const card = await waitUntilFind(detail, ".BucketCard");
 
     expect(client.getBucket).toBeCalledWith("testBucket");
-    expect(card.hostNodes().render().text()).toEqual(
-      "BucketWithDataSize10 KBEntries2History0 seconds",
-    );
+    const cardText = card.hostNodes().render().text();
+    expect(cardText).toContain("BucketWithData");
+    expect(cardText).toContain("Size10 KB");
+    expect(cardText).toContain("Entries2");
+    expect(cardText).toContain("History0 seconds");
   });
 
   it("should show entry table ", async () => {
@@ -84,6 +87,15 @@ describe("BucketDetail", () => {
   });
 
   it("should remove bucket and redirect", async () => {
+    bucket.getInfo = jest.fn().mockResolvedValue({
+      name: "BucketWithData",
+      entryCount: 2n,
+      size: 10220n,
+      oldestRecord: 0n,
+      latestRecord: 10000n,
+      status: Status.READY,
+    } as BucketInfo);
+
     const detail = mount(
       <MemoryRouter>
         <BucketDetail client={client} permissions={{ fullAccess: true }} />,
@@ -91,7 +103,7 @@ describe("BucketDetail", () => {
     );
     const removeButton = await waitUntilFind(detail, { title: "Remove" });
 
-    removeButton.hostNodes().props().onClick();
+    removeButton.hostNodes().simulate("click");
     /* TODO: How to test modal window? */
   });
 
@@ -117,6 +129,37 @@ describe("BucketDetail", () => {
 
     expect(removeButton.hostNodes().length).toEqual(2);
     /* TODO: How to test modal window? */
+  });
+
+  it("should show deleting state and disable entry actions when deleting", async () => {
+    bucket.getEntryList = jest.fn().mockResolvedValue([
+      {
+        name: "DeletingEntry",
+        blockCount: 1n,
+        recordCount: 10n,
+        size: 1024n,
+        oldestRecord: 0n,
+        latestRecord: 10000n,
+        status: Status.DELETING,
+      } as EntryInfo,
+    ]);
+
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail
+          client={client}
+          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
+    const row = detail.find(".ant-table-row").at(0);
+    expect(row.render().text()).toContain("Deleting");
+    const renameIcon = row.find(EditOutlined);
+    const removeIcon = row.find(DeleteOutlined);
+    expect(renameIcon.prop("onClick")).toBeUndefined();
+    expect(removeIcon.prop("onClick")).toBeUndefined();
   });
 
   it("should hide remove entry button if no permissions", async () => {
