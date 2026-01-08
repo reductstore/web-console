@@ -22,6 +22,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       is_active: true,
       is_provisioned: true,
       pending_records: BigInt(100),
+      mode: "enabled",
     });
 
     const mockReplicationSettings = ReplicationSettings.parse({
@@ -285,6 +286,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       is_active: true,
       is_provisioned: true,
       pending_records: BigInt(100),
+      mode: "enabled",
     });
     client.getReplication = jest.fn().mockResolvedValue({
       info: mockReplicationInfo,
@@ -324,6 +326,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       is_active: true,
       is_provisioned: true,
       pending_records: BigInt(100),
+      mode: "enabled",
     });
     client.getReplication = jest.fn().mockResolvedValue({
       info: mockReplicationInfo,
@@ -362,6 +365,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       is_active: true,
       is_provisioned: true,
       pending_records: BigInt(100),
+      mode: "enabled",
     });
     client.getReplication = jest.fn().mockResolvedValue({
       info: mockReplicationInfo,
@@ -402,6 +406,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       is_active: true,
       is_provisioned: true,
       pending_records: BigInt(100),
+      mode: "enabled",
     });
     client.getReplication = jest.fn().mockResolvedValue({
       info: mockReplicationInfo,

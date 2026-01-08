@@ -1,6 +1,6 @@
 import { mount, ReactWrapper } from "enzyme";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { Bucket, Client, EntryInfo } from "reduct-js";
+import { Bucket, Client, EntryInfo, Status } from "reduct-js";
 import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
@@ -178,6 +178,7 @@ describe("EntryDetail", () => {
         latestRecord: 10000n,
         createdAt: 0n,
         updatedAt: 10000n,
+        status: Status.READY,
       } as EntryInfo,
     ]);
 

@@ -27,6 +27,7 @@ describe("ReplicationCard", () => {
         isActive: true,
         isProvisioned: false,
         pendingRecords: 100n,
+        mode: "enabled",
       },
       settings: {
         srcBucket: "sourceBucket1",

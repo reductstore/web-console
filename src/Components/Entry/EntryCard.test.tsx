@@ -1,7 +1,7 @@
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import EntryCard from "./EntryCard";
-import { EntryInfo, Client } from "reduct-js";
+import { EntryInfo, Client, Status } from "reduct-js";
 import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 
 describe("EntryCard", () => {
@@ -14,6 +14,7 @@ describe("EntryCard", () => {
     blockCount: 2n,
     oldestRecord: 1000000n,
     latestRecord: 2000000n,
+    status: Status.READY,
   };
 
   const client = new Client("");

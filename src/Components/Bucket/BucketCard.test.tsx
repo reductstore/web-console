@@ -1,7 +1,7 @@
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import BucketCard from "./BucketCard";
-import { BucketInfo, Client } from "reduct-js";
+import { BucketInfo, Client, Status } from "reduct-js";
 
 describe("BucketCard", () => {
   beforeEach(() => mockJSDOM());
@@ -13,6 +13,7 @@ describe("BucketCard", () => {
     oldestRecord: 0n,
     latestRecord: 1000000n,
     isProvisioned: false,
+    status: Status.READY,
   };
 
   const client = new Client("");

@@ -46,9 +46,10 @@
     "eject": "react-app-rewired eject",
     "lint": "eslint . --ext ts,tsx --ignore-path .gitignore",
     "fmt": "prettier --write .",
-    "fmt:check": "prettier --check ."
+    "fmt:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
-  "proxy": "https://test.reduct.store",
+  "proxy": "http://localhost:8383",
   "eslintConfig": {
     "extends": [
       "react-app",
