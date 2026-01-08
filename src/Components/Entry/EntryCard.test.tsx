@@ -96,11 +96,27 @@ describe("EntryCard", () => {
     expect(timestamps.at(4).text()).toEqual("---");
   });
 
+  it("should show deleting state and disable remove action when actions are disabled", async () => {
+    const wrapper = mount(
+      <EntryCard
+        entryInfo={{ ...info, status: Status.DELETING }}
+        permissions={{ fullAccess: true }}
+        client={client}
+        bucketName="test-bucket"
+        onRemoved={onRemoved}
+      />,
+    );
+
+    expect(wrapper.render().text()).toContain("Deleting");
+    const deleteButton = wrapper.find(DeleteOutlined);
+    expect(deleteButton.prop("onClick")).toBeUndefined();
+  });
+
   describe("Upload Button Tests", () => {
     it("should show upload button with write permission", async () => {
       const wrapper = mount(
         <EntryCard
-          entryInfo={info}
+          entryInfo={{ ...info, status: Status.DELETING }}
           permissions={{ fullAccess: true }}
           client={client}
           bucketName="test-bucket"
@@ -133,7 +149,7 @@ describe("EntryCard", () => {
     it("should call onUpload when upload button is clicked", async () => {
       const wrapper = mount(
         <EntryCard
-          entryInfo={info}
+          entryInfo={{ ...info, status: Status.READY }}
           permissions={{ fullAccess: true }}
           client={client}
           bucketName="test-bucket"

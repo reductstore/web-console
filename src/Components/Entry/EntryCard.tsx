@@ -1,12 +1,18 @@
-import React, { useState } from "react";
-import { Card, Col, Row, Statistic } from "antd";
-import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
-import { EntryInfo, TokenPermissions, Client } from "reduct-js";
+import React, { useEffect, useState } from "react";
+import { Card, Col, message, Row, Statistic, Tag } from "antd";
+import {
+  DeleteOutlined,
+  LoadingOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
+import { APIError, EntryInfo, Status, TokenPermissions, Client } from "reduct-js";
 import { useHistory } from "react-router-dom";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 import { getHistory } from "../Bucket/BucketCard";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
+import ActionIcon from "../ActionIcon";
+import "./EntryCard.css";
 
 interface Props {
   entryInfo: EntryInfo;
@@ -23,6 +29,13 @@ export default function EntryCard(props: Readonly<Props>) {
   const { entryInfo, bucketName, permissions, onRemoved, showUnix } = props;
   const history = useHistory();
   const [entryToRemove, setEntryToRemove] = useState<string>("");
+  const [entryStatus, setEntryStatus] = useState(entryInfo.status);
+  const deletionTooltip = "Deletion in progress. Action disabled.";
+  const isDeleting = entryStatus === Status.DELETING;
+
+  useEffect(() => {
+    setEntryStatus(entryInfo.status);
+  }, [entryInfo.status]);
 
   const printTimestamp = (timestamp: bigint) => {
     if (entryInfo.recordCount === 0n) return "---";
@@ -39,18 +52,32 @@ export default function EntryCard(props: Readonly<Props>) {
 
   const removeEntry = async (name: string) => {
     const { client, bucketName } = props;
-    const bucket = await client.getBucket(bucketName);
-    await bucket.removeEntry(name);
+    const previousStatus = entryInfo.status ?? Status.READY;
     setEntryToRemove("");
-    onRemoved?.();
+    setEntryStatus(Status.DELETING);
+    try {
+      const bucket = await client.getBucket(bucketName);
+      await bucket.removeEntry(name);
+      onRemoved?.();
+    } catch (err) {
+      console.error(err);
+      const errorMsg =
+        err instanceof APIError && err.message
+          ? err.message
+          : "Failed to remove entry.";
+      message.error(errorMsg);
+      setEntryStatus(previousStatus);
+    }
   };
 
   const actions = [];
   if (props.hasWritePermission) {
     actions.push(
-      <UploadOutlined
+      <ActionIcon
         key="upload"
-        title="Upload File"
+        icon={<UploadOutlined title="Upload File" />}
+        disabled={isDeleting}
+        tooltip={deletionTooltip}
         onClick={() => props.onUpload?.()}
       />,
     );
@@ -60,10 +87,11 @@ export default function EntryCard(props: Readonly<Props>) {
     (permissions?.write && permissions.write.indexOf(bucketName) !== -1)
   ) {
     actions.push(
-      <DeleteOutlined
+      <ActionIcon
         key="delete"
-        style={{ color: "red" }}
-        title="Remove entry"
+        icon={<DeleteOutlined title="Remove entry" style={{ color: "red" }} />}
+        disabled={isDeleting}
+        tooltip={deletionTooltip}
         onClick={() => setEntryToRemove(entryInfo.name)}
       />,
     );
@@ -74,9 +102,18 @@ export default function EntryCard(props: Readonly<Props>) {
       <Card
         className="EntryCard"
         title={
-          <p>
-            <a onClick={handleClick}>{bucketName}</a>/{entryInfo.name}
-          </p>
+          <div className="entryCardTitle">
+            <span className="entryCardTitlePath">
+              <a onClick={handleClick}>{bucketName}</a>/{entryInfo.name}
+            </span>
+            {isDeleting ? (
+              <span className="entryCardStatus">
+                <Tag color="processing" icon={<LoadingOutlined spin />}>
+                  Deleting
+                </Tag>
+              </span>
+            ) : null}
+          </div>
         }
         actions={actions}
       >
