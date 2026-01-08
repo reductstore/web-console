@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Show deletion progress for buckets/entries with non-blocking deletion, [PR-154](https://github.com/reductstore/web-console/pull/154)
+
 ## 1.12.1 - 2025-11-17
 
 ### Fixed
