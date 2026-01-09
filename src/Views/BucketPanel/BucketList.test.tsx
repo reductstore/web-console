@@ -3,7 +3,7 @@ import { mount } from "enzyme";
 import waitUntil from "async-wait-until";
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
-import { BucketInfo, Client } from "reduct-js";
+import { BucketInfo, Client, Status } from "reduct-js";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react-dom/test-utils";
 
@@ -146,6 +146,35 @@ describe("BucketList", () => {
 
     expect(renameModal.exists()).toBe(false);
     expect(removeModal.exists()).toBe(true);
+  });
+
+  it("should show deleting state and disable actions for deleting bucket", async () => {
+    client.getBucketList = jest.fn().mockResolvedValue([
+      {
+        name: "DeletingBucket",
+        entryCount: 0n,
+        size: 0n,
+        oldestRecord: 0n,
+        latestRecord: 0n,
+        isProvisioned: false,
+        status: Status.DELETING,
+      } as BucketInfo,
+    ]);
+
+    const panel = mount(
+      <MemoryRouter>
+        <BucketList client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    const row = panel.find(".ant-table-row").at(0);
+    expect(row.render().text()).toContain("Deleting");
+
+    const renameIcon = row.find('span[title="Rename"]');
+    const removeIcon = row.find('span[title="Remove"]');
+    expect(renameIcon.prop("onClick")).toBeUndefined();
+    expect(removeIcon.prop("onClick")).toBeUndefined();
   });
 
   it("should show loading state while fetching buckets", async () => {

@@ -1,3 +1,16 @@
 .EntryCard {
-  margin: 0.5em;
+  margin: 0;
+}
+
+.entryCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.entryCardStatus {
+  display: flex;
+  margin-left: auto;
+  font-weight: normal;
 }

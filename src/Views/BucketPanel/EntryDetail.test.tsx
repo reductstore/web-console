@@ -1,6 +1,6 @@
 import { mount, ReactWrapper } from "enzyme";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { Bucket, Client, EntryInfo } from "reduct-js";
+import { Bucket, Client, EntryInfo, Status } from "reduct-js";
 import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
@@ -178,6 +178,7 @@ describe("EntryDetail", () => {
         latestRecord: 10000n,
         createdAt: 0n,
         updatedAt: 10000n,
+        status: Status.READY,
       } as EntryInfo,
     ]);
 
@@ -694,19 +695,14 @@ describe("EntryDetail", () => {
       const recordRow = wrapper.find(".ant-table-row").at(0);
       expect(recordRow.exists()).toBe(true);
 
-      const deleteIcon = wrapper.find(DeleteOutlined).at(0);
+      const deleteIcon = recordRow.find(DeleteOutlined).at(0);
       expect(deleteIcon.exists()).toBe(true);
 
       const { onClick } = deleteIcon.props();
       expect(typeof onClick).toBe("function");
 
       act(() => {
-        (onClick as any)(
-          {
-            stopPropagation: jest.fn(),
-          },
-          mockRecords[0],
-        );
+        (onClick as any)();
       });
       wrapper.update();
 
@@ -715,7 +711,7 @@ describe("EntryDetail", () => {
 
       // Check the modal title
       const modalTitle = modal.find(".ant-modal-title").text();
-      expect(modalTitle).toContain("Remove entry");
+      expect(modalTitle).toContain("Delete Record");
     });
 
     it("should delete record when confirmation is confirmed", async () => {

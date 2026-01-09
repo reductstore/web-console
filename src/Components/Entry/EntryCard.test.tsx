@@ -1,7 +1,7 @@
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import EntryCard from "./EntryCard";
-import { EntryInfo, Client } from "reduct-js";
+import { EntryInfo, Client, Status } from "reduct-js";
 import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 
 describe("EntryCard", () => {
@@ -14,6 +14,7 @@ describe("EntryCard", () => {
     blockCount: 2n,
     oldestRecord: 1000000n,
     latestRecord: 2000000n,
+    status: Status.READY,
   };
 
   const client = new Client("");
@@ -95,11 +96,27 @@ describe("EntryCard", () => {
     expect(timestamps.at(4).text()).toEqual("---");
   });
 
+  it("should show deleting state and disable remove action when actions are disabled", async () => {
+    const wrapper = mount(
+      <EntryCard
+        entryInfo={{ ...info, status: Status.DELETING }}
+        permissions={{ fullAccess: true }}
+        client={client}
+        bucketName="test-bucket"
+        onRemoved={onRemoved}
+      />,
+    );
+
+    expect(wrapper.render().text()).toContain("Deleting");
+    const deleteButton = wrapper.find(DeleteOutlined);
+    expect(deleteButton.prop("onClick")).toBeUndefined();
+  });
+
   describe("Upload Button Tests", () => {
     it("should show upload button with write permission", async () => {
       const wrapper = mount(
         <EntryCard
-          entryInfo={info}
+          entryInfo={{ ...info, status: Status.DELETING }}
           permissions={{ fullAccess: true }}
           client={client}
           bucketName="test-bucket"
@@ -132,7 +149,7 @@ describe("EntryCard", () => {
     it("should call onUpload when upload button is clicked", async () => {
       const wrapper = mount(
         <EntryCard
-          entryInfo={info}
+          entryInfo={{ ...info, status: Status.READY }}
           permissions={{ fullAccess: true }}
           client={client}
           bucketName="test-bucket"

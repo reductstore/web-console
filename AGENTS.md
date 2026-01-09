@@ -2,8 +2,9 @@
 
 ## Testing Instructions
 
-- Run tests in CI-compatible mode with `npm run test:ci`.
+- Run TypeScript checks without starting the dev server: `npm run typecheck`.
+- Run tests in CI-compatible mode: `npm run test:ci`.
 
 ## Formatting
 
-- Format code using `npm run fmt`.
+- Format code: `npm run fmt`.

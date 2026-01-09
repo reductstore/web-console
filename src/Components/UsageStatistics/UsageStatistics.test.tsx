@@ -1,7 +1,7 @@
 import React from "react";
 import { mount } from "enzyme";
 import UsageStatistics from "./UsageStatistics";
-import { ServerInfo, BucketInfo } from "reduct-js";
+import { ServerInfo, BucketInfo, Status } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("UsageStatistics", () => {
@@ -23,6 +23,7 @@ describe("UsageStatistics", () => {
     size: 1000n * 1000n * 1000n * 10n, // 10 GB
     oldestRecord: 0n,
     latestRecord: 0n,
+    status: Status.READY,
   }));
 
   beforeEach(() => {

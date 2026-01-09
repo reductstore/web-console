@@ -6,12 +6,24 @@ import {
   Client,
   TokenPermissions,
   APIError,
+  Status,
 } from "reduct-js";
 import { useHistory, useParams, Link } from "react-router-dom";
 import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
-import { Button, Flex, Input, Typography, Modal, Divider, Space } from "antd";
+import {
+  Button,
+  Flex,
+  Input,
+  Typography,
+  message,
+  Modal,
+  Divider,
+  Space,
+  Tag,
+  Tooltip,
+} from "antd";
 import type { TablePaginationConfig } from "antd";
 import type { ColumnsType, FilterConfirmProps } from "antd/es/table/interface";
 import {
@@ -19,6 +31,7 @@ import {
   EditOutlined,
   ReloadOutlined,
   SearchOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
@@ -48,6 +61,9 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const deletionTooltip = "Deletion in progress. Action disabled.";
+  const disabledActionStyle = { color: "#bfbfbf", cursor: "not-allowed" };
 
   const paginationStorageKey = `bucket-${name}-entries-pagination`;
   const { setPageSize, getPageSize } = usePaginationStore();
@@ -122,22 +138,31 @@ export default function BucketDetail(props: Readonly<Props>) {
 
   const removeEntry = async (name: string) => {
     if (!info) {
-      setRemoveError("No bucket info");
+      message.error("No bucket info");
       return;
     }
 
+    setIsRemoveModalOpen(false);
+    setEntries((prevEntries) =>
+      prevEntries.map((entry) =>
+        entry.name === name ? { ...entry, status: Status.DELETING } : entry,
+      ),
+    );
     try {
       const { client } = props;
       const bucket: Bucket = await client.getBucket(info.name);
       await bucket.removeEntry(name);
       setEntryToRemove("");
-      getEntries().then();
-      setRemoveError(null);
-      setIsRemoveModalOpen(false);
+      setEntries((prevEntries) =>
+        prevEntries.filter((entry) => entry.name !== name),
+      );
     } catch (err) {
       console.error(err);
-      if (err instanceof APIError && err.message) setRemoveError(err.message);
-      else setRemoveError("Failed to remove entry.");
+      const errorMsg =
+        err instanceof APIError && err.message
+          ? err.message
+          : "Failed to remove entry.";
+      message.error(errorMsg);
     }
   };
 
@@ -159,6 +184,17 @@ export default function BucketDetail(props: Readonly<Props>) {
     getEntries().then();
   }, [name]);
 
+  // Poll only when there are entries being deleted
+  useEffect(() => {
+    const hasDeletingEntries = entries.some(
+      (entry) => entry.status === Status.DELETING,
+    );
+    if (!hasDeletingEntries) return;
+
+    const interval = setInterval(() => getEntries(), 2000);
+    return () => clearInterval(interval);
+  }, [entries]);
+
   const data = entries.map((entry) => {
     const printIsoDate = (timestamp: bigint) =>
       entry.recordCount !== 0n
@@ -172,6 +208,7 @@ export default function BucketDetail(props: Readonly<Props>) {
       history: entry.recordCount !== 0n ? getHistory(entry) : "---",
       oldestRecord: printIsoDate(entry.oldestRecord),
       latestRecord: printIsoDate(entry.latestRecord),
+      status: entry.status,
     };
   });
 
@@ -248,13 +285,32 @@ export default function BucketDetail(props: Readonly<Props>) {
       dataIndex: "name",
       key: "name",
       fixed: "left",
+      width: 200,
       ...getColumnSearchProps("name", "entry names"),
       sorter: (a: any, b: any) => a.name.localeCompare(b.name),
-      render: (name: string) => (
-        <Link to={`/buckets/${info?.name}/entries/${name}`}>
-          <b>{name}</b>
-        </Link>
-      ),
+      render: (name: string, record: { status?: Status }) => {
+        const isDeleting = record.status === Status.DELETING;
+        return (
+          <span>
+            {isDeleting ? (
+              <b style={{ color: "#bfbfbf" }}>{name}</b>
+            ) : (
+              <Link to={`/buckets/${info?.name}/entries/${name}`}>
+                <b>{name}</b>
+              </Link>
+            )}
+            {isDeleting ? (
+              <Tag
+                color="processing"
+                icon={<LoadingOutlined spin />}
+                style={{ marginLeft: 8 }}
+              >
+                Deleting
+              </Tag>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       title: "Records",
@@ -346,21 +402,47 @@ export default function BucketDetail(props: Readonly<Props>) {
     },
     {
       title: "",
-      render: (_: any, entry: { name: string }) => {
+      render: (_: any, entry: { name: string; status?: Status }) => {
         if (info && checkWritePermission(props.permissions, info.name)) {
+          const isDeleting = entry.status === Status.DELETING;
           return (
             <Flex gap="middle">
-              <EditOutlined
-                key={`rename-${entry.name}`}
-                title="Rename entry"
-                onClick={() => handleOpenRenameModal(entry.name)}
-              />
-              <DeleteOutlined
-                key={entry.name}
-                className="removeButton"
-                title="Remove entry"
-                onClick={() => handleOpenRemoveModal(entry.name)}
-              />
+              {isDeleting ? (
+                <Tooltip title={deletionTooltip}>
+                  <span>
+                    <EditOutlined
+                      key={`rename-${entry.name}`}
+                      title="Rename entry"
+                      style={disabledActionStyle}
+                    />
+                  </span>
+                </Tooltip>
+              ) : (
+                <EditOutlined
+                  key={`rename-${entry.name}`}
+                  title="Rename entry"
+                  onClick={() => handleOpenRenameModal(entry.name)}
+                />
+              )}
+              {isDeleting ? (
+                <Tooltip title={deletionTooltip}>
+                  <span>
+                    <DeleteOutlined
+                      key={entry.name}
+                      className="removeButton"
+                      title="Remove entry"
+                      style={disabledActionStyle}
+                    />
+                  </span>
+                </Tooltip>
+              ) : (
+                <DeleteOutlined
+                  key={entry.name}
+                  className="removeButton"
+                  title="Remove entry"
+                  onClick={() => handleOpenRemoveModal(entry.name)}
+                />
+              )}
             </Flex>
           );
         }
@@ -377,7 +459,11 @@ export default function BucketDetail(props: Readonly<Props>) {
           index={0}
           {...props}
           showPanel
-          onRemoved={() => history.push("/buckets")}
+          onRemoved={() => {
+            if (history.location.pathname === `/buckets/${name}`) {
+              history.goBack();
+            }
+          }}
           onShow={() => null}
           onUpload={() => setIsUploadModalVisible(true)}
           hasWritePermission={hasWritePermission}

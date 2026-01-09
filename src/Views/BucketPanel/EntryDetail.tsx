@@ -615,7 +615,14 @@ export default function EntryDetail(props: Readonly<Props>) {
           permissions={permissions as TokenPermissions}
           showUnix={showUnix}
           client={props.client}
-          onRemoved={() => history.push(`/buckets/${bucketName}`)}
+          onRemoved={() => {
+            if (
+              history.location.pathname ===
+              `/buckets/${bucketName}/entries/${entryName}`
+            ) {
+              history.push(`/buckets/${bucketName}`);
+            }
+          }}
           onUpload={() => setIsUploadModalVisible(true)}
           hasWritePermission={hasWritePermission}
         />

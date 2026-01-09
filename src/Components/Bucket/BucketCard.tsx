@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Card, Col, Modal, Row, Statistic, Tag } from "antd";
+import { Card, Col, message, Modal, Row, Space, Statistic, Tag } from "antd";
 import humanizeDuration from "humanize-duration";
 import {
   APIError,
   Bucket,
   BucketInfo,
   Client,
+  Status,
   TokenPermissions,
 } from "reduct-js";
 
@@ -15,12 +16,14 @@ import {
   DeleteOutlined,
   SettingOutlined,
   UploadOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 
 import "./BucketCard.css";
 import BucketSettingsForm from "./BucketSettingsForm";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
+import ActionIcon from "../ActionIcon";
 
 interface Props {
   bucketInfo: BucketInfo;
@@ -50,22 +53,35 @@ export default function BucketCard(props: Readonly<Props>) {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [bucketInfo, setBucketInfo] = useState(props.bucketInfo);
   const { client, index } = props;
+  const deletionTooltip = "Deletion in progress. Action disabled.";
+  const isDeleting = bucketInfo.status === Status.DELETING;
 
   useEffect(() => {
     setBucketInfo(props.bucketInfo);
   }, [props.bucketInfo]);
 
   const onRemove = async () => {
+    const previousStatus = bucketInfo.status ?? Status.READY;
+    setIsRemoveModalOpen(false);
+    setBucketInfo((prevBucketInfo) => ({
+      ...prevBucketInfo,
+      status: Status.DELETING,
+    }));
     try {
       const bucket: Bucket = await client.getBucket(bucketInfo.name);
       await bucket.remove();
       props.onRemoved(bucketInfo.name);
-      setRemoveError(null);
-      setIsRemoveModalOpen(false);
     } catch (err) {
       console.error(err);
-      if (err instanceof APIError && err.message) setRemoveError(err.message);
-      else setRemoveError("Failed to remove bucket.");
+      const errorMsg =
+        err instanceof APIError && err.message
+          ? err.message
+          : "Failed to remove bucket.";
+      message.error(errorMsg);
+      setBucketInfo((prevBucketInfo) => ({
+        ...prevBucketInfo,
+        status: previousStatus,
+      }));
     }
   };
 
@@ -74,9 +90,11 @@ export default function BucketCard(props: Readonly<Props>) {
   if (props.showPanel) {
     if (props.hasWritePermission) {
       actions.push(
-        <UploadOutlined
-          title="Upload File"
+        <ActionIcon
           key="upload"
+          icon={<UploadOutlined title="Upload File" />}
+          disabled={isDeleting}
+          tooltip={deletionTooltip}
           onClick={(e) => {
             e.stopPropagation();
             props.onUpload?.();
@@ -86,19 +104,22 @@ export default function BucketCard(props: Readonly<Props>) {
     }
 
     actions.push(
-      <SettingOutlined
-        title="Settings"
+      <ActionIcon
         key="setting"
+        icon={<SettingOutlined title="Settings" />}
+        disabled={isDeleting}
+        tooltip={deletionTooltip}
         onClick={() => setChangeSettings(true)}
       />,
     );
 
     if (!readOnly) {
       actions.push(
-        <DeleteOutlined
-          title="Remove"
+        <ActionIcon
           key="delete"
-          style={{ color: "red" }}
+          icon={<DeleteOutlined title="Remove" style={{ color: "red" }} />}
+          disabled={isDeleting}
+          tooltip={deletionTooltip}
           onClick={() => setIsRemoveModalOpen(true)}
         />,
       );
@@ -112,14 +133,22 @@ export default function BucketCard(props: Readonly<Props>) {
       id={bucketInfo.name}
       title={bucketInfo.name}
       extra={
-        bucketInfo.isProvisioned ? (
-          <Tag color="processing">Provisioned</Tag>
-        ) : (
-          <></>
-        )
+        bucketInfo.isProvisioned || isDeleting ? (
+          <Space size="small">
+            {bucketInfo.isProvisioned ? (
+              <Tag color="processing">Provisioned</Tag>
+            ) : null}
+            {isDeleting ? (
+              <Tag color="processing" icon={<LoadingOutlined spin />}>
+                Deleting
+              </Tag>
+            ) : null}
+          </Space>
+        ) : null
       }
-      hoverable={props.showPanel != true}
-      onClick={() => props.onShow(bucketInfo.name)}
+      hoverable={props.showPanel != true && !isDeleting}
+      onClick={() => !isDeleting && props.onShow(bucketInfo.name)}
+      style={isDeleting ? { cursor: "not-allowed", opacity: 0.7 } : undefined}
       actions={actions}
     >
       <Card.Meta></Card.Meta>

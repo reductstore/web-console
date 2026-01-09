@@ -32,7 +32,7 @@
     "react-dom": "^17.0.2",
     "react-router-dom": "^5.3.4",
     "react-scripts": "5.0.1",
-    "reduct-js": "^1.17.1",
+    "reduct-js": "1.18.0-beta.1",
     "stream-browserify": "^3.0.0",
     "ts-jest": "^27.1.5",
     "typescript": "^4.9.5",
@@ -46,9 +46,10 @@
     "eject": "react-app-rewired eject",
     "lint": "eslint . --ext ts,tsx --ignore-path .gitignore",
     "fmt": "prettier --write .",
-    "fmt:check": "prettier --check ."
+    "fmt:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
-  "proxy": "https://test.reduct.store",
+  "proxy": "http://localhost:8383",
   "eslintConfig": {
     "extends": [
       "react-app",

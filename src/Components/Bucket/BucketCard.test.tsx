@@ -1,7 +1,8 @@
 import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
 import { mount } from "enzyme";
 import BucketCard from "./BucketCard";
-import { BucketInfo, Client } from "reduct-js";
+import { BucketInfo, Client, Status } from "reduct-js";
+import { DeleteOutlined } from "@ant-design/icons";
 
 describe("BucketCard", () => {
   beforeEach(() => mockJSDOM());
@@ -13,6 +14,7 @@ describe("BucketCard", () => {
     oldestRecord: 0n,
     latestRecord: 1000000n,
     isProvisioned: false,
+    status: Status.READY,
   };
 
   const client = new Client("");
@@ -68,7 +70,7 @@ describe("BucketCard", () => {
       />,
     );
     const tag = await waitUntilFind(wrapper, ".ant-tag");
-    expect(tag.hostNodes().render().text()).toEqual("Provisioned");
+    expect(tag.hostNodes().render().text()).toContain("Provisioned");
   });
 
   it("should not show remove button if provisioned", async () => {
@@ -87,11 +89,30 @@ describe("BucketCard", () => {
     expect(button.length).toEqual(0);
   });
 
+  it("should show deleting tag and disable remove action when actions are disabled", async () => {
+    const wrapper = mount(
+      <BucketCard
+        bucketInfo={{ ...info, status: Status.DELETING }}
+        permissions={{ fullAccess: true }}
+        showPanel
+        client={client}
+        index={0}
+        onRemoved={onRemove}
+        onShow={() => null}
+      />,
+    );
+
+    const tag = await waitUntilFind(wrapper, ".ant-tag");
+    expect(tag.text()).toContain("Deleting");
+    const removeButton = wrapper.find(DeleteOutlined);
+    expect(removeButton.prop("onClick")).toBeUndefined();
+  });
+
   describe("Upload Button Tests", () => {
     it("should show upload button with write permission", async () => {
       const wrapper = mount(
         <BucketCard
-          bucketInfo={info}
+          bucketInfo={{ ...info, status: Status.DELETING }}
           permissions={{ fullAccess: true }}
           showPanel
           client={client}
@@ -131,7 +152,7 @@ describe("BucketCard", () => {
     it("should call onUpload when upload button is clicked", async () => {
       const wrapper = mount(
         <BucketCard
-          bucketInfo={info}
+          bucketInfo={{ ...info, status: Status.READY }}
           permissions={{ fullAccess: true }}
           showPanel
           client={client}
