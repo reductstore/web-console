@@ -58,16 +58,24 @@ describe("Replications", () => {
     expect(rows.length).toEqual(2);
 
     expect(rows.at(0).find("a").text()).toEqual("Replication1");
-    expect(rows.at(0).find("span.ant-tag-success").text()).toEqual("Active");
+    expect(rows.at(0).find("span.ant-tag-success").text()).toEqual(
+      "Target Reachable",
+    );
     expect(rows.at(0).find("span.ant-tag-processing").exists()).toBeFalsy();
     expect(rows.at(0).find("td").at(2).text()).toEqual("100");
+    expect(rows.at(0).find("td").at(3).text()).toEqual("Target Reachable");
 
     expect(rows.at(1).find("a").text()).toEqual("Replication2");
-    expect(rows.at(1).find("span.ant-tag-error").text()).toEqual("Inactive");
+    expect(rows.at(1).find("span.ant-tag-error").text()).toEqual(
+      "Target Unreachable",
+    );
     expect(rows.at(1).find("span.ant-tag-processing").text()).toEqual(
       "Provisioned",
     );
     expect(rows.at(1).find("td").at(2).text()).toEqual("50");
+    expect(rows.at(1).find("td").at(3).text()).toEqual(
+      "Target UnreachableProvisioned",
+    );
   });
 
   it("shows the add replication button", () => {

@@ -1,11 +1,16 @@
 import React from "react";
 import { mount, ReactWrapper } from "enzyme";
 import { act } from "react-dom/test-utils";
-import { Card } from "antd";
+import { Card, Select } from "antd";
 import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
 
 import ReplicationCard from "./ReplicationCard";
-import { Client, FullReplicationInfo } from "reduct-js";
+import {
+  APIError,
+  Client,
+  FullReplicationInfo,
+  ReplicationMode,
+} from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("ReplicationCard", () => {
@@ -13,6 +18,7 @@ describe("ReplicationCard", () => {
   let replicationMock: FullReplicationInfo;
   let onRemoveMock: jest.Mock;
   let onShowMock: jest.Mock;
+  let onModeChangeMock: jest.Mock;
   let wrapper: ReactWrapper;
 
   beforeEach(() => {
@@ -20,6 +26,7 @@ describe("ReplicationCard", () => {
 
     clientMock = new Client("dummyURL");
     clientMock.deleteReplication = jest.fn().mockResolvedValue(undefined);
+    clientMock.setReplicationMode = jest.fn().mockResolvedValue(undefined);
 
     replicationMock = {
       info: {
@@ -54,6 +61,7 @@ describe("ReplicationCard", () => {
 
     onRemoveMock = jest.fn();
     onShowMock = jest.fn();
+    onModeChangeMock = jest.fn();
   });
 
   afterEach(() => {
@@ -169,7 +177,7 @@ describe("ReplicationCard", () => {
     expect(onRemoveMock).toHaveBeenCalledWith(replicationMock.info.name);
   });
 
-  it("does not show remove button if replication is provisioned", () => {
+  it("show inactive remove icon for provisioned replications", () => {
     const provisionedReplicationMock: FullReplicationInfo = {
       ...replicationMock,
       info: {
@@ -191,6 +199,209 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find(DeleteOutlined).exists()).toBe(false);
+    const deleteIcon = wrapper.find(DeleteOutlined);
+    expect(deleteIcon.exists()).toBe(true);
+    expect(deleteIcon.prop("style")).toEqual({
+      color: "gray",
+      cursor: "not-allowed",
+    });
+  });
+
+  it("shows mode selector when showPanel is true", () => {
+    wrapper = mount(
+      <ReplicationCard
+        replication={replicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={true}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        onModeChange={onModeChangeMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(wrapper.find("[data-testid='mode-select']").exists()).toBe(true);
+  });
+
+  it("changes replication mode successfully", async () => {
+    wrapper = mount(
+      <ReplicationCard
+        replication={replicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={true}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        onModeChange={onModeChangeMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    await act(async () => {
+      wrapper.find(Select).props().onChange?.(ReplicationMode.PAUSED, {
+        value: ReplicationMode.PAUSED,
+        label: "Paused",
+      });
+    });
+    wrapper.update();
+
+    expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
+      replicationMock.info.name,
+      ReplicationMode.PAUSED,
+    );
+    expect(onModeChangeMock).toHaveBeenCalledWith(
+      replicationMock.info.name,
+      ReplicationMode.PAUSED,
+    );
+  });
+
+  it("handles mode change error gracefully", async () => {
+    const errorMessage = "Failed to change mode";
+    clientMock.setReplicationMode = jest
+      .fn()
+      .mockRejectedValue(new APIError(errorMessage, 500));
+
+    wrapper = mount(
+      <ReplicationCard
+        replication={replicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={true}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        onModeChange={onModeChangeMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    await act(async () => {
+      wrapper.find(Select).props().onChange?.(ReplicationMode.DISABLED, {
+        value: ReplicationMode.DISABLED,
+        label: "Disabled",
+      });
+    });
+    wrapper.update();
+
+    expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
+      replicationMock.info.name,
+      ReplicationMode.DISABLED,
+    );
+    expect(onModeChangeMock).not.toHaveBeenCalled();
+  });
+
+  it("enables mode selector for provisioned replications with fullAccess", () => {
+    const provisionedReplicationMock: FullReplicationInfo = {
+      ...replicationMock,
+      info: {
+        ...replicationMock.info,
+        isProvisioned: true,
+      },
+    };
+
+    wrapper = mount(
+      <ReplicationCard
+        replication={provisionedReplicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={true}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        onModeChange={onModeChangeMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(wrapper.find(Select).props().disabled).toBe(false);
+  });
+
+  it("disables mode selector when user does not have fullAccess", () => {
+    wrapper = mount(
+      <ReplicationCard
+        replication={replicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={true}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        onModeChange={onModeChangeMock}
+        permissions={{ fullAccess: false }}
+      />,
+    );
+
+    expect(wrapper.find(Select).props().disabled).toBe(true);
+  });
+
+  it("shows status tags when showPanel is false", () => {
+    wrapper = mount(
+      <ReplicationCard
+        replication={replicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={false}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(wrapper.find("[data-testid='mode-select']").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Target Reachable");
+  });
+
+  it("shows Inactive status tag when mode is disabled", () => {
+    const disabledReplicationMock: FullReplicationInfo = {
+      ...replicationMock,
+      info: {
+        ...replicationMock.info,
+        mode: ReplicationMode.DISABLED,
+      },
+    };
+
+    wrapper = mount(
+      <ReplicationCard
+        replication={disabledReplicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={false}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(wrapper.text()).toContain("Inactive");
+  });
+
+  it("shows Target Unreachable status tag when not active", () => {
+    const inactiveReplicationMock: FullReplicationInfo = {
+      ...replicationMock,
+      info: {
+        ...replicationMock.info,
+        isActive: false,
+      },
+    };
+
+    wrapper = mount(
+      <ReplicationCard
+        replication={inactiveReplicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={false}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(wrapper.text()).toContain("Target Unreachable");
   });
 });
