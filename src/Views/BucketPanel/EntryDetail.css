@@ -41,6 +41,27 @@
   gap: var(--entry-detail-inner-spacing);
 }
 
+/* INPUT with prefix/suffix */
+.timeInputs .ant-input-affix-wrapper:focus,
+.timeInputs .ant-input-affix-wrapper-focused {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* INPUT */
+.timeInputs .ant-input:focus,
+.timeInputs .ant-input-focused {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* SELECT */
+.selectGroup .ant-select-selector:focus,
+.selectGroup .ant-select-focused .ant-select-selector {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 @media (max-width: 826px) {
   .timeSelectSection {
     flex-direction: column;
