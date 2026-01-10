@@ -26,12 +26,10 @@ import {
   DeleteOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { Controlled as CodeMirror } from "react-codemirror2";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
+import { JsonQueryEditor } from "../../Components/JsonEditor";
 
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 
@@ -731,30 +729,22 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
 
         <div className="jsonFilterSection">
-          <CodeMirror
-            className="jsonEditor"
+          <JsonQueryEditor
             value={whenCondition}
-            options={{
-              mode: { name: "javascript", json: true },
-              theme: "default",
-              lineNumbers: true,
-              lineWrapping: true,
-              viewportMargin: Infinity,
-              matchBrackets: true,
-            }}
-            onBeforeChange={(editor: any, data: any, value: string) => {
+            onChange={(value: string) => {
               setWhenCondition(value);
               if (whenError) {
                 setWhenError("");
               }
             }}
-            onBlur={(editor: any) => {
-              const value = editor.getValue() || "";
-              const formatted = formatJSON(value);
-              if (formatted !== value) {
+            onBlur={() => {
+              const formatted = formatJSON(whenCondition);
+              if (formatted !== whenCondition) {
                 setWhenCondition(formatted);
               }
             }}
+            height={120}
+            error={whenError}
           />
           {whenError && (
             <Alert type="error" message={whenError} style={{ marginTop: 8 }} />

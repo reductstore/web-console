@@ -20,9 +20,7 @@ import {
 } from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "./ReplicationSettingsForm.css";
-import { Controlled as CodeMirror } from "react-codemirror2";
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
+import { JsonQueryEditor } from "../JsonEditor";
 import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
 
 const isTestEnvironment = process.env.NODE_ENV === "test";
@@ -465,29 +463,22 @@ export default class ReplicationSettingsForm extends React.Component<
             }
           >
             {!isTestEnvironment && (
-              <CodeMirror
-                className="jsonEditor"
+              <JsonQueryEditor
                 value={this.state.formattedWhen}
-                options={{
-                  mode: { name: "javascript", json: true },
-                  theme: "default",
-                  lineNumbers: true,
-                  lineWrapping: true,
-                  matchBrackets: true,
-                  readOnly: readOnly ? "nocursor" : false,
-                }}
-                onBeforeChange={(_, __, value: string) =>
+                onChange={(value: string) =>
                   this.handleWhenConditionChange(value)
                 }
-                onBlur={(editor: any) => {
-                  const value = editor.getValue() || "";
+                onBlur={() => {
+                  const value = this.state.formattedWhen;
                   const result = parseAndFormat(value);
                   this.setState({
                     formattedWhen: result.error ? value : result.formatted,
                     error: result.error || undefined,
                   });
                 }}
-                onViewportChange={(editor) => editor.refresh()}
+                height={120}
+                error={error}
+                readOnly={readOnly}
               />
             )}
             {error && (
