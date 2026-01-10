@@ -1,3 +1,9 @@
 .ReplicationCard {
   margin: 0.5em;
 }
+
+.ReplicationCard-status {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
