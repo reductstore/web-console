@@ -6,7 +6,6 @@ import {
   ReplicationSettings,
 } from "reduct-js"; // Adjust import paths as necessary
 import {
-  Alert,
   Button,
   Col,
   Form,
@@ -38,6 +37,8 @@ interface State {
   formattedWhen: string;
   entries: string[];
   error?: string;
+  selectedBucket?: string;
+  selectedEntries: string[];
 }
 
 enum FilterType {
@@ -77,6 +78,8 @@ export default class ReplicationSettingsForm extends React.Component<
     settings: undefined,
     formattedWhen: "{}\n",
     entries: [],
+    selectedBucket: undefined,
+    selectedEntries: [],
   };
 
   /**
@@ -152,11 +155,20 @@ export default class ReplicationSettingsForm extends React.Component<
         const formatResult = parseAndFormat(whenString);
         whenString = formatResult.error ? whenString : formatResult.formatted;
 
-        this.setState({
-          settings,
-          formattedWhen: whenString,
-          entries: settings.entries || [],
-        });
+        this.setState(
+          {
+            settings,
+            formattedWhen: whenString,
+            entries: settings.entries || [],
+            selectedBucket: settings.srcBucket,
+            selectedEntries: settings.entries || [],
+          },
+          () => {
+            if (settings.srcBucket) {
+              this.handleSourceBucketChange(settings.srcBucket);
+            }
+          },
+        );
       } catch (err) {
         this.handleError(err);
       }
@@ -184,6 +196,16 @@ export default class ReplicationSettingsForm extends React.Component<
     } catch (err) {
       this.handleError(err);
     }
+  };
+
+  handleFormValuesChange = (
+    _changed: Partial<FormValues>,
+    values: FormValues,
+  ) => {
+    this.setState({
+      selectedBucket: values.srcBucket,
+      selectedEntries: Array.isArray(values.entries) ? values.entries : [],
+    });
   };
 
   handleError = (err: unknown) => {
@@ -272,10 +294,9 @@ export default class ReplicationSettingsForm extends React.Component<
         <Form
           name="replicationForm"
           onFinish={this.onFinish}
+          onValuesChange={this.handleFormValuesChange}
           layout="vertical"
           initialValues={this.getInitialFormValues()}
-          labelCol={{ span: 22 }}
-          wrapperCol={{ span: 22 }}
         >
           <Form.Item
             label="Replication Name"
@@ -289,7 +310,7 @@ export default class ReplicationSettingsForm extends React.Component<
             />
           </Form.Item>
 
-          <Row>
+          <Row gutter={16}>
             <Col span={12}>
               <b>Source</b>
               <Form.Item
@@ -364,7 +385,7 @@ export default class ReplicationSettingsForm extends React.Component<
                 rules={[
                   {
                     required: true,
-                    message: "Please input the destination bucket name!",
+                    message: "Please input the destination bucket name",
                   },
                 ]}
                 className="ReplicationField"
@@ -384,7 +405,7 @@ export default class ReplicationSettingsForm extends React.Component<
                 rules={[
                   {
                     required: true,
-                    message: "Please input the destination host URL!",
+                    message: "Please input the destination host URL.",
                   },
                 ]}
                 className="ReplicationField"
@@ -468,21 +489,15 @@ export default class ReplicationSettingsForm extends React.Component<
                 onChange={(value: string) =>
                   this.handleWhenConditionChange(value)
                 }
-                onBlur={() => {
-                  const value = this.state.formattedWhen;
-                  const result = parseAndFormat(value);
-                  this.setState({
-                    formattedWhen: result.error ? value : result.formatted,
-                    error: result.error || undefined,
-                  });
-                }}
-                height={120}
+                height={200}
                 error={error}
                 readOnly={readOnly}
+                validationContext={{
+                  client: this.props.client,
+                  bucket: this.state.selectedBucket,
+                  entries: this.state.selectedEntries,
+                }}
               />
-            )}
-            {error && (
-              <Alert message={error} type="error" style={{ marginTop: 8 }} />
             )}
             <Typography.Text type="secondary" className="jsonExample">
               Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
