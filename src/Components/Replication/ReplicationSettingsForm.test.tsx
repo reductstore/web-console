@@ -199,7 +199,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(button.prop("disabled")).toBe(true);
   });
 
-  it("verifies CodeMirror is non-editable in read-only mode", () => {
+  it("verifies Monaco editor is non-editable in read-only mode", () => {
     wrapper = mount(
       <MemoryRouter>
         <ReplicationSettingsForm

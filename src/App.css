@@ -3,6 +3,11 @@
   --primary-bg: #231b49;
   --primary-fg: #cccccc;
   --primary-hover: #ffffff;
+
+  /* Input colors (Ant Design defaults) */
+  --input-border: #d9d9d9;
+  --input-focus: #231b49;
+  --input-error: #ff4d4f;
 }
 
 /* --- Menu Styles --- */

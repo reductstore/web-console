@@ -18,20 +18,25 @@ type MockedRemoveRecord = RemoveRecordFn & {
   mockRejectedValueOnce: (value: Error) => void;
 };
 
-jest.mock("react-codemirror2", () => ({
-  Controlled: (props: any) => {
+jest.mock("@monaco-editor/react", () => ({
+  __esModule: true,
+  default: (props: any) => {
     return (
-      <div className="react-codemirror2" data-testid="codemirror-mock">
+      <div className="monaco-editor-mock" data-testid="monaco-editor-mock">
         <textarea
           value={props.value}
-          onChange={(e) => props.onBeforeChange(null, null, e.target.value)}
-          onBlur={(e) =>
-            props.onBlur && props.onBlur({ getValue: () => e.target.value })
-          }
+          onChange={(e) => props.onChange && props.onChange(e.target.value)}
+          onBlur={() => props.onBlur && props.onBlur()}
         />
       </div>
     );
   },
+}));
+
+jest.mock("@reductstore/reduct-query-monaco", () => ({
+  getCompletionProvider: jest.fn(() => ({
+    provideCompletionItems: jest.fn(() => ({ suggestions: [] })),
+  })),
 }));
 
 jest.mock("react-chartjs-2", () => ({
@@ -69,9 +74,6 @@ jest.mock("prettier-bytes", () => {
     return `${bytes} bytes`;
   };
 });
-
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
 
 const mockParams = {
   bucketName: "testBucket",
@@ -243,19 +245,12 @@ describe("EntryDetail", () => {
       expect(limitInput.exists()).toBe(false);
     });
 
-    it("should show the CodeMirror editor with empty JSON by default", () => {
-      const codeMirror = wrapper.find(".react-codemirror2");
-      expect(codeMirror.exists()).toBe(true);
-      const cmInstance = wrapper.find("Controlled").prop("options");
-      expect(cmInstance).toEqual(
-        expect.objectContaining({
-          mode: { name: "javascript", json: true },
-          lineNumbers: true,
-        }),
-      );
+    it("should show the Monaco editor with default JSON", () => {
+      const monacoEditor = wrapper.find(".monaco-editor-mock");
+      expect(monacoEditor.exists()).toBe(true);
 
-      const cmValue = wrapper.find("Controlled").prop("value");
-      expect(cmValue).toBe('{\n  "$each_t": "$__interval"\n}\n');
+      const editorValue = wrapper.find("JsonQueryEditor").prop("value");
+      expect(editorValue).toBe('{\n  "$each_t": "$__interval"\n}\n');
 
       const exampleText = wrapper.find(".jsonExample").first().text();
       expect(exampleText).toContain("Example:");
@@ -590,11 +585,11 @@ describe("EntryDetail", () => {
 
   describe("When Condition", () => {
     it("should initialize with default $each_t macro", () => {
-      // Check the CodeMirror component value
-      const codeMirror = wrapper.find(".react-codemirror2");
-      expect(codeMirror.exists()).toBe(true);
+      // Check the Monaco editor component value
+      const monacoEditor = wrapper.find(".monaco-editor-mock");
+      expect(monacoEditor.exists()).toBe(true);
 
-      const textArea = codeMirror.find("textarea");
+      const textArea = monacoEditor.find("textarea");
       expect(textArea.exists()).toBe(true);
 
       const conditionValue = textArea.prop("value") as string;
@@ -623,8 +618,8 @@ describe("EntryDetail", () => {
 
         wrapper.update();
 
-        const updatedCodeMirror = wrapper.find(".react-codemirror2");
-        const updatedTextArea = updatedCodeMirror.find("textarea");
+        const updatedMonacoEditor = wrapper.find(".monaco-editor-mock");
+        const updatedTextArea = updatedMonacoEditor.find("textarea");
         const updatedConditionValue = updatedTextArea.prop("value") as string;
 
         expect(updatedConditionValue.trim()).toBe(
@@ -640,8 +635,8 @@ describe("EntryDetail", () => {
         "&label": { $eq: "test" },
       };
 
-      const codeMirror = wrapper.find(".react-codemirror2");
-      const textArea = codeMirror.find("textarea");
+      const monacoEditor = wrapper.find(".monaco-editor-mock");
+      const textArea = monacoEditor.find("textarea");
 
       act(() => {
         const onChange = textArea.prop("onChange") as any;
@@ -668,8 +663,8 @@ describe("EntryDetail", () => {
       wrapper.update();
 
       // The condition should remain unchanged
-      const finalCodeMirror = wrapper.find(".react-codemirror2");
-      const finalTextArea = finalCodeMirror.find("textarea");
+      const finalMonacoEditor = wrapper.find(".monaco-editor-mock");
+      const finalTextArea = finalMonacoEditor.find("textarea");
       const finalCondition = JSON.parse(finalTextArea.prop("value") as string);
 
       expect(finalCondition).toEqual(customCondition);
