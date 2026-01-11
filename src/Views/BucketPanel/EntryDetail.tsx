@@ -13,7 +13,6 @@ import {
   Button,
   Input,
   Select,
-  Alert,
   Modal,
   Space,
   message,
@@ -737,18 +736,15 @@ export default function EntryDetail(props: Readonly<Props>) {
                 setWhenError("");
               }
             }}
-            onBlur={() => {
-              const formatted = formatJSON(whenCondition);
-              if (formatted !== whenCondition) {
-                setWhenCondition(formatted);
-              }
-            }}
-            height={120}
+            height={200}
             error={whenError}
+            validationContext={{
+              client: props.client,
+              bucket: bucketName,
+              entry: entryName,
+              intervalValue: timeRange.interval ?? undefined,
+            }}
           />
-          {whenError && (
-            <Alert type="error" message={whenError} style={{ marginTop: 8 }} />
-          )}
           <Typography.Text type="secondary" className="jsonExample">
             Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
             Use <code>&label</code> for standard labels and <code>@label</code>{" "}
