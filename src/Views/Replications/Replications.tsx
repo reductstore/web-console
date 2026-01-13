@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
 import {
+  APIError,
   ReplicationInfo,
+  ReplicationMode,
   Client,
   TokenPermissions,
   BucketInfo,
 } from "reduct-js";
-import { Button, Modal, Table, Tag, Typography } from "antd";
+import { Button, message, Modal, Select, Table, Tag, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 
 import "../../App.css";
+import {
+  MODE_SELECT_OPTIONS,
+  MODE_SELECT_STYLE,
+} from "../../Components/Replication/ReplicationModeUtils";
 import { Link } from "react-router-dom";
-import { PlusOutlined } from "@ant-design/icons";
 import ReplicationSettingsForm from "../../Components/Replication/ReplicationSettingsForm";
 
 interface Props {
@@ -26,6 +32,31 @@ export default function Replications(props: Readonly<Props>) {
   const [isLoadingReplications, setIsLoadingReplications] = useState(true);
 
   const [creatingReplication, setCreatingReplication] = useState(false);
+  const [changingMode, setChangingMode] = useState<string | null>(null);
+
+  const onModeChange = async (name: string, newMode: ReplicationMode) => {
+    setChangingMode(name);
+    try {
+      await props.client.setReplicationMode(name, newMode);
+      await getReplications();
+      if (newMode === ReplicationMode.ENABLED) {
+        message.success(`Replication "${name}" enabled.`);
+      } else if (newMode === ReplicationMode.PAUSED) {
+        message.success(`Replication "${name}" paused.`);
+      } else if (newMode === ReplicationMode.DISABLED) {
+        message.success(`Replication "${name}" disabled.`);
+      }
+    } catch (err) {
+      console.error(err);
+      if (err instanceof APIError && err.message) {
+        message.error(`Failed to change replication mode: ${err.message}`);
+      } else {
+        message.error("Failed to change replication mode.");
+      }
+    } finally {
+      setChangingMode(null);
+    }
+  };
 
   const getReplications = async () => {
     try {
@@ -68,6 +99,7 @@ export default function Replications(props: Readonly<Props>) {
       key: `replication-${index}`,
       name: replication.name,
       isActive: replication.isActive,
+      mode: replication.mode,
       isProvisioned: replication.isProvisioned,
       pendingRecords: replication.pendingRecords.toString(),
     };
@@ -85,15 +117,32 @@ export default function Replications(props: Readonly<Props>) {
       ),
     },
     {
-      title: "Active",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (isActive: boolean) => {
-        if (isActive) {
-          return <Tag color="success">Active</Tag>;
-        } else {
-          return <Tag color="error">Inactive</Tag>;
+      title: "Mode",
+      dataIndex: "mode",
+      key: "mode",
+      render: (
+        mode: ReplicationMode,
+        record: { name: string; isProvisioned: boolean },
+      ) => {
+        const canChangeMode = props.permissions?.fullAccess;
+        if (!canChangeMode) {
+          const colorMap: Record<ReplicationMode, string> = {
+            [ReplicationMode.ENABLED]: "success",
+            [ReplicationMode.PAUSED]: "warning",
+            [ReplicationMode.DISABLED]: "error",
+          };
+          return <Tag color={colorMap[mode] || "default"}>{mode}</Tag>;
         }
+        return (
+          <Select
+            value={mode}
+            onChange={(newMode) => onModeChange(record.name, newMode)}
+            loading={changingMode === record.name}
+            disabled={changingMode !== null}
+            style={MODE_SELECT_STYLE}
+            options={MODE_SELECT_OPTIONS}
+          />
+        );
       },
     },
     {
@@ -102,11 +151,45 @@ export default function Replications(props: Readonly<Props>) {
       key: "pendingRecords",
     },
     {
-      title: "",
-      dataIndex: "isProvisioned",
-      key: "isProvisioned",
-      render: (isProvisioned: boolean) =>
-        isProvisioned ? <Tag color="processing">Provisioned</Tag> : null,
+      title: "Status",
+      key: "status",
+      render: (
+        _: unknown,
+        record: {
+          isActive: boolean;
+          isProvisioned: boolean;
+          mode: ReplicationMode;
+        },
+      ) => {
+        const tags = [];
+        if (record.mode === ReplicationMode.DISABLED) {
+          tags.push(
+            <Tag key="disabled" color="default">
+              Inactive
+            </Tag>,
+          );
+        } else if (record.isActive) {
+          tags.push(
+            <Tag key="reachable" color="success">
+              Target Reachable
+            </Tag>,
+          );
+        } else {
+          tags.push(
+            <Tag key="unreachable" color="error">
+              Target Unreachable
+            </Tag>,
+          );
+        }
+        if (record.isProvisioned) {
+          tags.push(
+            <Tag key="provisioned" color="processing">
+              Provisioned
+            </Tag>,
+          );
+        }
+        return <>{tags}</>;
+      },
     },
   ];
 
