@@ -99,6 +99,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
             showPanel
             onRemove={() => history.push("/replications")}
             onShow={() => null}
+            onModeChange={() => getReplication()}
           />
           <Typography.Title level={3}>Errors</Typography.Title>
           <Table
