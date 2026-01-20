@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Typography, Image, Spin, Alert, Card } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
-import { Bucket } from "reduct-js";
+import { Bucket, QueryOptions } from "reduct-js";
 
 import "./RecordPreview.css";
 
@@ -11,6 +11,10 @@ interface RecordPreviewProps {
   fileName: string;
   entryName: string;
   timestamp: bigint;
+  queryStart?: bigint;
+  queryEnd?: bigint;
+  queryOptions?: QueryOptions;
+  recordIndex?: number;
   bucket: Bucket;
   apiUrl: string;
 }
@@ -39,6 +43,10 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   fileName,
   entryName,
   timestamp,
+  queryStart,
+  queryEnd,
+  queryOptions,
+  recordIndex,
   bucket,
   apiUrl,
 }) => {
@@ -70,10 +78,10 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const generatedQueryLink = await bucket.createQueryLink(
         entryName,
-        timestamp,
-        undefined,
-        undefined,
-        0,
+        queryStart ?? timestamp,
+        queryEnd,
+        queryOptions,
+        recordIndex ?? 0,
         expireAt,
         fileName,
         apiUrl,
