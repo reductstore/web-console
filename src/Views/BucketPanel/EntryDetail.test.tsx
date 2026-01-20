@@ -471,7 +471,7 @@ describe("EntryDetail", () => {
       if (recordPreview) {
         expect(recordPreview.type.name).toBe("RecordPreview");
         expect(recordPreview.props.contentType).toBe("application/json");
-        expect(recordPreview.props.size).toBe(1024);
+        expect(recordPreview.props.size).toBe("1.0 KB");
         expect(recordPreview.props.entryName).toBe("testEntry");
         expect(recordPreview.props.timestamp).toEqual(1000n);
       }

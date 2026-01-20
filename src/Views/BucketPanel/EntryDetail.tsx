@@ -18,7 +18,6 @@ import {
   message,
   Spin,
 } from "antd";
-import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import {
   DownloadOutlined,
   ShareAltOutlined,
@@ -54,6 +53,7 @@ import {
 } from "../../Helpers/json5Utils";
 import EditRecordLabels from "../../Components/EditRecordLabels";
 import RecordPreview from "../../Components/RecordPreview";
+import { IndexedReadableRecord } from "./types";
 
 interface CustomPermissions {
   write?: string[];
@@ -72,7 +72,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     entryName: string;
   };
   const history = useHistory();
-  const [records, setRecords] = useState<ReadableRecord[]>([]);
+  const [records, setRecords] = useState<IndexedReadableRecord[]>([]);
 
   const defaultRange = useMemo(() => {
     return getDefaultTimeRange();
@@ -217,7 +217,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         }
       }
 
-      let batch: ReadableRecord[] = [];
+      let batch: IndexedReadableRecord[] = [];
       let count = 0;
 
       for await (const record of bucketInstance.query(
@@ -227,7 +227,11 @@ export default function EntryDetail(props: Readonly<Props>) {
         options,
       )) {
         if (abortSignal.aborted) return;
-        batch.push(record);
+        const indexedRecord: IndexedReadableRecord = {
+          record,
+          tableIndex: count,
+        };
+        batch.push(indexedRecord);
         count++;
 
         // refresh components (table and chart) every 20 records
@@ -340,8 +344,8 @@ export default function EntryDetail(props: Readonly<Props>) {
     timestamp: bigint,
   ) => {
     try {
-      const originalRecord = records.find((r) => r.time === timestamp);
-      const originalLabels = originalRecord?.labels || {};
+      const originalRecord = records.find((r) => r.record.time === timestamp);
+      const originalLabels = originalRecord?.record.labels || {};
       const originalLabelsObj =
         typeof originalLabels === "string"
           ? JSON.parse(originalLabels)
@@ -365,8 +369,8 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       setRecords((prevRecords) =>
         prevRecords.map((record) => {
-          if (record.time === timestamp) {
-            (record.labels as any) = displayLabels;
+          if (record.record.time === timestamp) {
+            (record.record.labels as any) = displayLabels;
           }
           return record;
         }),
@@ -544,7 +548,7 @@ export default function EntryDetail(props: Readonly<Props>) {
           ? record.key
           : dayjs(Number(record.timestamp / 1000n)).toISOString(),
     },
-    { title: "Size", dataIndex: "size", key: "size" },
+    { title: "Size", dataIndex: "prettySize", key: "size" },
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
     {
       title: "Labels",
@@ -583,13 +587,14 @@ export default function EntryDetail(props: Readonly<Props>) {
     },
   ];
 
-  const data = records.map((record) => ({
-    key: record.time.toString(),
-    timestamp: record.time,
-    size: prettierBytes(Number(record.size)),
-    contentType: record.contentType,
-    labels: JSON.stringify(record.labels, null, 2),
-    record: record,
+  const data = records.map((r) => ({
+    key: r.record.time.toString(),
+    timestamp: r.record.time,
+    size: Number(r.record.size),
+    prettySize: prettierBytes(Number(r.record.size)),
+    contentType: r.record.contentType,
+    labels: JSON.stringify(r.record.labels, null, 2),
+    record: r.record,
   }));
 
   const hasWritePermission = checkWritePermission(permissions, bucketName);
@@ -736,7 +741,7 @@ export default function EntryDetail(props: Readonly<Props>) {
                 setWhenError("");
               }
             }}
-            height={200}
+            height={260}
             error={whenError}
             validationContext={{
               client: props.client,
@@ -795,7 +800,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
       </div>
       <DataVolumeChart
-        records={records}
+        records={records.map((r) => r.record)}
         setTimeRange={(start, end) => {
           setTimeRange(start, end);
           getRecords(start, end);
@@ -809,25 +814,22 @@ export default function EntryDetail(props: Readonly<Props>) {
         columns={columns as any[]}
         dataSource={data}
         expandable={{
-          expandedRowRender: (record: any) => (
-            <div key={`expanded-row-${record.key}`}>
+          expandedRowRender: (row: any) => (
+            <div key={`expanded-row-${row.key}`}>
               {bucket && (
                 <RecordPreview
-                  contentType={record.record.contentType || ""}
-                  size={Number(record.record.size)}
-                  fileName={generateFileName(
-                    record.key,
-                    record.record.contentType,
-                  )}
+                  contentType={row.contentType || ""}
+                  size={row.size}
+                  fileName={generateFileName(row.key, row.record.contentType)}
                   entryName={entryName}
-                  timestamp={BigInt(record.key)}
+                  timestamp={row.timestamp}
                   bucket={bucket}
                   apiUrl={props.apiUrl}
                 />
               )}
               <EditRecordLabels
-                key={`edit-labels-${record.key}`}
-                record={record}
+                key={`edit-labels-${row.key}`}
+                record={row}
                 onLabelsUpdated={handleLabelsUpdated}
                 editable={hasWritePermission}
               />
