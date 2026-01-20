@@ -351,9 +351,12 @@ describe("EntryDetail", () => {
 
     expect(bucket.createQueryLink).toHaveBeenCalledWith(
       "testEntry",
-      1000n,
-      undefined,
-      undefined,
+      0n,
+      604800000000n,
+      expect.objectContaining({
+        strict: true,
+        when: { $each_t: "2h" },
+      }),
       0,
       expect.any(Date),
       "testEntry-1000.json",
