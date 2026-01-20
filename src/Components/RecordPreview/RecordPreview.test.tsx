@@ -69,7 +69,7 @@ describe("RecordPreview", () => {
     wrapper = mount(<RecordPreview {...largeFileProps} />);
 
     expect(wrapper.find(Typography.Text).last().text()).toContain(
-      "Preview not available",
+      "Text size exceeds 10 MB limit for preview",
     );
   });
 
