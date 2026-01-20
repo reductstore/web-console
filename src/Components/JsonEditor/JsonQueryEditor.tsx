@@ -284,15 +284,6 @@ export function JsonQueryEditor({
       return <span>Validating...</span>;
     }
 
-    if (validationStatus === ValidationStatus.Valid) {
-      return (
-        <>
-          <span className="jsonQueryEditorValidationOk">✓</span>
-          <span>Valid condition</span>
-        </>
-      );
-    }
-
     if (validationStatus === ValidationStatus.Warning) {
       return (
         <>
@@ -307,6 +298,25 @@ export function JsonQueryEditor({
         <>
           <span className="jsonQueryEditorValidationError">✗</span>
           <span>{validationError || "Invalid condition"}</span>
+        </>
+      );
+    }
+
+    // validation is tested with limit = 1 but an error may still when executing the query
+    if (validationStatus === ValidationStatus.Valid && !error) {
+      return (
+        <>
+          <span className="jsonQueryEditorValidationOk">✓</span>
+          <span>Valid condition</span>
+        </>
+      );
+    }
+
+    if (error) {
+      return (
+        <>
+          <span className="jsonQueryEditorValidationError">✗</span>
+          <span>{error}</span>
         </>
       );
     }

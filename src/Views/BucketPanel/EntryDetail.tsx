@@ -140,12 +140,12 @@ export default function EntryDetail(props: Readonly<Props>) {
 
     const result = parseAndFormat(jsonString);
     if (result.error) {
-      setWhenError(result.error);
+      setFetchError(result.error);
       return jsonString;
     }
 
-    if (whenError) {
-      setWhenError("");
+    if (fetchError) {
+      setFetchError("");
     }
 
     return result.formatted;
@@ -157,7 +157,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
 
-  const [whenError, setWhenError] = useState<string>("");
+  const [fetchError, setFetchError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<RecordTableRow | null>(
@@ -220,7 +220,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     const abortSignal = fetchCtrlRef.current.signal;
 
     setIsLoading(true);
-    setWhenError("");
+    setFetchError("");
     setRecords([]);
 
     try {
@@ -242,7 +242,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         );
 
         if (!conditionResult.success) {
-          setWhenError(conditionResult.error || "Invalid condition");
+          setFetchError(conditionResult.error || "Invalid condition");
           setIsLoading(false);
           return;
         }
@@ -253,8 +253,8 @@ export default function EntryDetail(props: Readonly<Props>) {
         setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
         options.when = conditionResult.processedCondition;
 
-        if (whenError) {
-          setWhenError("");
+        if (fetchError) {
+          setFetchError("");
         }
       }
 
@@ -294,9 +294,9 @@ export default function EntryDetail(props: Readonly<Props>) {
     } catch (err) {
       if (abortSignal.aborted) return;
 
-      if (err instanceof APIError && err.message) setWhenError(err.message);
-      else if (err instanceof SyntaxError) setWhenError(err.message);
-      else setWhenError("Failed to fetch records.");
+      if (err instanceof APIError && err.message) setFetchError(err.message);
+      else if (err instanceof SyntaxError) setFetchError(err.message);
+      else setFetchError("Failed to fetch records.");
     } finally {
       if (!abortSignal.aborted) {
         setIsLoading(false);
@@ -784,12 +784,12 @@ export default function EntryDetail(props: Readonly<Props>) {
             value={whenCondition}
             onChange={(value: string) => {
               setWhenCondition(value);
-              if (whenError) {
-                setWhenError("");
+              if (fetchError) {
+                setFetchError("");
               }
             }}
             height={260}
-            error={whenError}
+            error={fetchError}
             validationContext={{
               client: props.client,
               bucket: bucketName,
