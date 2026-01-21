@@ -302,7 +302,7 @@ export function JsonQueryEditor({
       );
     }
 
-    // validation is tested with limit = 1 but an error may still when executing the query
+    // validation is tested with limit = 1 but an error may still happen when executing the query
     if (validationStatus === ValidationStatus.Valid && !error) {
       return (
         <>
