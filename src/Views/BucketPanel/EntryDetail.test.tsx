@@ -409,7 +409,19 @@ describe("EntryDetail", () => {
       });
       wrapper.update();
 
-      expect(bucket.createQueryLink).toHaveBeenCalled();
+      expect(bucket.createQueryLink).toHaveBeenCalledWith(
+        "testEntry",
+        0n,
+        604800000000n,
+        expect.objectContaining({
+          strict: true,
+          when: { $each_t: "2h" },
+        }),
+        0,
+        expect.any(Date),
+        "testEntry-1000.json",
+        "https://example.com",
+      );
       const input = wrapper.find('input[data-testid="generated-link"]');
       expect(input.prop("value")).toBe(mockLink);
 

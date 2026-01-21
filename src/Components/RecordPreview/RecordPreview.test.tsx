@@ -3,7 +3,7 @@ import { mount, ReactWrapper } from "enzyme";
 import { Button, Typography, Alert } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import RecordPreview from "./RecordPreview";
-import { Bucket } from "reduct-js";
+import { Bucket, QueryOptions } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("RecordPreview", () => {
@@ -110,6 +110,45 @@ describe("RecordPreview", () => {
     expect(global.fetch).toHaveBeenCalledWith("http://test-url", {
       signal: expect.any(AbortSignal),
     });
+  });
+
+  it("should pass query context to createQueryLink", async () => {
+    const queryOptions = new QueryOptions();
+    queryOptions.when = { "&label": { $eq: "test" } };
+    queryOptions.strict = true;
+    queryOptions.head = false;
+
+    (mockBucket.createQueryLink as jest.Mock).mockResolvedValue(
+      "http://test-url",
+    );
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("test content"),
+    });
+
+    wrapper = mount(
+      <RecordPreview
+        {...defaultProps}
+        queryStart={10n}
+        queryEnd={20n}
+        queryOptions={queryOptions}
+        recordIndex={2}
+      />,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    wrapper.update();
+
+    expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
+      "test-entry",
+      10n,
+      20n,
+      queryOptions,
+      2,
+      expect.any(Date),
+      "test.txt",
+      "http://localhost:8383",
+    );
   });
 
   it("should show error on fetch failure", async () => {
