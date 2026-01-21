@@ -55,6 +55,7 @@ import {
 import EditRecordLabels from "../../Components/EditRecordLabels";
 import RecordPreview from "../../Components/RecordPreview";
 import { IndexedReadableRecord } from "./types";
+import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 
 interface CustomPermissions {
   write?: string[];
@@ -72,8 +73,6 @@ interface RecordQueryContext {
   rangeEnd?: bigint;
   options?: QueryOptions;
 }
-
-import type { ReadableRecord } from "reduct-js/lib/cjs/Record";
 
 interface RecordTableRow {
   key: string;
