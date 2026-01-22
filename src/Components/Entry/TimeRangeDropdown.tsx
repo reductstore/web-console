@@ -68,7 +68,7 @@ export default function TimeRangeDropdown({
         label: string;
         value: [Dayjs, Dayjs];
       }[],
-    [],
+    [menuOpen, pickerOpen],
   );
 
   const applyRange = (from: Dayjs, to: Dayjs) => {
