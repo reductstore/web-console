@@ -227,7 +227,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       setBucket(bucketInstance);
 
       const rangeStart = start ?? entryInfo?.oldestRecord;
-      const rangeEnd = end ?? entryInfo?.latestRecord;
+      const rangeEnd = end;
 
       const options = new QueryOptions();
       options.head = true;
