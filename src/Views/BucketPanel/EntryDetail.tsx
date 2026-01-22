@@ -226,15 +226,12 @@ export default function EntryDetail(props: Readonly<Props>) {
       const bucketInstance = await props.client.getBucket(bucketName);
       setBucket(bucketInstance);
 
-      const rangeStart = start ?? entryInfo?.oldestRecord;
-      const rangeEnd = end;
-
       const options = new QueryOptions();
       options.head = true;
       options.strict = true;
 
       if (whenCondition.trim()) {
-        const macroValue = pickEachTInterval(rangeStart, rangeEnd);
+        const macroValue = pickEachTInterval(start, end);
         const conditionResult = processConditionWithMacros(
           whenCondition,
           macroValue,
@@ -258,8 +255,8 @@ export default function EntryDetail(props: Readonly<Props>) {
       }
 
       setQueryContext({
-        rangeStart,
-        rangeEnd,
+        rangeStart: start,
+        rangeEnd: end,
         options,
       });
 
@@ -268,8 +265,8 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       for await (const record of bucketInstance.query(
         entryName,
-        rangeStart,
-        rangeEnd,
+        start,
+        end,
         options,
       )) {
         if (abortSignal.aborted) return;
