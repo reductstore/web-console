@@ -782,4 +782,86 @@ describe("EntryDetail", () => {
       );
     });
   });
+
+  describe("Time Range Input", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should query with undefined end time when stop field is empty", async () => {
+      (bucket.query as jest.Mock).mockClear();
+
+      const timeInputs = wrapper.find(".timeInputs Input");
+      const stopInput = timeInputs.at(1);
+
+      // Clear the stop input
+      await act(async () => {
+        const onChange = stopInput.prop("onChange") as any;
+        if (onChange) {
+          onChange({ target: { value: "" } });
+        }
+      });
+      wrapper.update();
+
+      // Click fetch records button
+      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runAllTimers();
+      });
+
+      // Verify that bucket.query was called with undefined as the end time
+      expect(bucket.query).toHaveBeenCalledWith(
+        "testEntry",
+        0n,
+        undefined,
+        expect.objectContaining({
+          head: true,
+          strict: true,
+        }),
+      );
+    });
+
+    it("should query with specific end time when stop field has value", async () => {
+      (bucket.query as jest.Mock).mockClear();
+
+      const timeInputs = wrapper.find(".timeInputs Input");
+      const stopInput = timeInputs.at(1);
+
+      // Set a specific stop time
+      const specificTime = "2026-01-22T06:57:58.939Z";
+      await act(async () => {
+        const onChange = stopInput.prop("onChange") as any;
+        if (onChange) {
+          onChange({ target: { value: specificTime } });
+        }
+      });
+      wrapper.update();
+
+      // Click fetch records button
+      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runAllTimers();
+      });
+
+      // Verify that bucket.query was called with a defined end time (not undefined)
+      expect(bucket.query).toHaveBeenCalled();
+      const callArgs = (bucket.query as jest.Mock).mock.calls[0];
+      expect(callArgs[0]).toBe("testEntry");
+      expect(callArgs[1]).toBe(0n);
+      // Verify end time is defined and is a bigint
+      expect(callArgs[2]).toBeDefined();
+      expect(typeof callArgs[2]).toBe("bigint");
+      expect(callArgs[3]).toMatchObject({
+        head: true,
+        strict: true,
+      });
+    });
+  });
 });
