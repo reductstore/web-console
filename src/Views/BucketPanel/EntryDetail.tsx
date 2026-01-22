@@ -231,7 +231,9 @@ export default function EntryDetail(props: Readonly<Props>) {
       options.strict = true;
 
       if (whenCondition.trim()) {
-        const macroValue = pickEachTInterval(start, end);
+        const rangeStart = start ?? entryInfo?.oldestRecord;
+        const rangeEnd = end ?? entryInfo?.latestRecord;
+        const macroValue = pickEachTInterval(rangeStart, rangeEnd);
         const conditionResult = processConditionWithMacros(
           whenCondition,
           macroValue,
