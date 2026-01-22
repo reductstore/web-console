@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Button,
@@ -15,10 +15,15 @@ import dayjs, { Dayjs } from "dayjs";
 import { CopyOutlined, LinkOutlined } from "@ant-design/icons";
 import { getExtensionFromContentType } from "../Helpers/contentType";
 
+export interface ShareLinkRecord {
+  key: string;
+  contentType: string | undefined;
+}
+
 interface ShareLinkModalProps {
   open: boolean;
   entryName: string;
-  record: any;
+  record: ShareLinkRecord | null;
   onGenerate: (expireAt: Date, fileName: string) => Promise<string>;
   onCancel: () => void;
   errorMessage?: string | null;
@@ -45,19 +50,34 @@ export default function ShareLinkModal({
   onCancel,
   errorMessage,
 }: ShareLinkModalProps) {
-  if (!record) return null;
-
   const [expireAt, setExpireAt] = useState<Dayjs | null>(
     dayjs().add(24, "hour"),
   );
   const [activePreset, setActivePreset] = useState<string | null>("24h");
-
-  const ext = getExtensionFromContentType(record.contentType || "");
-  const defaultFileName = `${entryName}-${record.key}${ext}`;
-
-  const [fileName, setFileName] = useState(defaultFileName);
+  const [fileName, setFileName] = useState("");
   const [link, setLink] = useState<string>("");
   const [loading, setLoading] = useState(false);
+
+  const ext = record
+    ? getExtensionFromContentType(record.contentType || "")
+    : "";
+  const defaultFileName = record ? `${entryName}-${record.key}${ext}` : "";
+
+  // Reset state when record changes or modal opens with new record
+  useEffect(() => {
+    if (open && record) {
+      const newExt = getExtensionFromContentType(record.contentType || "");
+      const newDefaultFileName = `${entryName}-${record.key}${newExt}`;
+      setFileName(newDefaultFileName);
+      setLink("");
+      setExpireAt(dayjs().add(24, "hour"));
+      setActivePreset("24h");
+    }
+  }, [open, record, entryName]);
+
+  if (!record) return null;
+
+  const canCopy = !!navigator.clipboard;
 
   const handleCancel = () => {
     setLink("");
@@ -73,8 +93,8 @@ export default function ShareLinkModal({
     try {
       await navigator.clipboard.writeText(linkToCopy);
       message.success("Link copied to clipboard");
-    } catch {
-      message.error("Failed to copy link");
+    } catch (err) {
+      message.error("Failed to copy link to clipboard");
     }
   };
 
@@ -84,7 +104,7 @@ export default function ShareLinkModal({
     try {
       const generated = await onGenerate(expireAt.toDate(), fileName.trim());
       setLink(generated);
-      await handleCopy(generated);
+      if (canCopy) await handleCopy(generated);
     } catch (err) {
       console.error("Failed to generate share link:", err);
       message.error("Failed to generate link");
@@ -181,13 +201,15 @@ export default function ShareLinkModal({
             <Typography.Text strong>Shareable Link:</Typography.Text>
             <Input value={link} readOnly data-testid="generated-link" />
             <Space>
-              <Button
-                icon={<CopyOutlined />}
-                onClick={() => handleCopy()}
-                data-testid="copy-button"
-              >
-                Copy
-              </Button>
+              {canCopy && (
+                <Button
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopy()}
+                  data-testid="copy-button"
+                >
+                  Copy
+                </Button>
+              )}
               <Button
                 icon={<LinkOutlined />}
                 href={link}

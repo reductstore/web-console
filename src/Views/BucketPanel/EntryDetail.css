@@ -87,10 +87,6 @@
   max-width: var(--entry-detail-max-width);
 }
 
-.jsonEditor .CodeMirror {
-  height: auto;
-}
-
 .jsonExample {
   display: block;
   margin-top: var(--entry-detail-inner-spacing);

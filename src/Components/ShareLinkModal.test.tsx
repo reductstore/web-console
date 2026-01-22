@@ -1,12 +1,12 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react";
-import ShareLinkModal from "./ShareLinkModal";
+import ShareLinkModal, { ShareLinkRecord } from "./ShareLinkModal";
 
 describe("ShareLinkModal", () => {
   const mockOnGenerate = jest.fn();
   const mockOnCancel = jest.fn();
-  const record = {
-    key: 0,
+  const record: ShareLinkRecord = {
+    key: "0",
     contentType: "application/octet-stream",
   };
 

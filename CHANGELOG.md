@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use Monaco Editor for JSON query editor with syntax highlighting auto-completion, [PR-158](https://github.com/reductstore/web-console/issues/158)
 - Support for changing replication mode (enabled, paused, disabled), [PR-157](https://github.com/reductstore/web-console/pull/157)
 
+### Fixed
+
+- Include full query options when generating download/share/preview links, [PR-160](https://github.com/reductstore/web-console/pull/160)
+
 ## 1.12.1 - 2025-11-17
 
 ### Fixed

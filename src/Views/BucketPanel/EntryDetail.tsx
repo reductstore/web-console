@@ -18,7 +18,7 @@ import {
   message,
   Spin,
 } from "antd";
-import { ReadableRecord } from "reduct-js/lib/cjs/Record";
+import type { ColumnType } from "antd/es/table";
 import {
   DownloadOutlined,
   ShareAltOutlined,
@@ -54,6 +54,8 @@ import {
 } from "../../Helpers/json5Utils";
 import EditRecordLabels from "../../Components/EditRecordLabels";
 import RecordPreview from "../../Components/RecordPreview";
+import { IndexedReadableRecord } from "./types";
+import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 
 interface CustomPermissions {
   write?: string[];
@@ -66,13 +68,33 @@ interface Props {
   permissions?: CustomPermissions;
 }
 
+interface RecordQueryContext {
+  rangeStart?: bigint;
+  rangeEnd?: bigint;
+  options?: QueryOptions;
+}
+
+interface RecordTableRow {
+  key: string;
+  timestamp: bigint;
+  tableIndex: number;
+  size: number;
+  prettySize: string;
+  contentType: string | undefined;
+  labels: string;
+  record: ReadableRecord;
+}
+
 export default function EntryDetail(props: Readonly<Props>) {
   const { bucketName, entryName } = useParams() as {
     bucketName: string;
     entryName: string;
   };
   const history = useHistory();
-  const [records, setRecords] = useState<ReadableRecord[]>([]);
+  const [records, setRecords] = useState<IndexedReadableRecord[]>([]);
+  const [queryContext, setQueryContext] = useState<RecordQueryContext | null>(
+    null,
+  );
 
   const defaultRange = useMemo(() => {
     return getDefaultTimeRange();
@@ -117,12 +139,12 @@ export default function EntryDetail(props: Readonly<Props>) {
 
     const result = parseAndFormat(jsonString);
     if (result.error) {
-      setWhenError(result.error);
+      setFetchError(result.error);
       return jsonString;
     }
 
-    if (whenError) {
-      setWhenError("");
+    if (fetchError) {
+      setFetchError("");
     }
 
     return result.formatted;
@@ -134,15 +156,19 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [isLoading, setIsLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
 
-  const [whenError, setWhenError] = useState<string>("");
+  const [fetchError, setFetchError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState<any>(null);
+  const [recordToDelete, setRecordToDelete] = useState<RecordTableRow | null>(
+    null,
+  );
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
-  const [recordToShare, setRecordToShare] = useState<any>(null);
+  const [recordToShare, setRecordToShare] = useState<RecordTableRow | null>(
+    null,
+  );
   const [bucket, setBucket] = useState<Bucket | null>(null);
   const fetchCtrlRef = useRef<AbortController | null>(null);
 
@@ -157,7 +183,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   const processConditionWithMacros = (
     conditionString: string,
     intervalValue: string,
-  ): { success: boolean; processedCondition?: any; error?: string } => {
+  ): {
+    success: boolean;
+    processedCondition?: Record<string, unknown>;
+    error?: string;
+  } => {
     if (!conditionString.trim()) {
       return { success: true, processedCondition: {} };
     }
@@ -170,6 +200,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     };
   };
 
+  const buildLinkQueryOptions = (
+    source?: QueryOptions,
+  ): QueryOptions | undefined => {
+    if (!source) return undefined;
+    const linkOptions = new QueryOptions();
+    Object.assign(linkOptions, source);
+    linkOptions.head = false;
+    return linkOptions;
+  };
+
   const getRecords = async (start?: bigint, end?: bigint) => {
     if (fetchCtrlRef.current) {
       fetchCtrlRef.current.abort();
@@ -179,7 +219,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     const abortSignal = fetchCtrlRef.current.signal;
 
     setIsLoading(true);
-    setWhenError("");
+    setFetchError("");
     setRecords([]);
 
     try {
@@ -201,7 +241,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         );
 
         if (!conditionResult.success) {
-          setWhenError(conditionResult.error || "Invalid condition");
+          setFetchError(conditionResult.error || "Invalid condition");
           setIsLoading(false);
           return;
         }
@@ -212,12 +252,18 @@ export default function EntryDetail(props: Readonly<Props>) {
         setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
         options.when = conditionResult.processedCondition;
 
-        if (whenError) {
-          setWhenError("");
+        if (fetchError) {
+          setFetchError("");
         }
       }
 
-      let batch: ReadableRecord[] = [];
+      setQueryContext({
+        rangeStart,
+        rangeEnd,
+        options,
+      });
+
+      let batch: IndexedReadableRecord[] = [];
       let count = 0;
 
       for await (const record of bucketInstance.query(
@@ -227,7 +273,11 @@ export default function EntryDetail(props: Readonly<Props>) {
         options,
       )) {
         if (abortSignal.aborted) return;
-        batch.push(record);
+        const indexedRecord: IndexedReadableRecord = {
+          record,
+          tableIndex: count,
+        };
+        batch.push(indexedRecord);
         count++;
 
         // refresh components (table and chart) every 20 records
@@ -243,9 +293,9 @@ export default function EntryDetail(props: Readonly<Props>) {
     } catch (err) {
       if (abortSignal.aborted) return;
 
-      if (err instanceof APIError && err.message) setWhenError(err.message);
-      else if (err instanceof SyntaxError) setWhenError(err.message);
-      else setWhenError("Failed to fetch records.");
+      if (err instanceof APIError && err.message) setFetchError(err.message);
+      else if (err instanceof SyntaxError) setFetchError(err.message);
+      else setFetchError("Failed to fetch records.");
     } finally {
       if (!abortSignal.aborted) {
         setIsLoading(false);
@@ -254,21 +304,21 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleDownload = async (record: any) => {
+  const handleDownload = async (row: RecordTableRow) => {
     if (downloadingKey !== null) return;
-    setDownloadingKey(record.key);
+    setDownloadingKey(row.key);
 
     try {
       const bucket = await props.client.getBucket(bucketName);
-      const fileName = generateFileName(record.key, record.contentType);
+      const fileName = generateFileName(row.key, row.contentType || "");
       // Set expiration time for 1 hour from now
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const shareLink = await bucket.createQueryLink(
         entryName,
-        BigInt(record.key),
-        undefined,
-        undefined,
-        0,
+        queryContext?.rangeStart,
+        queryContext?.rangeEnd,
+        buildLinkQueryOptions(queryContext?.options),
+        row.tableIndex,
         expireAt,
         fileName,
         props.apiUrl,
@@ -291,8 +341,8 @@ export default function EntryDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleShareClick = (record: any) => {
-    setRecordToShare(record);
+  const handleShareClick = (row: RecordTableRow) => {
+    setRecordToShare(row);
     setIsShareModalVisible(true);
   };
 
@@ -303,18 +353,18 @@ export default function EntryDetail(props: Readonly<Props>) {
     const bucket = await props.client.getBucket(bucketName);
     return bucket.createQueryLink(
       entryName,
-      BigInt(recordToShare.key),
-      undefined,
-      undefined,
-      0,
+      queryContext?.rangeStart,
+      queryContext?.rangeEnd,
+      buildLinkQueryOptions(queryContext?.options),
+      recordToShare?.tableIndex,
       expireAt,
       fileName,
       props.apiUrl,
     );
   };
 
-  const handleDeleteClick = (record: any) => {
-    setRecordToDelete(record);
+  const handleDeleteClick = (row: RecordTableRow) => {
+    setRecordToDelete(row);
     setIsDeleteModalVisible(true);
   };
 
@@ -340,8 +390,8 @@ export default function EntryDetail(props: Readonly<Props>) {
     timestamp: bigint,
   ) => {
     try {
-      const originalRecord = records.find((r) => r.time === timestamp);
-      const originalLabels = originalRecord?.labels || {};
+      const originalRecord = records.find((r) => r.record.time === timestamp);
+      const originalLabels = originalRecord?.record.labels || {};
       const originalLabelsObj =
         typeof originalLabels === "string"
           ? JSON.parse(originalLabels)
@@ -364,11 +414,12 @@ export default function EntryDetail(props: Readonly<Props>) {
       );
 
       setRecords((prevRecords) =>
-        prevRecords.map((record) => {
-          if (record.time === timestamp) {
-            (record.labels as any) = displayLabels;
+        prevRecords.map((indexedRecord) => {
+          if (indexedRecord.record.time === timestamp) {
+            (indexedRecord.record.labels as Record<string, string>) =
+              displayLabels;
           }
-          return record;
+          return indexedRecord;
         }),
       );
       message.success("Record labels updated successfully");
@@ -533,18 +584,16 @@ export default function EntryDetail(props: Readonly<Props>) {
     );
   };
 
-  const columns = [
+  const columns: ColumnType<RecordTableRow>[] = [
     {
       title: "Timestamp",
       dataIndex: "timestamp",
       key: "timestamp",
       fixed: "left",
-      render: (text: any, record: any) =>
-        showUnix
-          ? record.key
-          : dayjs(Number(record.timestamp / 1000n)).toISOString(),
+      render: (_: bigint, row: RecordTableRow) =>
+        showUnix ? row.key : dayjs(Number(row.timestamp / 1000n)).toISOString(),
     },
-    { title: "Size", dataIndex: "size", key: "size" },
+    { title: "Size", dataIndex: "prettySize", key: "size" },
     { title: "Content Type", dataIndex: "contentType", key: "contentType" },
     {
       title: "Labels",
@@ -555,25 +604,25 @@ export default function EntryDetail(props: Readonly<Props>) {
     {
       title: "Actions",
       key: "actions",
-      render: (text: any, record: any) => (
+      render: (_: unknown, row: RecordTableRow) => (
         <Space size="middle">
-          {downloadingKey === record.key ? (
+          {downloadingKey === row.key ? (
             <Spin size="small" style={{ marginRight: 8 }} />
           ) : (
             <DownloadOutlined
-              onClick={() => handleDownload(record)}
+              onClick={() => handleDownload(row)}
               style={{ cursor: "pointer" }}
               title="Download record"
             />
           )}
           <ShareAltOutlined
-            onClick={() => handleShareClick(record)}
+            onClick={() => handleShareClick(row)}
             style={{ cursor: "pointer" }}
             title="Share record"
           />
           {hasWritePermission && (
             <DeleteOutlined
-              onClick={() => handleDeleteClick(record)}
+              onClick={() => handleDeleteClick(row)}
               style={{ cursor: "pointer", color: "#ff4d4f" }}
               title="Delete record"
             />
@@ -583,13 +632,15 @@ export default function EntryDetail(props: Readonly<Props>) {
     },
   ];
 
-  const data = records.map((record) => ({
-    key: record.time.toString(),
-    timestamp: record.time,
-    size: prettierBytes(Number(record.size)),
-    contentType: record.contentType,
-    labels: JSON.stringify(record.labels, null, 2),
-    record: record,
+  const data: RecordTableRow[] = records.map((r) => ({
+    key: r.record.time.toString(),
+    timestamp: r.record.time,
+    tableIndex: r.tableIndex,
+    size: Number(r.record.size),
+    prettySize: prettierBytes(Number(r.record.size)),
+    contentType: r.record.contentType,
+    labels: JSON.stringify(r.record.labels, null, 2),
+    record: r.record,
   }));
 
   const hasWritePermission = checkWritePermission(permissions, bucketName);
@@ -732,12 +783,12 @@ export default function EntryDetail(props: Readonly<Props>) {
             value={whenCondition}
             onChange={(value: string) => {
               setWhenCondition(value);
-              if (whenError) {
-                setWhenError("");
+              if (fetchError) {
+                setFetchError("");
               }
             }}
-            height={200}
-            error={whenError}
+            height={260}
+            error={fetchError}
             validationContext={{
               client: props.client,
               bucket: bucketName,
@@ -795,7 +846,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         </div>
       </div>
       <DataVolumeChart
-        records={records}
+        records={records.map((r) => r.record)}
         setTimeRange={(start, end) => {
           setTimeRange(start, end);
           getRecords(start, end);
@@ -806,28 +857,29 @@ export default function EntryDetail(props: Readonly<Props>) {
       />
       <ScrollableTable
         scroll={{ x: "max-content" }}
-        columns={columns as any[]}
+        columns={columns}
         dataSource={data}
         expandable={{
-          expandedRowRender: (record: any) => (
-            <div key={`expanded-row-${record.key}`}>
+          expandedRowRender: (row: RecordTableRow) => (
+            <div key={`expanded-row-${row.key}`}>
               {bucket && (
                 <RecordPreview
-                  contentType={record.record.contentType || ""}
-                  size={Number(record.record.size)}
-                  fileName={generateFileName(
-                    record.key,
-                    record.record.contentType,
-                  )}
+                  contentType={row.contentType || ""}
+                  size={row.size}
+                  fileName={generateFileName(row.key, row.contentType || "")}
                   entryName={entryName}
-                  timestamp={BigInt(record.key)}
+                  timestamp={row.timestamp}
                   bucket={bucket}
                   apiUrl={props.apiUrl}
+                  queryStart={queryContext?.rangeStart}
+                  queryEnd={queryContext?.rangeEnd}
+                  queryOptions={buildLinkQueryOptions(queryContext?.options)}
+                  recordIndex={queryContext ? row.tableIndex : 0}
                 />
               )}
               <EditRecordLabels
-                key={`edit-labels-${record.key}`}
-                record={record}
+                key={`edit-labels-${row.key}`}
+                record={row}
                 onLabelsUpdated={handleLabelsUpdated}
                 editable={hasWritePermission}
               />

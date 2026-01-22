@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Typography, Image, Spin, Alert, Card } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
-import { Bucket } from "reduct-js";
+import { Bucket, QueryOptions } from "reduct-js";
 
 import "./RecordPreview.css";
 
@@ -11,12 +11,16 @@ interface RecordPreviewProps {
   fileName: string;
   entryName: string;
   timestamp: bigint;
+  queryStart?: bigint;
+  queryEnd?: bigint;
+  queryOptions?: QueryOptions;
+  recordIndex?: number;
   bucket: Bucket;
   apiUrl: string;
 }
 
-const MAX_TEXT_SIZE = 1024 * 1024; // 1MB limit for text preview
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB limit for image preview
+const MAX_LOAD_SIZE = 10 * 1024 * 1024; // 10 MB limit for loading preview
+const AUTO_PREVIEW_SIZE = 1 * 1024 * 1024; // 1 MB limit for auto preview
 
 const isImageType = (contentType: string): boolean => {
   return contentType.startsWith("image/");
@@ -39,22 +43,37 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   fileName,
   entryName,
   timestamp,
+  queryStart,
+  queryEnd,
+  queryOptions,
+  recordIndex,
   bucket,
   apiUrl,
 }) => {
-  const [isPreviewVisible, setIsPreviewVisible] = useState(true);
+  const shouldAutoPreview = size <= AUTO_PREVIEW_SIZE;
+  const [isPreviewVisible, setIsPreviewVisible] = useState(shouldAutoPreview);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canPreview = (): boolean => {
     if (isImageType(contentType)) {
-      return size <= MAX_IMAGE_SIZE;
+      return size <= MAX_LOAD_SIZE;
     }
     if (isTextType(contentType)) {
-      return size <= MAX_TEXT_SIZE;
+      return size <= MAX_LOAD_SIZE;
     }
     return false;
+  };
+
+  const getUnavailableReason = (): string => {
+    if (isImageType(contentType) && size > MAX_LOAD_SIZE) {
+      return `Image size exceeds ${MAX_LOAD_SIZE / (1024 * 1024)} MB limit for preview`;
+    }
+    if (isTextType(contentType) && size > MAX_LOAD_SIZE) {
+      return `Text size exceeds ${MAX_LOAD_SIZE / (1024 * 1024)} MB limit for preview`;
+    }
+    return `Format is not supported for preview`;
   };
 
   const fetchPreview = async (abortSignal?: AbortSignal) => {
@@ -70,10 +89,10 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const generatedQueryLink = await bucket.createQueryLink(
         entryName,
-        timestamp,
-        undefined,
-        undefined,
-        0,
+        queryStart ?? timestamp,
+        queryEnd,
+        queryOptions,
+        recordIndex ?? 0,
         expireAt,
         fileName,
         apiUrl,
@@ -130,7 +149,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   };
 
   useEffect(() => {
-    if (canPreview() && !previewContent && !error) {
+    if (canPreview() && shouldAutoPreview && !previewContent && !error) {
       const abortController = new AbortController();
       fetchPreview(abortController.signal);
 
@@ -138,7 +157,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
         abortController.abort();
       };
     }
-  }, []); // abort controller on unmount
+  }, []);
 
   const renderPreviewContent = () => {
     if (isLoading) {
@@ -190,11 +209,13 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     return (
       <Card size="small" className="recordPreviewCard">
         <Typography.Text type="secondary">
-          Preview not available for this file type or size
+          {getUnavailableReason()}
         </Typography.Text>
       </Card>
     );
   }
+
+  const showSizeWarning = !isPreviewVisible && !shouldAutoPreview;
 
   return (
     <Card size="small" className="recordPreviewCard">
@@ -209,6 +230,12 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
           {isPreviewVisible ? "Hide Preview" : "Show Preview"}
         </Button>
       </div>
+      {showSizeWarning && (
+        <Typography.Text type="secondary">
+          Content larger than {(AUTO_PREVIEW_SIZE / (1024 * 1024)).toFixed(1)}{" "}
+          MB. Click "Show Preview" to load.
+        </Typography.Text>
+      )}
       {isPreviewVisible && (
         <div className="previewContent">{renderPreviewContent()}</div>
       )}
