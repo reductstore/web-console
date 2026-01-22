@@ -69,8 +69,8 @@ interface Props {
 }
 
 interface RecordQueryContext {
-  rangeStart?: bigint;
-  rangeEnd?: bigint;
+  start?: bigint;
+  end?: bigint;
   options?: QueryOptions;
 }
 
@@ -255,8 +255,8 @@ export default function EntryDetail(props: Readonly<Props>) {
       }
 
       setQueryContext({
-        rangeStart: start,
-        rangeEnd: end,
+        start,
+        end,
         options,
       });
 
@@ -312,8 +312,8 @@ export default function EntryDetail(props: Readonly<Props>) {
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const shareLink = await bucket.createQueryLink(
         entryName,
-        queryContext?.rangeStart,
-        queryContext?.rangeEnd,
+        queryContext?.start,
+        queryContext?.end,
         buildLinkQueryOptions(queryContext?.options),
         row.tableIndex,
         expireAt,
@@ -350,8 +350,8 @@ export default function EntryDetail(props: Readonly<Props>) {
     const bucket = await props.client.getBucket(bucketName);
     return bucket.createQueryLink(
       entryName,
-      queryContext?.rangeStart,
-      queryContext?.rangeEnd,
+      queryContext?.start,
+      queryContext?.end,
       buildLinkQueryOptions(queryContext?.options),
       recordToShare?.tableIndex,
       expireAt,
@@ -868,8 +868,8 @@ export default function EntryDetail(props: Readonly<Props>) {
                   timestamp={row.timestamp}
                   bucket={bucket}
                   apiUrl={props.apiUrl}
-                  queryStart={queryContext?.rangeStart}
-                  queryEnd={queryContext?.rangeEnd}
+                  queryStart={queryContext?.start}
+                  queryEnd={queryContext?.end}
                   queryOptions={buildLinkQueryOptions(queryContext?.options)}
                   recordIndex={queryContext ? row.tableIndex : 0}
                 />

@@ -799,7 +799,6 @@ describe("EntryDetail", () => {
       const timeInputs = wrapper.find(".timeInputs Input");
       const stopInput = timeInputs.at(1);
 
-      // Clear the stop input
       await act(async () => {
         const onChange = stopInput.prop("onChange") as any;
         if (onChange) {
@@ -808,14 +807,12 @@ describe("EntryDetail", () => {
       });
       wrapper.update();
 
-      // Click fetch records button
       const fetchButton = wrapper.find(".fetchButton button").at(0);
       await act(async () => {
         fetchButton.simulate("click");
         jest.runAllTimers();
       });
 
-      // Verify that bucket.query was called with undefined as the end time
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
         0n,
@@ -833,8 +830,7 @@ describe("EntryDetail", () => {
       const timeInputs = wrapper.find(".timeInputs Input");
       const stopInput = timeInputs.at(1);
 
-      // Set a specific stop time
-      const specificTime = "2026-01-22T06:57:58.939Z";
+      const specificTime = "1970-01-01T00:00:01.000Z";
       await act(async () => {
         const onChange = stopInput.prop("onChange") as any;
         if (onChange) {
@@ -843,7 +839,6 @@ describe("EntryDetail", () => {
       });
       wrapper.update();
 
-      // Click fetch records button
       const fetchButton = wrapper.find(".fetchButton button").at(0);
       await act(async () => {
         fetchButton.simulate("click");
@@ -856,10 +851,7 @@ describe("EntryDetail", () => {
 
       expect(entry).toBe("testEntry");
       expect(startTime).toBe(0n);
-
-      // Verify end time is defined and is a bigint
-      expect(endTime).toBeDefined();
-      expect(typeof endTime).toBe("bigint");
+      expect(endTime).toBe(1000000n);
 
       expect(options).toMatchObject({
         head: true,
