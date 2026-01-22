@@ -850,15 +850,18 @@ describe("EntryDetail", () => {
         jest.runAllTimers();
       });
 
-      // Verify that bucket.query was called with a defined end time (not undefined)
       expect(bucket.query).toHaveBeenCalled();
-      const callArgs = (bucket.query as jest.Mock).mock.calls[0];
-      expect(callArgs[0]).toBe("testEntry");
-      expect(callArgs[1]).toBe(0n);
+      const [[entry, startTime, endTime, options]] = (bucket.query as jest.Mock)
+        .mock.calls;
+
+      expect(entry).toBe("testEntry");
+      expect(startTime).toBe(0n);
+
       // Verify end time is defined and is a bigint
-      expect(callArgs[2]).toBeDefined();
-      expect(typeof callArgs[2]).toBe("bigint");
-      expect(callArgs[3]).toMatchObject({
+      expect(endTime).toBeDefined();
+      expect(typeof endTime).toBe("bigint");
+
+      expect(options).toMatchObject({
         head: true,
         strict: true,
       });
