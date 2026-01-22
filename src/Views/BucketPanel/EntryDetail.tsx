@@ -792,6 +792,8 @@ export default function EntryDetail(props: Readonly<Props>) {
               client: props.client,
               bucket: bucketName,
               entry: entryName,
+              start: timeRange.start,
+              end: timeRange.end,
               intervalValue: timeRange.interval ?? undefined,
             }}
           />
