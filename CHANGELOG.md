@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Include full query options when generating download/share/preview links, [PR-160](https://github.com/reductstore/web-console/pull/160)
+- Fix the inconsistency in the time range selection with an empty end, [PR-162](https://github.com/reductstore/web-console/pull/162)
 - Fix time range dropdown preset selection not exiting Custom mode, [PR-165](https://github.com/reductstore/web-console/pull/165)
 
 ## 1.12.1 - 2025-11-17
