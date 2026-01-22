@@ -782,4 +782,81 @@ describe("EntryDetail", () => {
       );
     });
   });
+
+  describe("Time Range Input", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(
+          () => wrapper.update().find(".ant-table-row").length > 0,
+        );
+      });
+    });
+
+    it("should query with undefined end time when stop field is empty", async () => {
+      (bucket.query as jest.Mock).mockClear();
+
+      const timeInputs = wrapper.find(".timeInputs Input");
+      const stopInput = timeInputs.at(1);
+
+      await act(async () => {
+        const onChange = stopInput.prop("onChange") as any;
+        if (onChange) {
+          onChange({ target: { value: "" } });
+        }
+      });
+      wrapper.update();
+
+      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runAllTimers();
+      });
+
+      expect(bucket.query).toHaveBeenCalledWith(
+        "testEntry",
+        0n,
+        undefined,
+        expect.objectContaining({
+          head: true,
+          strict: true,
+        }),
+      );
+    });
+
+    it("should query with specific end time when stop field has value", async () => {
+      (bucket.query as jest.Mock).mockClear();
+
+      const timeInputs = wrapper.find(".timeInputs Input");
+      const stopInput = timeInputs.at(1);
+
+      const specificTime = "1970-01-01T00:00:01.000Z";
+      await act(async () => {
+        const onChange = stopInput.prop("onChange") as any;
+        if (onChange) {
+          onChange({ target: { value: specificTime } });
+        }
+      });
+      wrapper.update();
+
+      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runAllTimers();
+      });
+
+      expect(bucket.query).toHaveBeenCalled();
+      const [[entry, startTime, endTime, options]] = (bucket.query as jest.Mock)
+        .mock.calls;
+
+      expect(entry).toBe("testEntry");
+      expect(startTime).toBe(0n);
+      expect(endTime).toBe(1000000n);
+
+      expect(options).toMatchObject({
+        head: true,
+        strict: true,
+      });
+    });
+  });
 });
