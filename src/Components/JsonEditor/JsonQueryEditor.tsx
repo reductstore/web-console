@@ -25,6 +25,8 @@ interface ValidationContext {
   bucket?: string;
   entry?: string;
   entries?: string[];
+  start?: bigint;
+  end?: bigint;
   intervalValue?: string | null;
 }
 
@@ -81,6 +83,8 @@ export function JsonQueryEditor({
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
   const validationEntriesKey = validationEntries.join("|");
+  const validationStart = validationContext?.start;
+  const validationEnd = validationContext?.end;
   const validationIntervalValue = validationContext?.intervalValue ?? undefined;
 
   const handleEditorMount: OnMount = (editor, monacoInstance) => {
@@ -190,8 +194,8 @@ export function JsonQueryEditor({
 
         const it = bucketInstance.query(
           entryToValidate,
-          undefined,
-          undefined,
+          validationStart,
+          validationEnd,
           options,
         );
         await it.next();
@@ -226,6 +230,8 @@ export function JsonQueryEditor({
     validationBucket,
     validationEntry,
     validationEntriesKey,
+    validationStart,
+    validationEnd,
     validationIntervalValue,
   ]);
 

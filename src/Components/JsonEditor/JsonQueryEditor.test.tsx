@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { Client } from "reduct-js";
 import { JsonQueryEditor } from "./JsonQueryEditor";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
@@ -24,6 +30,9 @@ jest.mock("@monaco-editor/react", () => ({
 jest.mock("monaco-editor", () => ({}));
 jest.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
+}));
+jest.mock("../../Helpers/json5Utils", () => ({
+  processWhenCondition: () => ({ success: true, value: {} }),
 }));
 
 describe("JsonQueryEditor", () => {
@@ -101,5 +110,40 @@ describe("JsonQueryEditor", () => {
     expect(
       screen.getByText("Editing in expanded JSON editor"),
     ).toBeInTheDocument();
+  });
+
+  it("passes start/stop into the validation query", async () => {
+    jest.useFakeTimers();
+    const queryNext = jest.fn().mockResolvedValue({ done: true });
+    const query = jest.fn().mockReturnValue({ next: queryNext });
+    const client = {
+      getBucket: jest.fn().mockResolvedValue({ query }),
+    } as unknown as Client;
+
+    render(
+      <JsonQueryEditor
+        value="{}"
+        onChange={() => {
+          /* */
+        }}
+        validationContext={{
+          client,
+          bucket: "bucket-a",
+          entry: "entry-a",
+          start: 1n,
+          end: 2n,
+        }}
+      />,
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() =>
+      expect(query).toHaveBeenCalledWith("entry-a", 1n, 2n, expect.anything()),
+    );
+
+    jest.useRealTimers();
   });
 });
