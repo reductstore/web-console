@@ -123,7 +123,7 @@ describe("BucketEntriesTable", () => {
       expect(dataSource).toHaveLength(1);
       expect(dataSource[0].key).toBe("folder1");
       expect(dataSource[0].children).toHaveLength(1);
-      expect(dataSource[0].children![0].key).toBe("folder1/file1.txt");
+      expect(dataSource[0].children?.[0].key).toBe("folder1/file1.txt");
     });
 
     it("should filter nested children", () => {
@@ -136,7 +136,7 @@ describe("BucketEntriesTable", () => {
       expect(dataSource).toHaveLength(1);
       expect(dataSource[0].key).toBe("folder2");
       expect(dataSource[0].children).toHaveLength(1);
-      expect(dataSource[0].children![0].key).toBe("folder2/nested");
+      expect(dataSource[0].children?.[0].key).toBe("folder2/nested");
     });
 
     it("should be case insensitive", () => {
@@ -147,7 +147,7 @@ describe("BucketEntriesTable", () => {
       const table = wrapper.find("ScrollableTable");
       const dataSource = table.prop("dataSource") as EntryTableRow[];
       expect(dataSource).toHaveLength(1);
-      expect(dataSource[0].children![0].fullName).toBe("folder1/file1.txt");
+      expect(dataSource[0].children?.[0].fullName).toBe("folder1/file1.txt");
     });
 
     it("should return all rows when pathQuery is empty", () => {

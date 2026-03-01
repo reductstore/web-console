@@ -1,6 +1,6 @@
 import React from "react";
 import { mount } from "enzyme";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
 import BucketDetail from "./BucketDetail";
 import { MemoryRouter } from "react-router-dom";

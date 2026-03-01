@@ -277,19 +277,20 @@ export default function BucketDetail(props: Readonly<Props>) {
     const makeRow = (node: EntryTreeNode): BucketEntryTableRow => {
       const children = node.children.map(makeRow);
       const isLeaf = children.length === 0;
-      const useOwnOnly = !showAggregated && !isLeaf && node.ownEntry;
+      const { ownEntry } = node;
+      const useOwnOnly = !showAggregated && !isLeaf && ownEntry;
       const stats = useOwnOnly
         ? {
-            records: node.ownEntry!.recordCount ?? 0n,
-            blocks: node.ownEntry!.blockCount ?? 0n,
-            size: node.ownEntry!.size ?? 0n,
+            records: ownEntry.recordCount ?? 0n,
+            blocks: ownEntry.blockCount ?? 0n,
+            size: ownEntry.size ?? 0n,
             oldest:
-              (node.ownEntry!.recordCount ?? 0n) > 0n
-                ? node.ownEntry!.oldestRecord
+              (ownEntry.recordCount ?? 0n) > 0n
+                ? ownEntry.oldestRecord
                 : undefined,
             latest:
-              (node.ownEntry!.recordCount ?? 0n) > 0n
-                ? node.ownEntry!.latestRecord
+              (ownEntry.recordCount ?? 0n) > 0n
+                ? ownEntry.latestRecord
                 : undefined,
           }
         : node.stats;
@@ -344,9 +345,9 @@ export default function BucketDetail(props: Readonly<Props>) {
           return (
             <Flex align="center" gap={4}>
               {icon}
-              {canOpen ? (
+              {canOpen && row.ownEntryName ? (
                 <Typography.Link
-                  onClick={() => handleOpenEntry(row.ownEntryName!)}
+                  onClick={() => handleOpenEntry(row.ownEntryName)}
                 >
                   {row.name}
                 </Typography.Link>
@@ -448,8 +449,10 @@ export default function BucketDetail(props: Readonly<Props>) {
                       tooltip={isDeleting ? deletionTooltip : "Rename entry"}
                       showTooltipWhenEnabled
                       onClick={() => {
-                        setEntryToRename(row.ownEntryName!);
-                        setIsRenameModalOpen(true);
+                        if (row.ownEntryName) {
+                          setEntryToRename(row.ownEntryName);
+                          setIsRenameModalOpen(true);
+                        }
                       }}
                     />
                     <ActionIcon
@@ -464,8 +467,10 @@ export default function BucketDetail(props: Readonly<Props>) {
                       tooltip={isDeleting ? deletionTooltip : "Remove entry"}
                       showTooltipWhenEnabled
                       onClick={() => {
-                        setEntryToRemove(row.ownEntryName!);
-                        setIsRemoveModalOpen(true);
+                        if (row.ownEntryName) {
+                          setEntryToRemove(row.ownEntryName);
+                          setIsRemoveModalOpen(true);
+                        }
                       }}
                     />
                   </Flex>

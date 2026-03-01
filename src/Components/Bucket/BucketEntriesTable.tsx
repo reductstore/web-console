@@ -73,12 +73,13 @@ export default function BucketEntriesTable<T extends EntryTableRow>(
   const [userExpandedKeys, setUserExpandedKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!props.onExpandedStatsChange) return;
+    const { onExpandedStatsChange } = props;
+    if (!onExpandedStatsChange) return;
     const openCount = isSearching
       ? allExpandableKeys.length
       : userExpandedKeys.length;
     const rafId = requestAnimationFrame(() => {
-      props.onExpandedStatsChange!(openCount, allExpandableKeys.length);
+      onExpandedStatsChange(openCount, allExpandableKeys.length);
     });
     return () => cancelAnimationFrame(rafId);
   }, [

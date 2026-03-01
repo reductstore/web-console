@@ -95,7 +95,7 @@ export default function EntryBreadcrumb(props: Readonly<Props>) {
               style={{
                 maxHeight: 320,
                 overflow: "auto",
-                minWidth: 240,
+                paddingRight: 35,
               }}
             />
           }

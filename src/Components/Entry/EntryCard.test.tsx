@@ -7,7 +7,6 @@ import { EntryInfo, Client, Status } from "reduct-js";
 import {
   DeleteOutlined,
   NodeCollapseOutlined,
-  NodeExpandOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 

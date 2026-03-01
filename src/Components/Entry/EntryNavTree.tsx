@@ -129,6 +129,7 @@ export default function EntryNavTree(props: Readonly<Props>) {
           style={{
             maxHeight: 320,
             overflow: "auto",
+            paddingRight: 35,
           }}
         />
       }
