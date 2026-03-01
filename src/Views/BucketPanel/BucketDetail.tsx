@@ -347,7 +347,9 @@ export default function BucketDetail(props: Readonly<Props>) {
               {icon}
               {canOpen && row.ownEntryName ? (
                 <Typography.Link
-                  onClick={() => handleOpenEntry(row.ownEntryName)}
+                  onClick={() => {
+                    if (row.ownEntryName) handleOpenEntry(row.ownEntryName);
+                  }}
                 >
                   {row.name}
                 </Typography.Link>
