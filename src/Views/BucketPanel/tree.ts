@@ -129,15 +129,3 @@ export function buildEntryTree(entries: EntryInfo[]): EntryTreeNode[] {
     .sort((a, b) => naturalNameSort(a.segment, b.segment))
     .map(toNode);
 }
-
-export function findTreeNode(
-  tree: EntryTreeNode[],
-  fullName: string,
-): EntryTreeNode | undefined {
-  for (const node of tree) {
-    if (node.fullName === fullName) return node;
-    const inChild = findTreeNode(node.children, fullName);
-    if (inChild) return inChild;
-  }
-  return undefined;
-}
