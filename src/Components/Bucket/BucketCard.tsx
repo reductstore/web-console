@@ -35,6 +35,7 @@ interface Props {
   permissions?: TokenPermissions;
   onUpload?: () => void;
   hasWritePermission?: boolean;
+  loading?: boolean;
 }
 
 export const getHistory = (interval: {
@@ -55,6 +56,7 @@ export default function BucketCard(props: Readonly<Props>) {
   const { client, index } = props;
   const deletionTooltip = "Deletion in progress. Action disabled.";
   const isDeleting = bucketInfo.status === Status.DELETING;
+  const isStatsLoading = Boolean(props.loading);
 
   useEffect(() => {
     setBucketInfo(props.bucketInfo);
@@ -94,7 +96,8 @@ export default function BucketCard(props: Readonly<Props>) {
           key="upload"
           icon={<UploadOutlined title="Upload File" />}
           disabled={isDeleting}
-          tooltip={deletionTooltip}
+          tooltip={isDeleting ? deletionTooltip : "Upload file"}
+          showTooltipWhenEnabled
           onClick={(e) => {
             e.stopPropagation();
             props.onUpload?.();
@@ -108,7 +111,8 @@ export default function BucketCard(props: Readonly<Props>) {
         key="setting"
         icon={<SettingOutlined title="Settings" />}
         disabled={isDeleting}
-        tooltip={deletionTooltip}
+        tooltip={isDeleting ? deletionTooltip : "Settings"}
+        showTooltipWhenEnabled
         onClick={() => setChangeSettings(true)}
       />,
     );
@@ -119,7 +123,8 @@ export default function BucketCard(props: Readonly<Props>) {
           key="delete"
           icon={<DeleteOutlined title="Remove" style={{ color: "red" }} />}
           disabled={isDeleting}
-          tooltip={deletionTooltip}
+          tooltip={isDeleting ? deletionTooltip : "Remove bucket"}
+          showTooltipWhenEnabled
           onClick={() => setIsRemoveModalOpen(true)}
         />,
       );
@@ -157,18 +162,21 @@ export default function BucketCard(props: Readonly<Props>) {
           <Statistic
             title="Size"
             value={prettierBytes(bigintToNumber(bucketInfo.size))}
+            loading={isStatsLoading}
           />
         </Col>
         <Col span={6}>
           <Statistic
             title="Entries"
             value={bigintToNumber(bucketInfo.entryCount)}
+            loading={isStatsLoading}
           />
         </Col>
         <Col span={10}>
           <Statistic
             title="History"
             value={bucketInfo.entryCount > 0n ? getHistory(bucketInfo) : "---"}
+            loading={isStatsLoading}
           />
         </Col>
       </Row>
