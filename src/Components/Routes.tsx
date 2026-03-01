@@ -59,7 +59,7 @@ export function Routes(props: Props): JSX.Element {
 
       <PrivateRoute
         exact
-        path="/buckets/:bucketName/entries/:entryName"
+        path="/buckets/:bucketName/entries/:entryName+"
         authorized={authorized}
       >
         <EntryDetail client={props.backendApi.client} {...props} />
