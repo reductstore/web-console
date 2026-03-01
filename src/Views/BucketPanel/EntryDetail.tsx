@@ -6,6 +6,7 @@ import {
   Client,
   EntryInfo,
   QueryOptions,
+  Status,
   TokenPermissions,
 } from "reduct-js";
 import {
@@ -90,6 +91,13 @@ export default function EntryDetail(props: Readonly<Props>) {
     bucketName: string;
     entryName: string;
   };
+  const decodedEntryName = useMemo(() => {
+    try {
+      return decodeURIComponent(entryName);
+    } catch {
+      return entryName;
+    }
+  }, [entryName]);
   const history = useHistory();
   const [records, setRecords] = useState<IndexedReadableRecord[]>([]);
   const [queryContext, setQueryContext] = useState<RecordQueryContext | null>(
@@ -154,6 +162,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [isLoading, setIsLoading] = useState(true);
+  const [isEntryInfoLoading, setIsEntryInfoLoading] = useState(true);
   const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
 
   const [fetchError, setFetchError] = useState<string>("");
@@ -163,6 +172,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     null,
   );
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
+  const [allEntriesInfo, setAllEntriesInfo] = useState<EntryInfo[]>([]);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
@@ -177,7 +187,7 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const generateFileName = (recordKey: string, contentType: string): string => {
     const ext = getExtensionFromContentType(contentType || "");
-    return `${entryName}-${recordKey}${ext}`;
+    return `${decodedEntryName}-${recordKey}${ext}`;
   };
 
   const processConditionWithMacros = (
@@ -266,7 +276,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       let count = 0;
 
       for await (const record of bucketInstance.query(
-        entryName,
+        decodedEntryName,
         start,
         end,
         options,
@@ -313,7 +323,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       // Set expiration time for 1 hour from now
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const shareLink = await bucket.createQueryLink(
-        entryName,
+        decodedEntryName,
         queryContext?.start,
         queryContext?.end,
         buildLinkQueryOptions(queryContext?.options),
@@ -351,7 +361,7 @@ export default function EntryDetail(props: Readonly<Props>) {
   ): Promise<string> => {
     const bucket = await props.client.getBucket(bucketName);
     return bucket.createQueryLink(
-      entryName,
+      decodedEntryName,
       queryContext?.start,
       queryContext?.end,
       buildLinkQueryOptions(queryContext?.options),
@@ -373,7 +383,7 @@ export default function EntryDetail(props: Readonly<Props>) {
     try {
       setIsLoading(true);
       const bucket = await props.client.getBucket(bucketName);
-      await bucket.removeRecord(entryName, BigInt(recordToDelete.key));
+      await bucket.removeRecord(decodedEntryName, BigInt(recordToDelete.key));
       message.success("Record deleted successfully");
       setIsDeleteModalVisible(false);
       getRecords(timeRange.start, timeRange.end);
@@ -406,7 +416,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       });
 
       const bucket = await props.client.getBucket(bucketName);
-      await bucket.update(entryName, timestamp, updateLabels);
+      await bucket.update(decodedEntryName, timestamp, updateLabels);
 
       const displayLabels = Object.fromEntries(
         Object.entries(newLabels).filter(([, value]) => value.trim() !== ""),
@@ -510,26 +520,30 @@ export default function EntryDetail(props: Readonly<Props>) {
   };
 
   const getEntryInfo = async () => {
+    setIsEntryInfoLoading(true);
     try {
       const bucket = await props.client.getBucket(bucketName);
       const entries = await bucket.getEntryList();
+      setAllEntriesInfo(entries);
       setAvailableEntries(entries.map((e) => e.name));
-      const entry = entries.find((e) => e.name === entryName);
+      const entry = entries.find((e) => e.name === decodedEntryName);
       if (entry) {
         setEntryInfo(entry);
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsEntryInfoLoading(false);
     }
   };
 
   useEffect(() => {
     getEntryInfo();
-  }, []);
+  }, [bucketName, decodedEntryName]);
 
   useEffect(() => {
     getRecords(timeRange.start, timeRange.end);
-  }, [bucketName, entryName]);
+  }, [bucketName, decodedEntryName]);
 
   // abort ongoing fetch on unmount
   useEffect(() => {
@@ -655,25 +669,37 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   return (
     <div className="entryDetail">
-      {entryInfo && (
-        <EntryCard
-          entryInfo={entryInfo}
-          bucketName={bucketName}
-          permissions={permissions as TokenPermissions}
-          showUnix={showUnix}
-          client={props.client}
-          onRemoved={() => {
-            if (
-              history.location.pathname ===
-              `/buckets/${bucketName}/entries/${entryName}`
-            ) {
-              history.push(`/buckets/${bucketName}`);
-            }
-          }}
-          onUpload={() => setIsUploadModalVisible(true)}
-          hasWritePermission={hasWritePermission}
-        />
-      )}
+      <EntryCard
+        entryInfo={
+          entryInfo ??
+          ({
+            name: decodedEntryName,
+            size: 0n,
+            recordCount: 0n,
+            blockCount: 0n,
+            oldestRecord: 0n,
+            latestRecord: 0n,
+            status: Status.READY,
+          } as EntryInfo)
+        }
+        bucketName={bucketName}
+        permissions={permissions as TokenPermissions}
+        showUnix={showUnix}
+        client={props.client}
+        onRemoved={() => {
+          if (
+            history.location.pathname ===
+            `/buckets/${bucketName}/entries/${encodeURIComponent(decodedEntryName)}`
+          ) {
+            history.push(`/buckets/${bucketName}`);
+          }
+        }}
+        onUpload={() => setIsUploadModalVisible(true)}
+        hasWritePermission={hasWritePermission}
+        allEntryNames={availableEntries}
+        allEntries={allEntriesInfo}
+        loading={isEntryInfoLoading || !entryInfo}
+      />
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -684,7 +710,7 @@ export default function EntryDetail(props: Readonly<Props>) {
         <UploadFileForm
           client={props.client}
           bucketName={bucketName}
-          entryName={entryName}
+          entryName={decodedEntryName}
           availableEntries={availableEntries}
           onUploadSuccess={() => {
             setIsUploadModalVisible(false);
@@ -791,7 +817,7 @@ export default function EntryDetail(props: Readonly<Props>) {
             validationContext={{
               client: props.client,
               bucket: bucketName,
-              entry: entryName,
+              entry: decodedEntryName,
               start: timeRange.start,
               end: timeRange.end,
               intervalValue: timeRange.interval ?? undefined,
@@ -868,7 +894,7 @@ export default function EntryDetail(props: Readonly<Props>) {
                   contentType={row.contentType || ""}
                   size={row.size}
                   fileName={generateFileName(row.key, row.contentType || "")}
-                  entryName={entryName}
+                  entryName={decodedEntryName}
                   timestamp={row.timestamp}
                   bucket={bucket}
                   apiUrl={props.apiUrl}
@@ -892,7 +918,7 @@ export default function EntryDetail(props: Readonly<Props>) {
       {/* Modal for sharing links */}
       <ShareLinkModal
         open={isShareModalVisible}
-        entryName={entryName}
+        entryName={decodedEntryName}
         record={recordToShare}
         onGenerate={generateShareLink}
         onCancel={() => setIsShareModalVisible(false)}

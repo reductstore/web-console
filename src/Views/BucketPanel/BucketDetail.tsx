@@ -280,18 +280,18 @@ export default function BucketDetail(props: Readonly<Props>) {
       const useOwnOnly = !showAggregated && !isLeaf && node.ownEntry;
       const stats = useOwnOnly
         ? {
-            records: node.ownEntry!.recordCount ?? 0n,
-            blocks: node.ownEntry!.blockCount ?? 0n,
-            size: node.ownEntry!.size ?? 0n,
-            oldest:
-              (node.ownEntry!.recordCount ?? 0n) > 0n
-                ? node.ownEntry!.oldestRecord
-                : undefined,
-            latest:
-              (node.ownEntry!.recordCount ?? 0n) > 0n
-                ? node.ownEntry!.latestRecord
-                : undefined,
-          }
+          records: node.ownEntry!.recordCount ?? 0n,
+          blocks: node.ownEntry!.blockCount ?? 0n,
+          size: node.ownEntry!.size ?? 0n,
+          oldest:
+            (node.ownEntry!.recordCount ?? 0n) > 0n
+              ? node.ownEntry!.oldestRecord
+              : undefined,
+          latest:
+            (node.ownEntry!.recordCount ?? 0n) > 0n
+              ? node.ownEntry!.latestRecord
+              : undefined,
+        }
         : node.stats;
       const showDashes = !showAggregated && !isLeaf && !node.ownEntry;
       const hasRecords = stats.records > 0n;
@@ -311,12 +311,12 @@ export default function BucketDetail(props: Readonly<Props>) {
         history: showDashes
           ? "---"
           : hasRecords &&
-              stats.oldest !== undefined &&
-              stats.latest !== undefined
+            stats.oldest !== undefined &&
+            stats.latest !== undefined
             ? getHistory({
-                oldestRecord: stats.oldest,
-                latestRecord: stats.latest,
-              })
+              oldestRecord: stats.oldest,
+              latestRecord: stats.latest,
+            })
             : "---",
         children,
       };
@@ -433,46 +433,46 @@ export default function BucketDetail(props: Readonly<Props>) {
       },
       ...(hasWritePermission
         ? [
-            {
-              title: "",
-              key: "actions",
-              width: 80,
-              render: (_: unknown, row: BucketEntryTableRow) => {
-                if (!row.ownEntryName) return null;
-                const isDeleting = row.status === Status.DELETING;
-                return (
-                  <Flex gap="middle" onClick={(e) => e.stopPropagation()}>
-                    <ActionIcon
-                      icon={<EditOutlined title="Rename entry" />}
-                      disabled={isDeleting}
-                      tooltip={isDeleting ? deletionTooltip : "Rename entry"}
-                      showTooltipWhenEnabled
-                      onClick={() => {
-                        setEntryToRename(row.ownEntryName!);
-                        setIsRenameModalOpen(true);
-                      }}
-                    />
-                    <ActionIcon
-                      icon={
-                        <DeleteOutlined
-                          title="Remove entry"
-                          className="removeButton"
-                          style={{ color: "red" }}
-                        />
-                      }
-                      disabled={isDeleting}
-                      tooltip={isDeleting ? deletionTooltip : "Remove entry"}
-                      showTooltipWhenEnabled
-                      onClick={() => {
-                        setEntryToRemove(row.ownEntryName!);
-                        setIsRemoveModalOpen(true);
-                      }}
-                    />
-                  </Flex>
-                );
-              },
-            } as any,
-          ]
+          {
+            title: "",
+            key: "actions",
+            width: 80,
+            render: (_: unknown, row: BucketEntryTableRow) => {
+              if (!row.ownEntryName) return null;
+              const isDeleting = row.status === Status.DELETING;
+              return (
+                <Flex gap="middle" onClick={(e) => e.stopPropagation()}>
+                  <ActionIcon
+                    icon={<EditOutlined title="Rename entry" />}
+                    disabled={isDeleting}
+                    tooltip={isDeleting ? deletionTooltip : "Rename entry"}
+                    showTooltipWhenEnabled
+                    onClick={() => {
+                      setEntryToRename(row.ownEntryName!);
+                      setIsRenameModalOpen(true);
+                    }}
+                  />
+                  <ActionIcon
+                    icon={
+                      <DeleteOutlined
+                        title="Remove entry"
+                        className="removeButton"
+                        style={{ color: "red" }}
+                      />
+                    }
+                    disabled={isDeleting}
+                    tooltip={isDeleting ? deletionTooltip : "Remove entry"}
+                    showTooltipWhenEnabled
+                    onClick={() => {
+                      setEntryToRemove(row.ownEntryName!);
+                      setIsRemoveModalOpen(true);
+                    }}
+                  />
+                </Flex>
+              );
+            },
+          } as any,
+        ]
         : []),
     ],
     [handleOpenEntry, hasWritePermission],
