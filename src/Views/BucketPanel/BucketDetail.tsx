@@ -1,49 +1,141 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bucket,
   BucketInfo,
-  EntryInfo,
   Client,
   TokenPermissions,
   APIError,
   Status,
 } from "reduct-js";
-import { useHistory, useParams, Link } from "react-router-dom";
-import BucketCard, { getHistory } from "../../Components/Bucket/BucketCard";
+import { useHistory, useParams } from "react-router-dom";
+import BucketCard from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 import {
   Button,
+  Divider,
   Flex,
   Input,
+  Tooltip,
   Typography,
   message,
   Modal,
-  Divider,
-  Space,
-  Tag,
-  Tooltip,
+  Popover,
+  Tree,
 } from "antd";
-import type { TablePaginationConfig } from "antd";
-import type { ColumnsType, FilterConfirmProps } from "antd/es/table/interface";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import {
+  DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExpandAltOutlined,
+  LineChartOutlined,
+  NodeCollapseOutlined,
+  NodeExpandOutlined,
+  PartitionOutlined,
   ReloadOutlined,
-  SearchOutlined,
-  LoadingOutlined,
+  ShrinkOutlined,
 } from "@ant-design/icons";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import RenameModal from "../../Components/RenameModal";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
-import ScrollableTable from "../../Components/ScrollableTable";
-import { usePaginationStore } from "../../stores/paginationStore";
 import { checkWritePermission } from "../../Helpers/permissionUtils";
 import "./BucketDetail.css";
+import BucketEntriesTable, {
+  EntryTableRow,
+} from "../../Components/Bucket/BucketEntriesTable";
+import { buildEntryTree, EntryTreeNode, naturalNameSort } from "./tree";
+import { getHistory } from "../../Components/Bucket/BucketCard";
+import ActionIcon from "../../Components/ActionIcon";
 
 interface Props {
   client: Client;
   permissions?: TokenPermissions;
+}
+
+interface BucketEntryTableRow extends EntryTableRow {
+  name: string;
+  isLeaf: boolean;
+  ownEntryName?: string;
+  records: bigint;
+  blocks: bigint;
+  size: bigint;
+  oldest?: bigint;
+  latest?: bigint;
+  history?: string;
+  status?: Status;
+}
+
+const PAGE_SIZE_KEY = "bucketDetailPageSize";
+
+const encodeEntryPath = (entry: string) =>
+  entry
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+const printTs = (timestamp?: bigint) => {
+  if (timestamp === undefined) return "---";
+  return new Date(Number(timestamp / 1_000n))
+    .toISOString()
+    .replace("T", " ")
+    .substring(0, 19);
+};
+
+const collectLeafEntries = (
+  rows: BucketEntryTableRow[],
+): BucketEntryTableRow[] => {
+  const leaves: BucketEntryTableRow[] = [];
+  for (const row of rows) {
+    if (row.ownEntryName) leaves.push(row);
+    if (row.children?.length) {
+      leaves.push(...collectLeafEntries(row.children as BucketEntryTableRow[]));
+    }
+  }
+  return leaves;
+};
+
+function TreePopover({
+  treeData,
+  onSelect,
+}: {
+  treeData: any[];
+  onSelect: (key: string) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Popover
+      trigger="click"
+      open={open}
+      onOpenChange={setOpen}
+      content={
+        <Tree
+          treeData={treeData}
+          defaultExpandAll
+          onSelect={(keys) => {
+            if (keys.length > 0) {
+              setOpen(false);
+              onSelect(keys[0] as string);
+            }
+          }}
+          style={{
+            maxHeight: 300,
+            overflow: "auto",
+          }}
+        />
+      }
+    >
+      <PartitionOutlined
+        style={{
+          cursor: "pointer",
+          marginLeft: 6,
+          fontSize: 14,
+          color: "#8c8c8c",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    </Popover>
+  );
 }
 
 export default function BucketDetail(props: Readonly<Props>) {
@@ -51,7 +143,7 @@ export default function BucketDetail(props: Readonly<Props>) {
   const history = useHistory();
 
   const [info, setInfo] = useState<BucketInfo>();
-  const [entries, setEntries] = useState<EntryInfo[]>([]);
+  const [entries, setEntries] = useState<any[]>([]);
   const [entryToRemove, setEntryToRemove] = useState<string>("");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
@@ -60,40 +152,29 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
+  const [pathInput, setPathInput] = useState("");
+  const [pathQuery, setPathQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => {
+    const value = localStorage.getItem(PAGE_SIZE_KEY);
+    return value ? Number(value) : 20;
+  });
+  const [showAggregated, setShowAggregated] = useState(true);
+  const [expandedOpenCount, setExpandedOpenCount] = useState(0);
+  const [expandedTotalCount, setExpandedTotalCount] = useState(0);
+  const [expandCollapseSignal, setExpandCollapseSignal] = useState<
+    number | undefined
+  >(undefined);
+  const [expandCollapseTarget, setExpandCollapseTarget] = useState<
+    "expand" | "collapse"
+  >("collapse");
 
   const deletionTooltip = "Deletion in progress. Action disabled.";
-  const disabledActionStyle = { color: "#bfbfbf", cursor: "not-allowed" };
-
-  const paginationStorageKey = `bucket-${name}-entries-pagination`;
-  const { setPageSize, getPageSize } = usePaginationStore();
-  const pageSize = getPageSize(paginationStorageKey);
-
-  const handlePageSizeChange = useCallback(
-    (newPageSize: number) => {
-      setPageSize(paginationStorageKey, newPageSize);
-      setCurrentPage(1);
-    },
-    [paginationStorageKey, setPageSize],
-  );
-
-  const handleTableChange = useCallback(
-    (tablePagination: TablePaginationConfig) => {
-      if (tablePagination.current) {
-        setCurrentPage(tablePagination.current);
-      }
-      if (tablePagination.pageSize && tablePagination.pageSize !== pageSize) {
-        handlePageSizeChange(tablePagination.pageSize);
-      }
-    },
-    [handlePageSizeChange, pageSize],
-  );
 
   const getEntries = async () => {
     setIsLoading(true);
     try {
-      const { client } = props;
-      const bucket: Bucket = await client.getBucket(name);
+      const bucket: Bucket = await props.client.getBucket(name);
       setInfo(await bucket.getInfo());
       setEntries(await bucket.getEntryList());
     } catch (err) {
@@ -113,15 +194,14 @@ export default function BucketDetail(props: Readonly<Props>) {
       return;
     }
     try {
-      const { client } = props;
       const bucketName = info?.name;
       if (!bucketName) {
         setRenameError("No bucket info");
         return;
       }
-      const bucket: Bucket = await client.getBucket(bucketName);
+      const bucket: Bucket = await props.client.getBucket(bucketName);
       await bucket.renameEntry(entryToRename, newName);
-      getEntries();
+      await getEntries();
       setRenameError(null);
       setIsRenameModalOpen(false);
     } catch (err) {
@@ -131,30 +211,24 @@ export default function BucketDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleOpenRenameModal = (entryName: string) => {
-    setEntryToRename(entryName);
-    setIsRenameModalOpen(true);
-  };
-
-  const removeEntry = async (name: string) => {
-    if (!info) {
-      message.error("No bucket info");
-      return;
-    }
+  const removeEntry = async (entryName: string) => {
+    if (!info) return;
 
     setIsRemoveModalOpen(false);
     setEntries((prevEntries) =>
       prevEntries.map((entry) =>
-        entry.name === name ? { ...entry, status: Status.DELETING } : entry,
+        entry.name === entryName
+          ? { ...entry, status: Status.DELETING }
+          : entry,
       ),
     );
+
     try {
-      const { client } = props;
-      const bucket: Bucket = await client.getBucket(info.name);
-      await bucket.removeEntry(name);
+      const bucket: Bucket = await props.client.getBucket(info.name);
+      await bucket.removeEntry(entryName);
       setEntryToRemove("");
       setEntries((prevEntries) =>
-        prevEntries.filter((entry) => entry.name !== name),
+        prevEntries.filter((entry) => entry.name !== entryName),
       );
     } catch (err) {
       console.error(err);
@@ -166,25 +240,21 @@ export default function BucketDetail(props: Readonly<Props>) {
     }
   };
 
-  const handleOpenRemoveModal = (entryName: string) => {
-    setEntryToRemove(entryName);
-    setIsRemoveModalOpen(true);
-  };
+  const handleOpenEntry = useCallback(
+    (entryName: string) => {
+      history.push(`/buckets/${name}/entries/${encodeEntryPath(entryName)}`);
+    },
+    [history, name],
+  );
 
   const hasWritePermission = info
     ? checkWritePermission(props.permissions, info.name)
     : false;
 
-  const handleUploadSuccess = () => {
-    setIsUploadModalVisible(false);
-    getEntries();
-  };
-
   useEffect(() => {
     getEntries().then();
   }, [name]);
 
-  // Poll only when there are entries being deleted
   useEffect(() => {
     const hasDeletingEntries = entries.some(
       (entry) => entry.status === Status.DELETING,
@@ -195,261 +265,244 @@ export default function BucketDetail(props: Readonly<Props>) {
     return () => clearInterval(interval);
   }, [entries]);
 
-  const data = entries.map((entry) => {
-    const printIsoDate = (timestamp: bigint) =>
-      entry.recordCount !== 0n
-        ? new Date(Number(timestamp / 1000n)).toISOString()
-        : "---";
-    return {
-      name: entry.name,
-      recordCount: entry.recordCount.toString(),
-      blockCount: entry.blockCount.toString(),
-      size: prettierBytes(Number(entry.size)),
-      history: entry.recordCount !== 0n ? getHistory(entry) : "---",
-      oldestRecord: printIsoDate(entry.oldestRecord),
-      latestRecord: printIsoDate(entry.latestRecord),
-      status: entry.status,
-    };
-  });
+  const handleExpandCollapseAll = () => {
+    const shouldCollapse = expandedOpenCount > 0;
+    setExpandCollapseTarget(shouldCollapse ? "collapse" : "expand");
+    setExpandCollapseSignal((n) => (n ?? 0) + 1);
+  };
 
-  const getColumnSearchProps = (dataIndex: string, placeholder: string) => ({
-    filterDropdown: ({
-      setSelectedKeys,
-      selectedKeys,
-      confirm,
-      clearFilters,
-    }: {
-      setSelectedKeys: (keys: React.Key[]) => void;
-      selectedKeys: React.Key[];
-      confirm: (param?: FilterConfirmProps) => void;
-      clearFilters?: () => void;
-    }) => (
-      <div className="filterDropdown" onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Search ${placeholder}`}
-          value={selectedKeys[0]}
-          onChange={(e) =>
-            setSelectedKeys(e.target.value ? [e.target.value] : [])
+  const tree = useMemo(() => buildEntryTree(entries), [entries]);
+
+  const rows = useMemo<BucketEntryTableRow[]>(() => {
+    const makeRow = (node: EntryTreeNode): BucketEntryTableRow => {
+      const children = node.children.map(makeRow);
+      const isLeaf = children.length === 0;
+      const useOwnOnly = !showAggregated && !isLeaf && node.ownEntry;
+      const stats = useOwnOnly
+        ? {
+            records: node.ownEntry!.recordCount ?? 0n,
+            blocks: node.ownEntry!.blockCount ?? 0n,
+            size: node.ownEntry!.size ?? 0n,
+            oldest:
+              (node.ownEntry!.recordCount ?? 0n) > 0n
+                ? node.ownEntry!.oldestRecord
+                : undefined,
+            latest:
+              (node.ownEntry!.recordCount ?? 0n) > 0n
+                ? node.ownEntry!.latestRecord
+                : undefined,
           }
-          onPressEnter={() => {
-            requestAnimationFrame(() => {
-              confirm();
-            });
-          }}
-          className="filterDropdownInput"
-        />
-        <Space className="filterDropdownSpace">
-          <Button
-            type="primary"
-            onClick={() => {
-              requestAnimationFrame(() => {
-                confirm();
-              });
-            }}
-            icon={<SearchOutlined />}
-            size="small"
-            className="filterDropdownButton"
-          >
-            Search
-          </Button>
-          <Button
-            onClick={() => {
-              requestAnimationFrame(() => {
-                clearFilters && clearFilters();
-                confirm();
-              });
-            }}
-            size="small"
-            className="filterDropdownButton"
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined
-        className={filtered ? "filterIconActive" : "filterIcon"}
-      />
-    ),
-    onFilter: (value: string | number | boolean, record: any) =>
-      record[dataIndex]
-        ?.toString()
-        ?.toLowerCase()
-        ?.includes((value as string).toLowerCase()),
-  });
+        : node.stats;
+      const showDashes = !showAggregated && !isLeaf && !node.ownEntry;
+      const hasRecords = stats.records > 0n;
 
-  const columns: ColumnsType<any> = [
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      fixed: "left",
-      width: 200,
-      ...getColumnSearchProps("name", "entry names"),
-      sorter: (a: any, b: any) => a.name.localeCompare(b.name),
-      render: (name: string, record: { status?: Status }) => {
-        const isDeleting = record.status === Status.DELETING;
-        return (
-          <span>
-            {isDeleting ? (
-              <b style={{ color: "#bfbfbf" }}>{name}</b>
-            ) : (
-              <Link to={`/buckets/${info?.name}/entries/${name}`}>
-                <b>{name}</b>
-              </Link>
-            )}
-            {isDeleting ? (
-              <Tag
-                color="processing"
-                icon={<LoadingOutlined spin />}
-                style={{ marginLeft: 8 }}
-              >
-                Deleting
-              </Tag>
-            ) : null}
-          </span>
-        );
-      },
-    },
-    {
-      title: "Records",
-      dataIndex: "recordCount",
-      key: "recordCount",
-      sorter: (a: any, b: any) =>
-        parseInt(a.recordCount) - parseInt(b.recordCount),
-    },
-    {
-      title: "Blocks",
-      dataIndex: "blockCount",
-      key: "blockCount",
-      sorter: (a: any, b: any) =>
-        parseInt(a.blockCount) - parseInt(b.blockCount),
-    },
-    {
-      title: "Size",
-      dataIndex: "size",
-      key: "size",
-      sorter: (a: any, b: any) => {
-        const getSizeInBytes = (sizeStr: string) => {
-          if (sizeStr === "0 B") return 0;
-          const units = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12 };
-          const match = sizeStr.match(/^([\d.]+)\s*([KMGT]?B)$/);
-          if (!match) return 0;
-          const [, num, unit] = match;
-          return parseFloat(num) * (units[unit as keyof typeof units] || 1);
-        };
+      return {
+        key: node.key,
+        fullName: node.fullName,
+        name: node.segment,
+        isLeaf,
+        ownEntryName: node.ownEntry?.name,
+        status: node.ownEntry?.status,
+        records: showDashes ? 0n : stats.records,
+        blocks: showDashes ? 0n : stats.blocks,
+        size: showDashes ? 0n : stats.size,
+        oldest: showDashes ? undefined : stats.oldest,
+        latest: showDashes ? undefined : stats.latest,
+        history: showDashes
+          ? "---"
+          : hasRecords &&
+              stats.oldest !== undefined &&
+              stats.latest !== undefined
+            ? getHistory({
+                oldestRecord: stats.oldest,
+                latestRecord: stats.latest,
+              })
+            : "---",
+        children,
+      };
+    };
 
-        return getSizeInBytes(a.size) - getSizeInBytes(b.size);
-      },
-    },
-    {
-      title: "History",
-      dataIndex: "history",
-      key: "history",
-      sorter: (a: any, b: any) => {
-        if (a.history === "---" && b.history === "---") return 0;
-        if (a.history === "---") return 1;
-        if (b.history === "---") return -1;
+    return tree.map(makeRow);
+  }, [tree, showAggregated]);
 
-        const getHistoryMinutes = (historyStr: string) => {
-          if (historyStr === "---") return 0;
-          let totalMinutes = 0;
+  const columns = useMemo<ColumnsType<BucketEntryTableRow>>(
+    () => [
+      {
+        title: "Entry",
+        dataIndex: "name",
+        key: "name",
+        fixed: "left",
+        render: (_: unknown, row) => {
+          const isDeleting = row.status === Status.DELETING;
+          const canOpen = Boolean(row.ownEntryName) && !isDeleting;
+          const icon = row.isLeaf ? (
+            <LineChartOutlined style={{ marginRight: 6, color: "#8c8c8c" }} />
+          ) : (
+            <DatabaseOutlined style={{ marginRight: 6, color: "#8c8c8c" }} />
+          );
 
-          const daysMatch = historyStr.match(/(\d+)\s*days?/);
-          const hoursMatch = historyStr.match(/(\d+)\s*hours?/);
-          const minutesMatch = historyStr.match(/(\d+)\s*minutes?/);
-          const secondsMatch = historyStr.match(/(\d+)\s*seconds?/);
-
-          if (daysMatch) totalMinutes += parseInt(daysMatch[1]) * 24 * 60;
-          if (hoursMatch) totalMinutes += parseInt(hoursMatch[1]) * 60;
-          if (minutesMatch) totalMinutes += parseInt(minutesMatch[1]);
-          if (secondsMatch) totalMinutes += parseInt(secondsMatch[1]) / 60;
-
-          return totalMinutes;
-        };
-
-        return getHistoryMinutes(a.history) - getHistoryMinutes(b.history);
-      },
-    },
-    {
-      title: "Oldest Record (UTC)",
-      dataIndex: "oldestRecord",
-      key: "oldestRecord",
-      sorter: (a: any, b: any) => {
-        if (a.oldestRecord === "---" && b.oldestRecord === "---") return 0;
-        if (a.oldestRecord === "---") return 1;
-        if (b.oldestRecord === "---") return -1;
-        return (
-          new Date(a.oldestRecord).getTime() -
-          new Date(b.oldestRecord).getTime()
-        );
-      },
-    },
-    {
-      title: "Latest Record (UTC)",
-      dataIndex: "latestRecord",
-      key: "latestRecord",
-      sorter: (a: any, b: any) => {
-        if (a.latestRecord === "---" && b.latestRecord === "---") return 0;
-        if (a.latestRecord === "---") return 1;
-        if (b.latestRecord === "---") return -1;
-        return (
-          new Date(a.latestRecord).getTime() -
-          new Date(b.latestRecord).getTime()
-        );
-      },
-    },
-    {
-      title: "",
-      render: (_: any, entry: { name: string; status?: Status }) => {
-        if (info && checkWritePermission(props.permissions, info.name)) {
-          const isDeleting = entry.status === Status.DELETING;
           return (
-            <Flex gap="middle">
-              {isDeleting ? (
-                <Tooltip title={deletionTooltip}>
-                  <span>
-                    <EditOutlined
-                      key={`rename-${entry.name}`}
-                      title="Rename entry"
-                      style={disabledActionStyle}
-                    />
-                  </span>
-                </Tooltip>
+            <Flex align="center" gap={4}>
+              {icon}
+              {canOpen ? (
+                <Typography.Link
+                  onClick={() => handleOpenEntry(row.ownEntryName!)}
+                >
+                  {row.name}
+                </Typography.Link>
               ) : (
-                <EditOutlined
-                  key={`rename-${entry.name}`}
-                  title="Rename entry"
-                  onClick={() => handleOpenRenameModal(entry.name)}
-                />
+                <Typography.Text>{row.name}</Typography.Text>
               )}
-              {isDeleting ? (
-                <Tooltip title={deletionTooltip}>
-                  <span>
-                    <DeleteOutlined
-                      key={entry.name}
-                      className="removeButton"
-                      title="Remove entry"
-                      style={disabledActionStyle}
-                    />
-                  </span>
-                </Tooltip>
-              ) : (
-                <DeleteOutlined
-                  key={entry.name}
-                  className="removeButton"
-                  title="Remove entry"
-                  onClick={() => handleOpenRemoveModal(entry.name)}
-                />
-              )}
+              {!row.ownEntryName &&
+                row.children &&
+                (row.children as BucketEntryTableRow[]).length > 0 &&
+                (() => {
+                  const leafChildren = collectLeafEntries(
+                    row.children as BucketEntryTableRow[],
+                  );
+                  if (leafChildren.length >= 1) {
+                    const treeData = (function buildTreeData(
+                      nodes: BucketEntryTableRow[],
+                    ): any[] {
+                      return nodes
+                        .filter(
+                          (n) =>
+                            n.ownEntryName ||
+                            (n.children &&
+                              (n.children as BucketEntryTableRow[]).length > 0),
+                        )
+                        .map((n) => ({
+                          title: n.name,
+                          key: n.fullName,
+                          isLeaf: n.isLeaf,
+                          selectable: Boolean(n.ownEntryName),
+                          children: n.children?.length
+                            ? buildTreeData(n.children as BucketEntryTableRow[])
+                            : undefined,
+                        }));
+                    })(row.children as BucketEntryTableRow[]);
+
+                    return (
+                      <TreePopover
+                        treeData={treeData}
+                        onSelect={handleOpenEntry}
+                      />
+                    );
+                  }
+                  return null;
+                })()}
             </Flex>
           );
-        }
-        return <div />;
+        },
       },
-    },
-  ];
+      {
+        title: "Records",
+        dataIndex: "records",
+        key: "records",
+        align: "left",
+        render: (v: bigint) => v.toString(),
+      },
+      {
+        title: "Blocks",
+        dataIndex: "blocks",
+        key: "blocks",
+        align: "left",
+        render: (v: bigint) => v.toString(),
+      },
+      {
+        title: "Size",
+        dataIndex: "size",
+        key: "size",
+        align: "left",
+        render: (v: bigint) => prettierBytes(Number(v)),
+      },
+      { title: "History", dataIndex: "history", key: "history", align: "left" },
+      {
+        title: "Oldest",
+        dataIndex: "oldest",
+        key: "oldest",
+        align: "left",
+        render: (v?: bigint) => printTs(v),
+      },
+      {
+        title: "Latest",
+        dataIndex: "latest",
+        key: "latest",
+        align: "left",
+        render: (v?: bigint) => printTs(v),
+      },
+      ...(hasWritePermission
+        ? [
+            {
+              title: "",
+              key: "actions",
+              width: 80,
+              render: (_: unknown, row: BucketEntryTableRow) => {
+                if (!row.ownEntryName) return null;
+                const isDeleting = row.status === Status.DELETING;
+                return (
+                  <Flex gap="middle" onClick={(e) => e.stopPropagation()}>
+                    <ActionIcon
+                      icon={<EditOutlined title="Rename entry" />}
+                      disabled={isDeleting}
+                      tooltip={isDeleting ? deletionTooltip : "Rename entry"}
+                      showTooltipWhenEnabled
+                      onClick={() => {
+                        setEntryToRename(row.ownEntryName!);
+                        setIsRenameModalOpen(true);
+                      }}
+                    />
+                    <ActionIcon
+                      icon={
+                        <DeleteOutlined
+                          title="Remove entry"
+                          className="removeButton"
+                          style={{ color: "red" }}
+                        />
+                      }
+                      disabled={isDeleting}
+                      tooltip={isDeleting ? deletionTooltip : "Remove entry"}
+                      showTooltipWhenEnabled
+                      onClick={() => {
+                        setEntryToRemove(row.ownEntryName!);
+                        setIsRemoveModalOpen(true);
+                      }}
+                    />
+                  </Flex>
+                );
+              },
+            } as any,
+          ]
+        : []),
+    ],
+    [handleOpenEntry, hasWritePermission],
+  );
+
+  const sortedRows = useMemo(() => {
+    const sortRows = (nodes: BucketEntryTableRow[]): BucketEntryTableRow[] =>
+      [...nodes]
+        .sort((a, b) => naturalNameSort(a.name, b.name))
+        .map((node) => ({
+          ...node,
+          children: node.children?.length
+            ? sortRows(node.children as BucketEntryTableRow[])
+            : undefined,
+        }));
+
+    return sortRows(rows);
+  }, [rows]);
+
+  const handleTableChange = (tablePagination: TablePaginationConfig) => {
+    const nextSize = tablePagination.pageSize ?? pageSize;
+    const nextCurrent = tablePagination.current ?? currentPage;
+    if (nextSize !== pageSize) {
+      localStorage.setItem(PAGE_SIZE_KEY, String(nextSize));
+      setPageSize(nextSize);
+      setCurrentPage(1);
+      return;
+    }
+    setCurrentPage(nextCurrent);
+  };
 
   return (
     <div className="bucketDetail">
@@ -467,39 +520,117 @@ export default function BucketDetail(props: Readonly<Props>) {
           onShow={() => null}
           onUpload={() => setIsUploadModalVisible(true)}
           hasWritePermission={hasWritePermission}
+          loading={isLoading}
         />
       ) : (
-        <div />
+        <BucketCard
+          bucketInfo={
+            {
+              name,
+              entryCount: 0n,
+              size: 0n,
+              oldestRecord: 0n,
+              latestRecord: 0n,
+            } as BucketInfo
+          }
+          index={0}
+          {...props}
+          showPanel
+          onRemoved={() => null}
+          onShow={() => null}
+          hasWritePermission={false}
+          loading
+        />
       )}
+
       <Divider />
-      <Flex className="entriesHeader">
+
+      <Flex className="entriesHeader" justify="space-between" align="center">
         <Typography.Title level={3} className="entriesTitle">
           Entries
         </Typography.Title>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => getEntries()}
-          loading={isLoading}
-        />
+        <div className="entriesHeaderControls">
+          <Input.Search
+            allowClear
+            className="entriesPathSearch"
+            placeholder="Search by full path"
+            value={pathInput}
+            onChange={(e) => {
+              setPathInput(e.target.value);
+              if (e.target.value === "") {
+                setPathQuery("");
+                setCurrentPage(1);
+              }
+            }}
+            onSearch={(value) => {
+              setPathQuery(value);
+              setCurrentPage(1);
+            }}
+          />
+          <Tooltip
+            title={
+              expandedOpenCount > 0
+                ? `Collapse all (${expandedOpenCount}/${expandedTotalCount})`
+                : `Expand all (${expandedTotalCount})`
+            }
+            placement="bottomLeft"
+          >
+            <Button
+              icon={
+                expandedOpenCount > 0 ? (
+                  <ShrinkOutlined />
+                ) : (
+                  <ExpandAltOutlined />
+                )
+              }
+              onClick={handleExpandCollapseAll}
+            />
+          </Tooltip>
+          <Tooltip
+            title={showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"}
+            placement="bottomLeft"
+          >
+            <Button
+              icon={
+                showAggregated ? (
+                  <NodeCollapseOutlined />
+                ) : (
+                  <NodeExpandOutlined />
+                )
+              }
+              onClick={() => {
+                window.requestAnimationFrame(() => {
+                  setShowAggregated((prev) => !prev);
+                });
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Refresh entries" placement="bottomLeft">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => getEntries()}
+              loading={isLoading}
+            />
+          </Tooltip>
+        </div>
       </Flex>
 
-      <ScrollableTable
-        scroll={{ x: "max-content" }}
-        className="entriesTable"
-        columns={columns as any[]}
-        dataSource={data}
+      <BucketEntriesTable
+        rows={sortedRows}
+        columns={columns}
         loading={isLoading}
-        rowKey="name"
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
+        pathQuery={pathQuery}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onTableChange={handleTableChange}
+        expandCollapseSignal={expandCollapseSignal}
+        expandCollapseTarget={expandCollapseTarget}
+        onExpandedStatsChange={(open, total) => {
+          setExpandedOpenCount(open);
+          setExpandedTotalCount(total);
         }}
-        onChange={handleTableChange}
       />
 
-      {/* Modals */}
       <Modal
         title="Upload File"
         open={isUploadModalVisible}
@@ -512,9 +643,13 @@ export default function BucketDetail(props: Readonly<Props>) {
           bucketName={name}
           entryName=""
           availableEntries={entries.map((entry) => entry.name)}
-          onUploadSuccess={handleUploadSuccess}
+          onUploadSuccess={() => {
+            setIsUploadModalVisible(false);
+            getEntries();
+          }}
         />
       </Modal>
+
       <RemoveConfirmationModal
         key={entryToRemove}
         name={entryToRemove}
