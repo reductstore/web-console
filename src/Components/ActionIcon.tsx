@@ -12,6 +12,7 @@ interface ActionIconProps {
   disabled?: boolean;
   tooltip?: string;
   disabledStyle?: React.CSSProperties;
+  showTooltipWhenEnabled?: boolean;
 }
 
 export default function ActionIcon({
@@ -20,6 +21,7 @@ export default function ActionIcon({
   disabled = false,
   tooltip,
   disabledStyle = defaultDisabledStyle,
+  showTooltipWhenEnabled = false,
 }: ActionIconProps) {
   const iconProps = {
     ...icon.props,
@@ -31,7 +33,11 @@ export default function ActionIcon({
   };
   const iconNode = React.cloneElement(icon, iconProps);
 
-  if (!disabled) {
+  if (!tooltip) {
+    return iconNode;
+  }
+
+  if (!disabled && !showTooltipWhenEnabled) {
     return iconNode;
   }
 
