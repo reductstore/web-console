@@ -7,49 +7,58 @@
   margin-left: 0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 12px;
 }
 
 .entriesTitle {
-  margin: 0;
+  margin: 0 !important;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
 }
 
-.searchInput {
-  width: 240px;
+.entriesHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 auto;
+}
+
+.entriesHeaderControls .ant-btn {
+  flex: 0 0 auto;
+}
+
+.entriesPathSearch {
+  width: clamp(220px, 34vw, 420px);
 }
 
 .entriesTable {
-  margin: 0.6em;
+  margin: 0.6em 0 0 0;
 }
 
 .removeButton {
   color: red;
 }
 
-.filterDropdown {
-  padding: 8px;
+@media (max-width: 900px) {
+  .entriesPathSearch {
+    width: clamp(180px, 42vw, 320px);
+  }
 }
 
-.filterDropdownInput {
-  margin-bottom: 8px;
-  display: block;
-}
+@media (max-width: 640px) {
+  .entriesHeader {
+    flex-wrap: wrap;
+  }
 
-.filterDropdownSpace {
-  display: flex;
-  justify-content: space-between;
-}
+  .entriesHeaderControls {
+    width: 100%;
+  }
 
-.filterDropdownButton {
-  width: 90px;
-}
-
-.filterIcon {
-  color: inherit;
-  font-size: 16px;
-}
-
-.filterIconActive {
-  color: #db817b;
-  font-size: 16px;
+  .entriesPathSearch {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
 }

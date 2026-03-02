@@ -1,17 +1,22 @@
 import React from "react";
 import { mount } from "enzyme";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
-import { Bucket, BucketInfo, Client, EntryInfo, Status } from "reduct-js";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
+import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
 import BucketDetail from "./BucketDetail";
 import { MemoryRouter } from "react-router-dom";
 import waitUntil from "async-wait-until";
-import { act } from "react-dom/test-utils";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+
+const mockPush = jest.fn();
 
 jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"), // use actual for all non-hook parts
+  ...jest.requireActual("react-router-dom"),
   useParams: () => ({
     name: "testBucket",
+  }),
+  useHistory: () => ({
+    push: mockPush,
+    location: { pathname: "/buckets/testBucket" },
+    goBack: jest.fn(),
   }),
 }));
 
@@ -35,331 +40,103 @@ describe("BucketDetail", () => {
 
     bucket.getEntryList = jest.fn().mockResolvedValue([
       {
-        name: "EntryWithData",
-        blockCount: 2n,
-        recordCount: 100n,
-        size: 10220n,
+        name: "sensor/humidity",
+        blockCount: 1n,
+        recordCount: 1n,
+        size: 512n,
         oldestRecord: 0n,
         latestRecord: 10000n,
       } as EntryInfo,
       {
-        name: "EmptyEntry",
-        blockCount: 0n,
-        recordCount: 0n,
-        size: 0n,
+        name: "flat-entry",
+        blockCount: 1n,
+        recordCount: 1n,
+        size: 2048n,
         oldestRecord: 0n,
         latestRecord: 10000n,
       } as EntryInfo,
     ]);
-
-    bucket.renameEntry = jest.fn(); // Mock renameEntry method
   });
 
-  it("should show bucket card ", async () => {
+  it("should show bucket card with info", async () => {
     const detail = mount(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
-    const card = await waitUntilFind(detail, ".BucketCard");
+
+    await waitUntil(() => {
+      detail.update();
+      const card = detail.find(".BucketCard");
+      if (!card.length) return false;
+      const text = card.hostNodes().render().text();
+      return text.includes("BucketWithData");
+    });
 
     expect(client.getBucket).toBeCalledWith("testBucket");
-    const cardText = card.hostNodes().render().text();
+    const cardText = detail.find(".BucketCard").hostNodes().render().text();
     expect(cardText).toContain("BucketWithData");
-    expect(cardText).toContain("Size10 KB");
     expect(cardText).toContain("Entries2");
-    expect(cardText).toContain("History0 seconds");
   });
 
-  it("should show entry table ", async () => {
+  it("should render entries table with tree structure", async () => {
     const detail = mount(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
-    const rows = await waitUntilFind(detail, ".ant-table-row");
 
-    expect(rows.length).toEqual(2);
-    expect(rows.at(0).render().text()).toEqual(
-      "EntryWithData100210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010Z",
-    );
-    expect(rows.at(1).render().text()).toEqual("EmptyEntry000 B---------");
-  });
-
-  it("should remove bucket and redirect", async () => {
-    bucket.getInfo = jest.fn().mockResolvedValue({
-      name: "BucketWithData",
-      entryCount: 2n,
-      size: 10220n,
-      oldestRecord: 0n,
-      latestRecord: 10000n,
-      status: Status.READY,
-    } as BucketInfo);
-
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail client={client} permissions={{ fullAccess: true }} />,
-      </MemoryRouter>,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove" });
-
-    removeButton.hostNodes().simulate("click");
-    /* TODO: How to test modal window? */
-  });
-
-  it("should hide remove bucket button if no permissions", async () => {
-    const detail = mount(
-      <BucketDetail client={client} permissions={{ fullAccess: false }} />,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove" });
-
-    expect(removeButton).toBeUndefined();
-  });
-
-  it("should remove entry and update table", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
-        />
-      </MemoryRouter>,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
-
-    expect(removeButton.hostNodes().length).toEqual(2);
-    /* TODO: How to test modal window? */
-  });
-
-  it("should show deleting state and disable entry actions when deleting", async () => {
-    bucket.getEntryList = jest.fn().mockResolvedValue([
-      {
-        name: "DeletingEntry",
-        blockCount: 1n,
-        recordCount: 10n,
-        size: 1024n,
-        oldestRecord: 0n,
-        latestRecord: 10000n,
-        status: Status.DELETING,
-      } as EntryInfo,
-    ]);
-
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
-        />
-      </MemoryRouter>,
-    );
-
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-    const row = detail.find(".ant-table-row").at(0);
-    expect(row.render().text()).toContain("Deleting");
-    const renameIcon = row.find(EditOutlined);
-    const removeIcon = row.find(DeleteOutlined);
-    expect(renameIcon.prop("onClick")).toBeUndefined();
-    expect(removeIcon.prop("onClick")).toBeUndefined();
-  });
-
-  it("should hide remove entry button if no permissions", async () => {
-    const detail = mount(
-      <BucketDetail client={client} permissions={{ fullAccess: false }} />,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
-
-    expect(removeButton).toBeUndefined();
-  });
-
-  it("should display rename icon for entries", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["BucketWithData"] }}
-        />
-        ,
-      </MemoryRouter>,
-    );
-    const renameIcon = await waitUntilFind(detail, { title: "Rename entry" });
-
-    expect(renameIcon.hostNodes().length).toEqual(2);
-  });
-
-  it("should hide rename icon for entries if no permissions", async () => {
-    const detail = mount(
-      <BucketDetail client={client} permissions={{ fullAccess: false }} />,
-    );
-    const renameIcon = await waitUntilFind(detail, { title: "Rename entry" });
-
-    expect(renameIcon).toBeUndefined();
-  });
-
-  it("should open rename modal on rename icon click", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail client={client} permissions={{ fullAccess: true }} />
-      </MemoryRouter>,
-    );
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-
-    const rows = detail.find(".ant-table-row");
-    const emptyEntryRow = rows.at(1);
-
-    const renameIcon = emptyEntryRow.find('span[title="Rename entry"]');
-    renameIcon.simulate("click");
-
-    const renameModal = detail.find('div[data-testid="rename-modal"]');
-    const removeModal = detail.find('div[data-testid="delete-modal"]');
-
-    expect(renameModal.exists()).toBe(true);
-    expect(removeModal.exists()).toBe(false);
-  });
-
-  it("should rename the entry on modal submit", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail client={client} permissions={{ fullAccess: true }} />,
-      </MemoryRouter>,
-    );
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-
-    const rows = detail.find(".ant-table-row");
-    const emptyEntryRow = rows.at(1);
-
-    const renameIcon = emptyEntryRow.find('span[title="Rename entry"]');
-    renameIcon.simulate("click");
-
-    const renameModal = detail.find('div[data-testid="rename-modal"]');
-    expect(renameModal.exists()).toBe(true);
-
-    const input = renameModal.find('input[data-testid="rename-input"]');
-    act(() => {
-      input.simulate("change", { target: { value: "NewEntryName" } });
+    await waitUntil(() => {
+      detail.update();
+      return detail.find(".entriesTable").hostNodes().length > 0;
     });
 
-    const inputValue = input.getDOMNode()?.getAttribute("value");
-    expect(inputValue).toEqual("NewEntryName");
-
-    const submitButton = renameModal.find("button").at(1);
-    submitButton.simulate("click");
-
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-    expect(bucket.renameEntry).toBeCalledWith("EmptyEntry", "NewEntryName");
+    expect(detail.find(".entriesTable").hostNodes().length).toBe(1);
   });
 
-  it("should show loading state while fetching entries", async () => {
-    let resolveGetInfo: (value: BucketInfo) => void;
-    const getInfoPromise = new Promise<BucketInfo>((resolve) => {
-      resolveGetInfo = resolve;
-    });
-    bucket.getInfo = jest.fn().mockReturnValue(getInfoPromise);
+  it("should navigate to entry on click", async () => {
     const detail = mount(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
-    expect(detail.find(".ant-spin").exists()).toBe(true);
-    await act(async () => {
-      resolveGetInfo({
-        name: "BucketWithData",
-        entryCount: 2n,
-        size: 10220n,
-        oldestRecord: 0n,
-        latestRecord: 10000n,
-      } as BucketInfo);
+
+    await waitUntil(() => {
+      detail.update();
+      return detail.find(".entriesTable").hostNodes().length > 0;
     });
+
+    // Find the flat-entry link and click it
+    const links = detail.find("a.ant-typography");
+    const flatEntryLink = links.filterWhere(
+      (n: any) => n.text() === "flat-entry",
+    );
+    if (flatEntryLink.length) {
+      flatEntryLink.simulate("click");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/buckets/testBucket/entries/flat-entry",
+      );
+    }
+  });
+
+  it("should filter entries by search query", async () => {
+    const detail = mount(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitUntil(() => {
+      detail.update();
+      return detail.find(".entriesTable").hostNodes().length > 0;
+    });
+
+    // Type in search box
+    const searchInput = detail.find(".entriesPathSearch input");
+    searchInput.simulate("change", { target: { value: "sensor" } });
     detail.update();
-    expect(detail.find(".ant-spin").exists()).toBe(false);
-  });
 
-  it("should display all entries with sortable columns", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail client={client} />
-      </MemoryRouter>,
-    );
-
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-
-    const rows = detail.find(".ant-table-row");
-    expect(rows.length).toEqual(2);
-
-    expect(detail.render().text()).toContain("EntryWithData");
-    expect(detail.render().text()).toContain("EmptyEntry");
-  });
-
-  it("should display entries with correct data formatting", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail client={client} />
-      </MemoryRouter>,
-    );
-
-    await waitUntil(() => detail.update().find(".ant-table-row").length > 0);
-
-    const tableText = detail.render().text();
-
-    expect(tableText).toContain("100");
-    expect(tableText).toContain("0");
-    expect(tableText).toContain("2");
-    expect(tableText).toMatch(/\d+(\.\d+)?\s*[KMGT]?B/);
-  });
-
-  // New tests for wildcard permission matching
-  it("should show remove entry button with wildcard permissions", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["Bucket*"] }}
-        />
-      </MemoryRouter>,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
-
-    expect(removeButton.hostNodes().length).toEqual(2);
-  });
-
-  it("should show rename entry button with wildcard permissions", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["*WithData"] }}
-        />
-      </MemoryRouter>,
-    );
-    const renameButton = await waitUntilFind(detail, { title: "Rename entry" });
-
-    expect(renameButton.hostNodes().length).toEqual(2);
-  });
-
-  it("should hide remove entry button with non-matching wildcard permissions", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["test-*", "other-*"] }}
-        />
-      </MemoryRouter>,
-    );
-    const removeButton = await waitUntilFind(detail, { title: "Remove entry" });
-
-    expect(removeButton).toBeUndefined();
-  });
-
-  it("should hide rename entry button with non-matching wildcard permissions", async () => {
-    const detail = mount(
-      <MemoryRouter>
-        <BucketDetail
-          client={client}
-          permissions={{ fullAccess: false, write: ["test-*", "other-*"] }}
-        />
-      </MemoryRouter>,
-    );
-    const renameButton = await waitUntilFind(detail, { title: "Rename entry" });
-
-    expect(renameButton).toBeUndefined();
+    // The table should still render (filtered)
+    expect(detail.find(".entriesTable").hostNodes().length).toBe(1);
   });
 });

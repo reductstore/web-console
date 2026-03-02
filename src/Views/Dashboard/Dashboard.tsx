@@ -7,6 +7,7 @@ import BucketCard from "../../Components/Bucket/BucketCard";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 
 import { PlusOutlined, ExclamationCircleFilled } from "@ant-design/icons";
+import ActionIcon from "../../Components/ActionIcon";
 import { useHistory } from "react-router-dom";
 import { History } from "history";
 import UsageStatistics from "../../Components/UsageStatistics/UsageStatistics";
@@ -119,9 +120,11 @@ export default function Dashboard(props: Readonly<Props>) {
   const allowedActions = [];
   if (props.permissions && props.permissions.fullAccess) {
     allowedActions.push(
-      <PlusOutlined
-        title="Create bucket"
+      <ActionIcon
         key="create"
+        icon={<PlusOutlined title="Create bucket" />}
+        tooltip="Create bucket"
+        showTooltipWhenEnabled
         onClick={() => setCreatingBucket(true)}
       />,
     );
