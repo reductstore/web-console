@@ -686,11 +686,19 @@ export default function EntryDetail(props: Readonly<Props>) {
         permissions={permissions as TokenPermissions}
         showUnix={showUnix}
         client={props.client}
-        onRemoved={() => {
-          if (
-            history.location.pathname ===
-            `/buckets/${bucketName}/entries/${encodeURIComponent(decodedEntryName)}`
-          ) {
+        onRemoved={(removedEntryName) => {
+          const prefix = `${removedEntryName}/`;
+          setAvailableEntries((prev) =>
+            prev.filter(
+              (name) => name !== removedEntryName && !name.startsWith(prefix),
+            ),
+          );
+          setAllEntriesInfo((prev) =>
+            prev.filter(
+              (e) => e.name !== removedEntryName && !e.name.startsWith(prefix),
+            ),
+          );
+          if (removedEntryName === decodedEntryName) {
             history.push(`/buckets/${bucketName}`);
           }
         }}

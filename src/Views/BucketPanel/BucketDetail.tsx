@@ -7,7 +7,7 @@ import {
   APIError,
   Status,
 } from "reduct-js";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useParams, useLocation } from "react-router-dom";
 import BucketCard from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -141,6 +141,7 @@ function TreePopover({
 export default function BucketDetail(props: Readonly<Props>) {
   const { name } = useParams() as { name: string };
   const history = useHistory();
+  const location = useLocation();
 
   const [info, setInfo] = useState<BucketInfo>();
   const [entries, setEntries] = useState<any[]>([]);
@@ -215,9 +216,10 @@ export default function BucketDetail(props: Readonly<Props>) {
     if (!info) return;
 
     setIsRemoveModalOpen(false);
+    const prefix = `${entryName}/`;
     setEntries((prevEntries) =>
       prevEntries.map((entry) =>
-        entry.name === entryName
+        entry.name === entryName || entry.name.startsWith(prefix)
           ? { ...entry, status: Status.DELETING }
           : entry,
       ),
@@ -228,7 +230,9 @@ export default function BucketDetail(props: Readonly<Props>) {
       await bucket.removeEntry(entryName);
       setEntryToRemove("");
       setEntries((prevEntries) =>
-        prevEntries.filter((entry) => entry.name !== entryName),
+        prevEntries.filter(
+          (entry) => entry.name !== entryName && !entry.name.startsWith(prefix),
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -237,6 +241,13 @@ export default function BucketDetail(props: Readonly<Props>) {
           ? err.message
           : "Failed to remove entry.";
       message.error(errorMsg);
+      setEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry.name === entryName || entry.name.startsWith(prefix)
+            ? { ...entry, status: Status.READY }
+            : entry,
+        ),
+      );
     }
   };
 
@@ -253,7 +264,7 @@ export default function BucketDetail(props: Readonly<Props>) {
 
   useEffect(() => {
     getEntries().then();
-  }, [name]);
+  }, [name, location.key]);
 
   useEffect(() => {
     const hasDeletingEntries = entries.some(

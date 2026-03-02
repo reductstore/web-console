@@ -29,7 +29,7 @@ interface Props {
   permissions?: TokenPermissions;
   showUnix?: boolean;
   client: Client;
-  onRemoved?: () => void;
+  onRemoved?: (entryName: string) => void;
   onUpload?: () => void;
   hasWritePermission?: boolean;
   allEntryNames?: string[];
@@ -67,7 +67,7 @@ export default function EntryCard(props: Readonly<Props>) {
     try {
       const bucket = await client.getBucket(bucketName);
       await bucket.removeEntry(name);
-      onRemoved?.();
+      onRemoved?.(name);
     } catch (err) {
       console.error(err);
       const errorMsg =
