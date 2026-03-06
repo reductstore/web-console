@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  APIError,
-  Client,
-  FullReplicationInfo,
-  ReplicationSettings,
-} from "reduct-js"; // Adjust import paths as necessary
+import { APIError, Client, FullReplicationInfo } from "reduct-js"; // Adjust import paths as necessary
 import {
   Button,
   Col,
@@ -33,7 +28,7 @@ interface Props {
 }
 
 interface State {
-  settings?: ReplicationSettings;
+  settings?: any;
   formattedWhen: string;
   entries: string[];
   error?: string;
@@ -113,7 +108,7 @@ export default class ReplicationSettingsForm extends React.Component<
         parsedWhen = processResult.value;
       }
 
-      const replicationSettings: ReplicationSettings = {
+      const replicationSettings: any = {
         srcBucket,
         dstBucket,
         dstHost,

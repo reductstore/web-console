@@ -5,7 +5,6 @@ import {
   LoadingOutlined,
   NodeCollapseOutlined,
   NodeExpandOutlined,
-  UploadOutlined,
 } from "@ant-design/icons";
 import {
   APIError,
@@ -30,7 +29,6 @@ interface Props {
   showUnix?: boolean;
   client: Client;
   onRemoved?: (entryName: string) => void;
-  onUpload?: () => void;
   hasWritePermission?: boolean;
   allEntryNames?: string[];
   allEntries?: EntryInfo[];
@@ -123,38 +121,31 @@ export default function EntryCard(props: Readonly<Props>) {
   }, [entryInfo, props.allEntries, showAggregated]);
 
   const actions = [];
-  if (props.hasWritePermission) {
+
+  if (
+    props.allEntries?.some((e) => e.name.startsWith(`${entryInfo.name}/`)) ??
+    false
+  ) {
     actions.push(
       <ActionIcon
-        key="upload"
-        icon={<UploadOutlined title="Upload File" />}
-        disabled={isDeleting}
-        tooltip={isDeleting ? deletionTooltip : "Upload file"}
+        key="toggle-aggregated"
+        icon={
+          showAggregated ? (
+            <NodeCollapseOutlined title="Entry Stats" />
+          ) : (
+            <NodeExpandOutlined title="Entry + Sub-entry Stats" />
+          )
+        }
+        tooltip={showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"}
         showTooltipWhenEnabled
-        onClick={() => props.onUpload?.()}
+        onClick={() => {
+          window.requestAnimationFrame(() => {
+            setShowAggregated((prev) => !prev);
+          });
+        }}
       />,
     );
   }
-
-  actions.push(
-    <ActionIcon
-      key="toggle-aggregated"
-      icon={
-        showAggregated ? (
-          <NodeCollapseOutlined title="Entry Stats" />
-        ) : (
-          <NodeExpandOutlined title="Entry + Sub-entry Stats" />
-        )
-      }
-      tooltip={showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"}
-      showTooltipWhenEnabled
-      onClick={() => {
-        window.requestAnimationFrame(() => {
-          setShowAggregated((prev) => !prev);
-        });
-      }}
-    />,
-  );
 
   if (
     permissions?.fullAccess ||
