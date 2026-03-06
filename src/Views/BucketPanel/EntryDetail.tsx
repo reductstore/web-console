@@ -18,6 +18,7 @@ import {
   Space,
   message,
   Spin,
+  Tooltip,
 } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
@@ -25,10 +26,12 @@ import {
   ShareAltOutlined,
   DeleteOutlined,
   ReloadOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import EntryCard from "../../Components/Entry/EntryCard";
 import "./EntryDetail.css";
 import UploadFileForm from "../../Components/Entry/UploadFileForm";
+import EntryAttachmentsCard from "../../Components/Entry/EntryAttachmentsCard";
 import { JsonQueryEditor } from "../../Components/JsonEditor";
 
 import { getExtensionFromContentType } from "../../Helpers/contentType";
@@ -161,8 +164,10 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [startError, setStartError] = useState(false);
   const [stopError, setStopError] = useState(false);
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEntryInfoLoading, setIsEntryInfoLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isEntryInfoLoading, setIsEntryInfoLoading] = useState(false);
   const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
 
   const [fetchError, setFetchError] = useState<string>("");
@@ -229,6 +234,9 @@ export default function EntryDetail(props: Readonly<Props>) {
     const abortSignal = fetchCtrlRef.current.signal;
 
     setIsLoading(true);
+    setShowCancel(false);
+    if (cancelDelayRef.current) clearTimeout(cancelDelayRef.current);
+    cancelDelayRef.current = setTimeout(() => setShowCancel(true), 500);
     setFetchError("");
     setRecords([]);
 
@@ -306,6 +314,11 @@ export default function EntryDetail(props: Readonly<Props>) {
       else if (err instanceof SyntaxError) setFetchError(err.message);
       else setFetchError("Failed to fetch records.");
     } finally {
+      if (cancelDelayRef.current) {
+        clearTimeout(cancelDelayRef.current);
+        cancelDelayRef.current = null;
+      }
+      setShowCancel(false);
       if (!abortSignal.aborted) {
         setIsLoading(false);
         fetchCtrlRef.current = null;
@@ -545,11 +558,14 @@ export default function EntryDetail(props: Readonly<Props>) {
     getRecords(timeRange.start, timeRange.end);
   }, [bucketName, decodedEntryName]);
 
-  // abort ongoing fetch on unmount
+  // abort ongoing fetch and clear timers on unmount
   useEffect(() => {
     return () => {
       if (fetchCtrlRef.current) {
         fetchCtrlRef.current.abort();
+      }
+      if (cancelDelayRef.current) {
+        clearTimeout(cancelDelayRef.current);
       }
     };
   }, []);
@@ -702,11 +718,16 @@ export default function EntryDetail(props: Readonly<Props>) {
             history.push(`/buckets/${bucketName}`);
           }
         }}
-        onUpload={() => setIsUploadModalVisible(true)}
         hasWritePermission={hasWritePermission}
         allEntryNames={availableEntries}
         allEntries={allEntriesInfo}
         loading={isEntryInfoLoading || !entryInfo}
+      />
+      <EntryAttachmentsCard
+        client={props.client}
+        bucketName={bucketName}
+        entryName={decodedEntryName}
+        editable={hasWritePermission}
       />
       <Modal
         title="Upload File"
@@ -820,7 +841,13 @@ export default function EntryDetail(props: Readonly<Props>) {
                 setFetchError("");
               }
             }}
-            height={260}
+            height={Math.min(
+              400,
+              Math.max(
+                100,
+                (whenCondition + "\n").split("\n").length * 18 + 45,
+              ),
+            )}
             error={fetchError}
             validationContext={{
               client: props.client,
@@ -855,43 +882,55 @@ export default function EntryDetail(props: Readonly<Props>) {
             </strong>
           </Typography.Text>
         </div>
+        <DataVolumeChart
+          records={records.map((r) => r.record)}
+          setTimeRange={(start, end) => {
+            setTimeRange(start, end);
+            getRecords(start, end);
+          }}
+          isLoading={isLoading}
+          showUnix={showUnix}
+          interval={timeRange.interval}
+        />
         <div className="fetchButton">
           <Button
             onClick={() => getRecords(timeRange.start, timeRange.end)}
-            type={isLoading ? "default" : "primary"}
-            danger={isLoading}
+            type={"primary"}
+            danger={showCancel}
             style={{
               // fixed width to prevent ResizeObserver errors
-              width: 120,
+              width: 130,
               whiteSpace: "nowrap",
               textAlign: "center",
             }}
           >
-            {isLoading ? "Cancel" : "Fetch Records"}
+            {showCancel ? "Cancel" : "Fetch Records"}
           </Button>
-          {showResetButton && (
+          {hasWritePermission && (
             <Button
-              icon={<ReloadOutlined />}
-              onClick={handleResetZoom}
-              title="Reset to default range"
-              type="default"
+              type="dashed"
+              icon={<UploadOutlined />}
+              onClick={() => setIsUploadModalVisible(true)}
               style={{ marginLeft: 8 }}
-            />
+            >
+              Add Record
+            </Button>
+          )}
+          {showResetButton && (
+            <Tooltip title="Reset to default time range">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleResetZoom}
+                type="default"
+                style={{ marginLeft: 8 }}
+              />
+            </Tooltip>
           )}
         </div>
       </div>
-      <DataVolumeChart
-        records={records.map((r) => r.record)}
-        setTimeRange={(start, end) => {
-          setTimeRange(start, end);
-          getRecords(start, end);
-        }}
-        isLoading={isLoading}
-        showUnix={showUnix}
-        interval={timeRange.interval}
-      />
       <ScrollableTable
         scroll={{ x: "max-content" }}
+        size="small"
         columns={columns}
         dataSource={data}
         expandable={{
