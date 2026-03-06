@@ -44,7 +44,7 @@ describe("ReplicationCard", () => {
         entries: ["entry1", "entry2"],
         include: {},
         exclude: {},
-      },
+      } as any,
       diagnostics: {
         hourly: {
           ok: 50n,
