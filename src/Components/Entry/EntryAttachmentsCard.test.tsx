@@ -96,6 +96,20 @@ describe("EntryAttachmentsCard", () => {
     expect(addBtn.length).toBe(0);
   });
 
+  it("shows 'No attachments' message when not editable and no attachments", async () => {
+    bucket.readAttachments.mockResolvedValue({});
+    await mountCard(false);
+
+    expect(wrapper.text()).toContain("No attachments");
+  });
+
+  it("does not show 'No attachments' message when editable", async () => {
+    bucket.readAttachments.mockResolvedValue({});
+    await mountCard(true);
+
+    expect(wrapper.text()).not.toContain("No attachments");
+  });
+
   it("opens add attachment modal when Add Attachment is clicked", async () => {
     await mountCard();
 
