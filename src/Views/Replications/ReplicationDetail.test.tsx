@@ -30,8 +30,6 @@ describe("ReplicationDetail", () => {
       dst_host: "destinationHost",
       dst_token: "destinationToken",
       entries: ["entry1", "entry2"],
-      include: { label1: "value1" },
-      exclude: { label2: "value2" },
     });
 
     const mockDiagnostics = Diagnostics.parse({
@@ -111,8 +109,6 @@ describe("ReplicationDetail", () => {
         dstHost: "destinationHost",
         dstToken: "destinationToken",
         entries: ["entry1", "entry2"],
-        include: { label1: "value1" },
-        exclude: { label2: "value2" },
       },
       diagnostics: {
         hourly: {

@@ -4,11 +4,7 @@ import { mount } from "enzyme";
 import { MemoryRouter } from "react-router-dom";
 import EntryCard from "./EntryCard";
 import { EntryInfo, Client, Status } from "reduct-js";
-import {
-  DeleteOutlined,
-  NodeCollapseOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, NodeCollapseOutlined } from "@ant-design/icons";
 
 describe("EntryCard", () => {
   beforeEach(() => mockJSDOM());
@@ -25,12 +21,11 @@ describe("EntryCard", () => {
 
   const client = new Client("");
   const onRemoved = jest.fn();
-  const onUpload = jest.fn();
 
   const mountWithRouter = (component: React.ReactElement) =>
     mount(<MemoryRouter>{component}</MemoryRouter>);
 
-  it("should show remove button with permissions", async () => {
+  it("shows remove button with permissions", async () => {
     const wrapper = mountWithRouter(
       <EntryCard
         entryInfo={info}
@@ -40,11 +35,10 @@ describe("EntryCard", () => {
         onRemoved={onRemoved}
       />,
     );
-    const button = wrapper.find(DeleteOutlined);
-    expect(button.length).toEqual(1);
+    expect(wrapper.find(DeleteOutlined).length).toEqual(1);
   });
 
-  it("should not show remove button without permissions", async () => {
+  it("does not show remove button without permissions", async () => {
     const wrapper = mountWithRouter(
       <EntryCard
         entryInfo={info}
@@ -54,11 +48,10 @@ describe("EntryCard", () => {
         onRemoved={onRemoved}
       />,
     );
-    const button = wrapper.find(DeleteOutlined);
-    expect(button.length).toEqual(0);
+    expect(wrapper.find(DeleteOutlined).length).toEqual(0);
   });
 
-  it("should display timestamps in UTC format by default", async () => {
+  it("displays timestamps in UTC format by default", async () => {
     const wrapper = mountWithRouter(
       <EntryCard
         entryInfo={info}
@@ -73,7 +66,7 @@ describe("EntryCard", () => {
     expect(timestamps.at(5).text()).toContain("1970-01-01");
   });
 
-  it("should display timestamps in Unix format when showUnix is true", async () => {
+  it("displays timestamps in Unix format when showUnix is true", async () => {
     const wrapper = mountWithRouter(
       <EntryCard
         entryInfo={info}
@@ -89,7 +82,7 @@ describe("EntryCard", () => {
     expect(timestamps.at(5).text()).toEqual("2000000");
   });
 
-  it("should display --- for timestamps when recordCount is 0", async () => {
+  it("displays --- for timestamps when recordCount is 0", async () => {
     const emptyInfo = { ...info, recordCount: 0n };
     const wrapper = mountWithRouter(
       <EntryCard
@@ -105,7 +98,7 @@ describe("EntryCard", () => {
     expect(timestamps.at(4).text()).toEqual("---");
   });
 
-  it("should show deleting state and disable remove action when actions are disabled", async () => {
+  it("shows deleting state and disables remove action", async () => {
     const wrapper = mountWithRouter(
       <EntryCard
         entryInfo={{ ...info, status: Status.DELETING }}
@@ -121,166 +114,59 @@ describe("EntryCard", () => {
     expect(deleteButton.prop("onClick")).toBeUndefined();
   });
 
-  describe("Upload Button Tests", () => {
-    it("should show upload button with write permission", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={{ ...info, status: Status.DELETING }}
-          permissions={{ fullAccess: true }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={true}
-        />,
-      );
-      const button = wrapper.find(UploadOutlined);
-      expect(button.length).toEqual(1);
-      expect(button.prop("title")).toBe("Upload File");
-    });
-
-    it("should not show upload button without write permission", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={info}
-          permissions={{ fullAccess: true }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={false}
-        />,
-      );
-      const button = wrapper.find(UploadOutlined);
-      expect(button.length).toEqual(0);
-    });
-
-    it("should call onUpload when upload button is clicked", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={{ ...info, status: Status.READY }}
-          permissions={{ fullAccess: true }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={true}
-        />,
-      );
-      const button = wrapper.find(UploadOutlined);
-      button.simulate("click");
-      expect(onUpload).toHaveBeenCalled();
-    });
-
-    it("should show both upload and delete buttons with full access", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={info}
-          permissions={{ fullAccess: true }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={true}
-        />,
-      );
-      const uploadButton = wrapper.find(UploadOutlined);
-      const deleteButton = wrapper.find(DeleteOutlined);
-      expect(uploadButton.length).toEqual(1);
-      expect(deleteButton.length).toEqual(1);
-    });
-
-    it("should show only delete button with write permission but no upload permission", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={info}
-          permissions={{ write: ["test-bucket"], fullAccess: false }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={false}
-        />,
-      );
-      const uploadButton = wrapper.find(UploadOutlined);
-      const deleteButton = wrapper.find(DeleteOutlined);
-      expect(uploadButton.length).toEqual(0);
-      expect(deleteButton.length).toEqual(1);
-    });
-
-    it("should show only upload button with upload permission but no delete permission", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={info}
-          permissions={{ write: [], fullAccess: false }}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          onUpload={onUpload}
-          hasWritePermission={true}
-        />,
-      );
-      const uploadButton = wrapper.find(UploadOutlined);
-      const deleteButton = wrapper.find(DeleteOutlined);
-      expect(uploadButton.length).toEqual(1);
-      expect(deleteButton.length).toEqual(0);
-    });
-  });
-
-  describe("Loading State", () => {
-    it("should show loading state when loading prop is true", async () => {
-      const wrapper = mountWithRouter(
-        <EntryCard
-          entryInfo={info}
-          client={client}
-          bucketName="test-bucket"
-          onRemoved={onRemoved}
-          loading={true}
-        />,
-      );
-
-      const skeleton = wrapper.find(".ant-skeleton");
-      expect(skeleton.length).toBeGreaterThan(0);
-    });
-  });
-
   describe("Aggregation Toggle", () => {
-    it("should show aggregation toggle button", async () => {
+    const entriesWithChild: EntryInfo[] = [
+      info,
+      {
+        name: "entry/sub1",
+        size: 10000n,
+        recordCount: 2n,
+        blockCount: 1n,
+        oldestRecord: 500000n,
+        latestRecord: 1500000n,
+        status: Status.READY,
+      },
+    ];
+
+    it("shows aggregation toggle button for non-leaf entries", async () => {
       const wrapper = mountWithRouter(
         <EntryCard
           entryInfo={info}
           client={client}
           bucketName="test-bucket"
           onRemoved={onRemoved}
+          allEntries={entriesWithChild}
+          allEntryNames={entriesWithChild.map((e) => e.name)}
         />,
       );
 
-      const toggleButton = wrapper.find(NodeCollapseOutlined);
-      expect(toggleButton.length).toEqual(1);
+      expect(wrapper.find(NodeCollapseOutlined).length).toEqual(1);
     });
 
-    it("should aggregate stats from sub-entries when showAggregated is true", async () => {
-      const allEntries: EntryInfo[] = [
-        info,
-        {
-          name: "entry/sub1",
-          size: 10000n,
-          recordCount: 2n,
-          blockCount: 1n,
-          oldestRecord: 500000n,
-          latestRecord: 1500000n,
-          status: Status.READY,
-        },
-      ];
-
+    it("hides aggregation toggle button for leaf entries", async () => {
       const wrapper = mountWithRouter(
         <EntryCard
           entryInfo={info}
           client={client}
           bucketName="test-bucket"
           onRemoved={onRemoved}
-          allEntries={allEntries}
-          allEntryNames={allEntries.map((e) => e.name)}
+          allEntries={[info]}
+          allEntryNames={[info.name]}
+        />,
+      );
+
+      expect(wrapper.find(NodeCollapseOutlined).length).toEqual(0);
+    });
+
+    it("aggregates stats from sub-entries when showAggregated is true", async () => {
+      const wrapper = mountWithRouter(
+        <EntryCard
+          entryInfo={info}
+          client={client}
+          bucketName="test-bucket"
+          onRemoved={onRemoved}
+          allEntries={entriesWithChild}
+          allEntryNames={entriesWithChild.map((e) => e.name)}
         />,
       );
 

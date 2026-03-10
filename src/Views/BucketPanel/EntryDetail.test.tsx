@@ -9,6 +9,7 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   ShareAltOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
 
@@ -217,27 +218,27 @@ describe("EntryDetail", () => {
     });
 
     it("should show the fetch records button", () => {
-      const fetchButton = wrapper.find(".fetchButton button");
+      const fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.exists()).toBe(true);
       expect(fetchButton.text()).toBe("Fetch Records");
     });
 
     it("should show reset button when time range differs from default", async () => {
       const timeInputs = wrapper.find(".timeInputs Input");
-      if (timeInputs.length > 0) {
-        const startInput = timeInputs.at(0);
-        await act(async () => {
-          const onChange = startInput.prop("onChange") as any;
-          if (onChange) {
-            onChange({ target: { value: "2023-01-01T00:00:00Z" } });
-          }
-        });
-        wrapper.update();
+      expect(timeInputs.length).toBeGreaterThan(0);
 
-        const resetButton = wrapper.find(".fetchButton Button").at(1);
-        expect(resetButton.exists()).toBe(true);
-        expect(resetButton.prop("title")).toBe("Reset to default range");
-      }
+      const startInput = timeInputs.at(0);
+      await act(async () => {
+        const onChange = startInput.prop("onChange") as any;
+        if (onChange) {
+          onChange({ target: { value: "2023-01-01T00:00:00Z" } });
+        }
+        jest.runAllTimers();
+      });
+      wrapper.update();
+
+      const resetButton = wrapper.find(ReloadOutlined);
+      expect(resetButton.exists()).toBe(true);
     });
 
     it("should not show a separate limit input", () => {
@@ -257,7 +258,7 @@ describe("EntryDetail", () => {
     });
 
     it("should call bucket.query with default $each_t when condition", async () => {
-      const fetchButton = wrapper.find(".fetchButton button");
+      const fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.exists()).toBe(true);
 
       await act(async () => {
@@ -277,6 +278,107 @@ describe("EntryDetail", () => {
           }),
         }),
       );
+    });
+  });
+
+  describe("Query Cancellation", () => {
+    it("should show Cancel button after delay during long query", async () => {
+      let queryResolve: () => void;
+      const slowQueryPromise = new Promise<void>((resolve) => {
+        queryResolve = resolve;
+      });
+
+      bucket.query = jest.fn().mockImplementation(() => ({
+        async *[Symbol.asyncIterator]() {
+          await slowQueryPromise;
+          for (const record of mockRecords) {
+            yield record;
+          }
+        },
+      }));
+
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
+      });
+
+      let fetchButton = wrapper.find(".fetchButton button").first();
+      expect(fetchButton.text()).toBe("Fetch Records");
+
+      await act(async () => {
+        fetchButton.simulate("click");
+      });
+      wrapper.update();
+
+      fetchButton = wrapper.find(".fetchButton button").first();
+      expect(fetchButton.text()).toBe("Fetch Records");
+
+      // Advance past the 500ms delay
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
+      wrapper.update();
+
+      // Now button should show "Cancel"
+      fetchButton = wrapper.find(".fetchButton button").first();
+      expect(fetchButton.text()).toBe("Cancel");
+
+      await act(async () => {
+        queryResolve();
+        jest.runAllTimers();
+      });
+    });
+
+    it("should abort query when Cancel is clicked", async () => {
+      let queryCallCount = 0;
+
+      bucket.query = jest.fn().mockImplementation(() => ({
+        async *[Symbol.asyncIterator]() {
+          queryCallCount++;
+          if (queryCallCount === 1) {
+            // First query: slow, never completes
+            await new Promise(() => {
+              /* never resolves */
+            });
+          } else {
+            // Subsequent queries: return immediately
+            for (const record of mockRecords) {
+              yield record;
+            }
+          }
+        },
+      }));
+
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
+      });
+
+      let fetchButton = wrapper.find(".fetchButton button").first();
+      await act(async () => {
+        fetchButton.simulate("click");
+      });
+
+      // Advance past delay to show Cancel
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
+      wrapper.update();
+
+      fetchButton = wrapper.find(".fetchButton button").first();
+      expect(fetchButton.text()).toBe("Cancel");
+
+      // Trigger another getRecords call that aborts previous
+      await act(async () => {
+        fetchButton.simulate("click");
+        jest.runAllTimers();
+      });
+      wrapper.update();
+
+      expect(queryCallCount).toBe(2);
+
+      fetchButton = wrapper.find(".fetchButton button").first();
+      expect(fetchButton.text()).toBe("Fetch Records");
     });
   });
 
@@ -450,17 +552,23 @@ describe("EntryDetail", () => {
     });
 
     it("should have expandable rows for label editing", () => {
-      const table = wrapper.find("ScrollableTable");
+      const tables = wrapper.find("ScrollableTable");
+      const table = tables.filterWhere(
+        (t) => (t.prop("expandable") as any) != null,
+      );
       expect(table.exists()).toBe(true);
 
-      const expandableConfig = table.prop("expandable") as any;
+      const expandableConfig = table.first().prop("expandable") as any;
       expect(expandableConfig).toBeDefined();
       expect(typeof expandableConfig.expandedRowRender).toBe("function");
     });
 
     it("should render RecordPreview and EditRecordLabels components when row is expanded with correct permissions", () => {
-      const table = wrapper.find("ScrollableTable");
-      const expandableConfig = table.prop("expandable") as any;
+      const tables = wrapper.find("ScrollableTable");
+      const table = tables.filterWhere(
+        (t) => (t.prop("expandable") as any) != null,
+      );
+      const expandableConfig = table.first().prop("expandable") as any;
 
       const mockRecord = {
         key: "1000",
@@ -498,8 +606,11 @@ describe("EntryDetail", () => {
     });
 
     it("should pass handleLabelsUpdated callback to EditRecordLabels component", () => {
-      const table = wrapper.find("ScrollableTable");
-      const expandableConfig = table.prop("expandable") as any;
+      const tables = wrapper.find("ScrollableTable");
+      const table = tables.filterWhere(
+        (t) => (t.prop("expandable") as any) != null,
+      );
+      const expandableConfig = table.first().prop("expandable") as any;
 
       const mockRecord = {
         key: "1000",
@@ -537,8 +648,11 @@ describe("EntryDetail", () => {
         </MemoryRouter>,
       );
 
-      const table = wrapperNoWrite.find("ScrollableTable");
-      const expandableConfig = table.prop("expandable") as any;
+      const tables = wrapperNoWrite.find("ScrollableTable");
+      const table = tables.filterWhere(
+        (t) => (t.prop("expandable") as any) != null,
+      );
+      const expandableConfig = table.first().prop("expandable") as any;
 
       const mockRecord = {
         key: "1000",

@@ -448,7 +448,7 @@ export default function BucketDetail(props: Readonly<Props>) {
       ...(hasWritePermission
         ? [
             {
-              title: "",
+              title: "Actions",
               key: "actions",
               width: 80,
               render: (_: unknown, row: BucketEntryTableRow) => {
@@ -585,44 +585,51 @@ export default function BucketDetail(props: Readonly<Props>) {
               setCurrentPage(1);
             }}
           />
-          <Tooltip
-            title={
-              expandedOpenCount > 0
-                ? `Collapse all (${expandedOpenCount}/${expandedTotalCount})`
-                : `Expand all (${expandedTotalCount})`
-            }
-            placement="bottomLeft"
-          >
-            <Button
-              icon={
-                expandedOpenCount > 0 ? (
-                  <ShrinkOutlined />
-                ) : (
-                  <ExpandAltOutlined />
-                )
-              }
-              onClick={handleExpandCollapseAll}
-            />
-          </Tooltip>
-          <Tooltip
-            title={showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"}
-            placement="bottomLeft"
-          >
-            <Button
-              icon={
-                showAggregated ? (
-                  <NodeCollapseOutlined />
-                ) : (
-                  <NodeExpandOutlined />
-                )
-              }
-              onClick={() => {
-                window.requestAnimationFrame(() => {
-                  setShowAggregated((prev) => !prev);
-                });
-              }}
-            />
-          </Tooltip>
+          {expandedTotalCount > 0 && (
+            <>
+              <Tooltip
+                title={
+                  expandedOpenCount > 0
+                    ? `Collapse all (${expandedOpenCount}/${expandedTotalCount})`
+                    : `Expand all (${expandedTotalCount})`
+                }
+                placement="bottomLeft"
+              >
+                <Button
+                  icon={
+                    expandedOpenCount > 0 ? (
+                      <ShrinkOutlined />
+                    ) : (
+                      <ExpandAltOutlined />
+                    )
+                  }
+                  onClick={handleExpandCollapseAll}
+                />
+              </Tooltip>
+
+              <Tooltip
+                title={
+                  showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"
+                }
+                placement="bottomLeft"
+              >
+                <Button
+                  icon={
+                    showAggregated ? (
+                      <NodeCollapseOutlined />
+                    ) : (
+                      <NodeExpandOutlined />
+                    )
+                  }
+                  onClick={() => {
+                    window.requestAnimationFrame(() => {
+                      setShowAggregated((prev) => !prev);
+                    });
+                  }}
+                />
+              </Tooltip>
+            </>
+          )}
           <Tooltip title="Refresh entries" placement="bottomLeft">
             <Button
               icon={<ReloadOutlined />}

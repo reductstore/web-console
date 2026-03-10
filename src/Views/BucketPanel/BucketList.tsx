@@ -157,7 +157,7 @@ export default function BucketList(props: Readonly<Props>) {
         : "---";
     return {
       name: bucket.name,
-      provisioned: bucket.isProvisioned,
+      actions: bucket.isProvisioned,
       entryCount: bucket.entryCount.toString(),
       size: prettierBytes(Number(bucket.size)),
       history: bucket.entryCount !== 0n ? getHistory(bucket) : "---",
@@ -212,9 +212,9 @@ export default function BucketList(props: Readonly<Props>) {
       key: "latestRecord",
     },
     {
-      title: "",
-      dataIndex: "provisioned",
-      key: "provisioned",
+      title: "Actions",
+      dataIndex: "actions",
+      key: "actions",
       render: (
         provisioned: boolean,
         record: {
@@ -226,9 +226,11 @@ export default function BucketList(props: Readonly<Props>) {
         const isDeleting = record.status === Status.DELETING;
         if (provisioned) {
           return (
-            <Tag key={`provisioned-${record.name}`} color="processing">
-              Provisioned
-            </Tag>
+            <Tooltip title="Provisioned buckets cannot be renamed or removed.">
+              <Tag key={`provisioned-${record.name}`} color="processing">
+                Provisioned
+              </Tag>
+            </Tooltip>
           );
         } else {
           return (
