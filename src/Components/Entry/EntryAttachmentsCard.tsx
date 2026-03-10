@@ -448,6 +448,8 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     },
   });
 
+  const hasAttachments = Object.keys(attachments).length > 0;
+
   return (
     <div className="entryAttachmentsSection">
       <Typography.Title level={3}>Attachments</Typography.Title>
@@ -461,6 +463,12 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
         >
           Add Attachment
         </Button>
+      )}
+
+      {!editable && !hasAttachments && (
+        <Typography.Text type="secondary" style={{ display: "block" }}>
+          No attachments
+        </Typography.Text>
       )}
 
       <Modal
@@ -483,7 +491,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
         />
       </Modal>
 
-      {Object.keys(attachments).length > 0 && (
+      {hasAttachments && (
         <ScrollableTable
           scroll={{ x: "max-content" }}
           columns={columns}
