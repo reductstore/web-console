@@ -87,6 +87,15 @@ describe("EntryAttachmentsCard", () => {
     expect(addBtn.length).toBe(1);
   });
 
+  it("hides Add Attachment button when not editable", async () => {
+    await mountCard(false);
+
+    const addBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.text().includes("Add Attachment"));
+    expect(addBtn.length).toBe(0);
+  });
+
   it("opens add attachment modal when Add Attachment is clicked", async () => {
     await mountCard();
 

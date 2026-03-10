@@ -452,14 +452,16 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     <div className="entryAttachmentsSection">
       <Typography.Title level={3}>Attachments</Typography.Title>
 
-      <Button
-        type="dashed"
-        onClick={startAdd}
-        icon={<UploadOutlined />}
-        style={{ marginBottom: 12 }}
-      >
-        Add Attachment
-      </Button>
+      {editable && (
+        <Button
+          type="dashed"
+          onClick={startAdd}
+          icon={<UploadOutlined />}
+          style={{ marginBottom: 12 }}
+        >
+          Add Attachment
+        </Button>
+      )}
 
       <Modal
         title="Add Attachment"
