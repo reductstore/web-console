@@ -307,7 +307,7 @@ describe("EntryAttachmentsCard", () => {
     expect(bucket.writeAttachments).toHaveBeenCalled();
   });
 
-  it("closes expanded row on close button click", async () => {
+  it("expands an existing attachment editor into a modal", async () => {
     await mountCard();
 
     const editBtn = wrapper
@@ -321,22 +321,77 @@ describe("EntryAttachmentsCard", () => {
     });
     wrapper.update();
 
-    const closeBtn = wrapper
-      .find(".expandedEditRow")
+    const expandBtn = wrapper
       .find(Button)
-      .filterWhere((btn) => btn.text().includes("Close"))
+      .filterWhere((btn) => btn.prop("aria-label") === "Expand editor")
       .first();
 
     await act(async () => {
-      closeBtn.simulate("click");
-      await flush();
-    });
-    wrapper.update();
-    await act(async () => {
+      expandBtn.simulate("click");
       await flush();
     });
     wrapper.update();
 
+    expect(wrapper.text()).toContain("Editing in expanded attachment editor");
+
+    const expandedModal = wrapper
+      .find("Modal")
+      .filterWhere((m) => m.prop("title") === "Attachment Editor: schema");
+    expect(expandedModal.prop("open")).toBe(true);
+  });
+
+  it("shows format and expand actions without a copy action", async () => {
+    await mountCard();
+
+    const editBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.prop("title") === "Edit")
+      .first();
+
+    await act(async () => {
+      editBtn.simulate("click");
+      await flush();
+    });
+    wrapper.update();
+
+    const formatBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.prop("aria-label") === "Format JSON");
+    const expandBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.prop("aria-label") === "Expand editor");
+    const copyBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.text().includes("Copy"));
+
+    expect(formatBtn).toHaveLength(1);
+    expect(expandBtn).toHaveLength(1);
+    expect(copyBtn).toHaveLength(0);
+  });
+
+  it("keeps cancel hidden until there are unsaved changes", async () => {
+    await mountCard();
+
+    const editBtn = wrapper
+      .find(Button)
+      .filterWhere((btn) => btn.prop("title") === "Edit")
+      .first();
+
+    await act(async () => {
+      editBtn.simulate("click");
+      await flush();
+    });
+    wrapper.update();
+
+    const cancelBtn = wrapper
+      .find(".expandedEditRow")
+      .find(Button)
+      .filterWhere((btn) => btn.text().includes("Cancel"))
+      .first();
+
+    expect(cancelBtn.exists()).toBe(true);
+    expect(cancelBtn.hasClass("hidden")).toBe(true);
+    expect(cancelBtn.prop("disabled")).toBe(true);
     expect(bucket.writeAttachments).not.toHaveBeenCalled();
   });
 
