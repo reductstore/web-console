@@ -10,17 +10,19 @@ describe("LicenseAlert", () => {
 
   it("contains the correct links", () => {
     render(<LicenseAlert />);
-    const buslLink = screen.getByRole("link", {
-      name: /Business Source License \(BUSL\)/i,
+    const apacheLicenseLink = screen.getByRole("link", {
+      name: /Apache License 2\.0/i,
     });
-    expect(buslLink).toHaveAttribute(
+    expect(apacheLicenseLink).toHaveAttribute(
       "href",
       "https://github.com/reductstore/reductstore/blob/main/LICENSE",
     );
-    expect(buslLink).toHaveAttribute("target", "_blank");
-    expect(buslLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(apacheLicenseLink).toHaveAttribute("target", "_blank");
+    expect(apacheLicenseLink).toHaveAttribute("rel", "noopener noreferrer");
 
-    const pricingPageLink = screen.getByRole("link", { name: /pricing page/i });
+    const pricingPageLink = screen.getByRole("link", {
+      name: /ReductStore Pro/i,
+    });
     expect(pricingPageLink).toHaveAttribute(
       "href",
       "https://www.reduct.store/pricing",

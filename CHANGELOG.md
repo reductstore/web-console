@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Move time controls into the conditional query toolbox header, [PR-183](https://github.com/reductstore/web-console/pull/183)
 - Make existing attachment JSON editors expandable with conditional-query-style toolbar actions, [PR-184](https://github.com/reductstore/web-console/pull/184)
+- Update license message for Apache-licensed ReductStore Core and ReductStore Pro pricing, [PR-185](https://github.com/reductstore/web-console/pull/185)
 
 ## 1.13.0 - 2026-01-24
 
