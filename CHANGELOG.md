@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hide "Add Attachment" button when using read-only token, [PR-173](https://github.com/reductstore/web-console/pull/173)
 - Update `reduct-js` to `1.19.0-beta.1` for fixed batch timeout handling, [PR-181](https://github.com/reductstore/web-console/pull/181)
 
+### Changed
+
+- Move time controls into the conditional query toolbox header, [PR-183](https://github.com/reductstore/web-console/pull/183)
+
 ## 1.13.0 - 2026-01-24
 
 ### Added
