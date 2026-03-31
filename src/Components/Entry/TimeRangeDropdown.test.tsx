@@ -83,8 +83,13 @@ describe("TimeRangeDropdown", () => {
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
     expect(typeof end).toBe("bigint");
-    // 7 days in microseconds
-    expect(end - start).toEqual(7n * 24n * 60n * 60n * 1_000_000n);
+    // 7 days in microseconds with a tolerance of 1 hour to account for daylight saving time changes
+    expect(end - start).toBeGreaterThanOrEqual(
+      7n * 24n * 60n * 60n * 1_000_000n - 1n * 60n * 60n * 1_000_000n,
+    );
+    expect(end - start).toBeLessThanOrEqual(
+      7n * 24n * 60n * 60n * 1_000_000n + 1n * 60n * 60n * 1_000_000n,
+    );
   });
 
   it("triggers onSelectRange for 'Last 30 days'", () => {
@@ -99,8 +104,13 @@ describe("TimeRangeDropdown", () => {
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
     expect(typeof end).toBe("bigint");
-    // 30 days in microseconds
-    expect(end - start).toEqual(30n * 24n * 60n * 60n * 1_000_000n);
+    // 30 days in microseconds with a tolerance of 1 hour to account for daylight saving time changes
+    expect(end - start).toBeGreaterThanOrEqual(
+      30n * 24n * 60n * 60n * 1_000_000n - 1n * 60n * 60n * 1_000_000n,
+    );
+    expect(end - start).toBeLessThanOrEqual(
+      30n * 24n * 60n * 60n * 1_000_000n + 1n * 60n * 60n * 1_000_000n,
+    );
   });
 
   it("triggers onSelectRange for 'Today'", () => {
