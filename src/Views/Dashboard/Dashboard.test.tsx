@@ -82,7 +82,7 @@ describe("Dashboard", () => {
       .at(1);
     licenseTab.simulate("click");
 
-    expect(wrapper.text()).toContain("Business Source License (BUSL)");
+    expect(wrapper.text()).toContain("Apache License 2.0");
   });
 
   it("should show bucket info", async () => {
