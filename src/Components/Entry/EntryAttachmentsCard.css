@@ -158,9 +158,20 @@
   position: relative;
 }
 
+.monacoEditorWrapper.expanded {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 .monacoEditorWrapper.dragOver {
   border-color: var(--primary-color);
   border-style: dashed;
+}
+
+.attachmentEditorBody.expanded {
+  flex: 1;
+  min-height: 0;
 }
 
 .editorDropOverlay {
@@ -192,11 +203,25 @@
   border-radius: 4px;
 }
 
-.expandedEditActions {
+.attachmentEditorToolbar {
   display: flex;
-  gap: 8px;
   align-items: center;
-  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.attachmentEditorToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attachmentEditorToolbarStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .expandedRowError {
@@ -207,10 +232,53 @@
   color: #595959;
   font-weight: 500;
   line-height: 1.3;
-  margin-right: auto;
 }
 
 .expandedRowErrorX {
   font-weight: 600;
   color: var(--input-error);
+}
+
+.attachmentEditorCancelButton.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.attachmentEditorPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  background: #fafafa;
+  color: #8c8c8c;
+  font-size: 12px;
+  text-align: center;
+  padding: 16px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+}
+
+.attachmentEditorModal .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+}
+
+.attachmentEditorModal .ant-modal-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.attachmentEditorModalContent {
+  height: 100%;
+}
+
+.attachmentEditorModalContent .expandedEditRow {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.attachmentEditorModalContent .expandedEditFields {
+  flex: 1;
+  min-height: 0;
 }

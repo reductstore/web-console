@@ -1,16 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Button, Input, Modal, Typography, message } from "antd";
 import type { ColumnType } from "antd/es/table";
-import Editor from "@monaco-editor/react";
 import {
   DeleteOutlined,
   EditOutlined,
   UploadOutlined,
-  SaveOutlined,
-  CloseOutlined,
-  SearchOutlined,
   DownloadOutlined,
-  CopyOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { APIError, Client } from "reduct-js";
 import ScrollableTable from "../ScrollableTable";
@@ -34,8 +30,6 @@ interface AttachmentTableRow {
 
 interface EditingState {
   originalKey: string | null;
-  key: string;
-  value: string;
 }
 
 const formatAttachmentValue = (value: unknown): string => {
@@ -50,14 +44,6 @@ const truncateContent = (value: unknown, maxLen = 50): string => {
   return oneLine.slice(0, maxLen - 3) + "...";
 };
 
-const readFileAsText = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-
 const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
   client,
   bucketName,
@@ -71,24 +57,8 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const [editValues, setEditValues] = useState<
-    Record<string, { key: string; value: string }>
-  >({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [addError, setAddError] = useState<string | null>(null);
-  const [rowDragOver, setRowDragOver] = useState<string | null>(null);
-
-  const validateJson = (value: string): string | null => {
-    try {
-      JSON.parse(value);
-      return null;
-    } catch (e) {
-      if (e instanceof SyntaxError) {
-        return e.message;
-      }
-      return "Invalid JSON";
-    }
-  };
 
   const loadAttachments = useCallback(async () => {
     setIsLoading(true);
@@ -111,35 +81,19 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     loadAttachments();
   }, [loadAttachments]);
 
-  const startEdit = (name: string, rawValue: unknown) => {
-    setEditValues((prev) => ({
-      ...prev,
-      [name]: { key: name, value: formatAttachmentValue(rawValue) },
-    }));
+  const startEdit = (name: string) => {
     setExpandedRowKeys([name]);
   };
 
   const startAdd = () => {
-    setEditing({ originalKey: null, key: "", value: "" });
+    setEditing({ originalKey: null });
   };
 
   const cancelEdit = () => {
     setEditing(null);
   };
 
-  const handleExpandRow = (name: string, rawValue: unknown) => {
-    setEditValues((prev) => ({
-      ...prev,
-      [name]: { key: name, value: formatAttachmentValue(rawValue) },
-    }));
-  };
-
-  const handleCollapseRow = (name: string) => {
-    setEditValues((prev) => {
-      const updated = { ...prev };
-      delete updated[name];
-      return updated;
-    });
+  const clearRowError = (name: string) => {
     setRowErrors((prev) => {
       const copy = { ...prev };
       delete copy[name];
@@ -147,42 +101,28 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     });
   };
 
-  const hasChanges = (name: string, rawValue: unknown) => {
-    const edit = editValues[name];
-    if (!edit) return false;
-    const originalValue = formatAttachmentValue(rawValue);
-    return edit.key !== name || edit.value !== originalValue;
-  };
-
-  const saveRowEdit = async (originalName: string) => {
-    const edit = editValues[originalName];
-    if (!edit) return;
-
-    const trimmedKey = edit.key.trim();
-    if (!trimmedKey) {
+  const saveRowEdit = async (
+    originalName: string,
+    key: string,
+    value: string,
+  ): Promise<boolean> => {
+    const trimmedKey = key.trim();
+    let parsedValue: unknown;
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
       setRowErrors((prev) => ({
         ...prev,
-        [originalName]: "Name cannot be empty.",
+        [originalName]: "Invalid JSON",
       }));
-      return;
+      return false;
     }
-
-    const jsonError = validateJson(edit.value);
-    if (jsonError) {
-      setRowErrors((prev) => ({
-        ...prev,
-        [originalName]: `Invalid JSON: ${jsonError}`,
-      }));
-      return;
-    }
-    const parsedValue = JSON.parse(edit.value);
-
     if (originalName !== trimmedKey && trimmedKey in attachments) {
       setRowErrors((prev) => ({
         ...prev,
         [originalName]: `Name '${trimmedKey}' already exists.`,
       }));
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -202,19 +142,11 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
 
       await bucket.writeAttachments(entryName, updated);
       setAttachments(updated);
-      setExpandedRowKeys([]);
-      setEditValues((prev) => {
-        const copy = { ...prev };
-        delete copy[originalName];
-        return copy;
-      });
-      setRowErrors((prev) => {
-        const copy = { ...prev };
-        delete copy[originalName];
-        return copy;
-      });
+      setExpandedRowKeys((keys) => keys.filter((key) => key !== originalName));
+      clearRowError(originalName);
       message.success("Attachment saved");
       await loadAttachments();
+      return true;
     } catch (err) {
       const errorMsg =
         err instanceof APIError
@@ -224,21 +156,10 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
         ...prev,
         [originalName]: errorMsg,
       }));
+      return false;
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const discardRowChanges = (name: string, rawValue: unknown) => {
-    setEditValues((prev) => ({
-      ...prev,
-      [name]: { key: name, value: formatAttachmentValue(rawValue) },
-    }));
-    setRowErrors((prev) => {
-      const copy = { ...prev };
-      delete copy[name];
-      return copy;
-    });
   };
 
   const downloadAttachment = (name: string, value: unknown) => {
@@ -252,15 +173,6 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  const copyToClipboard = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      message.success("Copied to clipboard");
-    } catch {
-      message.error("Failed to copy");
-    }
   };
 
   const saveNewAttachment = async (
@@ -426,7 +338,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
                 icon={<EditOutlined />}
                 disabled={editing !== null}
                 title="Edit"
-                onClick={() => startEdit(row.name, row.rawValue)}
+                onClick={() => startEdit(row.name)}
                 className="actionIcon"
               />
               <Button
@@ -503,221 +415,33 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
             onExpandedRowsChange: (keys: readonly React.Key[]) => {
               if (editing !== null) return;
               const newKeys = keys as string[];
-              const addedKeys = newKeys.filter(
-                (k) => !expandedRowKeys.includes(k),
-              );
               const removedKeys = expandedRowKeys.filter(
-                (k) => !newKeys.includes(k),
+                (key) => !newKeys.includes(key),
               );
-              for (const key of addedKeys) {
-                const row = tableData.find((r) => r.name === key);
-                if (row) handleExpandRow(key, row.rawValue);
-              }
               for (const key of removedKeys) {
-                handleCollapseRow(key);
+                clearRowError(key);
               }
               setExpandedRowKeys(newKeys);
             },
             expandedRowRender: (record: AttachmentTableRow) => {
-              const edit = editValues[record.name];
-              const currentKey = edit?.key ?? record.name;
-              const currentValue =
-                edit?.value ?? formatAttachmentValue(record.rawValue);
-              const changed = hasChanges(record.name, record.rawValue);
-              const rowError = rowErrors[record.name];
-
               return (
-                <div className="expandedEditRow">
-                  <div className="expandedEditFields">
-                    <Input
-                      value={currentKey}
-                      onChange={(e) => {
-                        setEditValues((prev) => ({
-                          ...prev,
-                          [record.name]: {
-                            ...prev[record.name],
-                            key: e.target.value,
-                          },
-                        }));
-                        setRowErrors((prev) => {
-                          const copy = { ...prev };
-                          delete copy[record.name];
-                          return copy;
-                        });
-                      }}
-                      placeholder="Name"
-                      disabled={!editable}
-                    />
-                    <div
-                      className={`monacoEditorWrapper${rowDragOver === record.name ? " dragOver" : ""}`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (editable) setRowDragOver(record.name);
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const relatedTarget = e.relatedTarget as Node | null;
-                        if (
-                          !relatedTarget ||
-                          !e.currentTarget.contains(relatedTarget)
-                        ) {
-                          setRowDragOver(null);
-                        }
-                      }}
-                      onDrop={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setRowDragOver(null);
-                        if (!editable) return;
-
-                        const files = Array.from(e.dataTransfer.files).filter(
-                          (f) =>
-                            f.name.endsWith(".json") ||
-                            f.type === "application/json",
-                        );
-                        if (files.length === 0) {
-                          message.error("Only JSON files are supported.");
-                          return;
-                        }
-                        const [file] = files;
-                        const fileName = file.name.replace(/\.[^.]+$/, "");
-                        try {
-                          const text = await readFileAsText(file);
-                          const parsed = JSON.parse(text);
-                          const formatted = JSON.stringify(parsed, null, 2);
-                          const currentEdit = editValues[record.name];
-                          const shouldSetKey =
-                            !currentEdit?.key?.trim() ||
-                            currentEdit.key === record.name;
-                          setEditValues((prev) => ({
-                            ...prev,
-                            [record.name]: {
-                              ...prev[record.name],
-                              value: formatted,
-                              ...(shouldSetKey ? { key: fileName } : {}),
-                            },
-                          }));
-                          setRowErrors((prev) => {
-                            const copy = { ...prev };
-                            delete copy[record.name];
-                            return copy;
-                          });
-                          message.success("File loaded");
-                        } catch {
-                          message.error("File does not contain valid JSON.");
-                        }
-                      }}
-                    >
-                      {rowDragOver === record.name && (
-                        <div className="editorDropOverlay">
-                          <Typography.Text type="secondary">
-                            Drop JSON file here
-                          </Typography.Text>
-                        </div>
-                      )}
-                      <Editor
-                        height={`${Math.min(400, Math.max(100, (currentValue + "\n").split("\n").length * 18))}px`}
-                        language="json"
-                        value={currentValue}
-                        onChange={(newValue) => {
-                          setEditValues((prev) => ({
-                            ...prev,
-                            [record.name]: {
-                              ...prev[record.name],
-                              value: newValue ?? "",
-                            },
-                          }));
-                          setRowErrors((prev) => {
-                            const copy = { ...prev };
-                            delete copy[record.name];
-                            return copy;
-                          });
-                        }}
-                        options={{
-                          minimap: { enabled: false },
-                          lineNumbers: "on",
-                          scrollBeyondLastLine: false,
-                          wordWrap: "on",
-                          automaticLayout: true,
-                          folding: false,
-                          glyphMargin: false,
-                          lineDecorationsWidth: 10,
-                          lineNumbersMinChars: 3,
-                          renderLineHighlight: "none",
-                          scrollbar: {
-                            vertical: "auto",
-                            horizontal: "hidden",
-                            verticalScrollbarSize: 8,
-                          },
-                          readOnly: !editable,
-                          quickSuggestions: false,
-                          suggestOnTriggerCharacters: false,
-                          parameterHints: { enabled: false },
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="expandedEditActions">
-                    {editable && !rowError && (
-                      <span className="dropHintText">
-                        <Typography.Text type="secondary">
-                          Tip: drag & drop JSON file
-                        </Typography.Text>
-                      </span>
-                    )}
-                    {rowError && (
-                      <span className="expandedRowError">
-                        <span className="expandedRowErrorX">✗</span>
-                        <span>{rowError}</span>
-                      </span>
-                    )}
-                    <Button
-                      size="small"
-                      icon={<CopyOutlined />}
-                      onClick={() => copyToClipboard(currentValue)}
-                    >
-                      Copy
-                    </Button>
-                    {editable && (
-                      <Button
-                        size="small"
-                        type="primary"
-                        icon={<SaveOutlined />}
-                        onClick={() => saveRowEdit(record.name)}
-                        loading={isSaving}
-                        disabled={!changed}
-                      >
-                        Save
-                      </Button>
-                    )}
-                    {changed ? (
-                      <Button
-                        size="small"
-                        icon={<CloseOutlined />}
-                        onClick={() => {
-                          discardRowChanges(record.name, record.rawValue);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    ) : (
-                      <Button
-                        size="small"
-                        icon={<CloseOutlined />}
-                        onClick={() => {
-                          setExpandedRowKeys((keys) =>
-                            keys.filter((k) => k !== record.name),
-                          );
-                          handleCollapseRow(record.name);
-                        }}
-                      >
-                        Close
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <AttachmentEditor
+                  initialKey={record.name}
+                  initialValue={formatAttachmentValue(record.rawValue)}
+                  readOnly={!editable}
+                  onSave={(key, value) => saveRowEdit(record.name, key, value)}
+                  onClose={() => {
+                    setExpandedRowKeys((keys) =>
+                      keys.filter((key) => key !== record.name),
+                    );
+                    clearRowError(record.name);
+                  }}
+                  isSaving={isSaving}
+                  error={rowErrors[record.name]}
+                  onClearError={() => clearRowError(record.name)}
+                  expandable
+                  expandedTitle={`Attachment Editor: ${record.name}`}
+                />
               );
             },
           }}
