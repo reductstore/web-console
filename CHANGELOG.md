@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Move time controls into the conditional query toolbox header, [PR-183](https://github.com/reductstore/web-console/pull/183)
+- Make existing attachment JSON editors expandable with conditional-query-style toolbar actions, [PR-184](https://github.com/reductstore/web-console/pull/184)
 
 ## 1.13.0 - 2026-01-24
 
