@@ -787,77 +787,83 @@ export default function EntryDetail(props: Readonly<Props>) {
 
       <Typography.Title level={3}>Records</Typography.Title>
       <div className="detailControls">
-        <div className="timeSelectSection">
-          <div className="selectGroup">
-            <Select
-              data-testid="format-select"
-              value={showUnix ? "Unix" : "UTC"}
-              onChange={handleFormatChange}
-            >
-              <Select.Option value="UTC">UTC</Select.Option>
-              <Select.Option value="Unix">Unix</Select.Option>
-            </Select>
-            <TimeRangeDropdown
-              onSelectRange={(start, end) => {
-                setTimeRange(start, end);
-                setStartError(false);
-                setStopError(false);
-              }}
-              initialRangeKey={DEFAULT_RANGE_KEY}
-              currentRange={{ start: timeRange.start, end: timeRange.end }}
-            />
-          </div>
-
-          <div className="timeInputs">
-            <Input
-              placeholder="Start time (optional)"
-              addonBefore="Start"
-              value={timeRange.startText}
-              onChange={(e) => {
-                updateTimeRangeText("startText", e.target.value);
-                parseInput(e.target.value, "start", setStartError);
-              }}
-              status={startError ? "error" : undefined}
-            />
-            <Input
-              placeholder="Stop time (optional)"
-              addonBefore="Stop"
-              value={timeRange.stopText}
-              onChange={(e) => {
-                updateTimeRangeText("stopText", e.target.value);
-                parseInput(e.target.value, "end", setStopError);
-              }}
-              status={stopError ? "error" : undefined}
-            />
-          </div>
-        </div>
-
         <div className="jsonFilterSection">
-          <JsonQueryEditor
-            value={whenCondition}
-            onChange={(value: string) => {
-              setWhenCondition(value);
-              if (fetchError) {
-                setFetchError("");
-              }
-            }}
-            height={Math.min(
-              400,
-              Math.max(
-                100,
-                (whenCondition + "\n").split("\n").length * 18 + 45,
-              ),
-            )}
-            error={fetchError}
-            validationContext={{
-              client: props.client,
-              bucket: bucketName,
-              entry: decodedEntryName,
-              start: timeRange.start,
-              end: timeRange.end,
-              intervalValue: timeRange.interval ?? undefined,
-            }}
-          />
+          <div className="jsonFilterPanel">
+            <div className="jsonFilterHeader jsonQueryEditorToolbar">
+              <div className="timeSelectSection">
+                <div className="selectGroup">
+                  <Select
+                    data-testid="format-select"
+                    value={showUnix ? "Unix" : "UTC"}
+                    onChange={handleFormatChange}
+                  >
+                    <Select.Option value="UTC">UTC</Select.Option>
+                    <Select.Option value="Unix">Unix</Select.Option>
+                  </Select>
+                  <TimeRangeDropdown
+                    onSelectRange={(start, end) => {
+                      setTimeRange(start, end);
+                      setStartError(false);
+                      setStopError(false);
+                    }}
+                    initialRangeKey={DEFAULT_RANGE_KEY}
+                    currentRange={{
+                      start: timeRange.start,
+                      end: timeRange.end,
+                    }}
+                  />
+                </div>
+
+                <div className="timeInputs">
+                  <Input
+                    placeholder="Start time (optional)"
+                    addonBefore="Start"
+                    value={timeRange.startText}
+                    onChange={(e) => {
+                      updateTimeRangeText("startText", e.target.value);
+                      parseInput(e.target.value, "start", setStartError);
+                    }}
+                    status={startError ? "error" : undefined}
+                  />
+                  <Input
+                    placeholder="Stop time (optional)"
+                    addonBefore="Stop"
+                    value={timeRange.stopText}
+                    onChange={(e) => {
+                      updateTimeRangeText("stopText", e.target.value);
+                      parseInput(e.target.value, "end", setStopError);
+                    }}
+                    status={stopError ? "error" : undefined}
+                  />
+                </div>
+              </div>
+            </div>
+            <JsonQueryEditor
+              value={whenCondition}
+              onChange={(value: string) => {
+                setWhenCondition(value);
+                if (fetchError) {
+                  setFetchError("");
+                }
+              }}
+              height={Math.min(
+                400,
+                Math.max(
+                  100,
+                  (whenCondition + "\n").split("\n").length * 18 + 45,
+                ),
+              )}
+              error={fetchError}
+              validationContext={{
+                client: props.client,
+                bucket: bucketName,
+                entry: decodedEntryName,
+                start: timeRange.start,
+                end: timeRange.end,
+                intervalValue: timeRange.interval ?? undefined,
+              }}
+            />
+          </div>
           <Typography.Text type="secondary" className="jsonExample">
             Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
             Use <code>&label</code> for standard labels and <code>@label</code>{" "}
