@@ -8,6 +8,7 @@ import {
   CompressOutlined,
   ExpandOutlined,
   FormatPainterOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import { processWhenCondition } from "../../Helpers/json5Utils";
 import "./JsonQueryEditor.css";
@@ -37,6 +38,9 @@ interface JsonQueryEditorProps {
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
+  onSave?: () => void;
+  saveDisabled?: boolean;
+  toolbarExtra?: React.ReactNode;
 }
 
 // Global flag to track if completion provider has been registered
@@ -65,6 +69,9 @@ export function JsonQueryEditor({
   error,
   readOnly = false,
   validationContext,
+  onSave,
+  saveDisabled = false,
+  toolbarExtra,
 }: JsonQueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -130,7 +137,21 @@ export function JsonQueryEditor({
   };
 
   const handleFormat = () => {
-    editorRef.current?.getAction("editor.action.formatDocument")?.run();
+    const editor = editorRef.current;
+    if (!editor) return;
+    const model = editor.getModel();
+    if (!model) return;
+    const hadTrailingNewline = model.getValue().endsWith("\n");
+    const action = editor.getAction("editor.action.formatDocument");
+    if (!action) return;
+    action.run().then(() => {
+      if (hadTrailingNewline) {
+        const currentValue = editorRef.current?.getModel()?.getValue();
+        if (currentValue !== undefined && !currentValue.endsWith("\n")) {
+          onChange(currentValue + "\n");
+        }
+      }
+    });
   };
 
   const handleToggleExpand = () => {
@@ -348,6 +369,27 @@ export function JsonQueryEditor({
           {renderValidationStatus(readOnly)}
         </div>
         <div className="jsonQueryEditorToolbarActions">
+          {toolbarExtra}
+          {onSave && (
+            <Tooltip
+              title={
+                readOnly
+                  ? "No write permission"
+                  : saveDisabled
+                    ? "Query unchanged"
+                    : "Save query to browser"
+              }
+            >
+              <Button
+                aria-label="Save query"
+                type="text"
+                size="small"
+                icon={<SaveOutlined />}
+                onClick={onSave}
+                disabled={readOnly || saveDisabled}
+              />
+            </Tooltip>
+          )}
           <Tooltip
             title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
           >

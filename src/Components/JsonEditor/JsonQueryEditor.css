@@ -112,3 +112,7 @@
 .jsonQueryEditor.hasError {
   border-color: var(--input-error);
 }
+
+.jsonQueryEditor .monaco-editor .suggest-widget {
+  z-index: 1000;
+}
