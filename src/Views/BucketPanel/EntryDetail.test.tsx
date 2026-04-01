@@ -9,7 +9,6 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   ShareAltOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
 
@@ -117,6 +116,9 @@ describe("EntryDetail", () => {
       .fn()
       .mockResolvedValue(undefined) as unknown as MockedRemoveRecord,
     update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    readAttachments: jest.fn().mockResolvedValue({}) as jest.Mock,
+    writeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    removeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
   const BASE_TIME = new Date("1970-01-08T00:00:00.000Z");
@@ -221,24 +223,6 @@ describe("EntryDetail", () => {
       const fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.exists()).toBe(true);
       expect(fetchButton.text()).toBe("Fetch Records");
-    });
-
-    it("should show reset button when time range differs from default", async () => {
-      const timeInputs = wrapper.find(".timeInputs Input");
-      expect(timeInputs.length).toBeGreaterThan(0);
-
-      const startInput = timeInputs.at(0);
-      await act(async () => {
-        const onChange = startInput.prop("onChange") as any;
-        if (onChange) {
-          onChange({ target: { value: "2023-01-01T00:00:00Z" } });
-        }
-        jest.runAllTimers();
-      });
-      wrapper.update();
-
-      const resetButton = wrapper.find(ReloadOutlined);
-      expect(resetButton.exists()).toBe(true);
     });
 
     it("should not show a separate limit input", () => {

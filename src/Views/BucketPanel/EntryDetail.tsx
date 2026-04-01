@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import { useHistory, useParams } from "react-router-dom";
 import {
   APIError,
@@ -18,14 +24,12 @@ import {
   Space,
   message,
   Spin,
-  Tooltip,
 } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
   DownloadOutlined,
   ShareAltOutlined,
   DeleteOutlined,
-  ReloadOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -45,6 +49,8 @@ import DataVolumeChart from "../../Components/Entry/DataVolumeChart";
 import dayjs from "../../Helpers/dayjsConfig";
 import {
   getDefaultTimeRange,
+  getTimeRangeFromKey,
+  detectRangeKey,
   DEFAULT_RANGE_KEY,
 } from "../../Helpers/timeRangeUtils";
 import { formatValue } from "../../Helpers/timeFormatUtils";
@@ -58,6 +64,9 @@ import {
 } from "../../Helpers/json5Utils";
 import EditRecordLabels from "../../Components/EditRecordLabels";
 import RecordPreview from "../../Components/RecordPreview";
+import SaveQueryModal from "../../Components/SavedQueries/SaveQueryModal";
+import QuerySelector from "../../Components/SavedQueries/QuerySelector";
+import { useQueryStore, SavedQuery } from "../../stores/queryStore";
 import { IndexedReadableRecord } from "./types";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 
@@ -168,7 +177,8 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [showCancel, setShowCancel] = useState(false);
   const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isEntryInfoLoading, setIsEntryInfoLoading] = useState(false);
-  const [whenCondition, setWhenCondition] = useState<string>(formatJSON());
+  const defaultQuery = useMemo(() => formatJSON(), []);
+  const [whenCondition, setWhenCondition] = useState<string>(defaultQuery);
 
   const [fetchError, setFetchError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
@@ -184,8 +194,11 @@ export default function EntryDetail(props: Readonly<Props>) {
   const [recordToShare, setRecordToShare] = useState<RecordTableRow | null>(
     null,
   );
+  const [isSaveQueryModalVisible, setIsSaveQueryModalVisible] = useState(false);
   const [bucket, setBucket] = useState<Bucket | null>(null);
   const fetchCtrlRef = useRef<AbortController | null>(null);
+
+  const { getLoadedQueryName, getQueries } = useQueryStore();
 
   // Provide a default value for permissions
   const permissions = props.permissions || { write: [], fullAccess: false };
@@ -674,14 +687,83 @@ export default function EntryDetail(props: Readonly<Props>) {
 
   const hasWritePermission = checkWritePermission(permissions, bucketName);
 
-  const showResetButton =
-    timeRange.start !== defaultRange.start ||
-    timeRange.end !== defaultRange.end;
+  const handleLoadQuery = useCallback(
+    (saved: SavedQuery) => {
+      setWhenCondition(saved.query);
+      setFetchError("");
+      const useUnix = saved.timeFormat ? saved.timeFormat === "Unix" : showUnix;
+      if (saved.timeFormat) {
+        setShowUnix(useUnix);
+      }
 
-  const handleResetZoom = () => {
-    setTimeRange(defaultRange.start, defaultRange.end);
-    getRecords(defaultRange.start, defaultRange.end);
+      let start: bigint | undefined;
+      let end: bigint | undefined;
+      if (saved.rangeKey && saved.rangeKey !== "custom") {
+        try {
+          ({ start, end } = getTimeRangeFromKey(saved.rangeKey));
+        } catch {
+          // ignore invalid range keys
+        }
+      } else if (
+        saved.rangeKey === "custom" &&
+        saved.rangeStart &&
+        saved.rangeEnd
+      ) {
+        start = BigInt(saved.rangeStart);
+        end = BigInt(saved.rangeEnd);
+      }
+
+      if (start !== undefined && end !== undefined) {
+        setTimeRangeState((prev) => ({
+          ...prev,
+          start,
+          end,
+          startText: formatValue(start, useUnix),
+          stopText: formatValue(end, useUnix),
+        }));
+      }
+    },
+    [showUnix],
+  );
+
+  const currentQuerySnapshot = (): SavedQuery => ({
+    name: getLoadedQueryName(bucketName, decodedEntryName) ?? "",
+    query: whenCondition,
+    timeFormat: showUnix ? "Unix" : "UTC",
+    rangeKey: detectRangeKey(timeRange.start, timeRange.end),
+    rangeStart: timeRange.start?.toString(),
+    rangeEnd: timeRange.end?.toString(),
+  });
+
+  const handleSaveQuery = () => {
+    const loadedName = getLoadedQueryName(bucketName, decodedEntryName);
+    if (loadedName) {
+      const { saveQuery } = useQueryStore.getState();
+      saveQuery(bucketName, decodedEntryName, currentQuerySnapshot());
+      message.success(`Query "${loadedName}" updated`);
+    } else {
+      setIsSaveQueryModalVisible(true);
+    }
   };
+
+  const isSaveDisabled = (() => {
+    if (!whenCondition.trim() || whenCondition === defaultQuery) return true;
+    const loadedName = getLoadedQueryName(bucketName, decodedEntryName);
+    if (!loadedName) return false;
+    const loaded = getQueries(bucketName, decodedEntryName).find(
+      (q) => q.name === loadedName,
+    );
+    if (!loaded) return false;
+    const snap = currentQuerySnapshot();
+    return (
+      loaded.query === snap.query &&
+      loaded.timeFormat === snap.timeFormat &&
+      loaded.rangeKey === snap.rangeKey &&
+      (snap.rangeKey !== "custom" ||
+        (loaded.rangeStart === snap.rangeStart &&
+          loaded.rangeEnd === snap.rangeEnd))
+    );
+  })();
 
   return (
     <div className="entryDetail">
@@ -854,6 +936,7 @@ export default function EntryDetail(props: Readonly<Props>) {
                 ),
               )}
               error={fetchError}
+              readOnly={!hasWritePermission}
               validationContext={{
                 client: props.client,
                 bucket: bucketName,
@@ -862,6 +945,17 @@ export default function EntryDetail(props: Readonly<Props>) {
                 end: timeRange.end,
                 intervalValue: timeRange.interval ?? undefined,
               }}
+              onSave={handleSaveQuery}
+              saveDisabled={isSaveDisabled}
+              toolbarExtra={
+                <QuerySelector
+                  bucketName={bucketName}
+                  entryName={decodedEntryName}
+                  defaultQuery={defaultQuery}
+                  onLoadQuery={handleLoadQuery}
+                  editable={hasWritePermission}
+                />
+              }
             />
           </div>
           <Typography.Text type="secondary" className="jsonExample">
@@ -922,16 +1016,6 @@ export default function EntryDetail(props: Readonly<Props>) {
               Add Record
             </Button>
           )}
-          {showResetButton && (
-            <Tooltip title="Reset to default time range">
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleResetZoom}
-                type="default"
-                style={{ marginLeft: 8 }}
-              />
-            </Tooltip>
-          )}
         </div>
       </div>
       <ScrollableTable
@@ -966,6 +1050,19 @@ export default function EntryDetail(props: Readonly<Props>) {
             </div>
           ),
         }}
+      />
+
+      {/* Modal for saving query */}
+      <SaveQueryModal
+        open={isSaveQueryModalVisible}
+        onClose={() => setIsSaveQueryModalVisible(false)}
+        bucketName={bucketName}
+        entryName={decodedEntryName}
+        queryText={whenCondition}
+        timeFormat={showUnix ? "Unix" : "UTC"}
+        rangeKey={detectRangeKey(timeRange.start, timeRange.end)}
+        rangeStart={timeRange.start?.toString()}
+        rangeEnd={timeRange.end?.toString()}
       />
 
       {/* Modal for sharing links */}
