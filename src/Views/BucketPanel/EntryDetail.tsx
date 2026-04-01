@@ -951,7 +951,6 @@ export default function EntryDetail(props: Readonly<Props>) {
                 <QuerySelector
                   bucketName={bucketName}
                   entryName={decodedEntryName}
-                  defaultQuery={defaultQuery}
                   onLoadQuery={handleLoadQuery}
                   editable={hasWritePermission}
                 />

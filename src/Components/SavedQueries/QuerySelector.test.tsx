@@ -45,7 +45,6 @@ describe("QuerySelector", () => {
         <QuerySelector
           bucketName="test-bucket"
           entryName="test-entry"
-          defaultQuery='{"$each_t": "$__interval"}'
           onLoadQuery={onLoadQuery}
           editable={editable}
         />,
@@ -100,7 +99,6 @@ describe("QuerySelector", () => {
         <QuerySelector
           bucketName="test-bucket"
           entryName="test-entry"
-          defaultQuery='{"$each_t": "$__interval"}'
           onLoadQuery={onLoadQuery}
           editable={true}
         />,

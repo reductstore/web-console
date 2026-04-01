@@ -6,7 +6,6 @@ import { useQueryStore, SavedQuery } from "../../stores/queryStore";
 interface QuerySelectorProps {
   bucketName: string;
   entryName: string;
-  defaultQuery: string;
   onLoadQuery: (saved: SavedQuery) => void;
   editable: boolean;
 }
@@ -14,7 +13,6 @@ interface QuerySelectorProps {
 export default function QuerySelector({
   bucketName,
   entryName,
-  defaultQuery,
   onLoadQuery,
   editable,
 }: QuerySelectorProps) {
@@ -55,7 +53,6 @@ export default function QuerySelector({
 
   const handleClear = () => {
     setLoadedQueryName(bucketName, entryName, null);
-    onLoadQuery({ name: "", query: defaultQuery });
   };
 
   if (queries.length === 0) return null;
