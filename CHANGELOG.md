@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Display entries as hierarchical tree with aggregated statistics, breadcrumb navigation, path search, and expand/collapse controls, [PR-170](https://github.com/reductstore/web-console/pull/170)
 - Support for entry attachments with a dedicated UI for viewing and adding JSON attachments, [PR-171](https://github.com/reductstore/web-console/pull/171)
+- Save and load conditional queries in the browser with time range and format settings, [PR-186](https://github.com/reductstore/web-console/pull/186)
 
 ### Fixed
 

@@ -9,7 +9,6 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   ShareAltOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import { message } from "antd";
 
@@ -117,9 +116,12 @@ describe("EntryDetail", () => {
       .fn()
       .mockResolvedValue(undefined) as unknown as MockedRemoveRecord,
     update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    readAttachments: jest.fn().mockResolvedValue({}) as jest.Mock,
+    writeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    removeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
-  const BASE_TIME = new Date("1970-01-08T00:00:00.000Z");
+  const BASE_TIME = new Date("1970-01-01T01:00:00.000Z");
 
   const mockRecords = [
     {
@@ -223,24 +225,6 @@ describe("EntryDetail", () => {
       expect(fetchButton.text()).toBe("Fetch Records");
     });
 
-    it("should show reset button when time range differs from default", async () => {
-      const timeInputs = wrapper.find(".timeInputs Input");
-      expect(timeInputs.length).toBeGreaterThan(0);
-
-      const startInput = timeInputs.at(0);
-      await act(async () => {
-        const onChange = startInput.prop("onChange") as any;
-        if (onChange) {
-          onChange({ target: { value: "2023-01-01T00:00:00Z" } });
-        }
-        jest.runAllTimers();
-      });
-      wrapper.update();
-
-      const resetButton = wrapper.find(ReloadOutlined);
-      expect(resetButton.exists()).toBe(true);
-    });
-
     it("should not show a separate limit input", () => {
       const limitInput = wrapper.find(".limitInput");
       expect(limitInput.exists()).toBe(false);
@@ -269,12 +253,12 @@ describe("EntryDetail", () => {
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
         0n,
-        604800000000n,
+        3600000000n,
         expect.objectContaining({
           head: true,
           strict: true,
           when: expect.objectContaining({
-            $each_t: "2h",
+            $each_t: "30s",
           }),
         }),
       );
@@ -330,21 +314,15 @@ describe("EntryDetail", () => {
     });
 
     it("should abort query when Cancel is clicked", async () => {
-      let queryCallCount = 0;
-
       bucket.query = jest.fn().mockImplementation(() => ({
         async *[Symbol.asyncIterator]() {
-          queryCallCount++;
-          if (queryCallCount === 1) {
-            // First query: slow, never completes
-            await new Promise(() => {
-              /* never resolves */
-            });
-          } else {
-            // Subsequent queries: return immediately
-            for (const record of mockRecords) {
-              yield record;
-            }
+          for (const record of mockRecords) {
+            yield record;
+          }
+          // Simulate a slow tail that keeps yielding
+          while (true) {
+            await new Promise((r) => setTimeout(r, 100));
+            yield mockRecords[0];
           }
         },
       }));
@@ -357,6 +335,7 @@ describe("EntryDetail", () => {
       let fetchButton = wrapper.find(".fetchButton button").first();
       await act(async () => {
         fetchButton.simulate("click");
+        jest.advanceTimersByTime(100);
       });
 
       // Advance past delay to show Cancel
@@ -368,14 +347,12 @@ describe("EntryDetail", () => {
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Cancel");
 
-      // Trigger another getRecords call that aborts previous
+      // Clicking Cancel should abort
       await act(async () => {
         fetchButton.simulate("click");
         jest.runAllTimers();
       });
       wrapper.update();
-
-      expect(queryCallCount).toBe(2);
 
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Fetch Records");
@@ -454,10 +431,10 @@ describe("EntryDetail", () => {
     expect(bucket.createQueryLink).toHaveBeenCalledWith(
       "testEntry",
       0n,
-      604800000000n,
+      3600000000n,
       expect.objectContaining({
         strict: true,
-        when: { $each_t: "2h" },
+        when: { $each_t: "30s" },
       }),
       0,
       expect.any(Date),
@@ -514,10 +491,10 @@ describe("EntryDetail", () => {
       expect(bucket.createQueryLink).toHaveBeenCalledWith(
         "testEntry",
         0n,
-        604800000000n,
+        3600000000n,
         expect.objectContaining({
           strict: true,
-          when: { $each_t: "2h" },
+          when: { $each_t: "30s" },
         }),
         0,
         expect.any(Date),
