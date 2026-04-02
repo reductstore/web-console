@@ -70,18 +70,18 @@ describe("timeRangeUtils", () => {
   });
 
   describe("getDefaultTimeRange", () => {
-    it("should return the same as last7 range", () => {
+    it("should return the same as last1 range", () => {
       const defaultRange = getDefaultTimeRange(mockNow);
-      const last7Range = getTimeRangeFromKey("last7", mockNow);
+      const last1Range = getTimeRangeFromKey("last1", mockNow);
 
-      expect(defaultRange.start).toBe(last7Range.start);
-      expect(defaultRange.end).toBe(last7Range.end);
+      expect(defaultRange.start).toBe(last1Range.start);
+      expect(defaultRange.end).toBe(last1Range.end);
     });
   });
 
   describe("DEFAULT_RANGE_KEY", () => {
-    it("should be last7", () => {
-      expect(DEFAULT_RANGE_KEY).toBe("last7");
+    it("should be last1", () => {
+      expect(DEFAULT_RANGE_KEY).toBe("last1");
     });
   });
 

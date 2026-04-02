@@ -112,7 +112,7 @@ export function getTimeRangeFromKey(
 /**
  * Get the default time range key used by the application
  */
-export const DEFAULT_RANGE_KEY = "last7";
+export const DEFAULT_RANGE_KEY = "last1";
 
 /**
  * Get the default time range using the default key
