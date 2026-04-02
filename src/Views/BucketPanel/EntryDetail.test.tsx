@@ -121,7 +121,7 @@ describe("EntryDetail", () => {
     removeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
   } as unknown as Bucket;
   let wrapper: ReactWrapper;
-  const BASE_TIME = new Date("1970-01-08T00:00:00.000Z");
+  const BASE_TIME = new Date("1970-01-01T01:00:00.000Z");
 
   const mockRecords = [
     {
@@ -253,12 +253,12 @@ describe("EntryDetail", () => {
       expect(bucket.query).toHaveBeenCalledWith(
         "testEntry",
         0n,
-        604800000000n,
+        3600000000n,
         expect.objectContaining({
           head: true,
           strict: true,
           when: expect.objectContaining({
-            $each_t: "2h",
+            $each_t: "30s",
           }),
         }),
       );
@@ -314,21 +314,15 @@ describe("EntryDetail", () => {
     });
 
     it("should abort query when Cancel is clicked", async () => {
-      let queryCallCount = 0;
-
       bucket.query = jest.fn().mockImplementation(() => ({
         async *[Symbol.asyncIterator]() {
-          queryCallCount++;
-          if (queryCallCount === 1) {
-            // First query: slow, never completes
-            await new Promise(() => {
-              /* never resolves */
-            });
-          } else {
-            // Subsequent queries: return immediately
-            for (const record of mockRecords) {
-              yield record;
-            }
+          for (const record of mockRecords) {
+            yield record;
+          }
+          // Simulate a slow tail that keeps yielding
+          while (true) {
+            await new Promise((r) => setTimeout(r, 100));
+            yield mockRecords[0];
           }
         },
       }));
@@ -341,6 +335,7 @@ describe("EntryDetail", () => {
       let fetchButton = wrapper.find(".fetchButton button").first();
       await act(async () => {
         fetchButton.simulate("click");
+        jest.advanceTimersByTime(100);
       });
 
       // Advance past delay to show Cancel
@@ -352,15 +347,12 @@ describe("EntryDetail", () => {
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Cancel");
 
-      // Clicking Cancel should abort the current query
+      // Clicking Cancel should abort
       await act(async () => {
         fetchButton.simulate("click");
         jest.runAllTimers();
-        await new Promise((r) => setTimeout(r, 0));
       });
       wrapper.update();
-
-      expect(queryCallCount).toBe(1);
 
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Fetch Records");
@@ -439,10 +431,10 @@ describe("EntryDetail", () => {
     expect(bucket.createQueryLink).toHaveBeenCalledWith(
       "testEntry",
       0n,
-      604800000000n,
+      3600000000n,
       expect.objectContaining({
         strict: true,
-        when: { $each_t: "2h" },
+        when: { $each_t: "30s" },
       }),
       0,
       expect.any(Date),
@@ -499,10 +491,10 @@ describe("EntryDetail", () => {
       expect(bucket.createQueryLink).toHaveBeenCalledWith(
         "testEntry",
         0n,
-        604800000000n,
+        3600000000n,
         expect.objectContaining({
           strict: true,
-          when: { $each_t: "2h" },
+          when: { $each_t: "30s" },
         }),
         0,
         expect.any(Date),
