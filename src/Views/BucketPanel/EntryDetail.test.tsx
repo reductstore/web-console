@@ -352,14 +352,15 @@ describe("EntryDetail", () => {
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Cancel");
 
-      // Trigger another getRecords call that aborts previous
+      // Clicking Cancel should abort the current query
       await act(async () => {
         fetchButton.simulate("click");
         jest.runAllTimers();
+        await new Promise((r) => setTimeout(r, 0));
       });
       wrapper.update();
 
-      expect(queryCallCount).toBe(2);
+      expect(queryCallCount).toBe(1);
 
       fetchButton = wrapper.find(".fetchButton button").first();
       expect(fetchButton.text()).toBe("Fetch Records");

@@ -332,10 +332,8 @@ export default function EntryDetail(props: Readonly<Props>) {
         cancelDelayRef.current = null;
       }
       setShowCancel(false);
-      if (!abortSignal.aborted) {
-        setIsLoading(false);
-        fetchCtrlRef.current = null;
-      }
+      setIsLoading(false);
+      fetchCtrlRef.current = null;
     }
   };
 
@@ -993,7 +991,13 @@ export default function EntryDetail(props: Readonly<Props>) {
         />
         <div className="fetchButton">
           <Button
-            onClick={() => getRecords(timeRange.start, timeRange.end)}
+            onClick={() => {
+              if (showCancel && fetchCtrlRef.current) {
+                fetchCtrlRef.current.abort();
+              } else {
+                getRecords(timeRange.start, timeRange.end);
+              }
+            }}
             type={"primary"}
             danger={showCancel}
             style={{
