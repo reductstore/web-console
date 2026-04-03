@@ -1,6 +1,4 @@
-FROM node:18 AS builder
-
-RUN npm install -g npm@9.3.1
+FROM node:22 AS builder
 
 WORKDIR /app
 COPY package.json .
@@ -12,7 +10,7 @@ COPY . .
 
 RUN npm run build
 
-FROM node:10-slim
+FROM node:22-alpine
 
 COPY --from=builder /app/build /app
 
