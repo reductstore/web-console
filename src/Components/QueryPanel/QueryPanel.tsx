@@ -1114,8 +1114,8 @@ export default function QueryPanel({
                         }
                         data-testid="entry-query-select"
                         style={{ width: "100%" }}
-                        maxTagCount={2}
-                        maxTagTextLength={18}
+                        maxTagCount={4}
+                        maxTagTextLength={30}
                         maxTagPlaceholder={(omittedValues) =>
                           `+${omittedValues.length} more`
                         }

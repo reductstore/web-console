@@ -9,7 +9,7 @@ interface RecordPreviewProps {
   contentType: string;
   size: number;
   fileName: string;
-  entryName: string;
+  entryName: string | string[];
   timestamp: bigint;
   queryStart?: bigint;
   queryEnd?: bigint;

@@ -9,6 +9,10 @@
   margin: 1.4em;
 }
 
+.entryDetail > .ant-typography {
+  margin-top: 0.5em;
+}
+
 /* --- Time Range & Inputs --- */
 .detailControls {
   display: flex;
@@ -17,62 +21,142 @@
   margin-bottom: var(--entry-detail-block-spacing);
 }
 
-.timeSelectSection {
+/* --- Query Header Sections --- */
+.querySection {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--entry-detail-inner-spacing);
-  flex: 1;
-  width: 100%;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.selectGroup {
+.querySection + .querySection {
+  margin-top: 16px;
+}
+
+.querySectionLabel {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #595959;
+}
+
+.queryFieldLabel {
+  font-size: 12px;
+}
+
+.queryFieldGroup {
   display: flex;
-  flex-wrap: nowrap;
-  gap: var(--entry-detail-inner-spacing);
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.queryFieldGroupEntries {
+  flex: 1 1 0%;
   min-width: 200px;
 }
 
-.timeInputs {
-  display: grid;
-  align-items: center;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+.querySourceRow {
+  display: flex;
   gap: var(--entry-detail-inner-spacing);
-  flex: 1;
+  align-items: flex-end;
 }
 
-/* INPUT with prefix/suffix */
-.timeInputs .ant-input-affix-wrapper:focus,
-.timeInputs .ant-input-affix-wrapper-focused {
+.queryBucketSelect,
+.queryEntrySelect {
+  min-width: 0;
+  width: 100%;
+}
+
+.queryTimeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--entry-detail-inner-spacing);
+  align-items: flex-end;
+}
+
+.queryTimeControls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.queryTimeInputs {
+  display: flex;
+  gap: var(--entry-detail-inner-spacing);
+  flex: 1 1 0%;
+  min-width: 280px;
+}
+
+.queryEntrySelect .ant-select-selection-overflow {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.queryEntrySelect .ant-select-selector {
+  align-items: center;
+  min-height: 32px !important;
+}
+
+.queryEntrySelect .ant-select-selection-overflow-item {
+  min-width: 0;
+}
+
+.queryEntrySelect .ant-select-selection-item,
+.queryEntrySelect .ant-select-selection-search {
+  min-width: 0;
+}
+
+.queryEntrySelect .ant-select-selection-item {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queryEntrySelect .ant-select-selection-search {
+  flex: 1 1 32px !important;
+  min-width: 32px;
+  max-width: 100%;
+}
+
+.queryEntrySelect .ant-select-selection-search-input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* INPUT focus styles */
+.queryTimeInputs .ant-input-affix-wrapper:focus,
+.queryTimeInputs .ant-input-affix-wrapper-focused,
+.queryTimeInputs .ant-input:focus,
+.queryTimeInputs .ant-input-focused {
   box-shadow: none !important;
   outline: none !important;
 }
 
-/* INPUT */
-.timeInputs .ant-input:focus,
-.timeInputs .ant-input-focused {
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* SELECT */
-.selectGroup .ant-select-selector:focus,
-.selectGroup .ant-select-focused .ant-select-selector {
+/* SELECT focus styles */
+.queryTimeControls .ant-select-selector:focus,
+.queryTimeControls .ant-select-focused .ant-select-selector,
+.querySourceRow .ant-select-selector:focus,
+.querySourceRow .ant-select-focused .ant-select-selector {
   box-shadow: none !important;
   outline: none !important;
 }
 
 @media (max-width: 826px) {
-  .timeSelectSection {
+  .querySourceRow {
     flex-direction: column;
     align-items: stretch;
   }
-  .selectGroup {
-    width: 100%;
+  .queryFieldGroupEntries {
+    min-width: 0;
   }
-  .timeInputs {
-    grid-template-columns: 1fr;
+  .queryTimeRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .queryTimeInputs {
+    flex-direction: column;
+    min-width: 0;
   }
 }
 
@@ -89,16 +173,25 @@
 
 .jsonFilterHeader {
   border-top: 0;
-  border-bottom: 1px solid var(--input-border);
-  border-radius: 6px 6px 0 0;
+  border-radius: 6px;
 }
 
-.jsonFilterPanel .jsonQueryEditor {
+.queryHeaderBar {
+  padding: 12px;
+}
+
+.queryConditionalContent {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.queryConditionalContent .jsonQueryEditor {
   border: 0;
-  border-radius: 0 0 6px 6px;
+  border-radius: 6px;
 }
 
-.jsonFilterPanel .jsonQueryEditor:focus-within {
+.queryConditionalContent .jsonQueryEditor:focus-within {
   border-color: transparent;
 }
 
@@ -111,17 +204,26 @@
 
 /* --- Button --- */
 .fetchButton {
-  display: block;
+  display: flex;
+  padding-top: 12px;
+}
+
+/* --- Chart Container --- */
+.chartContainer {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.chartContainer .recordsChart {
+  margin-bottom: 0;
+  height: 160px;
+  padding-bottom: 12px;
 }
 
 /* --- Tooltip Customization --- */
 .custom-tooltip .ant-tooltip-inner {
   background-color: #f0f0f0;
   color: #333;
-}
-
-@media (max-width: 1100px) {
-  .jsonFilterHeader {
-    align-items: flex-start;
-  }
 }
