@@ -22,6 +22,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install modules
         run: npm install
+      - name: Audit for vulnerabilities
+        run: npm run audit:ci
       - name: Run ESLint
         run: npm run lint
       - name: Run Tests
