@@ -1,109 +1,76 @@
 import {
-  hasWritePermissionForBucket,
+  checkReadPermission,
+  matchesBucketPattern,
   checkWritePermission,
 } from "./permissionUtils";
 
-describe("hasWritePermissionForBucket", () => {
+describe("matchesBucketPattern", () => {
   it("should return false when allowedBuckets is undefined", () => {
-    expect(hasWritePermissionForBucket("test-bucket", undefined)).toBe(false);
+    expect(matchesBucketPattern("test-bucket", undefined)).toBe(false);
   });
 
   it("should return false when allowedBuckets is empty", () => {
-    expect(hasWritePermissionForBucket("test-bucket", [])).toBe(false);
+    expect(matchesBucketPattern("test-bucket", [])).toBe(false);
   });
 
   it("should handle exact bucket name matching", () => {
     const allowedBuckets = ["bucket1", "bucket2", "special-bucket"];
 
-    expect(hasWritePermissionForBucket("bucket1", allowedBuckets)).toBe(true);
-    expect(hasWritePermissionForBucket("bucket2", allowedBuckets)).toBe(true);
-    expect(hasWritePermissionForBucket("special-bucket", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("bucket3", allowedBuckets)).toBe(false);
-    expect(hasWritePermissionForBucket("bucket", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("bucket1", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket2", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("special-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket3", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("bucket", allowedBuckets)).toBe(false);
   });
 
   it("should handle wildcard patterns at the end", () => {
     const allowedBuckets = ["bucket-*"];
 
-    expect(hasWritePermissionForBucket("bucket-123", allowedBuckets)).toBe(
-      true,
+    expect(matchesBucketPattern("bucket-123", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-test", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-a-b-c", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("other-bucket-123", allowedBuckets)).toBe(
+      false,
     );
-    expect(hasWritePermissionForBucket("bucket-test", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("bucket-", allowedBuckets)).toBe(true);
-    expect(hasWritePermissionForBucket("bucket-a-b-c", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("bucket", allowedBuckets)).toBe(false);
-    expect(
-      hasWritePermissionForBucket("other-bucket-123", allowedBuckets),
-    ).toBe(false);
   });
 
   it("should handle wildcard patterns at the beginning", () => {
     const allowedBuckets = ["*-bucket"];
 
-    expect(hasWritePermissionForBucket("test-bucket", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("123-bucket", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("-bucket", allowedBuckets)).toBe(true);
-    expect(hasWritePermissionForBucket("a-b-c-bucket", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("bucket", allowedBuckets)).toBe(false);
-    expect(hasWritePermissionForBucket("test-bucket-123", allowedBuckets)).toBe(
-      false,
-    );
+    expect(matchesBucketPattern("test-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("123-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("a-b-c-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("test-bucket-123", allowedBuckets)).toBe(false);
   });
 
   it("should handle wildcard patterns in the middle", () => {
     const allowedBuckets = ["bucket-*-data"];
 
-    expect(
-      hasWritePermissionForBucket("bucket-test-data", allowedBuckets),
-    ).toBe(true);
-    expect(hasWritePermissionForBucket("bucket-123-data", allowedBuckets)).toBe(
+    expect(matchesBucketPattern("bucket-test-data", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-123-data", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket--data", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-a-b-c-data", allowedBuckets)).toBe(
       true,
     );
-    expect(hasWritePermissionForBucket("bucket--data", allowedBuckets)).toBe(
-      true,
-    );
-    expect(
-      hasWritePermissionForBucket("bucket-a-b-c-data", allowedBuckets),
-    ).toBe(true);
-    expect(hasWritePermissionForBucket("bucket-test", allowedBuckets)).toBe(
+    expect(matchesBucketPattern("bucket-test", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("bucket-data", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("test-bucket-data", allowedBuckets)).toBe(
       false,
     );
-    expect(hasWritePermissionForBucket("bucket-data", allowedBuckets)).toBe(
-      false,
-    );
-    expect(
-      hasWritePermissionForBucket("test-bucket-data", allowedBuckets),
-    ).toBe(false);
   });
 
   it("should handle multiple wildcard patterns", () => {
     const allowedBuckets = ["*-bucket-*"];
 
-    expect(hasWritePermissionForBucket("test-bucket-123", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("a-bucket-b", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("-bucket-", allowedBuckets)).toBe(true);
-    expect(hasWritePermissionForBucket("bucket-123", allowedBuckets)).toBe(
-      false,
-    );
-    expect(hasWritePermissionForBucket("test-bucket", allowedBuckets)).toBe(
-      false,
-    );
+    expect(matchesBucketPattern("test-bucket-123", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("a-bucket-b", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("-bucket-", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket-123", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("test-bucket", allowedBuckets)).toBe(false);
   });
 
   it("should handle mixed exact and wildcard patterns", () => {
@@ -115,58 +82,44 @@ describe("hasWritePermissionForBucket", () => {
     ];
 
     // Exact matches
-    expect(hasWritePermissionForBucket("exact-bucket", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("another-exact", allowedBuckets)).toBe(
-      true,
-    );
+    expect(matchesBucketPattern("exact-bucket", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("another-exact", allowedBuckets)).toBe(true);
 
     // Wildcard matches
-    expect(hasWritePermissionForBucket("wildcard-123", allowedBuckets)).toBe(
-      true,
-    );
-    expect(hasWritePermissionForBucket("test-suffix", allowedBuckets)).toBe(
-      true,
-    );
+    expect(matchesBucketPattern("wildcard-123", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("test-suffix", allowedBuckets)).toBe(true);
 
     // Non-matches
-    expect(hasWritePermissionForBucket("other-bucket", allowedBuckets)).toBe(
-      false,
-    );
-    expect(hasWritePermissionForBucket("wildcard", allowedBuckets)).toBe(false);
-    expect(hasWritePermissionForBucket("suffix", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("other-bucket", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("wildcard", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("suffix", allowedBuckets)).toBe(false);
   });
 
   it("should escape special regex characters in patterns", () => {
     const allowedBuckets = ["bucket.test.*", "bucket+special.*"];
 
-    expect(hasWritePermissionForBucket("bucket.test.123", allowedBuckets)).toBe(
+    expect(matchesBucketPattern("bucket.test.123", allowedBuckets)).toBe(true);
+    expect(matchesBucketPattern("bucket+special.data", allowedBuckets)).toBe(
       true,
     );
-    expect(
-      hasWritePermissionForBucket("bucket+special.data", allowedBuckets),
-    ).toBe(true);
-    expect(hasWritePermissionForBucket("bucketXtest.123", allowedBuckets)).toBe(
+    expect(matchesBucketPattern("bucketXtest.123", allowedBuckets)).toBe(false);
+    expect(matchesBucketPattern("bucketXspecial.data", allowedBuckets)).toBe(
       false,
     );
-    expect(
-      hasWritePermissionForBucket("bucketXspecial.data", allowedBuckets),
-    ).toBe(false);
   });
 
   it("should handle edge cases", () => {
     // Empty pattern
-    expect(hasWritePermissionForBucket("test", [""])).toBe(false);
-    expect(hasWritePermissionForBucket("", [""])).toBe(true);
+    expect(matchesBucketPattern("test", [""])).toBe(false);
+    expect(matchesBucketPattern("", [""])).toBe(true);
 
     // Only wildcard
-    expect(hasWritePermissionForBucket("anything", ["*"])).toBe(true);
-    expect(hasWritePermissionForBucket("", ["*"])).toBe(true);
+    expect(matchesBucketPattern("anything", ["*"])).toBe(true);
+    expect(matchesBucketPattern("", ["*"])).toBe(true);
 
     // Multiple wildcards
-    expect(hasWritePermissionForBucket("test-123-data", ["**"])).toBe(true);
-    expect(hasWritePermissionForBucket("test-123-data", ["*-*-*"])).toBe(true);
+    expect(matchesBucketPattern("test-123-data", ["**"])).toBe(true);
+    expect(matchesBucketPattern("test-123-data", ["*-*-*"])).toBe(true);
   });
 });
 
@@ -219,5 +172,23 @@ describe("checkWritePermission", () => {
     const permissions = { write: ["bucket-*"] };
     expect(checkWritePermission(permissions, "bucket-123")).toBe(true);
     expect(checkWritePermission(permissions, "other-bucket")).toBe(false);
+  });
+});
+
+describe("checkReadPermission", () => {
+  it("should return true when fullAccess is true", () => {
+    expect(checkReadPermission({ fullAccess: true }, "bucket")).toBe(true);
+  });
+
+  it("should check read permissions with wildcard matching", () => {
+    expect(
+      checkReadPermission(
+        { fullAccess: false, read: ["bucket-*"] },
+        "bucket-a",
+      ),
+    ).toBe(true);
+    expect(
+      checkReadPermission({ fullAccess: false, read: ["bucket-*"] }, "other"),
+    ).toBe(false);
   });
 });
