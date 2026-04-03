@@ -5,6 +5,7 @@ import {
   LoadingOutlined,
   NodeCollapseOutlined,
   NodeExpandOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import {
   APIError,
@@ -29,6 +30,7 @@ interface Props {
   showUnix?: boolean;
   client: Client;
   onRemoved?: (entryName: string) => void;
+  onAddRecord?: () => void;
   hasWritePermission?: boolean;
   allEntryNames?: string[];
   allEntries?: EntryInfo[];
@@ -151,6 +153,18 @@ export default function EntryCard(props: Readonly<Props>) {
     permissions?.fullAccess ||
     (permissions?.write && permissions.write.indexOf(bucketName) !== -1)
   ) {
+    if (props.onAddRecord) {
+      actions.push(
+        <ActionIcon
+          key="add-record"
+          icon={<UploadOutlined title="Add record" />}
+          disabled={isDeleting}
+          tooltip="Add record"
+          showTooltipWhenEnabled
+          onClick={props.onAddRecord}
+        />,
+      );
+    }
     actions.push(
       <ActionIcon
         key="delete"
