@@ -10,6 +10,7 @@ import { Routes } from "./Components/Routes";
 import {
   BorderOuterOutlined,
   DatabaseOutlined,
+  LineChartOutlined,
   LockOutlined,
   LogoutOutlined,
   ShareAltOutlined,
@@ -105,6 +106,12 @@ export default class App extends React.Component<Props, State> {
             icon: <BorderOuterOutlined />,
             label: "Dashboard",
             onClick: () => history.push("/dashboard"),
+          },
+          {
+            key: "query",
+            icon: <LineChartOutlined />,
+            label: "Query",
+            onClick: () => history.push("/query"),
           },
           {
             key: "buckets",

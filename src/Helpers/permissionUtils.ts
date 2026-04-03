@@ -10,7 +10,7 @@
  * @param allowedBuckets - Array of bucket patterns (can include wildcards like "bucket-*")
  * @returns true if the bucket is allowed, false otherwise
  */
-export function hasWritePermissionForBucket(
+export function matchesBucketPattern(
   bucketName: string,
   allowedBuckets: string[] | undefined,
 ): boolean {
@@ -58,5 +58,27 @@ export function checkWritePermission(
   }
 
   // Check specific bucket permissions with wildcard support
-  return hasWritePermissionForBucket(bucketName, permissions.write);
+  return matchesBucketPattern(bucketName, permissions.write);
+}
+
+/**
+ * Checks if a user has read permission for a specific bucket.
+ *
+ * @param permissions - Token permissions object
+ * @param bucketName - The name of the bucket to check
+ * @returns true if the user has read permission, false otherwise
+ */
+export function checkReadPermission(
+  permissions: { fullAccess?: boolean; read?: string[] } | undefined,
+  bucketName: string,
+): boolean {
+  if (!permissions) {
+    return false;
+  }
+
+  if (permissions.fullAccess) {
+    return true;
+  }
+
+  return matchesBucketPattern(bucketName, permissions.read);
 }

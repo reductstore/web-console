@@ -49,7 +49,7 @@
     "fmt:check": "prettier --check .",
     "typecheck": "tsc --noEmit"
   },
-  "proxy": "http://localhost:8383",
+  "proxy": "https://orion.reductsoft.eu",
   "eslintConfig": {
     "extends": [
       "react-app",

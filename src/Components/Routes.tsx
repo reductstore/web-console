@@ -12,6 +12,7 @@ import { TokenPermissions } from "reduct-js";
 import Replications from "../Views/Replications/Replications";
 import ReplicationDetail from "../Views/Replications/ReplicationDetail";
 import EntryDetail from "../Views/BucketPanel/EntryDetail";
+import QueryPanelPage from "../Views/QueryPanel/QueryPanelPage";
 
 interface Props extends RouteComponentProps {
   backendApi: IBackendAPI;
@@ -63,6 +64,10 @@ export function Routes(props: Props): JSX.Element {
         authorized={authorized}
       >
         <EntryDetail client={props.backendApi.client} {...props} />
+      </PrivateRoute>
+
+      <PrivateRoute exact path="/query" authorized={authorized}>
+        <QueryPanelPage client={props.backendApi.client} {...props} />
       </PrivateRoute>
 
       <PrivateRoute exact path="/replications" authorized={authorized}>

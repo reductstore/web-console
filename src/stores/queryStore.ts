@@ -9,26 +9,75 @@ export interface SavedQuery {
   /** Microsecond timestamps stored as strings (bigint doesn't serialize) */
   rangeStart?: string;
   rangeEnd?: string;
+  /** Saved selection context for restoring on the query page */
+  bucketName?: string;
+  entries?: string[];
 }
 
 interface QueryStore {
   queries: Record<string, SavedQuery[]>;
   loadedQueryNames: Record<string, string | null>;
 
-  getQueries: (bucketName: string, entryName: string) => SavedQuery[];
-  getLoadedQueryName: (bucketName: string, entryName: string) => string | null;
-  saveQuery: (bucketName: string, entryName: string, saved: SavedQuery) => void;
-  deleteQuery: (bucketName: string, entryName: string, name: string) => void;
+  getQueries: (
+    bucketName: string,
+    entryName: string | string[],
+  ) => SavedQuery[];
+  getAllQueries: () => { key: string; queries: SavedQuery[] }[];
+  getLoadedQueryName: (
+    bucketName: string,
+    entryName: string | string[],
+  ) => string | null;
+  saveQuery: (
+    bucketName: string,
+    entryName: string | string[],
+    saved: SavedQuery,
+  ) => void;
+  deleteQuery: (
+    bucketName: string,
+    entryName: string | string[],
+    name: string,
+  ) => void;
+  deleteQueryByKey: (key: string, name: string) => void;
   setLoadedQueryName: (
     bucketName: string,
-    entryName: string,
+    entryName: string | string[],
     name: string | null,
   ) => void;
   clearQueries: () => void;
 }
 
-const entryKey = (bucketName: string, entryName: string): string =>
-  `${bucketName}/${entryName}`;
+const MULTI_MARKER = "/__multi__/";
+const ENTRY_SEP = "\u0001";
+
+const normalizeEntries = (entryName: string | string[]): string[] => {
+  const entries = Array.isArray(entryName) ? entryName : [entryName];
+  return Array.from(
+    new Set(entries.map((entry) => entry.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
+};
+
+const entryKey = (bucketName: string, entryName: string | string[]): string => {
+  const entries = normalizeEntries(entryName);
+  if (entries.length === 1) {
+    return `${bucketName}/${entries[0]}`;
+  }
+
+  return `${bucketName}${MULTI_MARKER}${entries.join(ENTRY_SEP)}`;
+};
+
+export const formatQueryKey = (key: string): string => {
+  const multiIdx = key.indexOf(MULTI_MARKER);
+  if (multiIdx === -1) return key;
+
+  const bucket = key.substring(0, multiIdx);
+  const entries = key
+    .substring(multiIdx + MULTI_MARKER.length)
+    .split(ENTRY_SEP);
+  if (entries.length === 1) {
+    return `${bucket} / ${entries[0]}`;
+  }
+  return `${bucket} / ${entries[0]} +${entries.length - 1} more`;
+};
 
 export const useQueryStore = create<QueryStore>()(
   persist(
@@ -36,15 +85,29 @@ export const useQueryStore = create<QueryStore>()(
       queries: {},
       loadedQueryNames: {},
 
-      getQueries: (bucketName: string, entryName: string) => {
+      getQueries: (bucketName: string, entryName: string | string[]) => {
         return get().queries[entryKey(bucketName, entryName)] || [];
       },
 
-      getLoadedQueryName: (bucketName: string, entryName: string) => {
+      getAllQueries: () => {
+        const allQueries = get().queries;
+        return Object.entries(allQueries)
+          .filter(([, queries]) => queries.length > 0)
+          .map(([key, queries]) => ({ key, queries }));
+      },
+
+      getLoadedQueryName: (
+        bucketName: string,
+        entryName: string | string[],
+      ) => {
         return get().loadedQueryNames[entryKey(bucketName, entryName)] ?? null;
       },
 
-      saveQuery: (bucketName: string, entryName: string, saved: SavedQuery) => {
+      saveQuery: (
+        bucketName: string,
+        entryName: string | string[],
+        saved: SavedQuery,
+      ) => {
         const key = entryKey(bucketName, entryName);
         const existing = get().queries[key] || [];
         const filtered = existing.filter((q) => q.name !== saved.name);
@@ -60,8 +123,15 @@ export const useQueryStore = create<QueryStore>()(
         }));
       },
 
-      deleteQuery: (bucketName: string, entryName: string, name: string) => {
-        const key = entryKey(bucketName, entryName);
+      deleteQuery: (
+        bucketName: string,
+        entryName: string | string[],
+        name: string,
+      ) => {
+        get().deleteQueryByKey(entryKey(bucketName, entryName), name);
+      },
+
+      deleteQueryByKey: (key: string, name: string) => {
         const existing = get().queries[key] || [];
         const updated = existing.filter((q) => q.name !== name);
         const currentLoaded = get().loadedQueryNames[key];
@@ -76,7 +146,7 @@ export const useQueryStore = create<QueryStore>()(
 
       setLoadedQueryName: (
         bucketName: string,
-        entryName: string,
+        entryName: string | string[],
         name: string | null,
       ) => {
         const key = entryKey(bucketName, entryName);

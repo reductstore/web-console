@@ -5,6 +5,7 @@ import { getCompletionProvider } from "@reductstore/reduct-query-monaco";
 import { Button, Modal, Tooltip } from "antd";
 import { APIError, Client, QueryOptions } from "reduct-js";
 import {
+  ExperimentOutlined,
   CompressOutlined,
   ExpandOutlined,
   FormatPainterOutlined,
@@ -26,6 +27,7 @@ interface ValidationContext {
   bucket?: string;
   entry?: string;
   entries?: string[];
+  requireEntrySelection?: boolean;
   start?: bigint;
   end?: bigint;
   intervalValue?: string | null;
@@ -82,6 +84,7 @@ export function JsonQueryEditor({
     undefined,
   );
   const validationRequestIdRef = useRef(0);
+  const lastValidatedKeyRef = useRef<string>("");
 
   const validationClient = validationContext?.client;
   const validationBucket = validationContext?.bucket?.trim() || "";
@@ -89,6 +92,8 @@ export function JsonQueryEditor({
   const validationEntries = (validationContext?.entries ?? [])
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
+  const requireEntrySelection =
+    validationContext?.requireEntrySelection ?? false;
   const validationEntriesKey = validationEntries.join("|");
   const validationStart = validationContext?.start;
   const validationEnd = validationContext?.end;
@@ -161,93 +166,23 @@ export function JsonQueryEditor({
   const containerHeight = typeof height === "number" ? `${height}px` : height;
 
   useEffect(() => {
-    if (!validationClient || !validationBucket) {
+    const parsed = processWhenCondition(value, validationIntervalValue);
+    const key = JSON.stringify([
+      parsed.success ? JSON.stringify(parsed.value) : value,
+      validationBucket,
+      validationEntry,
+      validationEntriesKey,
+      String(validationStart),
+      String(validationEnd),
+      validationIntervalValue,
+    ]);
+    if (key !== lastValidatedKeyRef.current) {
       setValidationStatus(ValidationStatus.Idle);
       setValidationError(undefined);
-      return;
+      lastValidatedKeyRef.current = "";
     }
-
-    const requestId = (validationRequestIdRef.current += 1);
-
-    let isActive = true;
-    const timeoutId = window.setTimeout(async () => {
-      if (!isActive || validationRequestIdRef.current !== requestId) {
-        return;
-      }
-      setValidationStatus(ValidationStatus.Loading);
-      setValidationError(undefined);
-
-      const parseResult = processWhenCondition(value, validationIntervalValue);
-      if (!parseResult.success) {
-        if (!isActive || validationRequestIdRef.current !== requestId) {
-          return;
-        }
-        setValidationStatus(ValidationStatus.Invalid);
-        setValidationError(parseResult.error || "Invalid condition");
-        return;
-      }
-
-      try {
-        let entryToValidate = validationEntries[0] || validationEntry;
-        const bucketInstance =
-          await validationClient.getBucket(validationBucket);
-        if (!entryToValidate) {
-          const entriesList = await bucketInstance.getEntryList();
-          entryToValidate = entriesList[0]?.name ?? "";
-        }
-        if (!entryToValidate) {
-          if (!isActive || validationRequestIdRef.current !== requestId) {
-            return;
-          }
-          setValidationStatus(ValidationStatus.Warning);
-          setValidationError("No entries available to validate condition");
-          return;
-        }
-
-        const whenCondition = {
-          ...(parseResult.value ?? {}),
-          $limit: 1,
-        };
-        const options = new QueryOptions();
-        options.head = true;
-        options.strict = true;
-        options.when = whenCondition;
-
-        const it = bucketInstance.query(
-          entryToValidate,
-          validationStart,
-          validationEnd,
-          options,
-        );
-        await it.next();
-
-        if (!isActive || validationRequestIdRef.current !== requestId) {
-          return;
-        }
-        setValidationStatus(ValidationStatus.Valid);
-        setValidationError(undefined);
-      } catch (err) {
-        if (!isActive || validationRequestIdRef.current !== requestId) {
-          return;
-        }
-        const message =
-          err instanceof APIError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : "Invalid condition";
-        setValidationStatus(ValidationStatus.Invalid);
-        setValidationError(message || "Invalid condition");
-      }
-    }, 1000);
-
-    return () => {
-      isActive = false;
-      window.clearTimeout(timeoutId);
-    };
   }, [
     value,
-    validationClient,
     validationBucket,
     validationEntry,
     validationEntriesKey,
@@ -255,6 +190,100 @@ export function JsonQueryEditor({
     validationEnd,
     validationIntervalValue,
   ]);
+
+  const canValidate =
+    !!validationClient &&
+    !!validationBucket &&
+    (!requireEntrySelection ||
+      !!validationEntry ||
+      validationEntries.length > 0);
+
+  const handleValidate = async () => {
+    if (!validationClient || !validationBucket) return;
+
+    const requestId = (validationRequestIdRef.current += 1);
+    setValidationStatus(ValidationStatus.Loading);
+    setValidationError(undefined);
+
+    const parseResult = processWhenCondition(value, validationIntervalValue);
+
+    const currentKey = JSON.stringify([
+      parseResult.success ? JSON.stringify(parseResult.value) : value,
+      validationBucket,
+      validationEntry,
+      validationEntriesKey,
+      String(validationStart),
+      String(validationEnd),
+      validationIntervalValue,
+    ]);
+
+    if (!parseResult.success) {
+      if (validationRequestIdRef.current !== requestId) return;
+      lastValidatedKeyRef.current = currentKey;
+      setValidationStatus(ValidationStatus.Invalid);
+      setValidationError(parseResult.error || "Invalid condition");
+      return;
+    }
+
+    try {
+      let entryToValidate = validationEntries[0] || validationEntry;
+      if (!entryToValidate) {
+        if (requireEntrySelection) {
+          if (validationRequestIdRef.current !== requestId) return;
+          lastValidatedKeyRef.current = currentKey;
+          setValidationStatus(ValidationStatus.Warning);
+          setValidationError("Select entry to validate condition");
+          return;
+        }
+      }
+
+      const bucketInstance = await validationClient.getBucket(validationBucket);
+      if (!entryToValidate) {
+        const entriesList = await bucketInstance.getEntryList();
+        entryToValidate = entriesList[0]?.name ?? "";
+      }
+      if (!entryToValidate) {
+        if (validationRequestIdRef.current !== requestId) return;
+        lastValidatedKeyRef.current = currentKey;
+        setValidationStatus(ValidationStatus.Warning);
+        setValidationError("No entries available to validate condition");
+        return;
+      }
+
+      const whenCondition = {
+        ...(parseResult.value ?? {}),
+        $limit: 1,
+      };
+      const options = new QueryOptions();
+      options.head = true;
+      options.strict = true;
+      options.when = whenCondition;
+
+      const it = bucketInstance.query(
+        entryToValidate,
+        validationStart,
+        validationEnd,
+        options,
+      );
+      await it.next();
+
+      if (validationRequestIdRef.current !== requestId) return;
+      lastValidatedKeyRef.current = currentKey;
+      setValidationStatus(ValidationStatus.Valid);
+      setValidationError(undefined);
+    } catch (err) {
+      if (validationRequestIdRef.current !== requestId) return;
+      const message =
+        err instanceof APIError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Invalid condition";
+      lastValidatedKeyRef.current = currentKey;
+      setValidationStatus(ValidationStatus.Invalid);
+      setValidationError(message || "Invalid condition");
+    }
+  };
 
   const editorOptions = {
     minimap: { enabled: false },
@@ -301,9 +330,26 @@ export function JsonQueryEditor({
 
     if (!validationBucket) {
       return (
-        <span className="jsonQueryEditorValidationMuted">
-          Select bucket to validate condition
-        </span>
+        <span className="jsonQueryEditorValidationMuted">Select bucket</span>
+      );
+    }
+
+    if (
+      requireEntrySelection &&
+      !validationEntry &&
+      validationEntries.length === 0
+    ) {
+      return (
+        <span className="jsonQueryEditorValidationMuted">Select entry</span>
+      );
+    }
+
+    if (error) {
+      return (
+        <>
+          <span className="jsonQueryEditorValidationError">✗</span>
+          <span>{error}</span>
+        </>
       );
     }
 
@@ -329,21 +375,11 @@ export function JsonQueryEditor({
       );
     }
 
-    // validation is tested with limit = 1 but an error may still occur when executing the query
-    if (validationStatus === ValidationStatus.Valid && !error) {
+    if (validationStatus === ValidationStatus.Valid) {
       return (
         <>
           <span className="jsonQueryEditorValidationOk">✓</span>
           <span>Valid condition</span>
-        </>
-      );
-    }
-
-    if (error) {
-      return (
-        <>
-          <span className="jsonQueryEditorValidationError">✗</span>
-          <span>{error}</span>
         </>
       );
     }
@@ -365,11 +401,26 @@ export function JsonQueryEditor({
         />
       </div>
       <div className="jsonQueryEditorToolbar">
+        {!readOnly && (
+          <Tooltip title="Validate condition">
+            <Button
+              aria-label="Validate condition"
+              type="text"
+              size="small"
+              icon={<ExperimentOutlined />}
+              onClick={handleValidate}
+              disabled={
+                !canValidate || validationStatus === ValidationStatus.Loading
+              }
+              loading={validationStatus === ValidationStatus.Loading}
+              className="jsonQueryEditorValidateBtn"
+            />
+          </Tooltip>
+        )}
         <div className="jsonQueryEditorValidation">
           {renderValidationStatus(readOnly)}
         </div>
         <div className="jsonQueryEditorToolbarActions">
-          {toolbarExtra}
           {onSave && (
             <Tooltip
               title={
@@ -390,6 +441,7 @@ export function JsonQueryEditor({
               />
             </Tooltip>
           )}
+          {toolbarExtra}
           <Tooltip
             title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
           >

@@ -6,7 +6,7 @@ interface SaveQueryModalProps {
   open: boolean;
   onClose: () => void;
   bucketName: string;
-  entryName: string;
+  entryName: string | string[];
   queryText: string;
   timeFormat: "UTC" | "Unix";
   rangeKey: string;
@@ -50,6 +50,8 @@ export default function SaveQueryModal({
       rangeKey,
       rangeStart,
       rangeEnd,
+      bucketName,
+      entries: Array.isArray(entryName) ? [...entryName] : [entryName],
     });
     message.success(`Query "${queryName}" saved`);
     handleClose();

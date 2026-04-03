@@ -90,9 +90,7 @@ describe("JsonQueryEditor", () => {
       />,
     );
 
-    expect(
-      screen.getByText("Select bucket to validate condition"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Select bucket")).toBeInTheDocument();
   });
 
   it("shows the expanded placeholder after clicking expand", () => {
@@ -136,8 +134,9 @@ describe("JsonQueryEditor", () => {
       />,
     );
 
-    act(() => {
-      jest.advanceTimersByTime(1000);
+    const validateButton = screen.getByLabelText("Validate condition");
+    await act(async () => {
+      fireEvent.click(validateButton);
     });
 
     await waitFor(() =>

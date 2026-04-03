@@ -887,7 +887,7 @@ describe("EntryDetail", () => {
     it("should query with undefined end time when stop field is empty", async () => {
       (bucket.query as jest.Mock).mockClear();
 
-      const timeInputs = wrapper.find(".timeInputs Input");
+      const timeInputs = wrapper.find(".queryTimeInputs Input");
       const stopInput = timeInputs.at(1);
 
       await act(async () => {
@@ -918,7 +918,7 @@ describe("EntryDetail", () => {
     it("should query with specific end time when stop field has value", async () => {
       (bucket.query as jest.Mock).mockClear();
 
-      const timeInputs = wrapper.find(".timeInputs Input");
+      const timeInputs = wrapper.find(".queryTimeInputs Input");
       const stopInput = timeInputs.at(1);
 
       const specificTime = "1970-01-01T00:00:01.000Z";
@@ -948,6 +948,67 @@ describe("EntryDetail", () => {
         head: true,
         strict: true,
       });
+    });
+  });
+
+  describe("Sub-entry Warning", () => {
+    it("should not show warning when entry has no sub-entries", async () => {
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+        await waitUntil(() => wrapper.update().find(".EntryCard").length > 0);
+      });
+
+      const alert = wrapper.find("Alert");
+      expect(alert.exists()).toBe(false);
+    });
+
+    it("should show warning when entry has sub-entries", async () => {
+      bucket.getEntryList = jest.fn().mockResolvedValue([
+        {
+          name: "testEntry",
+          blockCount: 5n,
+          recordCount: 100n,
+          size: 1024n,
+          oldestRecord: 0n,
+          latestRecord: 10000n,
+          status: Status.READY,
+        } as EntryInfo,
+        {
+          name: "testEntry/child1",
+          blockCount: 2n,
+          recordCount: 50n,
+          size: 512n,
+          oldestRecord: 0n,
+          latestRecord: 5000n,
+          status: Status.READY,
+        } as EntryInfo,
+      ]);
+
+      const wrapperWithSub = mount(
+        <MemoryRouter>
+          <EntryDetail
+            client={client}
+            permissions={permissions}
+            apiUrl="https://example.com"
+          />
+        </MemoryRouter>,
+      );
+
+      await act(async () => {
+        jest.runAllTimers();
+      });
+      wrapperWithSub.update();
+
+      // Wait for the getEntryList promise to resolve
+      await act(async () => {
+        jest.runAllTimers();
+      });
+      wrapperWithSub.update();
+
+      const alertText = wrapperWithSub.text();
+      expect(alertText).toContain("sub-entries");
+
+      wrapperWithSub.unmount();
     });
   });
 });

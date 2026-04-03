@@ -23,6 +23,10 @@
   border-radius: 0 0 6px 6px;
 }
 
+.jsonQueryEditorValidateBtn {
+  flex-shrink: 0;
+}
+
 .jsonQueryEditorValidation {
   display: flex;
   align-items: center;

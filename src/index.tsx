@@ -16,6 +16,21 @@ if (apiUrl === undefined) {
 const backendApi = new BackendAPI(apiUrl);
 const RoutableApp = withRouter(App);
 
+const resizeObserverMessages = new Set([
+  "ResizeObserver loop completed with undelivered notifications.",
+  "ResizeObserver loop limit exceeded",
+]);
+
+// Some responsive third-party components can trigger the browser's benign
+// ResizeObserver loop warning during window resizes. Ignore only this
+// specific browser-level error so responsive behavior remains enabled.
+window.addEventListener("error", (event) => {
+  if (resizeObserverMessages.has(event.message)) {
+    event.stopImmediatePropagation();
+    event.preventDefault();
+  }
+});
+
 ReactDOM.render(
   <React.StrictMode>
     {/* @ts-ignore*/}
