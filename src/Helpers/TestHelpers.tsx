@@ -1,60 +1,20 @@
-import { createMemoryHistory } from "history";
-import { RouteComponentProps } from "react-router-dom";
-import waitUntil from "async-wait-until";
-import { ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
 import { RcFile } from "antd/es/upload";
 import { TextDecoder, TextEncoder } from "util";
-
-export const makeRouteProps = (): RouteComponentProps => {
-  return {
-    match: {
-      isExact: false,
-      path: "",
-      url: "",
-      params: { id: "1" },
-    },
-    // @ts-ignore
-    location: {},
-    // @ts-ignore
-    history: createMemoryHistory(),
-  };
-};
 
 export const mockJSDOM = () => {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
-    value: jest.fn().mockImplementation((query) => ({
+    value: vi.fn().mockImplementation((query) => ({
       matches: false,
       media: query,
       onchange: null,
-      addListener: jest.fn(), // deprecated
-      removeListener: jest.fn(), // deprecated
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
+      addListener: vi.fn(), // deprecated
+      removeListener: vi.fn(), // deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
     })),
   });
-};
-
-export const waitUntilFind = async (wrapper: ReactWrapper, predictor: any) => {
-  let elements: any = [];
-  try {
-    await waitUntil(
-      () => {
-        act(() => {
-          // @ts-ignore
-          elements = wrapper.update().find(predictor);
-        });
-        return elements.length > 0;
-      },
-      { timeout: 2000 },
-    );
-  } catch (e) {
-    return undefined;
-  }
-
-  return elements;
 };
 
 // Mock the File API
@@ -122,7 +82,7 @@ export class MockFile implements RcFile {
     });
   }
 
-  bytes(): Promise<Uint8Array> {
-    return Promise.resolve(this.content);
+  bytes(): Promise<Uint8Array<ArrayBuffer>> {
+    return Promise.resolve(new Uint8Array(this.content));
   }
 }
