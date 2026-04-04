@@ -194,8 +194,8 @@
 }
 
 .jsonEditor {
-  font-family: "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New",
-    monospace;
+  font-family:
+    "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.5;
   background-color: #fff;
@@ -258,7 +258,7 @@
   border-radius: 6px;
 }
 
-.attachmentEditorModal .ant-modal-content {
+.attachmentEditorModal .ant-modal-container {
   display: flex;
   flex-direction: column;
   height: 90vh;
