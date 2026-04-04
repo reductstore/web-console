@@ -3,7 +3,6 @@ import { Alert, Button, Input, Modal, Typography, message } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
   DeleteOutlined,
-  EditOutlined,
   UploadOutlined,
   DownloadOutlined,
   SearchOutlined,
@@ -80,10 +79,6 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
   useEffect(() => {
     loadAttachments();
   }, [loadAttachments]);
-
-  const startEdit = (name: string) => {
-    setExpandedRowKeys([name]);
-  };
 
   const startAdd = () => {
     setEditing({ originalKey: null });
@@ -331,29 +326,18 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
             className="actionIcon"
           />
           {editable && (
-            <>
-              <Button
-                type="text"
-                size="small"
-                icon={<EditOutlined />}
-                disabled={editing !== null}
-                title="Edit"
-                onClick={() => startEdit(row.name)}
-                className="actionIcon"
-              />
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                title="Delete attachment"
-                className="actionIcon deleteIcon"
-                onClick={() => {
-                  setDeleteKey(row.name);
-                  setDeleteError(null);
-                }}
-              />
-            </>
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              title="Delete attachment"
+              className="actionIcon deleteIcon"
+              onClick={() => {
+                setDeleteKey(row.name);
+                setDeleteError(null);
+              }}
+            />
           )}
         </div>
       );
@@ -499,7 +483,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
         {deleteError && (
           <Alert
             type="error"
-            message={deleteError}
+            title={deleteError}
             showIcon
             style={{ marginBottom: 12 }}
           />
