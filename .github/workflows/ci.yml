@@ -27,7 +27,7 @@ jobs:
       - name: Run ESLint
         run: npm run lint
       - name: Run Tests
-        run: npm test -- --watchAll=false
+        run: npm test
       - name: Build App
         run: npm run build
         env:
