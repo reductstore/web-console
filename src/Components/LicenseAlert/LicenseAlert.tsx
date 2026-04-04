@@ -8,7 +8,7 @@ interface LicenseAlertProps {
 const LicenseAlert: React.FC<LicenseAlertProps> = ({ alertMessage }) => (
   <Alert
     type="warning"
-    message={
+    title={
       alertMessage || (
         <span>
           ReductStore Core is licensed under the{" "}

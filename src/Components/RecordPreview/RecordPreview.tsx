@@ -170,7 +170,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     }
 
     if (error) {
-      return <Alert type="error" message={error} showIcon />;
+      return <Alert type="error" title={error} showIcon />;
     }
 
     if (!previewContent) {

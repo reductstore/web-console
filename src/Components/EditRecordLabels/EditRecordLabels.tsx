@@ -157,7 +157,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
     const index = newData.findIndex((item) => item.id === row.id);
     if (index > -1) {
       const originalItem = newData[index];
-      let isModified = false;
+      let isModified: boolean;
       if (originalItem.isNew) {
         isModified = row.key.trim() !== "" || row.value.trim() !== "";
       } else {
@@ -383,7 +383,7 @@ const EditRecordLabels: React.FC<EditRecordLabelsProps> = ({
             {labelUpdateError && (
               <Alert
                 type="error"
-                message={labelUpdateError}
+                title={labelUpdateError}
                 className="errorMessage"
               />
             )}

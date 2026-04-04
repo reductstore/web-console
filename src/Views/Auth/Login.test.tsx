@@ -1,14 +1,11 @@
-import { mount } from "enzyme";
-import { mockJSDOM, makeRouteProps } from "../../Helpers/TestHelpers";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Client } from "reduct-js";
 import Login from "./Login";
-import waitUntil from "async-wait-until";
-
-mockJSDOM();
 
 describe("Auth::Login", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
   });
 
@@ -17,28 +14,23 @@ describe("Auth::Login", () => {
     get client() {
       return client;
     },
-    login: jest.fn(),
-    logout: jest.fn(),
-    isAllowed: jest.fn(),
-    me: jest.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    isAllowed: vi.fn(),
+    me: vi.fn(),
   };
-
-  const props = {
-    backendApi: backend,
-    onLogin: jest.fn(),
-    ...makeRouteProps(),
-  };
-
-  const wrapper = mount(<Login {...props} />);
-  wrapper.find({ name: "token" });
-  const button = wrapper.find({ type: "submit" }).at(0);
 
   it("should login and call onlogin", async () => {
     backend.login.mockResolvedValue({});
-    button.simulate("submit");
+    const onLogin = vi.fn();
+    render(<Login backendApi={backend} onLogin={onLogin} />);
 
-    await waitUntil(() => backend.login.mock.calls.length > 0);
-    expect(backend.login).toBeCalledWith(undefined); // Find a way test input field
-    expect(props.onLogin).toBeCalled();
+    const submitButton = screen.getByRole("button", { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(backend.login).toHaveBeenCalled();
+    });
+    expect(onLogin).toHaveBeenCalled();
   });
 });

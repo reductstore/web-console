@@ -4,11 +4,11 @@ import RemoveConfirmationModal from "./RemoveConfirmationModal";
 import { mockJSDOM } from "../Helpers/TestHelpers";
 
 describe("RemoveConfirmationModal", () => {
-  const mockOnRemove = jest.fn();
-  const mockOnCancel = jest.fn();
+  const mockOnRemove = vi.fn();
+  const mockOnCancel = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
   });
 

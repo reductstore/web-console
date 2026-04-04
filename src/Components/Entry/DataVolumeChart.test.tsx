@@ -1,10 +1,10 @@
 import React from "react";
-import { mount } from "enzyme";
+import { render } from "@testing-library/react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import DataVolumeChart from "./DataVolumeChart";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 
-jest.mock("react-chartjs-2", () => ({
+vi.mock("react-chartjs-2", () => ({
   Line: ({ data, options, ...props }: any) => (
     <div
       data-testid="chart"
@@ -15,45 +15,46 @@ jest.mock("react-chartjs-2", () => ({
   ),
 }));
 
-jest.mock("chart.js", () => ({
+vi.mock("chart.js", () => ({
   Chart: {
-    register: jest.fn(),
+    register: vi.fn(),
   },
-  LineController: jest.fn(),
-  LineElement: jest.fn(),
-  PointElement: jest.fn(),
-  LinearScale: jest.fn(),
-  TimeScale: jest.fn(),
-  LogarithmicScale: jest.fn(),
-  Tooltip: jest.fn(),
-  Legend: jest.fn(),
+  LineController: vi.fn(),
+  LineElement: vi.fn(),
+  PointElement: vi.fn(),
+  LinearScale: vi.fn(),
+  TimeScale: vi.fn(),
+  LogarithmicScale: vi.fn(),
+  Tooltip: vi.fn(),
+  Legend: vi.fn(),
 }));
 
-jest.mock("chartjs-plugin-zoom", () => ({}));
-jest.mock("chartjs-adapter-dayjs-4", () => ({}));
+vi.mock("chartjs-plugin-zoom", () => ({ default: {} }));
 
-jest.mock("prettier-bytes", () => (bytes: number) => `${bytes} bytes`);
+vi.mock("prettier-bytes", () => ({
+  default: (bytes: number) => `${bytes} bytes`,
+}));
 
 describe("DataVolumeChart", () => {
   beforeEach(() => {
     mockJSDOM();
-    jest.clearAllMocks();
-    global.requestAnimationFrame = jest.fn((cb) => {
+    vi.clearAllMocks();
+    global.requestAnimationFrame = vi.fn((cb) => {
       cb(0);
       return 0;
     });
   });
 
-  const mockSetTimeRange = jest.fn();
+  const mockSetTimeRange = vi.fn();
 
   const createMockRecord = (timeUs: bigint, size: bigint): ReadableRecord =>
     ({
       time: timeUs,
       size,
       contentType: "application/octet-stream",
-      read: jest.fn(),
-      readAsJson: jest.fn(),
-      readAsString: jest.fn(),
+      read: vi.fn(),
+      readAsJson: vi.fn(),
+      readAsString: vi.fn(),
     }) as unknown as ReadableRecord;
 
   const defaultProps = {
@@ -63,13 +64,13 @@ describe("DataVolumeChart", () => {
   };
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Rendering", () => {
     it("should render nothing when no records and not mounted once", () => {
-      const wrapper = mount(<DataVolumeChart {...defaultProps} />);
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(0);
+      const { container } = render(<DataVolumeChart {...defaultProps} />);
+      expect(container.querySelector('[data-testid="chart"]')).toBeNull();
     });
 
     it("should render chart when records are provided", () => {
@@ -78,32 +79,31 @@ describe("DataVolumeChart", () => {
         createMockRecord(2000000n, 2048n),
       ];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(1);
+      expect(container.querySelector('[data-testid="chart"]')).toBeTruthy();
     });
 
     it("should render chart container with correct class", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
-      expect(wrapper.find(".recordsChart")).toHaveLength(1);
+      expect(container.querySelector(".recordsChart")).toBeTruthy();
     });
 
     it("should render chart even with empty records after being mounted once", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container, rerender } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      wrapper.setProps({ records: [] });
-      wrapper.update();
+      rerender(<DataVolumeChart {...defaultProps} records={[]} />);
 
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(1);
+      expect(container.querySelector('[data-testid="chart"]')).toBeTruthy();
     });
   });
 
@@ -114,12 +114,12 @@ describe("DataVolumeChart", () => {
         createMockRecord(2000000n, 2048n),
       ];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const chartData = JSON.parse(chart!.getAttribute("data-chart-data")!);
 
       expect(chartData).toHaveProperty("datasets");
       expect(chartData.datasets).toHaveLength(1);
@@ -141,12 +141,12 @@ describe("DataVolumeChart", () => {
     it("should configure chart with correct options", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const options = JSON.parse(chart!.getAttribute("data-chart-options")!);
 
       expect(options).toMatchObject({
         responsive: true,
@@ -168,7 +168,7 @@ describe("DataVolumeChart", () => {
     it("should disable zoom drag when loading", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart
           {...defaultProps}
           records={records}
@@ -176,8 +176,8 @@ describe("DataVolumeChart", () => {
         />,
       );
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const options = JSON.parse(chart!.getAttribute("data-chart-options")!);
 
       expect(options.plugins.zoom.zoom.drag.enabled).toBe(false);
     });
@@ -188,7 +188,7 @@ describe("DataVolumeChart", () => {
         createMockRecord(2000000n, 2048n),
       ];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart
           {...defaultProps}
           records={records}
@@ -196,8 +196,8 @@ describe("DataVolumeChart", () => {
         />,
       );
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const options = JSON.parse(chart!.getAttribute("data-chart-options")!);
 
       expect(options.plugins.zoom.zoom.drag.enabled).toBe(true);
     });
@@ -210,12 +210,12 @@ describe("DataVolumeChart", () => {
         createMockRecord(2000000n, 2048n),
       ];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const options = JSON.parse(chart.prop("data-chart-options"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const options = JSON.parse(chart!.getAttribute("data-chart-options")!);
 
       expect(options.scales.x).toBeDefined();
     });
@@ -229,18 +229,21 @@ describe("DataVolumeChart", () => {
         createMockRecord(2000000n, 2048n),
       ];
 
-      const wrapper = mount(
+      const { container, rerender } = render(
         <DataVolumeChart {...defaultProps} records={initialRecords} />,
       );
 
-      const initialChart = wrapper.find('[data-testid="chart"]');
-      const initialData = JSON.parse(initialChart.prop("data-chart-data"));
+      const initialChart = container.querySelector('[data-testid="chart"]');
+      const initialData = JSON.parse(
+        initialChart!.getAttribute("data-chart-data")!,
+      );
 
-      wrapper.setProps({ records: newRecords });
-      wrapper.update();
+      rerender(<DataVolumeChart {...defaultProps} records={newRecords} />);
 
-      const updatedChart = wrapper.find('[data-testid="chart"]');
-      const updatedData = JSON.parse(updatedChart.prop("data-chart-data"));
+      const updatedChart = container.querySelector('[data-testid="chart"]');
+      const updatedData = JSON.parse(
+        updatedChart!.getAttribute("data-chart-data")!,
+      );
 
       expect(updatedData.datasets[0].data.length).not.toBe(
         initialData.datasets[0].data.length,
@@ -250,22 +253,24 @@ describe("DataVolumeChart", () => {
 
   describe("Edge Cases", () => {
     it("should handle empty records array gracefully", () => {
-      const wrapper = mount(<DataVolumeChart {...defaultProps} records={[]} />);
+      const { container } = render(
+        <DataVolumeChart {...defaultProps} records={[]} />,
+      );
 
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(0);
+      expect(container.querySelector('[data-testid="chart"]')).toBeNull();
     });
 
     it("should handle single record", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(1);
+      expect(container.querySelector('[data-testid="chart"]')).toBeTruthy();
 
-      const chart = wrapper.find('[data-testid="chart"]');
-      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      const chart = container.querySelector('[data-testid="chart"]');
+      const chartData = JSON.parse(chart!.getAttribute("data-chart-data")!);
 
       expect(chartData.datasets[0].data).toHaveLength(1);
     });
@@ -277,7 +282,7 @@ describe("DataVolumeChart", () => {
       ];
 
       expect(() => {
-        mount(<DataVolumeChart {...defaultProps} records={records} />);
+        render(<DataVolumeChart {...defaultProps} records={records} />);
       }).not.toThrow();
     });
   });
@@ -286,18 +291,16 @@ describe("DataVolumeChart", () => {
     it("should be memoized with React.memo", () => {
       const records = [createMockRecord(1000000n, 1024n)];
 
-      const wrapper = mount(
+      const { container, rerender } = render(
         <DataVolumeChart {...defaultProps} records={records} />,
       );
 
-      const initialRenderCount = wrapper.find('[data-testid="chart"]').length;
+      const initialChart = container.querySelector('[data-testid="chart"]');
+      expect(initialChart).toBeTruthy();
 
-      wrapper.setProps({ ...defaultProps, records });
-      wrapper.update();
+      rerender(<DataVolumeChart {...defaultProps} records={records} />);
 
-      expect(wrapper.find('[data-testid="chart"]')).toHaveLength(
-        initialRenderCount,
-      );
+      expect(container.querySelector('[data-testid="chart"]')).toBeTruthy();
     });
   });
 });

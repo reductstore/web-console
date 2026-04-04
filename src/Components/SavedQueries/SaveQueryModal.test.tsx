@@ -1,92 +1,65 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { message } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import SaveQueryModal from "./SaveQueryModal";
 import { useQueryStore } from "../../stores/queryStore";
 
-jest.setTimeout(15000);
-
-const flush = () => new Promise((resolve) => setTimeout(resolve, 100));
+vi.setConfig({ testTimeout: 15000 });
 
 describe("SaveQueryModal", () => {
-  let wrapper: ReactWrapper;
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
     useQueryStore.getState().clearQueries();
-    message.success = jest.fn() as unknown as typeof message.success;
+    message.success = vi.fn() as unknown as typeof message.success;
   });
 
-  afterEach(() => {
-    if (wrapper) wrapper.unmount();
-  });
-
-  const mountModal = async (open = true, queryText = '{"$each_t": "1s"}') => {
-    await act(async () => {
-      wrapper = mount(
-        <SaveQueryModal
-          open={open}
-          onClose={jest.fn()}
-          bucketName="test-bucket"
-          entryName="test-entry"
-          queryText={queryText}
-          timeFormat="UTC"
-          rangeKey="last7"
-        />,
-      );
-      await flush();
-    });
-    wrapper.update();
+  const renderModal = (open = true, queryText = '{"$each_t": "1s"}') => {
+    return render(
+      <SaveQueryModal
+        open={open}
+        onClose={vi.fn()}
+        bucketName="test-bucket"
+        entryName="test-entry"
+        queryText={queryText}
+        timeFormat="UTC"
+        rangeKey="last7"
+      />,
+    );
   };
 
-  it("renders modal with input when open", async () => {
-    await mountModal();
-    expect(wrapper.find('[data-testid="query-name-input"]').exists()).toBe(
-      true,
-    );
+  it("renders modal with input when open", () => {
+    renderModal();
+    expect(screen.getByTestId("query-name-input")).toBeInTheDocument();
   });
 
-  it("save button is disabled when name is empty", async () => {
-    await mountModal();
-    const saveBtn = wrapper
-      .find("button")
-      .filterWhere((btn) => btn.text() === "Save");
-    expect(saveBtn.prop("disabled")).toBe(true);
+  it("save button is disabled when name is empty", () => {
+    renderModal();
+    const saveBtn = screen.getByRole("button", { name: "Save" });
+    expect(saveBtn).toBeDisabled();
   });
 
   it("saves query to store when name is provided", async () => {
-    await mountModal();
+    renderModal();
 
-    await act(async () => {
-      wrapper
-        .find('[data-testid="query-name-input"]')
-        .find("input")
-        .simulate("change", { target: { value: "my-query" } });
-      await flush();
+    fireEvent.change(screen.getByTestId("query-name-input"), {
+      target: { value: "my-query" },
     });
-    wrapper.update();
 
-    await act(async () => {
-      wrapper
-        .find("button")
-        .filterWhere((btn) => btn.text() === "Save")
-        .simulate("click");
-      await flush();
-    });
-    wrapper.update();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    const queries = useQueryStore
-      .getState()
-      .getQueries("test-bucket", "test-entry");
-    expect(queries).toHaveLength(1);
-    expect(queries[0]).toMatchObject({
-      name: "my-query",
-      query: '{"$each_t": "1s"}',
-      timeFormat: "UTC",
-      rangeKey: "last7",
+    await waitFor(() => {
+      const queries = useQueryStore
+        .getState()
+        .getQueries("test-bucket", "test-entry");
+      expect(queries).toHaveLength(1);
+      expect(queries[0]).toMatchObject({
+        name: "my-query",
+        query: '{"$each_t": "1s"}',
+        timeFormat: "UTC",
+        rangeKey: "last7",
+      });
     });
     expect(message.success).toHaveBeenCalledWith('Query "my-query" saved');
   });
@@ -101,27 +74,16 @@ describe("SaveQueryModal", () => {
       .getState()
       .setLoadedQueryName("test-bucket", "test-entry", null);
 
-    await mountModal();
+    renderModal();
 
-    await act(async () => {
-      wrapper
-        .find('[data-testid="query-name-input"]')
-        .find("input")
-        .simulate("change", { target: { value: "existing" } });
-      await flush();
+    fireEvent.change(screen.getByTestId("query-name-input"), {
+      target: { value: "existing" },
     });
-    wrapper.update();
 
-    await act(async () => {
-      wrapper
-        .find("button")
-        .filterWhere((btn) => btn.text() === "Save")
-        .simulate("click");
-      await flush();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/already exists/)).toBeInTheDocument();
     });
-    wrapper.update();
-
-    // Overwrite modal should appear
-    expect(wrapper.text()).toContain("already exists");
   });
 });

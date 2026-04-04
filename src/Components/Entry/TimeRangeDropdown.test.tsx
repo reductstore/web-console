@@ -1,36 +1,39 @@
-import { mount } from "enzyme";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import TimeRangeDropdown from "./TimeRangeDropdown";
-import { Button } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import dayjs from "dayjs";
 import { getTimeRangeFromKey } from "../../Helpers/timeRangeUtils";
 
 describe("TimeRangeDropdown", () => {
-  beforeEach(() => mockJSDOM());
+  beforeEach(() => {
+    mockJSDOM();
+    global.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
 
-  const mockOnSelectRange = jest.fn();
+  const mockOnSelectRange = vi.fn();
 
-  const findMenuItem = (wrapper: ReturnType<typeof mount>, label: string) => {
-    return wrapper
-      .find("li[role='menuitem']")
-      .filterWhere((node) => node.text().includes(label));
+  const openMenuAndClick = async (label: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText(label));
+    });
   };
 
   it("renders the dropdown button", () => {
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    expect(wrapper.find(Button).text()).toContain("Custom range");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    expect(screen.getByRole("button").textContent).toContain("Custom range");
   });
 
-  it("triggers onSelectRange for 'Last 1 hour'", () => {
+  it("triggers onSelectRange for 'Last 1 hour'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last 1 hour");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last 1 hour");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -39,14 +42,10 @@ describe("TimeRangeDropdown", () => {
     expect(end - start).toEqual(1n * 60n * 60n * 1_000_000n);
   });
 
-  it("triggers onSelectRange for 'Last 6 hours'", () => {
+  it("triggers onSelectRange for 'Last 6 hours'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last 6 hours");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last 6 hours");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -55,14 +54,10 @@ describe("TimeRangeDropdown", () => {
     expect(end - start).toEqual(6n * 60n * 60n * 1_000_000n);
   });
 
-  it("triggers onSelectRange for 'Last 24 hours'", () => {
+  it("triggers onSelectRange for 'Last 24 hours'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last 24 hours");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last 24 hours");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -71,13 +66,10 @@ describe("TimeRangeDropdown", () => {
     expect(end - start).toEqual(24n * 60n * 60n * 1_000_000n);
   });
 
-  it("triggers onSelectRange for 'Last 7 days'", () => {
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last 7 days");
-    menuItem.simulate("click");
+  it("triggers onSelectRange for 'Last 7 days'", async () => {
+    mockOnSelectRange.mockClear();
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last 7 days");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
 
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
@@ -92,14 +84,10 @@ describe("TimeRangeDropdown", () => {
     );
   });
 
-  it("triggers onSelectRange for 'Last 30 days'", () => {
+  it("triggers onSelectRange for 'Last 30 days'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last 30 days");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last 30 days");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -113,14 +101,10 @@ describe("TimeRangeDropdown", () => {
     );
   });
 
-  it("triggers onSelectRange for 'Today'", () => {
+  it("triggers onSelectRange for 'Today'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Today");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Today");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
 
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
@@ -130,14 +114,10 @@ describe("TimeRangeDropdown", () => {
     expect(end - start).toBeLessThanOrEqual(24n * 60n * 60n * 1_000_000n);
   });
 
-  it("triggers onSelectRange for 'Yesterday'", () => {
+  it("triggers onSelectRange for 'Yesterday'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Yesterday");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Yesterday");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -146,14 +126,10 @@ describe("TimeRangeDropdown", () => {
     expect(end - start).toEqual(24n * 60n * 60n * 1_000_000n - 1_000n);
   });
 
-  it("triggers onSelectRange for 'This week'", () => {
+  it("triggers onSelectRange for 'This week'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "This week");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("This week");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -164,14 +140,10 @@ describe("TimeRangeDropdown", () => {
     expect(rangeInDays).toBeLessThan(7.5);
   });
 
-  it("triggers onSelectRange for 'Last week'", () => {
+  it("triggers onSelectRange for 'Last week'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last week");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last week");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -182,14 +154,10 @@ describe("TimeRangeDropdown", () => {
     expect(rangeInDays).toBeLessThan(7.5);
   });
 
-  it("triggers onSelectRange for 'This month'", () => {
+  it("triggers onSelectRange for 'This month'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "This month");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("This month");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -200,14 +168,10 @@ describe("TimeRangeDropdown", () => {
     expect(rangeInDays).toBeLessThan(32);
   });
 
-  it("triggers onSelectRange for 'Last month'", () => {
+  it("triggers onSelectRange for 'Last month'", async () => {
     mockOnSelectRange.mockClear();
-    const wrapper = mount(
-      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
-    );
-    wrapper.find(Button).simulate("click");
-    const menuItem = findMenuItem(wrapper, "Last month");
-    menuItem.simulate("click");
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+    await openMenuAndClick("Last month");
     expect(mockOnSelectRange).toHaveBeenCalledTimes(1);
     const [start, end] = mockOnSelectRange.mock.calls[0] || [];
     expect(typeof start).toBe("bigint");
@@ -218,13 +182,13 @@ describe("TimeRangeDropdown", () => {
 
   it("automatically detects range key from currentRange prop", () => {
     const last7Range = getTimeRangeFromKey("last7");
-    const wrapper = mount(
+    render(
       <TimeRangeDropdown
         onSelectRange={mockOnSelectRange}
         currentRange={last7Range}
       />,
     );
-    expect(wrapper.find(Button).text()).toContain("Last 7 days");
+    expect(screen.getByRole("button").textContent).toContain("Last 7 days");
   });
 
   it("displays 'Custom range' for unmatched currentRange", () => {
@@ -232,12 +196,12 @@ describe("TimeRangeDropdown", () => {
       start: BigInt(dayjs("2023-01-01").valueOf() * 1000),
       end: BigInt(dayjs("2023-01-02").valueOf() * 1000),
     };
-    const wrapper = mount(
+    render(
       <TimeRangeDropdown
         onSelectRange={mockOnSelectRange}
         currentRange={customRange}
       />,
     );
-    expect(wrapper.find(Button).text()).toContain("Custom range");
+    expect(screen.getByRole("button").textContent).toContain("Custom range");
   });
 });

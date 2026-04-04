@@ -1,28 +1,32 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import ShareLinkModal, { ShareLinkRecord } from "./ShareLinkModal";
 
 describe("ShareLinkModal", () => {
-  const mockOnGenerate = jest.fn();
-  const mockOnCancel = jest.fn();
+  const mockOnGenerate = vi.fn();
+  const mockOnCancel = vi.fn();
   const record: ShareLinkRecord = {
     key: "0",
     contentType: "application/octet-stream",
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
-      value: jest.fn().mockImplementation((query) => ({
+      value: vi.fn().mockImplementation((query) => ({
         matches: false,
         media: query,
         onchange: null,
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("should render the modal with the correct title", () => {
@@ -151,7 +155,7 @@ describe("ShareLinkModal", () => {
   it("should copy the link to clipboard when copy button is clicked", async () => {
     mockOnGenerate.mockResolvedValue("http://test-link");
     const mockClipboard = {
-      writeText: jest.fn().mockResolvedValue(undefined),
+      writeText: vi.fn().mockResolvedValue(undefined),
     };
     Object.assign(navigator, { clipboard: mockClipboard });
 

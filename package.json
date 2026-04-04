@@ -1,83 +1,65 @@
 {
   "name": "web-console",
   "version": "1.14.0-beta.1",
+  "type": "module",
   "private": true,
-  "homepage": "/ui",
   "devDependencies": {
-    "@ant-design/icons": "^4.8.1",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^12.1.5",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/enzyme": "^3.10.14",
+    "@ant-design/icons": "^6.0.0",
+    "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/humanize-duration": "^3.27.1",
-    "@types/jest": "^27.5.2",
-    "@types/mime-types": "^3.0.1",
-    "@types/node": "^18.18.4",
-    "@types/react": "^17.0.67",
-    "@types/react-dom": "^17.0.21",
-    "@types/react-router-dom": "^5.3.3",
-    "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
-    "antd": "^5.26.6",
-    "async-wait-until": "^2.0.12",
-    "babel-jest": "^27.5.1",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/browser": "^4.1.2",
+    "antd": "^6.0.0",
     "buffer": "^6.0.3",
-    "enzyme": "^3.11.0",
-    "eslint-config-prettier": "^9.1.0",
-    "humanize-duration": "^3.30.0",
-    "jest": "^27.5.1",
-    "prettier": "^3.2.5",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "humanize-duration": "^3.33.2",
+    "jsdom": "^29.0.1",
+    "prettier": "^3.8.1",
     "prettier-bytes": "^1.0.4",
-    "react": "^17.0.2",
-    "react-app-rewired": "^2.2.1",
-    "react-dom": "^17.0.2",
-    "react-router-dom": "^5.3.4",
-    "react-scripts": "5.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0",
     "reduct-js": "1.19.0-beta.1",
-    "stream-browserify": "^3.0.0",
-    "ts-jest": "^27.1.5",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.58.0",
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2",
+    "web-vitals": "^5.0.0"
   },
   "scripts": {
-    "start": "REACT_APP_VERSION=$npm_package_version react-app-rewired start",
-    "build": "REACT_APP_VERSION=$npm_package_version react-app-rewired build",
-    "test": "react-app-rewired test",
-    "test:ci": "CI=true npm test -- -w=0",
-    "eject": "react-app-rewired eject",
-    "lint": "eslint . --ext ts,tsx --ignore-path .gitignore",
+    "start": "VITE_APP_VERSION=$npm_package_version vite",
+    "build": "VITE_APP_VERSION=$npm_package_version vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:ci": "vitest run",
+    "lint": "eslint .",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
-  },
-  "proxy": "https://orion.reductsoft.eu",
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "typecheck": "tsc --noEmit",
+    "audit:ci": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@reductstore/reduct-query-monaco": "^1.0.1",
-    "chart.js": "^4.5.0",
-    "chartjs-adapter-dayjs-4": "^1.0.4",
+    "ajv": "^8.18.0",
+    "chart.js": "^4.5.1",
+    "chartjs-adapter-dayjs-4": "^1.2.3",
     "chartjs-plugin-zoom": "^2.2.0",
     "json5": "^2.2.3",
-    "mime-types": "^3.0.1",
+    "mime": "^4.1.0",
     "monaco-editor": "^0.55.1",
-    "react-chartjs-2": "^5.3.0",
-    "zustand": "^4.5.6"
+    "react-chartjs-2": "^5.3.1",
+    "zustand": "^5.0.12"
+  },
+  "overrides": {
+    "dompurify": "^3.3.3"
   }
 }

@@ -93,7 +93,7 @@ export default function ShareLinkModal({
     try {
       await navigator.clipboard.writeText(linkToCopy);
       message.success("Link copied to clipboard");
-    } catch (err) {
+    } catch {
       message.error("Failed to copy link to clipboard");
     }
   };
@@ -157,7 +157,7 @@ export default function ShareLinkModal({
       <Flex vertical gap="small">
         {errorMessage && (
           <Alert
-            message={errorMessage}
+            title={errorMessage}
             type="error"
             showIcon
             data-testid="error-alert"
@@ -167,7 +167,7 @@ export default function ShareLinkModal({
         {!link ? (
           <Form layout="vertical">
             <Form.Item label="Expiry time">
-              <Space direction="vertical" size="small">
+              <Space orientation="vertical" size="small">
                 <Flex gap="small" wrap>
                   {PRESETS.map((preset) => (
                     <Button
@@ -197,7 +197,7 @@ export default function ShareLinkModal({
             </Form.Item>
           </Form>
         ) : (
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space orientation="vertical" style={{ width: "100%" }}>
             <Typography.Text strong>Shareable Link:</Typography.Text>
             <Input value={link} readOnly data-testid="generated-link" />
             <Space>

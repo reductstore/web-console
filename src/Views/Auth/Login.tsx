@@ -1,13 +1,11 @@
 import React, { useState } from "react";
-import { RouteComponentProps } from "react-router-dom";
-import { Alert, Button, Card, Form } from "antd";
-import Password from "antd/lib/input/Password";
+import { Alert, Button, Card, Form, Input } from "antd";
 import { IBackendAPI } from "../../BackendAPI";
 
 import "./Login.css";
 import { APIError } from "reduct-js";
 
-interface Props extends RouteComponentProps {
+interface Props {
   backendApi: IBackendAPI;
   onLogin: () => void;
 }
@@ -34,23 +32,25 @@ export default function Login(props: Props) {
     <Card
       title="Enter API token for authentication"
       className="LoginForm"
-      bordered
+      variant="outlined"
     >
-      <p>
+      <div>
         {error ? (
           <Alert
-            message={error}
+            title={error}
             type="error"
-            closable
-            onClose={() => setError(undefined)}
+            closable={{
+              onClose: () => setError(undefined),
+            }}
+            style={{ marginBottom: 16 }}
           />
         ) : (
           <div />
         )}
-      </p>
+      </div>
       <Form onFinish={onFinish}>
         <Form.Item label="API Token" name="token">
-          <Password />
+          <Input.Password />
         </Form.Item>
         <Button type="primary" htmlType="submit">
           Login

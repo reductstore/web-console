@@ -37,6 +37,14 @@
   max-width: 220px;
   width: 220px;
 }
+.Sider .ant-layout-sider-children {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
 
 @media (max-width: 768px) {
   .Sider {
@@ -147,10 +155,9 @@
 
 /* --- Meta Info --- */
 .Meta {
-  position: absolute;
-  bottom: 0;
   color: var(--primary-fg);
   margin: 20px 30px 15px;
+  margin-top: auto;
 }
 .MetaItem {
   padding: 5px 0;

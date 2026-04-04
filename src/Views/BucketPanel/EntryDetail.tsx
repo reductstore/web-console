@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useHistory, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Alert } from "antd";
 import { Bucket, Client, EntryInfo, Status, TokenPermissions } from "reduct-js";
 import EntryCard from "../../Components/Entry/EntryCard";
@@ -20,18 +20,24 @@ interface Props {
 }
 
 export default function EntryDetail(props: Readonly<Props>) {
-  const { bucketName, entryName } = useParams() as {
+  const {
+    bucketName,
+    entryName,
+    "*": splat,
+  } = useParams() as {
     bucketName: string;
     entryName: string;
+    "*": string;
   };
+  const fullEntryName = splat ? `${entryName}/${splat}` : entryName;
   const decodedEntryName = useMemo(() => {
     try {
-      return decodeURIComponent(entryName);
+      return decodeURIComponent(fullEntryName);
     } catch {
-      return entryName;
+      return fullEntryName;
     }
-  }, [entryName]);
-  const history = useHistory();
+  }, [fullEntryName]);
+  const navigate = useNavigate();
   const permissions = props.permissions || { write: [], fullAccess: false };
   const [entryInfo, setEntryInfo] = useState<EntryInfo>();
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
@@ -99,7 +105,7 @@ export default function EntryDetail(props: Readonly<Props>) {
             ),
           );
           if (removedEntryName === decodedEntryName) {
-            history.push(`/buckets/${bucketName}`);
+            navigate(`/buckets/${bucketName}`);
           }
         }}
         hasWritePermission={hasWritePermission}
@@ -129,7 +135,7 @@ export default function EntryDetail(props: Readonly<Props>) {
             <Alert
               type="warning"
               showIcon
-              message={
+              title={
                 <span>
                   This entry has sub-entries. Use the{" "}
                   <Link to="/query">

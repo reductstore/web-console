@@ -132,7 +132,7 @@ export default function TimeRangeDropdown({
             <DownOutlined />
           </Button>
           <Space
-            direction="vertical"
+            orientation="vertical"
             size={12}
             style={{
               position: "absolute",

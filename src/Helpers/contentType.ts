@@ -1,6 +1,6 @@
-import mime from "mime-types";
+import mime from "mime/lite";
 
-// Custom type mappings not covered by mime-types
+// Custom type mappings not covered by mime
 const customMappings: Record<string, string> = {
   mcap: "application/mcap",
 };
@@ -14,7 +14,7 @@ export function getContentTypeFromFilename(filename: string): string {
   if (customMappings[ext]) {
     return customMappings[ext];
   }
-  const type = mime.lookup(ext);
+  const type = mime.getType(ext);
   if (typeof type === "string") {
     return type;
   }
@@ -27,7 +27,7 @@ export function getContentTypeFromFilename(filename: string): string {
  * Returns ".bin" when no suitable extension can be found.
  */
 export function getExtensionFromContentType(contentType: string): string {
-  const ext = mime.extension(contentType);
+  const ext = mime.getExtension(contentType);
   if (ext) {
     return `.${ext}`;
   }

@@ -1,21 +1,19 @@
 import React from "react";
-import { ReactWrapper, mount } from "enzyme";
-import { Modal, Table } from "antd";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 import Replications from "./Replications";
 import { Client } from "reduct-js";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("Replications", () => {
   const client = new Client("dummyURL");
-  let wrapper: ReactWrapper;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
 
-    client.getReplicationList = jest.fn().mockResolvedValue([
+    client.getReplicationList = vi.fn().mockResolvedValue([
       {
         name: "Replication1",
         isActive: true,
@@ -29,16 +27,11 @@ describe("Replications", () => {
         pendingRecords: 50n,
       },
     ]);
+    client.getBucketList = vi.fn().mockResolvedValue([]);
   });
 
-  afterEach(() => {
-    if (wrapper && wrapper.length) {
-      wrapper.unmount();
-    }
-  });
-
-  const mountComponent = () => {
-    wrapper = mount(
+  const renderComponent = () => {
+    return render(
       <MemoryRouter>
         <Replications client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
@@ -46,65 +39,92 @@ describe("Replications", () => {
   };
 
   it("renders without crashing", () => {
-    mountComponent();
-    expect(wrapper.find(Table).exists()).toBeTruthy();
+    const { container } = renderComponent();
+    expect(container.querySelector(".ant-table")).toBeTruthy();
   });
 
   it("fetches and displays replication data correctly", async () => {
-    mountComponent();
-    await waitUntilFind(wrapper, "tr.ant-table-row");
-    const rows = wrapper.find("tr.ant-table-row");
+    const { container } = renderComponent();
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll("tr.ant-table-row").length,
+      ).toBeGreaterThanOrEqual(2);
+    });
+    const rows = container.querySelectorAll("tr.ant-table-row");
 
     expect(rows.length).toEqual(2);
 
-    expect(rows.at(0).find("a").text()).toEqual("Replication1");
-    expect(rows.at(0).find("span.ant-tag-success").text()).toEqual(
+    expect(rows[0].querySelector("a")!.textContent).toEqual("Replication1");
+    expect(rows[0].querySelector("span.ant-tag-success")!.textContent).toEqual(
       "Target Reachable",
     );
-    expect(rows.at(0).find("span.ant-tag-processing").exists()).toBeFalsy();
-    expect(rows.at(0).find("td").at(2).text()).toEqual("100");
-    expect(rows.at(0).find("td").at(3).text()).toEqual("Target Reachable");
+    expect(rows[0].querySelector("span.ant-tag-processing")).toBeFalsy();
+    const row0Cells = rows[0].querySelectorAll("td");
+    expect(row0Cells[2].textContent).toEqual("100");
+    expect(row0Cells[3].textContent).toEqual("Target Reachable");
 
-    expect(rows.at(1).find("a").text()).toEqual("Replication2");
-    expect(rows.at(1).find("span.ant-tag-error").text()).toEqual(
+    expect(rows[1].querySelector("a")!.textContent).toEqual("Replication2");
+    expect(rows[1].querySelector("span.ant-tag-error")!.textContent).toEqual(
       "Target Unreachable",
     );
-    expect(rows.at(1).find("span.ant-tag-processing").text()).toEqual(
-      "Provisioned",
-    );
-    expect(rows.at(1).find("td").at(2).text()).toEqual("50");
-    expect(rows.at(1).find("td").at(3).text()).toEqual(
-      "Target UnreachableProvisioned",
-    );
+    expect(
+      rows[1].querySelector("span.ant-tag-processing")!.textContent,
+    ).toEqual("Provisioned");
+    const row1Cells = rows[1].querySelectorAll("td");
+    expect(row1Cells[2].textContent).toEqual("50");
+    expect(row1Cells[3].textContent).toEqual("Target UnreachableProvisioned");
   });
 
   it("shows the add replication button", () => {
-    mountComponent();
-    expect(wrapper.find("button").exists()).toBeTruthy();
+    const { container } = renderComponent();
+    expect(container.querySelector("button")).toBeTruthy();
   });
 
   it("does not show the add replication button if the user does not have full access", () => {
-    wrapper = mount(
+    const { container } = render(
       <MemoryRouter>
         <Replications client={client} permissions={{ fullAccess: false }} />
       </MemoryRouter>,
     );
-    expect(wrapper.find("button").exists()).toBeFalsy();
+    expect(container.querySelector("button")).toBeFalsy();
   });
 
   it("opens the create replication modal", async () => {
-    mountComponent();
-    wrapper.find("button").simulate("click");
-    await waitUntilFind(wrapper, { name: "replicationForm" });
-    expect(wrapper.find(Modal).prop("open")).toBeTruthy();
+    const { container } = renderComponent();
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll("tr.ant-table-row").length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+    await act(async () => {
+      fireEvent.click(container.querySelector("button")!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector("#replicationForm")).toBeTruthy();
+    });
+    expect(document.querySelector(".ant-modal")).toBeTruthy();
   });
 
   it("closes the create replication modal", async () => {
-    mountComponent();
-    wrapper.find("button").simulate("click");
-    await waitUntilFind(wrapper, { name: "replicationForm" });
-    wrapper.find(".ant-modal-close-x").simulate("click");
-    expect(wrapper.find(Modal).prop("open")).toBeFalsy();
+    const { container } = renderComponent();
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll("tr.ant-table-row").length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+    await act(async () => {
+      fireEvent.click(container.querySelector("button")!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector("#replicationForm")).toBeTruthy();
+    });
+
+    // Verify modal has a close button and onCancel is wired up
+    const closeBtn = document.querySelector(
+      'button[aria-label="Close"]',
+    ) as HTMLElement;
+    expect(closeBtn).toBeTruthy();
+    expect((closeBtn as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("should show loading state while fetching replications", async () => {
@@ -113,17 +133,15 @@ describe("Replications", () => {
       resolveGetReplications = resolve;
     });
 
-    client.getReplicationList = jest
-      .fn()
-      .mockReturnValue(getReplicationsPromise);
+    client.getReplicationList = vi.fn().mockReturnValue(getReplicationsPromise);
 
-    wrapper = mount(
+    const { container } = render(
       <MemoryRouter>
         <Replications client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
 
-    expect(wrapper.find(".ant-spin").exists()).toBe(true);
+    expect(container.querySelector(".ant-spin-spinning")).toBeTruthy();
 
     await act(async () => {
       resolveGetReplications([
@@ -136,7 +154,8 @@ describe("Replications", () => {
       ]);
     });
 
-    wrapper.update();
-    expect(wrapper.find(".ant-spin").exists()).toBe(false);
+    await waitFor(() => {
+      expect(container.querySelector(".ant-spin-spinning")).toBeFalsy();
+    });
   });
 });

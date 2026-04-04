@@ -111,7 +111,7 @@ export default function Replications(props: Readonly<Props>) {
       dataIndex: "name",
       key: "name",
       render: (text: string) => (
-        <Link to={`replications/${text}`}>
+        <Link to={`/replications/${text}`}>
           <b>{text}</b>
         </Link>
       ),
@@ -188,7 +188,11 @@ export default function Replications(props: Readonly<Props>) {
             </Tag>,
           );
         }
-        return <>{tags}</>;
+        return (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {tags}
+          </div>
+        );
       },
     },
   ];

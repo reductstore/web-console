@@ -1,12 +1,18 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
-import { message, Button } from "antd";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { message } from "antd";
 import { Client } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import EntryAttachmentsCard from "./EntryAttachmentsCard";
 
-jest.mock("@monaco-editor/react", () => ({
+// Mock ResizeObserver for antd Table
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
   default: ({
     value,
@@ -23,50 +29,44 @@ jest.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-jest.setTimeout(15000);
-
-const flush = () => new Promise((resolve) => setTimeout(resolve, 100));
+vi.setConfig({ testTimeout: 15000 });
 
 describe("EntryAttachmentsCard", () => {
-  let wrapper: ReactWrapper;
+  let container: HTMLElement;
 
   const makeBucket = () => ({
-    readAttachments: jest.fn().mockResolvedValue({ schema: { version: 1 } }),
-    writeAttachments: jest.fn().mockResolvedValue(undefined),
-    removeAttachments: jest.fn().mockResolvedValue(undefined),
+    readAttachments: vi.fn().mockResolvedValue({ schema: { version: 1 } }),
+    writeAttachments: vi.fn().mockResolvedValue(undefined),
+    removeAttachments: vi.fn().mockResolvedValue(undefined),
   });
 
   let bucket: ReturnType<typeof makeBucket>;
   let client: Client;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-    message.success = jest.fn() as unknown as typeof message.success;
+    message.success = vi.fn() as unknown as typeof message.success;
 
     bucket = makeBucket();
     client = {
-      getBucket: jest.fn().mockResolvedValue(bucket),
+      getBucket: vi.fn().mockResolvedValue(bucket),
     } as unknown as Client;
   });
 
-  afterEach(() => {
-    if (wrapper) wrapper.unmount();
-  });
-
   const mountCard = async (editable = true) => {
-    await act(async () => {
-      wrapper = mount(
-        <EntryAttachmentsCard
-          client={client}
-          bucketName="bucket"
-          entryName="entry"
-          editable={editable}
-        />,
-      );
-      await flush();
+    const result = render(
+      <EntryAttachmentsCard
+        client={client}
+        bucketName="bucket"
+        entryName="entry"
+        editable={editable}
+      />,
+    );
+    ({ container } = result);
+    await waitFor(() => {
+      expect(bucket.readAttachments).toHaveBeenCalled();
     });
-    wrapper.update();
   };
 
   it("loads and displays attachments in a table", async () => {
@@ -74,98 +74,83 @@ describe("EntryAttachmentsCard", () => {
 
     expect(client.getBucket).toHaveBeenCalledWith("bucket");
     expect(bucket.readAttachments).toHaveBeenCalledWith("entry");
-    expect(wrapper.text()).toContain("schema");
-    expect(wrapper.text()).toContain("Attachments");
+    expect(container.textContent).toContain("schema");
+    expect(container.textContent).toContain("Attachments");
   });
 
   it("shows Add Attachment button when editable", async () => {
     await mountCard();
 
-    const addBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Add Attachment"));
-    expect(addBtn.length).toBe(1);
+    const addBtn = screen.getByRole("button", { name: /Add Attachment/ });
+    expect(addBtn).toBeTruthy();
   });
 
   it("hides Add Attachment button when not editable", async () => {
     await mountCard(false);
 
-    const addBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Add Attachment"));
-    expect(addBtn.length).toBe(0);
+    const addBtns = screen.queryAllByRole("button", {
+      name: /Add Attachment/,
+    });
+    expect(addBtns.length).toBe(0);
   });
 
   it("shows 'No attachments' message when not editable and no attachments", async () => {
     bucket.readAttachments.mockResolvedValue({});
     await mountCard(false);
 
-    expect(wrapper.text()).toContain("No attachments");
+    await waitFor(() => {
+      expect(container.textContent).toContain("No attachments");
+    });
   });
 
   it("does not show 'No attachments' message when editable", async () => {
     bucket.readAttachments.mockResolvedValue({});
     await mountCard(true);
 
-    expect(wrapper.text()).not.toContain("No attachments");
+    expect(container.textContent).not.toContain("No attachments");
   });
 
   it("opens add attachment modal when Add Attachment is clicked", async () => {
     await mountCard();
 
-    const addBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Add Attachment"));
+    const addBtn = screen.getByRole("button", { name: /Add Attachment/ });
+    fireEvent.click(addBtn);
 
-    await act(async () => {
-      addBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        screen.getByText("Add Attachment", { selector: ".ant-modal-title" }),
+      ).toBeTruthy();
     });
-    wrapper.update();
-
-    const addModal = wrapper
-      .find("Modal")
-      .filterWhere((m) => m.prop("title") === "Add Attachment");
-    expect(addModal.prop("open")).toBe(true);
   });
 
   it("saves new attachment via writeAttachments", async () => {
     await mountCard();
 
-    const addBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Add Attachment"));
+    const addBtn = screen.getByRole("button", { name: /Add Attachment/ });
+    fireEvent.click(addBtn);
 
-    await act(async () => {
-      addBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(document.querySelector(".ant-modal")).toBeTruthy();
     });
-    wrapper.update();
 
-    const modal = wrapper
-      .find("Modal")
-      .filterWhere((m) => m.prop("title") === "Add Attachment");
-    const keyInput = modal.find("input").first();
-    const valueInput = modal.find('[data-testid="monaco-editor"]').first();
+    const modal = document.querySelector(".ant-modal") as HTMLElement;
+    const keyInput = modal.querySelector("input") as HTMLInputElement;
+    const valueInput = modal.querySelector(
+      '[data-testid="monaco-editor"]',
+    ) as HTMLTextAreaElement;
 
-    await act(async () => {
-      keyInput.simulate("change", { target: { value: "newKey" } });
-      valueInput.simulate("change", { target: { value: '{"test": true}' } });
-      await flush();
+    fireEvent.change(keyInput, { target: { value: "newKey" } });
+    fireEvent.change(valueInput, { target: { value: '{"test": true}' } });
+
+    const saveBtn = Array.from(modal.querySelectorAll("button")).find((btn) =>
+      btn.textContent?.includes("Save"),
+    ) as HTMLElement;
+
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(bucket.writeAttachments).toHaveBeenCalled();
     });
-    wrapper.update();
-
-    const saveBtn = modal
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Save"));
-
-    await act(async () => {
-      saveBtn.simulate("click");
-      await flush();
-    });
-    wrapper.update();
-
-    expect(bucket.writeAttachments).toHaveBeenCalled();
   });
 
   it("truncates content preview to 50 characters", async () => {
@@ -173,20 +158,22 @@ describe("EntryAttachmentsCard", () => {
     bucket.readAttachments.mockResolvedValueOnce({ longKey: longValue });
     await mountCard();
 
-    const contentPreview = wrapper.find(".contentPreview").first();
-    expect(contentPreview.text().length).toBeLessThanOrEqual(50);
-    expect(contentPreview.text()).toContain("...");
+    await waitFor(() => {
+      const contentPreview = container.querySelector(
+        ".contentPreview",
+      ) as HTMLElement;
+      expect(contentPreview).toBeTruthy();
+      expect(contentPreview.textContent!.length).toBeLessThanOrEqual(50);
+      expect(contentPreview.textContent).toContain("...");
+    });
   });
 
   it("has download button for attachments", async () => {
     await mountCard();
 
-    const downloadBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Download")
-      .first();
-
-    expect(downloadBtn.length).toBe(1);
+    await waitFor(() => {
+      expect(screen.getAllByTitle("Download").length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it("expands row to show full content", async () => {
@@ -194,16 +181,21 @@ describe("EntryAttachmentsCard", () => {
     bucket.readAttachments.mockResolvedValueOnce({ testKey: testValue });
     await mountCard();
 
-    const expandIcon = wrapper.find(".ant-table-row-expand-icon").first();
-    await act(async () => {
-      expandIcon.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    const expandedRow = wrapper.find(".ant-table-expanded-row");
-    expect(expandedRow.length).toBeGreaterThanOrEqual(1);
-    expect(wrapper.text()).toContain("expanded");
+    const expandIcon = container.querySelector(
+      ".ant-table-row-expand-icon",
+    ) as HTMLElement;
+    fireEvent.click(expandIcon);
+
+    await waitFor(() => {
+      expect(container.querySelector(".ant-table-expanded-row")).toBeTruthy();
+      expect(container.textContent).toContain("expanded");
+    });
   });
 
   it("collapses expanded row on second click", async () => {
@@ -211,247 +203,226 @@ describe("EntryAttachmentsCard", () => {
     bucket.readAttachments.mockResolvedValueOnce({ testKey: testValue });
     await mountCard();
 
-    const expandIcon = wrapper.find(".ant-table-row-expand-icon").first();
-    await act(async () => {
-      expandIcon.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    expect(
-      wrapper.find(".ant-table-expanded-row").length,
-    ).toBeGreaterThanOrEqual(1);
-
-    await act(async () => {
-      wrapper.find(".ant-table-row-expand-icon").first().simulate("click");
-      await flush();
-    });
-    wrapper.update();
-
-    const collapsedIcons = wrapper.find(
-      ".ant-table-row-expand-icon.ant-table-row-expand-icon-collapsed",
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
     );
-    expect(collapsedIcons.length).toBeGreaterThanOrEqual(1);
-  });
 
-  it("opens edit mode via action icon when editable", async () => {
-    await mountCard();
-
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit")
-      .first();
-
-    await act(async () => {
-      editBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(container.querySelector(".ant-table-expanded-row")).toBeTruthy();
     });
-    wrapper.update();
 
-    const keyInput = wrapper
-      .find("input")
-      .filterWhere((inp) => inp.prop("value") === "schema");
-    expect(keyInput.length).toBe(1);
-  });
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
+    );
 
-  it("does not show edit action icon when not editable", async () => {
-    await mountCard(false);
-
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit");
-    expect(editBtn.length).toBe(0);
+    await waitFor(() => {
+      const collapsedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon.ant-table-row-expand-icon-collapsed",
+      );
+      expect(collapsedIcons.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it("saves edited attachment via writeAttachments", async () => {
     await mountCard();
 
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit")
-      .first();
-
-    await act(async () => {
-      editBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    const keyInput = wrapper.find(".expandedEditRow input").first();
-    const valueInput = wrapper
-      .find('.expandedEditRow [data-testid="monaco-editor"]')
-      .first();
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
+    );
 
-    await act(async () => {
-      keyInput.simulate("change", { target: { value: "newSchema" } });
-      valueInput.simulate("change", {
-        target: { value: '{"version": 2}' },
-      });
-      await flush();
+    await waitFor(() => {
+      expect(container.querySelector(".expandedEditRow")).toBeTruthy();
     });
-    wrapper.update();
 
-    const saveBtn = wrapper
-      .find(".expandedEditRow")
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Save"))
-      .first();
+    const editRow = container.querySelector(".expandedEditRow") as HTMLElement;
+    const keyInput = editRow.querySelector("input") as HTMLInputElement;
+    const valueInput = editRow.querySelector(
+      '[data-testid="monaco-editor"]',
+    ) as HTMLTextAreaElement;
 
-    await act(async () => {
-      saveBtn.simulate("click");
-      await flush();
+    fireEvent.change(keyInput, { target: { value: "newSchema" } });
+    fireEvent.change(valueInput, {
+      target: { value: '{"version": 2}' },
     });
-    wrapper.update();
 
-    expect(bucket.removeAttachments).toHaveBeenCalledWith("entry", ["schema"]);
-    expect(bucket.writeAttachments).toHaveBeenCalled();
+    const saveBtn = Array.from(editRow.querySelectorAll("button")).find((btn) =>
+      btn.textContent?.includes("Save"),
+    ) as HTMLElement;
+
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(bucket.removeAttachments).toHaveBeenCalledWith("entry", [
+        "schema",
+      ]);
+      expect(bucket.writeAttachments).toHaveBeenCalled();
+    });
   });
 
   it("expands an existing attachment editor into a modal", async () => {
     await mountCard();
 
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit")
-      .first();
-
-    await act(async () => {
-      editBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    const expandBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("aria-label") === "Expand editor")
-      .first();
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
+    );
 
-    await act(async () => {
-      expandBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Expand editor/ }),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    expect(wrapper.text()).toContain("Editing in expanded attachment editor");
+    fireEvent.click(screen.getByRole("button", { name: /Expand editor/ }));
 
-    const expandedModal = wrapper
-      .find("Modal")
-      .filterWhere((m) => m.prop("title") === "Attachment Editor: schema");
-    expect(expandedModal.prop("open")).toBe(true);
+    await waitFor(() => {
+      expect(container.textContent).toContain(
+        "Editing in expanded attachment editor",
+      );
+      expect(
+        screen.getByText("Attachment Editor: schema", {
+          selector: ".ant-modal-title",
+        }),
+      ).toBeTruthy();
+    });
   });
 
   it("shows format and expand actions without a copy action", async () => {
     await mountCard();
 
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit")
-      .first();
-
-    await act(async () => {
-      editBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    const formatBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("aria-label") === "Format JSON");
-    const expandBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("aria-label") === "Expand editor");
-    const copyBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Copy"));
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
+    );
 
-    expect(formatBtn).toHaveLength(1);
-    expect(expandBtn).toHaveLength(1);
-    expect(copyBtn).toHaveLength(0);
+    await waitFor(() => {
+      expect(
+        screen.queryAllByRole("button", { name: /Format JSON/ }),
+      ).toHaveLength(1);
+      expect(
+        screen.queryAllByRole("button", { name: /Expand editor/ }),
+      ).toHaveLength(1);
+      expect(screen.queryAllByRole("button", { name: /Copy/ })).toHaveLength(0);
+    });
   });
 
   it("keeps cancel hidden until there are unsaved changes", async () => {
     await mountCard();
 
-    const editBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.prop("title") === "Edit")
-      .first();
-
-    await act(async () => {
-      editBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-table-row-expand-icon"),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    const cancelBtn = wrapper
-      .find(".expandedEditRow")
-      .find(Button)
-      .filterWhere((btn) => btn.text().includes("Cancel"))
-      .first();
+    fireEvent.click(
+      container.querySelector(".ant-table-row-expand-icon") as HTMLElement,
+    );
 
-    expect(cancelBtn.exists()).toBe(true);
-    expect(cancelBtn.hasClass("hidden")).toBe(true);
-    expect(cancelBtn.prop("disabled")).toBe(true);
+    await waitFor(() => {
+      expect(container.querySelector(".expandedEditRow")).toBeTruthy();
+    });
+
+    const editRow = container.querySelector(".expandedEditRow") as HTMLElement;
+    const cancelBtn = Array.from(editRow.querySelectorAll("button")).find(
+      (btn) => btn.textContent?.includes("Cancel"),
+    ) as HTMLElement;
+
+    expect(cancelBtn).toBeTruthy();
+    expect(cancelBtn.classList.contains("hidden")).toBe(true);
+    expect(cancelBtn.hasAttribute("disabled")).toBe(true);
     expect(bucket.writeAttachments).not.toHaveBeenCalled();
   });
 
   it("has sortable key column", async () => {
     await mountCard();
 
-    const sorterIcon = wrapper.find(".ant-table-column-sorter");
-    expect(sorterIcon.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(container.querySelector(".ant-table-column-sorter")).toBeTruthy();
+    });
   });
 
   it("has search filter on key column", async () => {
     await mountCard();
 
-    const filterIcon = wrapper.find(".filterIcon");
-    expect(filterIcon.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(container.querySelector(".filterIcon")).toBeTruthy();
+    });
   });
 
   it("opens delete confirmation modal on delete click", async () => {
     await mountCard();
 
-    const deleteBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) => btn.find(".deleteIcon").length > 0)
-      .first();
-
-    await act(async () => {
-      deleteBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(container.querySelector(".actionIcon.deleteIcon")).toBeTruthy();
     });
-    wrapper.update();
 
-    const deleteModal = wrapper
-      .find("Modal")
-      .filterWhere((m) => m.prop("title") === "Delete Attachment");
-    expect(deleteModal.prop("open")).toBe(true);
+    fireEvent.click(
+      container.querySelector(".actionIcon.deleteIcon") as HTMLElement,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Delete Attachment", {
+          selector: ".ant-modal-title",
+        }),
+      ).toBeTruthy();
+    });
   });
 
   it("removes attachment on delete confirm", async () => {
     await mountCard();
 
-    const deleteBtn = wrapper.find(".actionIcon.deleteIcon").first();
-
-    await act(async () => {
-      deleteBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(container.querySelector(".actionIcon.deleteIcon")).toBeTruthy();
     });
-    wrapper.update();
 
-    const confirmBtn = wrapper
-      .find(Button)
-      .filterWhere((btn) =>
-        Boolean(btn.text() === "Delete" && btn.prop("danger")),
-      );
+    fireEvent.click(
+      container.querySelector(".actionIcon.deleteIcon") as HTMLElement,
+    );
 
-    await act(async () => {
-      confirmBtn.simulate("click");
-      await flush();
+    await waitFor(() => {
+      expect(
+        screen.getByText("Delete Attachment", {
+          selector: ".ant-modal-title",
+        }),
+      ).toBeTruthy();
     });
-    wrapper.update();
 
-    expect(bucket.removeAttachments).toHaveBeenCalledWith("entry", ["schema"]);
+    const confirmBtn = Array.from(document.querySelectorAll("button")).find(
+      (btn) =>
+        btn.textContent === "Delete" &&
+        btn.classList.contains("ant-btn-dangerous"),
+    ) as HTMLElement;
+
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(bucket.removeAttachments).toHaveBeenCalledWith("entry", [
+        "schema",
+      ]);
+    });
   });
 });

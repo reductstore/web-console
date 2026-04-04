@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
-import { useHistory, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -44,7 +44,7 @@ export default function TokenDetail(props: Readonly<Props>) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const { client } = props;
@@ -80,7 +80,7 @@ export default function TokenDetail(props: Readonly<Props>) {
     const { client } = props;
     client
       .deleteToken(name)
-      .then(() => history.push("/tokens"))
+      .then(() => navigate("/tokens"))
       .catch((err) => setError(err.message));
   };
 
@@ -114,7 +114,6 @@ export default function TokenDetail(props: Readonly<Props>) {
       return;
     }
 
-    // eslint-disable-next-line prefer-const
     let { fullAccess, read, write } = permissions;
     fullAccess =
       fullAccess === undefined ? token.permissions.fullAccess : fullAccess;
@@ -150,7 +149,7 @@ export default function TokenDetail(props: Readonly<Props>) {
       >
         Full Access
       </Checkbox>,
-      <Space.Compact block direction={"vertical"}>
+      <Space.Compact block orientation={"vertical"}>
         Read Access:
         <Select
           id="ReadSelect"
@@ -161,7 +160,7 @@ export default function TokenDetail(props: Readonly<Props>) {
           onChange={(value) => setPermissions({ read: value })}
         />
       </Space.Compact>,
-      <Space.Compact block direction={"vertical"}>
+      <Space.Compact block orientation={"vertical"}>
         Write Access:
         <Select
           id="WriteSelect"
@@ -173,7 +172,7 @@ export default function TokenDetail(props: Readonly<Props>) {
         />
       </Space.Compact>,
       <Space>
-        <Button onClick={() => history.push("/tokens")}>Back</Button>
+        <Button onClick={() => navigate("/tokens")}>Back</Button>
         {isNew ? (
           <Button
             className="CreateButton"
@@ -248,13 +247,13 @@ export default function TokenDetail(props: Readonly<Props>) {
                 if (!tokenValue || tokenError) {
                   setTokenValue(undefined);
                   setTokenError(undefined);
-                  history.push("/tokens");
+                  navigate("/tokens");
                   return;
                 }
                 try {
                   await navigator.clipboard.writeText(tokenValue);
-                  history.push("/tokens");
-                } catch (err) {
+                  navigate("/tokens");
+                } catch {
                   setTokenError(
                     "Failed to copy token to clipboard. Please copy it manually.",
                   );
@@ -265,18 +264,17 @@ export default function TokenDetail(props: Readonly<Props>) {
             </Button>,
           ]}
         >
-          <Space direction="vertical" size="large">
+          <Space orientation="vertical" size="large">
             <Alert
               type="success"
-              message="This is your token value. Please, save it somewhere, because it will not be shown again."
+              title="This is your token value. Please, save it somewhere, because it will not be shown again."
             />
             {tokenError && (
               <Alert
                 className="Alert"
-                message={tokenError}
+                title={tokenError}
                 type="error"
-                closable
-                onClose={() => setTokenError(undefined)}
+                closable={{ onClose: () => setTokenError(undefined) }}
               />
             )}
             <Input.TextArea
@@ -292,17 +290,16 @@ export default function TokenDetail(props: Readonly<Props>) {
 
   return (
     <Space
-      direction={"vertical"}
+      orientation={"vertical"}
       size={"large"}
       style={{ margin: "2em", width: "70%" }}
     >
       {error ? (
         <Alert
           className="Alert"
-          message={error}
+          title={error}
           type="error"
-          closable
-          onClose={() => setError(undefined)}
+          closable={{ onClose: () => setError(undefined) }}
         />
       ) : (
         <div />

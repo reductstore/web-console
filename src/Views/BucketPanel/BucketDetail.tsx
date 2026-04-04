@@ -7,7 +7,7 @@ import {
   APIError,
   Status,
 } from "reduct-js";
-import { useHistory, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import BucketCard from "../../Components/Bucket/BucketCard";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -140,7 +140,7 @@ function TreePopover({
 
 export default function BucketDetail(props: Readonly<Props>) {
   const { name } = useParams() as { name: string };
-  const history = useHistory();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [info, setInfo] = useState<BucketInfo>();
@@ -253,7 +253,7 @@ export default function BucketDetail(props: Readonly<Props>) {
 
   const handleOpenEntry = useCallback(
     (entryName: string) => {
-      history.push(`/buckets/${name}/entries/${encodeEntryPath(entryName)}`);
+      navigate(`/buckets/${name}/entries/${encodeEntryPath(entryName)}`);
     },
     [history, name],
   );
@@ -531,8 +531,8 @@ export default function BucketDetail(props: Readonly<Props>) {
           {...props}
           showPanel
           onRemoved={() => {
-            if (history.location.pathname === `/buckets/${name}`) {
-              history.goBack();
+            if (location.pathname === `/buckets/${name}`) {
+              navigate(-1);
             }
           }}
           onShow={() => null}

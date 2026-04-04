@@ -5,7 +5,7 @@ import {
   LineChartOutlined,
   PartitionOutlined,
 } from "@ant-design/icons";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { encodeEntryPath } from "./EntryBreadcrumb";
 
 export interface NavNode {
@@ -87,14 +87,12 @@ interface Props {
 
 export default function EntryNavTree(props: Readonly<Props>) {
   const { currentPath, allEntryNames, bucketName } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const navigateToEntry = (entryName: string) => {
     setPopoverOpen(false);
-    history.push(
-      `/buckets/${bucketName}/entries/${encodeEntryPath(entryName)}`,
-    );
+    navigate(`/buckets/${bucketName}/entries/${encodeEntryPath(entryName)}`);
   };
 
   const nextChildKeys = useMemo(

@@ -1,36 +1,37 @@
 import React from "react";
-import { mount } from "enzyme";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
 import BucketDetail from "./BucketDetail";
 import { MemoryRouter } from "react-router-dom";
-import waitUntil from "async-wait-until";
+import { act } from "react";
 
-const mockPush = jest.fn();
+const mockNavigate = vi.fn();
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useParams: () => ({
-    name: "testBucket",
-  }),
-  useHistory: () => ({
-    push: mockPush,
-    location: { pathname: "/buckets/testBucket" },
-    goBack: jest.fn(),
-  }),
+vi.mock("react-router-dom", async () => ({
+  ...(await vi.importActual("react-router-dom")),
+  useParams: () => ({ name: "testBucket" }),
+  useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: "/buckets/testBucket" }),
 }));
+
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 describe("BucketDetail", () => {
   const client = new Client("");
   const bucket = {} as Bucket;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
 
-    client.getBucket = jest.fn().mockResolvedValue(bucket);
+    client.getBucket = vi.fn().mockResolvedValue(bucket);
 
-    bucket.getInfo = jest.fn().mockResolvedValue({
+    bucket.getInfo = vi.fn().mockResolvedValue({
       name: "BucketWithData",
       entryCount: 2n,
       size: 10220n,
@@ -38,7 +39,7 @@ describe("BucketDetail", () => {
       latestRecord: 10000n,
     } as BucketInfo);
 
-    bucket.getEntryList = jest.fn().mockResolvedValue([
+    bucket.getEntryList = vi.fn().mockResolvedValue([
       {
         name: "sensor/humidity",
         blockCount: 1n,
@@ -59,84 +60,80 @@ describe("BucketDetail", () => {
   });
 
   it("should show bucket card with info", async () => {
-    const detail = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
 
-    await waitUntil(() => {
-      detail.update();
-      const card = detail.find(".BucketCard");
-      if (!card.length) return false;
-      const text = card.hostNodes().render().text();
-      return text.includes("BucketWithData");
+    await waitFor(() => {
+      const card = container.querySelector(".BucketCard");
+      expect(card).not.toBeNull();
+      expect(card!.textContent).toContain("BucketWithData");
     });
 
     expect(client.getBucket).toBeCalledWith("testBucket");
-    const cardText = detail.find(".BucketCard").hostNodes().render().text();
-    expect(cardText).toContain("BucketWithData");
-    expect(cardText).toContain("Entries2");
+    const card = container.querySelector(".BucketCard");
+    expect(card!.textContent).toContain("BucketWithData");
+    expect(card!.textContent).toContain("Entries2");
   });
 
   it("should render entries table with tree structure", async () => {
-    const detail = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
 
-    await waitUntil(() => {
-      detail.update();
-      return detail.find(".entriesTable").hostNodes().length > 0;
+    await waitFor(() => {
+      expect(container.querySelector(".entriesTable")).not.toBeNull();
     });
 
-    expect(detail.find(".entriesTable").hostNodes().length).toBe(1);
+    expect(container.querySelector(".entriesTable")).not.toBeNull();
   });
 
   it("should navigate to entry on click", async () => {
-    const detail = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
 
-    await waitUntil(() => {
-      detail.update();
-      return detail.find(".entriesTable").hostNodes().length > 0;
+    await waitFor(() => {
+      expect(container.querySelector(".entriesTable")).not.toBeNull();
     });
 
     // Find the flat-entry link and click it
-    const links = detail.find("a.ant-typography");
-    const flatEntryLink = links.filterWhere(
-      (n: any) => n.text() === "flat-entry",
+    const links = Array.from(container.querySelectorAll("a.ant-typography"));
+    const flatEntryLink = links.find(
+      (link) => link.textContent === "flat-entry",
     );
-    if (flatEntryLink.length) {
-      flatEntryLink.simulate("click");
-      expect(mockPush).toHaveBeenCalledWith(
+    if (flatEntryLink) {
+      fireEvent.click(flatEntryLink);
+      expect(mockNavigate).toHaveBeenCalledWith(
         "/buckets/testBucket/entries/flat-entry",
       );
     }
   });
 
   it("should filter entries by search query", async () => {
-    const detail = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketDetail client={client} />
       </MemoryRouter>,
     );
 
-    await waitUntil(() => {
-      detail.update();
-      return detail.find(".entriesTable").hostNodes().length > 0;
+    await waitFor(() => {
+      expect(container.querySelector(".entriesTable")).not.toBeNull();
     });
 
     // Type in search box
-    const searchInput = detail.find(".entriesPathSearch input");
-    searchInput.simulate("change", { target: { value: "sensor" } });
-    detail.update();
+    const searchInput = container.querySelector(".entriesPathSearch input");
+    await act(async () => {
+      fireEvent.change(searchInput!, { target: { value: "sensor" } });
+    });
 
     // The table should still render (filtered)
-    expect(detail.find(".entriesTable").hostNodes().length).toBe(1);
+    expect(container.querySelector(".entriesTable")).not.toBeNull();
   });
 });

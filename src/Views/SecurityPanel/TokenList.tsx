@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Alert, Button, Table, Tag, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 
@@ -13,7 +13,7 @@ export default function TokenList(props: Readonly<Props>) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const { client } = props;
@@ -38,7 +38,7 @@ export default function TokenList(props: Readonly<Props>) {
       dataIndex: "name",
       key: "name",
       render: (text: string) => (
-        <Link to={`tokens/${text}`}>
+        <Link to={`/tokens/${text}`}>
           <b>{text}</b>
         </Link>
       ),
@@ -70,16 +70,15 @@ export default function TokenList(props: Readonly<Props>) {
         <Button
           style={{ float: "right" }}
           icon={<PlusOutlined />}
-          onClick={() => history.push("/tokens/new_token?isNew=true")}
+          onClick={() => navigate("/tokens/new_token?isNew=true")}
           title="Add"
         />
       </Typography.Title>
       {error ? (
         <Alert
-          message={error}
+          title={error}
           type="error"
-          closable
-          onClose={() => setError(null)}
+          closable={{ onClose: () => setError(null) }}
         />
       ) : (
         <div />
@@ -89,6 +88,7 @@ export default function TokenList(props: Readonly<Props>) {
         columns={columns}
         dataSource={tokens}
         loading={isLoading}
+        rowKey="name"
       />
     </div>
   );

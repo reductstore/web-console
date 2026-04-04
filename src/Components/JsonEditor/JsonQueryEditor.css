@@ -93,7 +93,7 @@
   padding: 8px;
 }
 
-.jsonQueryEditorModal .ant-modal-content {
+.jsonQueryEditorModal .ant-modal-container {
   display: flex;
   flex-direction: column;
   height: 90vh;

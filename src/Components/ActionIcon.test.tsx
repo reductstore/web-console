@@ -27,7 +27,7 @@ describe("ActionIcon", () => {
   });
 
   it("disables click when disabled", () => {
-    const onClick = jest.fn();
+    const onClick = vi.fn();
     render(
       <ActionIcon
         icon={<DeleteOutlined data-testid="icon" />}

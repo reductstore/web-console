@@ -1,17 +1,11 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
+import { render, fireEvent } from "@testing-library/react";
 import { message } from "antd";
-import {
-  DeleteOutlined,
-  UndoOutlined,
-  InsertRowBelowOutlined,
-} from "@ant-design/icons";
 import EditRecordLabels from "./EditRecordLabels";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("EditRecordLabels", () => {
-  let wrapper: ReactWrapper;
-  const mockOnLabelsUpdated = jest.fn();
+  const mockOnLabelsUpdated = vi.fn();
 
   const mockRecord = {
     key: "1000",
@@ -33,21 +27,15 @@ describe("EditRecordLabels", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-    message.success = jest.fn();
-    message.error = jest.fn();
-  });
-
-  afterEach(() => {
-    if (wrapper) {
-      wrapper.unmount();
-    }
+    message.success = vi.fn();
+    message.error = vi.fn();
   });
 
   describe("Rendering", () => {
     it("should render labels title", () => {
-      wrapper = mount(
+      const { container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
@@ -55,13 +43,13 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const title = wrapper.find(".labelsHeader");
-      expect(title.exists()).toBe(true);
-      expect(title.first().text()).toContain("Labels");
+      const title = container.querySelector(".labelsHeader");
+      expect(title).not.toBeNull();
+      expect(title?.textContent).toContain("Labels");
     });
 
     it("should render ScrollableTable with correct props", () => {
-      wrapper = mount(
+      const { container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
@@ -69,15 +57,15 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      expect(table.exists()).toBe(true);
-      expect(table.prop("size")).toBe("small");
-      expect(table.prop("bordered")).toBe(true);
-      expect(table.prop("pagination")).toBe(false);
+      const table = container.querySelector(".ant-table");
+      expect(table).not.toBeNull();
+      // Table renders as small and bordered via DOM classes
+      expect(container.querySelector(".ant-table-small")).not.toBeNull();
+      expect(container.querySelector(".ant-table-bordered")).not.toBeNull();
     });
 
     it("should display existing labels from record", () => {
-      wrapper = mount(
+      const { container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
@@ -85,7 +73,7 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const tableText = wrapper.find(".ant-table").text();
+      const tableText = container.querySelector(".ant-table")?.textContent;
       expect(tableText).toContain("name");
       expect(tableText).toContain("test");
       expect(tableText).toContain("type");
@@ -93,7 +81,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should render empty table when record has no labels", () => {
-      wrapper = mount(
+      const { container } = render(
         <EditRecordLabels
           record={mockRecordWithEmptyLabels}
           onLabelsUpdated={mockOnLabelsUpdated}
@@ -101,7 +89,7 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const tableText = wrapper.find(".ant-table").text();
+      const tableText = container.querySelector(".ant-table")?.textContent;
       expect(tableText).not.toContain("name");
       expect(tableText).not.toContain("test");
       expect(tableText).not.toContain("type");
@@ -109,7 +97,7 @@ describe("EditRecordLabels", () => {
     });
 
     it("should render nothing when no record provided", () => {
-      wrapper = mount(
+      const { container } = render(
         <EditRecordLabels
           record={null}
           onLabelsUpdated={mockOnLabelsUpdated}
@@ -117,86 +105,93 @@ describe("EditRecordLabels", () => {
         />,
       );
 
-      const title = wrapper.find(".labelsHeader");
-      expect(title.exists()).toBe(false);
+      const title = container.querySelector(".labelsHeader");
+      expect(title).toBeNull();
     });
   });
 
   describe("Read-only Mode", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={false}
         />,
-      );
+      ));
     });
 
     it("should not show action buttons when editable=false", () => {
-      const addButton = wrapper.find('Button[title="Add new label"]');
-      const revertButton = wrapper.find('Button[title="Revert changes"]');
-      const updateButton = wrapper.find('Button[title="Update labels"]');
+      const addButton = container.querySelector('[title="Add new label"]');
+      const revertButton = container.querySelector('[title="Revert changes"]');
+      const updateButton = container.querySelector('[title="Update labels"]');
 
-      expect(addButton.exists()).toBe(false);
-      expect(revertButton.exists()).toBe(false);
-      expect(updateButton.exists()).toBe(false);
+      expect(addButton).toBeNull();
+      expect(revertButton).toBeNull();
+      expect(updateButton).toBeNull();
     });
 
     it("should not show action column when editable=false", () => {
-      const table = wrapper.find("ScrollableTable");
-      const columns = table.prop("columns") as any[];
+      const columnHeaders = container.querySelectorAll(".ant-table-thead th");
+      const headerTexts = Array.from(columnHeaders).map((th) => th.textContent);
 
-      expect(columns.length).toBe(2);
-      expect(columns[0].title).toBe("Key");
-      expect(columns[1].title).toBe("Value");
+      expect(headerTexts).toHaveLength(2);
+      expect(headerTexts[0]).toBe("Key");
+      expect(headerTexts[1]).toBe("Value");
     });
 
     it("should display labels as non-editable text", () => {
-      const firstCell = wrapper.find(".ant-table-tbody td").at(0);
-      firstCell.simulate("click");
-      wrapper.update();
+      const firstCell = container.querySelector(".ant-table-tbody td");
+      if (firstCell) {
+        fireEvent.click(firstCell);
+      }
 
-      const inputs = wrapper.find("Input");
+      const inputs = container.querySelectorAll("input");
       expect(inputs.length).toBe(0);
     });
   });
 
   describe("Editable Mode", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should show action buttons when editable=true", () => {
-      const addButton = wrapper.find('Button[title="Add new label"]');
-      const revertButton = wrapper.find('Button[title="Revert changes"]');
-      const updateButton = wrapper.find('Button[title="Update labels"]');
+      const addButton = container.querySelector('[title="Add new label"]');
+      const revertButton = container.querySelector('[title="Revert changes"]');
+      const updateButton = container.querySelector('[title="Update labels"]');
 
-      expect(addButton.exists()).toBe(true);
-      expect(revertButton.exists()).toBe(true);
-      expect(updateButton.exists()).toBe(true);
+      expect(addButton).not.toBeNull();
+      expect(revertButton).not.toBeNull();
+      expect(updateButton).not.toBeNull();
     });
 
     it("should show action column when editable=true", () => {
-      const table = wrapper.find("ScrollableTable");
-      const columns = table.prop("columns") as any[];
+      const columnHeaders = container.querySelectorAll(".ant-table-thead th");
+      const headerTexts = Array.from(columnHeaders).map((th) => th.textContent);
 
-      expect(columns.length).toBe(3);
-      expect(columns[0].title).toBe("Key");
-      expect(columns[1].title).toBe("Value");
-      expect(columns[2].title).toBe("Actions");
+      expect(headerTexts).toHaveLength(3);
+      expect(headerTexts[0]).toBe("Key");
+      expect(headerTexts[1]).toBe("Value");
+      expect(headerTexts[2]).toBe("Actions");
     });
 
     it("should show row action icons for each row", () => {
-      const revertIcons = wrapper.find(UndoOutlined);
-      const addBelowIcons = wrapper.find(InsertRowBelowOutlined);
-      const deleteIcons = wrapper.find(DeleteOutlined);
+      const revertIcons = container.querySelectorAll(".anticon-undo");
+      const addBelowIcons = container.querySelectorAll(
+        ".anticon-insert-row-below",
+      );
+      const deleteIcons = container.querySelectorAll(".anticon-delete");
 
       expect(revertIcons.length).toBeGreaterThanOrEqual(2);
       expect(addBelowIcons.length).toBeGreaterThanOrEqual(2);
@@ -204,221 +199,232 @@ describe("EditRecordLabels", () => {
     });
 
     it("should disable revert and update buttons initially when no changes", () => {
-      const revertButton = wrapper.find('Button[title="Revert changes"]');
-      const updateButton = wrapper.find('Button[title="Update labels"]');
+      const revertButton = container.querySelector(
+        '[title="Revert changes"]',
+      ) as HTMLButtonElement;
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLButtonElement;
 
-      expect(revertButton.prop("disabled")).toBe(true);
-      expect(updateButton.prop("disabled")).toBe(true);
+      expect(revertButton?.disabled).toBe(true);
+      expect(updateButton?.disabled).toBe(true);
     });
   });
 
   describe("Cell Editing", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should make cell editable when clicked", () => {
       // In editable mode, inputs are always visible
-      const inputs = wrapper.find("Input");
+      const inputs = container.querySelectorAll("input");
       expect(inputs.length).toBeGreaterThan(0);
 
       // Check first input has the correct value
-      const firstInput = inputs.at(0);
-      expect(firstInput.prop("value")).toBe("name");
+      expect(inputs[0]).toHaveValue("name");
     });
 
     it("should save changes when input value changes", () => {
-      // Find the first input (should be the first key)
-      const input = wrapper.find("Input").at(0);
-      expect(input.prop("value")).toBe("name");
+      const inputs = container.querySelectorAll("input");
+      expect(inputs[0]).toHaveValue("name");
 
       // Change the value
-      input.simulate("change", { target: { value: "env" } });
-      wrapper.update();
+      fireEvent.change(inputs[0], { target: { value: "env" } });
 
       // Should enable buttons since we made changes
-      const updateButton = wrapper.find('Button[title="Update labels"]');
-      expect(updateButton.prop("disabled")).toBe(false);
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLButtonElement;
+      expect(updateButton?.disabled).toBe(false);
     });
 
     it("should save changes when value is modified", () => {
-      // Find the second input (should be the first value)
-      const input = wrapper.find("Input").at(1);
-      expect(input.prop("value")).toBe("test");
+      const inputs = container.querySelectorAll("input");
+      expect(inputs[1]).toHaveValue("test");
 
       // Change the value
-      input.simulate("change", { target: { value: "sample" } });
-      wrapper.update();
+      fireEvent.change(inputs[1], { target: { value: "sample" } });
 
       // Should enable buttons
-      const updateButton = wrapper.find('Button[title="Update labels"]');
-      expect(updateButton.prop("disabled")).toBe(false);
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLButtonElement;
+      expect(updateButton?.disabled).toBe(false);
     });
   });
 
   describe("Adding Labels", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should add new empty row when Add button is clicked", () => {
-      const initialRows = wrapper.find(".ant-table-tbody tr").length;
+      const initialRows = container.querySelectorAll(
+        ".ant-table-tbody tr",
+      ).length;
 
-      const addButton = wrapper.find('Button[title="Add new label"]');
-      addButton.simulate("click");
-      wrapper.update();
+      const addButton = container.querySelector(
+        '[title="Add new label"]',
+      ) as HTMLElement;
+      fireEvent.click(addButton);
 
-      const newRows = wrapper.find(".ant-table-tbody tr").length;
+      const newRows = container.querySelectorAll(".ant-table-tbody tr").length;
       expect(newRows).toBe(initialRows + 1);
     });
 
     it("should add new row below target when add-below icon is clicked", () => {
-      const initialRows = wrapper.find(".ant-table-tbody tr").length;
+      const initialRows = container.querySelectorAll(
+        ".ant-table-tbody tr",
+      ).length;
 
       // Click the "add below" icon on the first row
-      const addBelowIcon = wrapper.find(".addBelowIcon").at(0);
-      addBelowIcon.simulate("click");
-      wrapper.update();
+      const addBelowIcon = container.querySelector(
+        ".addBelowIcon",
+      ) as HTMLElement;
+      fireEvent.click(addBelowIcon);
 
-      const newRows = wrapper.find(".ant-table-tbody tr").length;
+      const newRows = container.querySelectorAll(".ant-table-tbody tr").length;
       expect(newRows).toBe(initialRows + 1);
     });
   });
 
   describe("Deleting Labels", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should delete row when delete icon is clicked", () => {
-      const initialRows = wrapper.find(".ant-table-tbody tr").length;
+      const initialRows = container.querySelectorAll(
+        ".ant-table-tbody tr",
+      ).length;
 
       // Click delete icon on first row
-      const deleteIcon = wrapper.find(".deleteIcon").at(0);
-      deleteIcon.simulate("click");
-      wrapper.update();
+      const deleteIcon = container.querySelector(".deleteIcon") as HTMLElement;
+      fireEvent.click(deleteIcon);
 
-      const newRows = wrapper.find(".ant-table-tbody tr").length;
+      const newRows = container.querySelectorAll(".ant-table-tbody tr").length;
       expect(newRows).toBe(initialRows - 1);
     });
 
     it("should enable update button after deleting a row", () => {
-      const deleteIcon = wrapper.find(".deleteIcon").at(0);
-      deleteIcon.simulate("click");
-      wrapper.update();
+      const deleteIcon = container.querySelector(".deleteIcon") as HTMLElement;
+      fireEvent.click(deleteIcon);
 
-      const updateButton = wrapper.find('Button[title="Update labels"]');
-      expect(updateButton.prop("disabled")).toBe(false);
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLButtonElement;
+      expect(updateButton?.disabled).toBe(false);
     });
   });
 
   describe("Reverting Changes", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should revert individual row changes when row revert icon is clicked", () => {
       // First, modify a cell
-      const input = wrapper.find("Input").at(0);
-      input.simulate("change", { target: { value: "modified" } });
-      wrapper.update();
+      const inputs = container.querySelectorAll("input");
+      fireEvent.change(inputs[0], { target: { value: "modified" } });
 
       // Now revert the row
-      const revertIcon = wrapper.find(".revertIcon").at(0);
-      expect(revertIcon.prop("disabled")).toBe(false);
+      const revertIcon = container.querySelector(
+        ".revertIcon",
+      ) as HTMLButtonElement;
+      expect(revertIcon?.disabled).toBe(false);
 
-      revertIcon.simulate("click");
-      wrapper.update();
+      fireEvent.click(revertIcon);
 
       // Should be reverted back to original
-      const firstInput = wrapper.find("Input").at(0);
-      expect(firstInput.prop("value")).toBe("name");
+      const revertedInputs = container.querySelectorAll("input");
+      expect(revertedInputs[0]).toHaveValue("name");
     });
 
     it("should revert all changes when global revert button is clicked", () => {
-      if (wrapper) wrapper.unmount();
-      wrapper = mount(
-        <EditRecordLabels
-          record={mockRecord}
-          onLabelsUpdated={mockOnLabelsUpdated}
-          editable={true}
-        />,
-      );
-
       // Make a simple change - modify a value
-      const input = wrapper.find("Input").at(0);
-      expect(input.prop("value")).toBe("name"); // Ensure starting value
-      input.simulate("change", { target: { value: "modified" } });
-      wrapper.update();
+      const inputs = container.querySelectorAll("input");
+      expect(inputs[0]).toHaveValue("name"); // Ensure starting value
+      fireEvent.change(inputs[0], { target: { value: "modified" } });
 
       // Verify change was made
-      const modifiedInput = wrapper.find("Input").at(0);
-      expect(modifiedInput.prop("value")).toBe("modified");
+      const modifiedInputs = container.querySelectorAll("input");
+      expect(modifiedInputs[0]).toHaveValue("modified");
 
       // Revert all changes
-      const revertButton = wrapper
-        .find('Button[title="Revert changes"]')
-        .first();
-      revertButton.simulate("click");
-      wrapper.update();
+      const revertButton = container.querySelector(
+        '[title="Revert changes"]',
+      ) as HTMLElement;
+      fireEvent.click(revertButton);
 
       // Should have original values
-      const revertedInput = wrapper.find("Input").at(0);
-      expect(revertedInput.prop("value")).toBe("name");
+      const revertedInputs = container.querySelectorAll("input");
+      expect(revertedInputs[0]).toHaveValue("name");
     });
 
     it("should disable revert icons for unchanged rows", () => {
-      const revertIcons = wrapper.find(".revertIcon");
+      const revertIcons = container.querySelectorAll(".revertIcon");
       revertIcons.forEach((icon) => {
-        expect(icon.prop("disabled")).toBe(true);
+        expect((icon as HTMLButtonElement).disabled).toBe(true);
       });
     });
   });
 
   describe("Saving Labels", () => {
+    let container: HTMLElement;
+
     beforeEach(() => {
-      wrapper = mount(
+      ({ container } = render(
         <EditRecordLabels
           record={mockRecord}
           onLabelsUpdated={mockOnLabelsUpdated}
           editable={true}
         />,
-      );
+      ));
     });
 
     it("should call onLabelsUpdated with correct data when save is successful", () => {
       // Make a change
-      const input = wrapper.find("Input").at(0);
-      input.simulate("change", { target: { value: "env" } });
-      wrapper.update();
+      const inputs = container.querySelectorAll("input");
+      fireEvent.change(inputs[0], { target: { value: "env" } });
 
       // Save
-      const updateButton = wrapper.find('Button[title="Update labels"]');
-      updateButton.simulate("click");
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLElement;
+      fireEvent.click(updateButton);
 
       // Should call callback with updated labels
       expect(mockOnLabelsUpdated).toHaveBeenCalledWith(
@@ -432,18 +438,18 @@ describe("EditRecordLabels", () => {
 
     it("should include empty values in the data sent to callback for deletion", () => {
       // Delete the value of an existing label to make it empty
-      const input = wrapper.find("Input").at(1);
-      input.simulate("change", { target: { value: "" } });
-      wrapper.update();
+      const inputs = container.querySelectorAll("input");
+      fireEvent.change(inputs[1], { target: { value: "" } });
 
       // This should fail validation due to empty value
-      const updateButton = wrapper.find('Button[title="Update labels"]');
-      updateButton.simulate("click");
-      wrapper.update();
+      const updateButton = container.querySelector(
+        '[title="Update labels"]',
+      ) as HTMLElement;
+      fireEvent.click(updateButton);
 
       // Should show error and not call callback
-      const errorAlert = wrapper.find("Alert");
-      expect(errorAlert.exists()).toBe(true);
+      const errorAlert = container.querySelector(".ant-alert");
+      expect(errorAlert).not.toBeNull();
       expect(mockOnLabelsUpdated).not.toHaveBeenCalled();
     });
   });

@@ -1,19 +1,26 @@
 import React from "react";
-import { ReactWrapper, mount } from "enzyme";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { act } from "react";
 
 import { Client, ReplicationInfo, ReplicationSettings } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import ReplicationDetail from "./ReplicationDetail";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
 
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 describe("ReplicationDetail", () => {
   const client = new Client("dummyURL");
-  let wrapper: ReactWrapper;
+  let container: HTMLElement;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
     mockJSDOM();
 
     const mockReplicationInfo = ReplicationInfo.parse({
@@ -49,7 +56,7 @@ describe("ReplicationDetail", () => {
       },
     });
 
-    client.getReplication = jest.fn().mockResolvedValue({
+    client.getReplication = vi.fn().mockResolvedValue({
       info: mockReplicationInfo,
       settings: mockReplicationSettings,
       diagnostics: mockDiagnostics,
@@ -60,97 +67,61 @@ describe("ReplicationDetail", () => {
       { name: "Bucket2", creationDate: "2021-06-01" },
     ];
 
-    client.getBucketList = jest.fn().mockResolvedValue(mockBucketList);
+    client.getBucketList = vi.fn().mockResolvedValue(mockBucketList);
 
-    wrapper = mount(
-      <MemoryRouter>
-        <ReplicationDetail client={client} />
-      </MemoryRouter>,
-    );
+    await act(async () => {
+      const result = render(
+        <MemoryRouter>
+          <ReplicationDetail client={client} />
+        </MemoryRouter>,
+      );
+      ({ container } = result);
+    });
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
-    if (wrapper) {
-      wrapper.unmount();
-    }
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
-  it("fetches replication and bucket data on mount and at intervals", () => {
+  it("fetches replication and bucket data on mount and at intervals", async () => {
     expect(client.getReplication).toHaveBeenCalledTimes(1);
     expect(client.getBucketList).toHaveBeenCalledTimes(1);
 
-    jest.advanceTimersByTime(5000);
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
 
     expect(client.getReplication).toHaveBeenCalledTimes(2);
     expect(client.getBucketList).toHaveBeenCalledTimes(2);
   });
 
   it("displays replication card", async () => {
-    wrapper.update();
-    const replicationCard = wrapper.find("ReplicationCard");
-    expect(replicationCard.exists()).toBeTruthy();
+    expect(screen.getByText("TestReplication")).toBeTruthy();
   });
 
   it("displays replication card with correct props", async () => {
-    wrapper.update();
-    const replicationCard = wrapper.find("ReplicationCard");
-    expect(replicationCard.prop("replication")).toMatchObject({
-      info: {
-        name: "TestReplication",
-        isActive: true,
-        isProvisioned: true,
-        pendingRecords: BigInt(100),
-      },
-      settings: {
-        srcBucket: "sourceBucket",
-        dstBucket: "destinationBucket",
-        dstHost: "destinationHost",
-        dstToken: "destinationToken",
-        entries: ["entry1", "entry2"],
-      },
-      diagnostics: {
-        hourly: {
-          ok: BigInt(1000),
-          errored: BigInt(5),
-          errors: {
-            0: {
-              count: 5,
-              lastMessage: "Error connecting to source bucket",
-            },
-            1: {
-              count: 10,
-              lastMessage: "Error connecting to destination bucket",
-            },
-          },
-        },
-      },
-    });
-
-    expect(replicationCard.prop("sourceBuckets")).toEqual([
-      "Bucket1",
-      "Bucket2",
-    ]);
+    expect(screen.getByText("TestReplication")).toBeTruthy();
+    expect(screen.getByText("100")).toBeTruthy();
+    expect(screen.getByText("1,000")).toBeTruthy();
+    expect(screen.getAllByText("5").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Records Awaiting Replication")).toBeTruthy();
+    expect(
+      screen.getByText("Successfully Replicated (Past Hour)"),
+    ).toBeTruthy();
+    expect(screen.getByText("Errors (Past Hour)")).toBeTruthy();
   });
 
   it("displays replication errors", async () => {
-    wrapper.update();
-    const replicationErrors = wrapper.find("Table");
-    expect(replicationErrors.exists()).toBeTruthy();
-    expect(replicationErrors.last().prop("dataSource")).toEqual([
-      {
-        key: "error-0",
-        code: "0",
-        count: "5",
-        lastMessage: "Error connecting to source bucket",
-      },
-      {
-        key: "error-1",
-        code: "1",
-        count: "10",
-        lastMessage: "Error connecting to destination bucket",
-      },
-    ]);
+    const table = container.querySelector(".ant-table");
+    expect(table).toBeTruthy();
+
+    expect(screen.getByText("Error connecting to source bucket")).toBeTruthy();
+    expect(
+      screen.getByText("Error connecting to destination bucket"),
+    ).toBeTruthy();
+
+    const rows = container.querySelectorAll(".ant-table-tbody tr");
+    expect(rows.length).toBe(2);
   });
 });

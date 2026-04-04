@@ -23,27 +23,40 @@ export default function ActionIcon({
   disabledStyle = defaultDisabledStyle,
   showTooltipWhenEnabled = false,
 }: ActionIconProps) {
-  const iconProps = {
-    ...icon.props,
-    onClick: disabled ? undefined : onClick,
-    style: {
-      ...(icon.props.style || {}),
-      ...(disabled ? disabledStyle : {}),
-    },
+  const iconElProps = icon.props as Record<string, any>;
+  const mergedStyle = {
+    ...(iconElProps.style || {}),
+    ...(disabled ? disabledStyle : {}),
   };
-  const iconNode = React.cloneElement(icon, iconProps);
+  const styledIcon = React.cloneElement(icon, {
+    ...iconElProps,
+    style: mergedStyle,
+  } as Record<string, any>);
+
+  const wrapperStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    cursor: disabled ? "not-allowed" : "pointer",
+  };
+
+  const handleClick = disabled ? undefined : onClick;
+
+  const node = (
+    <span style={wrapperStyle} onClick={handleClick}>
+      {styledIcon}
+    </span>
+  );
 
   if (!tooltip) {
-    return iconNode;
+    return node;
   }
 
   if (!disabled && !showTooltipWhenEnabled) {
-    return iconNode;
+    return node;
   }
 
-  return (
-    <Tooltip title={tooltip}>
-      <span>{iconNode}</span>
-    </Tooltip>
-  );
+  return <Tooltip title={tooltip}>{node}</Tooltip>;
 }

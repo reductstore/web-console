@@ -51,7 +51,7 @@ export default function RenameModal({
       <Flex vertical gap="small">
         {errorMessage && (
           <Alert
-            message={errorMessage}
+            title={errorMessage}
             type="error"
             showIcon
             data-testid="error-alert"

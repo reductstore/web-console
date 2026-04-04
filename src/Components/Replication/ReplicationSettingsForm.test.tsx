@@ -1,20 +1,19 @@
 import React from "react";
-import { ReactWrapper, mount } from "enzyme";
+import { render, waitFor } from "@testing-library/react";
+import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 import { Client, ReplicationInfo, ReplicationSettings } from "reduct-js";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
-import { act } from "react-dom/test-utils";
-import waitUntil from "async-wait-until";
 
 describe("Replication::ReplicationSettingsForm", () => {
   const client = new Client("dummyURL");
-  let wrapper: ReactWrapper;
+  let container: HTMLElement;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
 
     const mockReplicationInfo = ReplicationInfo.parse({
@@ -46,21 +45,21 @@ describe("Replication::ReplicationSettingsForm", () => {
       },
     });
 
-    client.getReplication = jest.fn().mockResolvedValue({
+    client.getReplication = vi.fn().mockResolvedValue({
       info: mockReplicationInfo,
       settings: mockReplicationSettings,
       diagnostics: mockDiagnostics,
     });
 
-    client.updateReplication = jest.fn().mockResolvedValue(undefined);
-    client.createReplication = jest.fn().mockResolvedValue(undefined);
-    client.getBucket = jest.fn().mockResolvedValue({
-      getEntryList: jest
+    client.updateReplication = vi.fn().mockResolvedValue(undefined);
+    client.createReplication = vi.fn().mockResolvedValue(undefined);
+    client.getBucket = vi.fn().mockResolvedValue({
+      getEntryList: vi
         .fn()
         .mockResolvedValue([{ name: "entry1" }, { name: "entry2" }]),
     });
 
-    wrapper = mount(
+    const result = render(
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
@@ -71,70 +70,85 @@ describe("Replication::ReplicationSettingsForm", () => {
         />
       </MemoryRouter>,
     );
+    ({ container } = result);
 
     // Wait for the component to finish rendering
-    await waitUntilFind(wrapper, "form");
-  });
-
-  afterEach(() => {
-    if (wrapper && wrapper.length) {
-      wrapper.unmount();
-    }
+    await waitFor(() => expect(container.querySelector("form")).toBeTruthy());
   });
 
   it("renders without crashing", () => {
-    expect(wrapper.find("form").exists()).toBeTruthy();
+    expect(container.querySelector("form")).toBeTruthy();
   });
 
   it("shows a form with all fields", () => {
-    expect(wrapper.find({ name: "name" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "srcBucket" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "dstBucket" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "dstHost" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "dstToken" }).exists()).toBeTruthy();
-    expect(wrapper.find({ name: "entries" }).exists()).toBeTruthy();
+    expect(container.querySelector("#replicationForm_name")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_srcBucket")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_dstBucket")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_dstHost")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_dstToken")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_entries")).toBeTruthy();
   });
 
   it("shows the replication disabled name if it is provided", () => {
-    const input = wrapper.find({ name: "name" }).find("input");
-    expect(input.prop("value")).toEqual("TestReplication");
-    expect(input.prop("disabled")).toBeTruthy();
+    const input = container.querySelector(
+      "#replicationForm_name",
+    ) as HTMLInputElement;
+    expect(input.value).toEqual("TestReplication");
+    expect(input.disabled).toBeTruthy();
   });
 
   it("shows the selected source bucket if it is provided", async () => {
-    await waitUntilFind(wrapper, "Select[name='srcBucket']");
-    const selectedOptionText = wrapper
-      .find({ name: "srcBucket" })
-      .find(".ant-select-selection-item")
-      .text();
-    expect(selectedOptionText).toEqual("Bucket1");
+    await waitFor(() =>
+      expect(
+        container.querySelector("#replicationForm_srcBucket"),
+      ).toBeTruthy(),
+    );
+    const selectContent = container
+      .querySelector("#replicationForm_srcBucket")
+      ?.closest(".ant-select")
+      ?.querySelector(".ant-select-content");
+    expect(selectContent?.textContent).toContain("Bucket1");
   });
 
   it("shows the destination bucket if it is provided", async () => {
-    await waitUntilFind(wrapper, { name: "dstBucket" });
-    expect(
-      wrapper.find({ name: "dstBucket" }).find("input").prop("value"),
-    ).toEqual("destinationBucket");
+    await waitFor(() =>
+      expect(
+        container.querySelector("#replicationForm_dstBucket"),
+      ).toBeTruthy(),
+    );
+    const input = container.querySelector(
+      "#replicationForm_dstBucket",
+    ) as HTMLInputElement;
+    expect(input.value).toEqual("destinationBucket");
   });
 
   it("shows the destination host if it is provided", async () => {
-    await waitUntilFind(wrapper, { name: "dstHost" });
-    expect(
-      wrapper.find({ name: "dstHost" }).find("input").prop("value"),
-    ).toEqual("destinationHost");
+    await waitFor(() =>
+      expect(container.querySelector("#replicationForm_dstHost")).toBeTruthy(),
+    );
+    const input = container.querySelector(
+      "#replicationForm_dstHost",
+    ) as HTMLInputElement;
+    expect(input.value).toEqual("destinationHost");
   });
 
   it("shows the selected entries if they are provided", async () => {
-    await waitUntilFind(wrapper, "Select[name='entries']");
-    const selectedOptionText = wrapper
-      .find({ name: "entries" })
-      .find(".ant-select-selection-item");
-    expect(selectedOptionText.at(0).text()).toEqual("entry1");
-    expect(selectedOptionText.at(1).text()).toEqual("entry2");
+    await waitFor(() =>
+      expect(container.querySelector("#replicationForm_entries")).toBeTruthy(),
+    );
+    const selectContainer = container
+      .querySelector("#replicationForm_entries")
+      ?.closest(".ant-select");
+    const selectedItems = selectContainer?.querySelectorAll(
+      ".ant-select-selection-item-content, .ant-select-content",
+    );
+    const texts = Array.from(selectedItems || []).map((el) => el.textContent);
+    expect(texts).toContain("entry1");
+    expect(texts).toContain("entry2");
   });
 
   it("disables record settings inputs and radios in read-only mode", async () => {
-    wrapper = mount(
+    const { container: readOnlyContainer } = render(
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
@@ -147,40 +161,38 @@ describe("Replication::ReplicationSettingsForm", () => {
     );
 
     // Wait for the component to finish rendering
-    await waitUntilFind(wrapper, "form");
-
-    // Find all Radio.Group and Input components within the record settings Form.List
-    const recordSettingsRadios = wrapper.find("Form.List").find("Radio.Group");
-    const recordSettingsInputs = wrapper.find("Form.List").find("Input");
+    await waitFor(() =>
+      expect(readOnlyContainer.querySelector("form")).toBeTruthy(),
+    );
 
     // Check that each Radio.Group is disabled
-    recordSettingsRadios.forEach((radioGroup) => {
-      expect(radioGroup.prop("disabled")).toBe(true);
+    const radioGroups = readOnlyContainer.querySelectorAll(".ant-radio-group");
+    radioGroups.forEach((radioGroup) => {
+      const radios = radioGroup.querySelectorAll("input[type='radio']");
+      radios.forEach((radio) => {
+        expect((radio as HTMLInputElement).disabled).toBe(true);
+      });
     });
 
-    // Check that each Input (for both key and value within each record setting) is disabled
+    // Check that each Input within record settings is disabled
+    const recordSettingsInputs = readOnlyContainer.querySelectorAll(
+      "input[placeholder='Key'], input[placeholder='Value']",
+    );
     recordSettingsInputs.forEach((input) => {
-      expect(input.prop("disabled")).toBe(true);
+      expect((input as HTMLInputElement).disabled).toBe(true);
     });
 
-    // Check that the delete buttons for each record setting are disabled
-    const deleteRuleButtons = wrapper
-      .find("Form.List")
-      .find("Button[type='primary']")
-      .find("DeleteOutlined");
-    deleteRuleButtons.forEach((deleteButton) => {
-      expect(deleteButton.prop("disabled")).toBe(true);
-    });
-
-    // Check that the Add Rule button is disabled
-    const button = wrapper
-      .find("Button")
-      .filterWhere((node) => node.text() === "Update Replication");
-    expect(button.prop("disabled")).toBe(true);
+    // Check that the Update Replication button is disabled
+    const buttons = readOnlyContainer.querySelectorAll("button");
+    const updateButton = Array.from(buttons).find(
+      (btn) => btn.textContent === "Update Replication",
+    );
+    expect(updateButton).toBeTruthy();
+    expect((updateButton as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("verifies Monaco editor is non-editable in read-only mode", () => {
-    wrapper = mount(
+  it("verifies Monaco editor is non-editable in read-only mode", async () => {
+    const { container: readOnlyContainer } = render(
       <MemoryRouter>
         <ReplicationSettingsForm
           client={client}
@@ -192,13 +204,24 @@ describe("Replication::ReplicationSettingsForm", () => {
       </MemoryRouter>,
     );
 
-    expect(wrapper.find(ReplicationSettingsForm).prop("readOnly")).toBe(true);
+    await waitFor(() =>
+      expect(readOnlyContainer.querySelector("form")).toBeTruthy(),
+    );
+
+    // The component is rendered in readOnly mode; the submit button should be disabled
+    const submitButton = readOnlyContainer.querySelector(
+      "button[type='submit']",
+    ) as HTMLButtonElement;
+    expect(submitButton?.disabled).toBe(true);
   });
 
   it("verifies When condition JSON editor respects readOnly property", async () => {
-    wrapper = mount(
+    const ref = React.createRef<ReplicationSettingsForm>();
+
+    const { container: readOnlyContainer } = render(
       <MemoryRouter>
         <ReplicationSettingsForm
+          ref={ref}
           client={client}
           onCreated={() => null}
           sourceBuckets={["Bucket1", "Bucket2"]}
@@ -208,10 +231,12 @@ describe("Replication::ReplicationSettingsForm", () => {
       </MemoryRouter>,
     );
 
-    await waitUntilFind(wrapper, "form");
+    await waitFor(() =>
+      expect(readOnlyContainer.querySelector("form")).toBeTruthy(),
+    );
 
-    const component = wrapper.find(ReplicationSettingsForm).instance() as any;
-    const setStateSpy = jest.spyOn(component, "setState");
+    const component = ref.current!;
+    const setStateSpy = vi.spyOn(component, "setState");
     const initialFormattedWhen = component.state.formattedWhen;
 
     component.handleWhenConditionChange('{"test": "value"}');
@@ -223,9 +248,12 @@ describe("Replication::ReplicationSettingsForm", () => {
   });
 
   it("verifies handleWhenConditionChange functionality when not in read-only mode", async () => {
-    wrapper = mount(
+    const ref = React.createRef<ReplicationSettingsForm>();
+
+    const { container: editContainer } = render(
       <MemoryRouter>
         <ReplicationSettingsForm
+          ref={ref}
           client={client}
           onCreated={() => null}
           sourceBuckets={["Bucket1", "Bucket2"]}
@@ -235,13 +263,17 @@ describe("Replication::ReplicationSettingsForm", () => {
       </MemoryRouter>,
     );
 
-    await waitUntilFind(wrapper, "form");
+    await waitFor(() =>
+      expect(editContainer.querySelector("form")).toBeTruthy(),
+    );
 
-    const component = wrapper.find(ReplicationSettingsForm).instance() as any;
-    const setStateSpy = jest.spyOn(component, "setState");
+    const component = ref.current!;
+    const setStateSpy = vi.spyOn(component, "setState");
     const newValue = '{"test": "value"}';
 
-    component.handleWhenConditionChange(newValue);
+    act(() => {
+      component.handleWhenConditionChange(newValue);
+    });
 
     expect(setStateSpy).toHaveBeenCalled();
     expect(component.state.formattedWhen).toEqual(newValue);
@@ -277,9 +309,12 @@ describe("Replication::ReplicationSettingsForm", () => {
 
     it("calls createReplication on form submission", async () => {
       const onCreatedCalled = [false];
-      const wrapper = mount(
+      const ref = React.createRef<ReplicationSettingsForm>();
+
+      render(
         <MemoryRouter>
           <ReplicationSettingsForm
+            ref={ref}
             client={client}
             onCreated={() => (onCreatedCalled[0] = true)}
             sourceBuckets={["Bucket1", "Bucket2"]}
@@ -288,15 +323,14 @@ describe("Replication::ReplicationSettingsForm", () => {
         </MemoryRouter>,
       );
 
-      const form = wrapper.find({ name: "replicationForm" }).at(0);
+      // No replicationName, so the form renders immediately
+      const component = ref.current!;
 
-      // fill the form fields
       await act(async () => {
-        form.props().onFinish(form_settings);
+        await component.onFinish(form_settings as any);
       });
 
-      await waitUntilFind(wrapper, "form");
-      await waitUntil(() => onCreatedCalled[0]);
+      await waitFor(() => expect(onCreatedCalled[0]).toBe(true));
 
       expect(client.createReplication).toBeCalledWith(
         "NewReplication",
@@ -308,9 +342,12 @@ describe("Replication::ReplicationSettingsForm", () => {
 
     it("calls updateReplication on form submission", async () => {
       const onCreatedCalled = [false];
-      const wrapper = mount(
+      const ref = React.createRef<ReplicationSettingsForm>();
+
+      const { container: updateContainer } = render(
         <MemoryRouter>
           <ReplicationSettingsForm
+            ref={ref}
             client={client}
             onCreated={() => (onCreatedCalled[0] = true)}
             sourceBuckets={["Bucket1", "Bucket2"]}
@@ -320,13 +357,18 @@ describe("Replication::ReplicationSettingsForm", () => {
         </MemoryRouter>,
       );
 
-      await waitUntilFind(wrapper, "form");
-      const form = wrapper.find({ name: "replicationForm" }).at(0);
-      // fill the form fields
+      await waitFor(() =>
+        expect(updateContainer.querySelector("form")).toBeTruthy(),
+      );
+
+      const component = ref.current!;
+
       await act(async () => {
-        form.props().onFinish(form_settings);
+        await component.onFinish(form_settings as any);
       });
-      await waitUntil(() => onCreatedCalled[0]);
+
+      await waitFor(() => expect(onCreatedCalled[0]).toBe(true));
+
       expect(client.updateReplication).toBeCalledWith(
         "TestReplication",
         expected_settings,

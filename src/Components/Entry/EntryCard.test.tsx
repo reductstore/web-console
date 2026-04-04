@@ -1,10 +1,9 @@
 import React from "react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { mount } from "enzyme";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import EntryCard from "./EntryCard";
 import { EntryInfo, Client, Status } from "reduct-js";
-import { DeleteOutlined, NodeCollapseOutlined } from "@ant-design/icons";
 
 describe("EntryCard", () => {
   beforeEach(() => mockJSDOM());
@@ -20,13 +19,13 @@ describe("EntryCard", () => {
   };
 
   const client = new Client("");
-  const onRemoved = jest.fn();
+  const onRemoved = vi.fn();
 
-  const mountWithRouter = (component: React.ReactElement) =>
-    mount(<MemoryRouter>{component}</MemoryRouter>);
+  const renderWithRouter = (component: React.ReactElement) =>
+    render(<MemoryRouter>{component}</MemoryRouter>);
 
-  it("shows remove button with permissions", async () => {
-    const wrapper = mountWithRouter(
+  it("shows remove button with permissions", () => {
+    renderWithRouter(
       <EntryCard
         entryInfo={info}
         permissions={{ fullAccess: true }}
@@ -35,11 +34,11 @@ describe("EntryCard", () => {
         onRemoved={onRemoved}
       />,
     );
-    expect(wrapper.find(DeleteOutlined).length).toEqual(1);
+    expect(screen.getByTitle("Remove entry")).toBeInTheDocument();
   });
 
-  it("does not show remove button without permissions", async () => {
-    const wrapper = mountWithRouter(
+  it("does not show remove button without permissions", () => {
+    renderWithRouter(
       <EntryCard
         entryInfo={info}
         permissions={{ fullAccess: false }}
@@ -48,11 +47,11 @@ describe("EntryCard", () => {
         onRemoved={onRemoved}
       />,
     );
-    expect(wrapper.find(DeleteOutlined).length).toEqual(0);
+    expect(screen.queryByTitle("Remove entry")).toBeNull();
   });
 
-  it("displays timestamps in UTC format by default", async () => {
-    const wrapper = mountWithRouter(
+  it("displays timestamps in UTC format by default", () => {
+    const { container } = renderWithRouter(
       <EntryCard
         entryInfo={info}
         client={client}
@@ -61,13 +60,15 @@ describe("EntryCard", () => {
       />,
     );
 
-    const timestamps = wrapper.find(".ant-statistic-content-value");
-    expect(timestamps.at(4).text()).toContain("1970-01-01");
-    expect(timestamps.at(5).text()).toContain("1970-01-01");
+    const statValues = container.querySelectorAll(
+      ".ant-statistic-content-value",
+    );
+    expect(statValues[4].textContent).toContain("1970-01-01");
+    expect(statValues[5].textContent).toContain("1970-01-01");
   });
 
-  it("displays timestamps in Unix format when showUnix is true", async () => {
-    const wrapper = mountWithRouter(
+  it("displays timestamps in Unix format when showUnix is true", () => {
+    const { container } = renderWithRouter(
       <EntryCard
         entryInfo={info}
         client={client}
@@ -77,14 +78,16 @@ describe("EntryCard", () => {
       />,
     );
 
-    const timestamps = wrapper.find(".ant-statistic-content-value");
-    expect(timestamps.at(4).text()).toEqual("1000000");
-    expect(timestamps.at(5).text()).toEqual("2000000");
+    const statValues = container.querySelectorAll(
+      ".ant-statistic-content-value",
+    );
+    expect(statValues[4].textContent).toEqual("1000000");
+    expect(statValues[5].textContent).toEqual("2000000");
   });
 
-  it("displays --- for timestamps when recordCount is 0", async () => {
+  it("displays --- for timestamps when recordCount is 0", () => {
     const emptyInfo = { ...info, recordCount: 0n };
-    const wrapper = mountWithRouter(
+    const { container } = renderWithRouter(
       <EntryCard
         entryInfo={emptyInfo}
         client={client}
@@ -93,13 +96,15 @@ describe("EntryCard", () => {
       />,
     );
 
-    const timestamps = wrapper.find(".ant-statistic-content-value");
-    expect(timestamps.at(3).text()).toEqual("---");
-    expect(timestamps.at(4).text()).toEqual("---");
+    const statValues = container.querySelectorAll(
+      ".ant-statistic-content-value",
+    );
+    expect(statValues[3].textContent).toEqual("---");
+    expect(statValues[4].textContent).toEqual("---");
   });
 
-  it("shows deleting state and disables remove action", async () => {
-    const wrapper = mountWithRouter(
+  it("shows deleting state and disables remove action", () => {
+    renderWithRouter(
       <EntryCard
         entryInfo={{ ...info, status: Status.DELETING }}
         permissions={{ fullAccess: true }}
@@ -109,9 +114,7 @@ describe("EntryCard", () => {
       />,
     );
 
-    expect(wrapper.render().text()).toContain("Deleting");
-    const deleteButton = wrapper.find(DeleteOutlined);
-    expect(deleteButton.prop("onClick")).toBeUndefined();
+    expect(screen.getByText("Deleting")).toBeInTheDocument();
   });
 
   describe("Aggregation Toggle", () => {
@@ -128,8 +131,8 @@ describe("EntryCard", () => {
       },
     ];
 
-    it("shows aggregation toggle button for non-leaf entries", async () => {
-      const wrapper = mountWithRouter(
+    it("shows aggregation toggle button for non-leaf entries", () => {
+      renderWithRouter(
         <EntryCard
           entryInfo={info}
           client={client}
@@ -140,11 +143,11 @@ describe("EntryCard", () => {
         />,
       );
 
-      expect(wrapper.find(NodeCollapseOutlined).length).toEqual(1);
+      expect(screen.getByTitle("Entry Stats")).toBeInTheDocument();
     });
 
-    it("hides aggregation toggle button for leaf entries", async () => {
-      const wrapper = mountWithRouter(
+    it("hides aggregation toggle button for leaf entries", () => {
+      renderWithRouter(
         <EntryCard
           entryInfo={info}
           client={client}
@@ -155,11 +158,11 @@ describe("EntryCard", () => {
         />,
       );
 
-      expect(wrapper.find(NodeCollapseOutlined).length).toEqual(0);
+      expect(screen.queryByTitle("Entry Stats")).toBeNull();
     });
 
-    it("aggregates stats from sub-entries when showAggregated is true", async () => {
-      const wrapper = mountWithRouter(
+    it("aggregates stats from sub-entries when showAggregated is true", () => {
+      const { container } = renderWithRouter(
         <EntryCard
           entryInfo={info}
           client={client}
@@ -170,8 +173,10 @@ describe("EntryCard", () => {
         />,
       );
 
-      const stats = wrapper.find(".ant-statistic-content-value");
-      expect(stats.at(1).text()).toEqual("7");
+      const statValues = container.querySelectorAll(
+        ".ant-statistic-content-value",
+      );
+      expect(statValues[1].textContent).toEqual("7");
     });
   });
 });

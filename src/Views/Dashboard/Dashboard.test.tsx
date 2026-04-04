@@ -1,16 +1,21 @@
 import React from "react";
-import { mount } from "enzyme";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { render, fireEvent, waitFor } from "@testing-library/react";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 import Dashboard from "./Dashboard";
 import { Client, ServerInfo } from "reduct-js";
 
-const mockPush = jest.fn();
-jest.mock("react-router-dom", () => ({
-  useHistory: () => ({
-    push: mockPush,
-  }),
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => mockNavigate,
 }));
+
+// antd components use ResizeObserver
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 describe("Dashboard", () => {
   const client = new Client("");
@@ -18,10 +23,10 @@ describe("Dashboard", () => {
     get client() {
       return client;
     },
-    login: jest.fn(),
-    logout: jest.fn(),
-    isAllowed: jest.fn(),
-    me: jest.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    isAllowed: vi.fn(),
+    me: vi.fn(),
   };
 
   const serverInfo: ServerInfo = {
@@ -37,11 +42,11 @@ describe("Dashboard", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
 
-    client.getInfo = jest.fn().mockResolvedValue(serverInfo);
-    client.getBucketList = jest.fn().mockResolvedValue([
+    client.getInfo = vi.fn().mockResolvedValue(serverInfo);
+    client.getBucketList = vi.fn().mockResolvedValue([
       {
         name: "bucket_1",
         entryCount: 2,
@@ -60,64 +65,82 @@ describe("Dashboard", () => {
   });
 
   it("should show server info by default", async () => {
-    client.getInfo = jest.fn().mockResolvedValue(serverInfo);
-    client.getBucketList = jest.fn().mockResolvedValue([]);
+    client.getInfo = vi.fn().mockResolvedValue(serverInfo);
+    client.getBucketList = vi.fn().mockResolvedValue([]);
 
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    const html = (await waitUntilFind(wrapper, "#ServerInfo")).hostNodes();
+    await waitFor(() =>
+      expect(container.querySelector("#ServerInfo")).toBeTruthy(),
+    );
+    const html = container.querySelector("#ServerInfo")!;
 
-    expect(html.text()).toContain("0.4.0");
-    expect(html.text()).toContain("16 minutes");
-    expect(html.text()).toContain("2 KB");
+    expect(html.textContent).toContain("0.4.0");
+    expect(html.textContent).toContain("16 minutes");
+    expect(html.textContent).toContain("2 KB");
   });
 
   it("should show license info when clicked on the tab", async () => {
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    const licenseTab = (await waitUntilFind(wrapper, ".ant-tabs-tab-btn"))
-      .hostNodes()
-      .at(1);
-    licenseTab.simulate("click");
+    await waitFor(() =>
+      expect(container.querySelector(".ant-tabs-tab-btn")).toBeTruthy(),
+    );
+    const tabs = container.querySelectorAll(".ant-tabs-tab-btn");
+    fireEvent.click(tabs[1]);
 
-    expect(wrapper.text()).toContain("Apache License 2.0");
+    await waitFor(() =>
+      expect(container.textContent).toContain("Apache License 2.0"),
+    );
   });
 
   it("should show bucket info", async () => {
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
-    expect(bucket.text()).toContain("bucket_1");
-    expect(bucket.text()).toContain("1 KB");
-    expect(bucket.text()).toContain("10 seconds");
+    await waitFor(() =>
+      expect(container.querySelector("#bucket_1")).toBeTruthy(),
+    );
+    const bucket = container.querySelector("#bucket_1")!;
+    expect(bucket.textContent).toContain("bucket_1");
+    expect(bucket.textContent).toContain("1 KB");
+    expect(bucket.textContent).toContain("10 seconds");
   });
 
   it("should order buckets by last records", async () => {
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    let bucket = await waitUntilFind(wrapper, "#bucket_1");
-    expect(bucket.at(0).key()).toEqual("1");
+    await waitFor(() =>
+      expect(container.querySelector("#bucket_1")).toBeTruthy(),
+    );
+    await waitFor(() =>
+      expect(container.querySelector("#bucket_2")).toBeTruthy(),
+    );
 
-    bucket = await waitUntilFind(wrapper, "#bucket_2");
-    expect(bucket.at(0).key()).toEqual("0");
+    // bucket_2 has a later latestRecord, so it should appear first
+    const bucketCards = container.querySelectorAll("[id^='bucket_']");
+    expect(bucketCards[0].id).toEqual("bucket_2");
+    expect(bucketCards[1].id).toEqual("bucket_1");
   });
 
   it("should push to BucketDetail if user click on bucket card", async () => {
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    const bucket = (await waitUntilFind(wrapper, "#bucket_1")).hostNodes();
-    bucket.props().onClick();
+    await waitFor(() =>
+      expect(container.querySelector("#bucket_1")).toBeTruthy(),
+    );
+    const bucket = container.querySelector("#bucket_1")!;
+    fireEvent.click(bucket);
 
-    expect(mockPush).toBeCalledWith("/buckets/bucket_1");
+    expect(mockNavigate).toBeCalledWith("/buckets/bucket_1");
   });
 
   it("shows warning icon if license is invalid", async () => {
-    client.getInfo = jest.fn().mockResolvedValue({
+    client.getInfo = vi.fn().mockResolvedValue({
       ...serverInfo,
       license: {
         licensee: "test",
@@ -130,17 +153,16 @@ describe("Dashboard", () => {
       },
     });
 
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    const warningIcon = (
-      await waitUntilFind(wrapper, ".warningIcon")
-    ).hostNodes();
-    expect(warningIcon).toHaveLength(1);
+    await waitFor(() =>
+      expect(container.querySelectorAll(".warningIcon").length).toBe(1),
+    );
   });
 
   it("does not show warning icon if license is valid", async () => {
-    client.getInfo = jest.fn().mockResolvedValue({
+    client.getInfo = vi.fn().mockResolvedValue({
       ...serverInfo,
       license: {
         licensee: "test",
@@ -153,22 +175,24 @@ describe("Dashboard", () => {
       },
     });
 
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: true }} />,
     );
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    wrapper.update();
-    expect(wrapper.find(".warningIcon").hostNodes()).toHaveLength(0);
+    // Wait for async data to load
+    await waitFor(() =>
+      expect(container.querySelector("#ServerInfo")).toBeTruthy(),
+    );
+    expect(container.querySelectorAll(".warningIcon")).toHaveLength(0);
   });
 
   it("shows correct usage and bucket count even if bucket list is filtered", async () => {
-    client.getInfo = jest.fn().mockResolvedValue({
+    client.getInfo = vi.fn().mockResolvedValue({
       ...serverInfo,
       bucketCount: 5n,
       usage: 1000n * 1000n * 1000n * 50n, // 50 GB
     });
 
-    client.getBucketList = jest.fn().mockResolvedValue([
+    client.getBucketList = vi.fn().mockResolvedValue([
       {
         name: "bucket_visible",
         entryCount: 2,
@@ -178,19 +202,21 @@ describe("Dashboard", () => {
       },
     ]);
 
-    const wrapper = mount(
+    const { container } = render(
       <Dashboard backendApi={backend} permissions={{ fullAccess: false }} />,
     );
 
-    const serverInfoPanel = (
-      await waitUntilFind(wrapper, "#ServerInfo")
-    ).hostNodes();
-    expect(serverInfoPanel.text()).toContain("50 GB");
-    expect(serverInfoPanel.text()).toContain("5");
+    await waitFor(() =>
+      expect(container.querySelector("#ServerInfo")).toBeTruthy(),
+    );
+    const serverInfoPanel = container.querySelector("#ServerInfo")!;
+    expect(serverInfoPanel.textContent).toContain("50 GB");
+    expect(serverInfoPanel.textContent).toContain("5");
 
-    const bucket = (
-      await waitUntilFind(wrapper, "#bucket_visible")
-    ).hostNodes();
-    expect(bucket.text()).toContain("bucket_visible");
+    await waitFor(() =>
+      expect(container.querySelector("#bucket_visible")).toBeTruthy(),
+    );
+    const bucket = container.querySelector("#bucket_visible")!;
+    expect(bucket.textContent).toContain("bucket_visible");
   });
 });

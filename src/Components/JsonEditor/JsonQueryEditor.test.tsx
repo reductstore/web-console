@@ -10,7 +10,7 @@ import type { Client } from "reduct-js";
 import { JsonQueryEditor } from "./JsonQueryEditor";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
-jest.mock("@monaco-editor/react", () => ({
+vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
   default: ({
     value,
@@ -27,11 +27,11 @@ jest.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-jest.mock("monaco-editor", () => ({}));
-jest.mock("@reductstore/reduct-query-monaco", () => ({
+vi.mock("monaco-editor", () => ({}));
+vi.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
 }));
-jest.mock("../../Helpers/json5Utils", () => ({
+vi.mock("../../Helpers/json5Utils", () => ({
   processWhenCondition: () => ({ success: true, value: {} }),
 }));
 
@@ -54,7 +54,7 @@ describe("JsonQueryEditor", () => {
   });
 
   it("forwards changes from the editor", () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(<JsonQueryEditor value="{}" onChange={onChange} />);
 
     fireEvent.change(screen.getByTestId("monaco-editor"), {
@@ -111,11 +111,10 @@ describe("JsonQueryEditor", () => {
   });
 
   it("passes start/stop into the validation query", async () => {
-    jest.useFakeTimers();
-    const queryNext = jest.fn().mockResolvedValue({ done: true });
-    const query = jest.fn().mockReturnValue({ next: queryNext });
+    const queryNext = vi.fn().mockResolvedValue({ done: true });
+    const query = vi.fn().mockReturnValue({ next: queryNext });
     const client = {
-      getBucket: jest.fn().mockResolvedValue({ query }),
+      getBucket: vi.fn().mockResolvedValue({ query }),
     } as unknown as Client;
 
     render(
@@ -142,7 +141,5 @@ describe("JsonQueryEditor", () => {
     await waitFor(() =>
       expect(query).toHaveBeenCalledWith("entry-a", 1n, 2n, expect.anything()),
     );
-
-    jest.useRealTimers();
   });
 });

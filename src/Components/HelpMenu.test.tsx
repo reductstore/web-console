@@ -1,3 +1,4 @@
+import React from "react";
 import { getHelpMenuItems } from "./HelpMenu";
 
 describe("HelpMenu", () => {
@@ -46,7 +47,7 @@ describe("HelpMenu", () => {
 
     items.forEach((item) => {
       if (!item || !("label" in item)) return;
-      const link = item.label as JSX.Element;
+      const link = item.label as React.ReactElement<{ href: string }>;
       expect(link.props.href).toBe(
         expectedUrls[item.key as keyof typeof expectedUrls],
       );
