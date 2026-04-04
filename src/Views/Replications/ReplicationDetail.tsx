@@ -5,7 +5,7 @@ import {
   FullReplicationInfo,
   BucketInfo,
 } from "reduct-js";
-import { useHistory, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import ReplicationCard from "../../Components/Replication/ReplicationCard";
 import { Table, Typography } from "antd";
 
@@ -16,7 +16,7 @@ interface Props {
 
 export default function ReplicationDetail(props: Readonly<Props>) {
   const { name } = useParams() as { name: string };
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [replication, setReplication] = useState<FullReplicationInfo>();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
@@ -97,7 +97,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
             index={0}
             {...props}
             showPanel
-            onRemove={() => history.push("/replications")}
+            onRemove={() => navigate("/replications")}
             onShow={() => null}
             onModeChange={() => getReplication()}
           />

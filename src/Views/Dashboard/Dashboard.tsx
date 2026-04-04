@@ -8,8 +8,7 @@ import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
 
 import { PlusOutlined, ExclamationCircleFilled } from "@ant-design/icons";
 import ActionIcon from "../../Components/ActionIcon";
-import { useHistory } from "react-router-dom";
-import { History } from "history";
+import { useNavigate } from "react-router-dom";
 import UsageStatistics from "../../Components/UsageStatistics/UsageStatistics";
 import LicenseDetails from "../../Components/LicenseDetails/LicenseDetails";
 import LicenseAlert from "../../Components/LicenseAlert/LicenseAlert";
@@ -25,7 +24,7 @@ interface Props {
  * Dashboard with information about the server and list of buckets
  */
 export default function Dashboard(props: Readonly<Props>) {
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [info, setInfo] = useState<ServerInfo | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -98,8 +97,8 @@ export default function Dashboard(props: Readonly<Props>) {
     }
   };
 
-  const showBucket = async (name: string, history: History<unknown>) => {
-    history.push(`/buckets/${name}`);
+  const showBucket = async (name: string) => {
+    navigate(`/buckets/${name}`);
   };
 
   const renderBuckets = () => (
@@ -111,7 +110,7 @@ export default function Dashboard(props: Readonly<Props>) {
           index={index}
           client={client}
           onRemoved={removeBucket}
-          onShow={(name) => showBucket(name, history)}
+          onShow={(name) => showBucket(name)}
         />
       ))}
     </div>

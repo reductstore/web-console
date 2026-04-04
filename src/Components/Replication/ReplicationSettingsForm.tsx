@@ -330,13 +330,11 @@ export default class ReplicationSettingsForm extends React.Component<
                   disabled={readOnly}
                   placeholder="Select a source bucket"
                   onChange={this.handleSourceBucketChange}
-                >
-                  {sourceBuckets?.map((bucket) => (
-                    <Select.Option key={bucket} value={bucket}>
-                      {bucket}
-                    </Select.Option>
-                  ))}
-                </Select>
+                  options={sourceBuckets?.map((bucket) => ({
+                    value: bucket,
+                    label: bucket,
+                  }))}
+                />
               </Form.Item>
               <Form.Item
                 label={
@@ -355,13 +353,11 @@ export default class ReplicationSettingsForm extends React.Component<
                   style={{ width: "100%" }}
                   placeholder="Add entries"
                   disabled={readOnly}
-                >
-                  {this.state.entries.map((entry) => (
-                    <Select.Option key={entry} value={entry}>
-                      {entry}
-                    </Select.Option>
-                  ))}
-                </Select>
+                  options={this.state.entries.map((entry) => ({
+                    value: entry,
+                    label: entry,
+                  }))}
+                />
               </Form.Item>
             </Col>
 

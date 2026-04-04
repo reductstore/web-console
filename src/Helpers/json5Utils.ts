@@ -18,7 +18,7 @@ export function safeParseJSON5(input: string): ParseResult {
   try {
     const value = JSON.parse(input);
     return { success: true, value };
-  } catch (jsonError) {
+  } catch {
     try {
       const value = JSON5.parse(input);
       return { success: true, value };
@@ -41,6 +41,7 @@ export function formatAsStrictJSON(value: any): string {
   } catch (error) {
     throw new Error(
       `Failed to format as JSON: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error },
     );
   }
 }

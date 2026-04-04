@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Popover, Tree } from "antd";
 import { EllipsisOutlined } from "@ant-design/icons";
 import { buildNavTree } from "./EntryNavTree";
@@ -20,16 +20,16 @@ const MAX_VISIBLE_SEGMENTS = 4;
 
 export default function EntryBreadcrumb(props: Readonly<Props>) {
   const { bucketName, entryName, allEntryNames = [] } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
   const segments = entryName.split("/");
   const [ellipsisPopoverOpen, setEllipsisPopoverOpen] = useState(false);
 
   const navigateToPath = (path: string) => {
-    history.push(`/buckets/${bucketName}/entries/${encodeEntryPath(path)}`);
+    navigate(`/buckets/${bucketName}/entries/${encodeEntryPath(path)}`);
   };
 
   const handleBucketClick = () => {
-    history.push(`/buckets/${bucketName}`);
+    navigate(`/buckets/${bucketName}`);
   };
 
   const needsTruncation = segments.length > MAX_VISIBLE_SEGMENTS;

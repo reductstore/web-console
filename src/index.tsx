@@ -1,10 +1,10 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { BackendAPI } from "./BackendAPI";
-import { BrowserRouter, withRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import { parseLocation } from "./Helpers/ApiUrlParser";
 
 let apiUrl = process.env.REACT_APP_STORAGE_URL;
@@ -13,8 +13,15 @@ if (apiUrl === undefined) {
   [apiUrl, uiUrl] = parseLocation(window.location, process.env.PUBLIC_URL);
 }
 
+// react-router v7 is strict about basename matching — redirect to basename
+// if the current URL doesn't start with it (e.g. "/" → "/ui/" in dev).
+if (uiUrl && !window.location.pathname.startsWith(uiUrl)) {
+  window.location.replace(
+    uiUrl + window.location.search + window.location.hash,
+  );
+}
+
 const backendApi = new BackendAPI(apiUrl);
-const RoutableApp = withRouter(App);
 
 const resizeObserverMessages = new Set([
   "ResizeObserver loop completed with undelivered notifications.",
@@ -31,14 +38,13 @@ window.addEventListener("error", (event) => {
   }
 });
 
-ReactDOM.render(
+const root = createRoot(document.getElementById("root") as HTMLElement);
+root.render(
   <React.StrictMode>
-    {/* @ts-ignore*/}
     <BrowserRouter basename={uiUrl}>
-      <RoutableApp backendApi={backendApi} publicUrl={uiUrl} apiUrl={apiUrl} />
+      <App backendApi={backendApi} publicUrl={uiUrl} apiUrl={apiUrl} />
     </BrowserRouter>
   </React.StrictMode>,
-  document.getElementById("root") as HTMLElement,
 );
 
 // If you want to start measuring performance in your app, pass a function
@@ -70,7 +76,7 @@ if (!supportsRequestStreams || process.env.NODE_ENV === "development") {
     if (init?.body instanceof ReadableStream) {
       const reader = init.body.getReader();
       const chunks: Uint8Array[] = [];
-      // eslint-disable-next-line no-constant-condition
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;

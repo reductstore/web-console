@@ -231,7 +231,7 @@ const UploadFileForm: React.FC<UploadFileFormProps> = ({
       {uploadError && (
         <Alert
           type="error"
-          message={uploadError}
+          title={uploadError}
           className="uploadError"
           showIcon
         />

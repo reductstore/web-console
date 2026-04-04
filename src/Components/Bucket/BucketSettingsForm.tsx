@@ -15,11 +15,10 @@ import {
   Input,
   InputNumber,
   Select,
+  Space,
   Spin,
 } from "antd";
-import { useHistory } from "react-router-dom";
-
-const { Option } = Select;
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   client: Client;
@@ -27,7 +26,7 @@ interface Props {
   onCreated: () => void;
   showAll?: boolean; // show all settings
   readOnly?: boolean; // now allowed to change settings
-  history?: any;
+  navigate?: (path: string) => void;
 }
 
 interface State {
@@ -49,10 +48,10 @@ const FACTOR_MAP: Record<string, bigint> = {
  * A form to create or update a bucket
  */
 class BucketSettingsForm extends React.Component<
-  Props & { history: any },
+  Props & { navigate: (path: string) => void },
   State
 > {
-  constructor(props: Readonly<Props & { history: any }>) {
+  constructor(props: Readonly<Props & { navigate: (path: string) => void }>) {
     super(props);
     this.state = {
       maxBlockSizeFactor: DEFAULT_FACTOR,
@@ -72,7 +71,7 @@ class BucketSettingsForm extends React.Component<
     quotaSize?: string;
     name: string;
   }): Promise<void> {
-    const { history } = this.props;
+    const { navigate } = this.props;
 
     let maxBlockSize = undefined;
     if (values.maxBlockSize) {
@@ -110,7 +109,7 @@ class BucketSettingsForm extends React.Component<
         if (bucketName !== values.name) await bucket.rename(values.name);
       }
       this.props.onCreated();
-      history.push(`/buckets/${values.name}`);
+      navigate(`/buckets/${values.name}`);
     } catch (err) {
       if (err instanceof APIError) {
         this.setState({ error: err.message });
@@ -122,9 +121,9 @@ class BucketSettingsForm extends React.Component<
 
   async componentDidMount() {
     const { bucketName, client } = this.props;
-    let settings = null;
 
     try {
+      let settings;
       // If bucket name isn't in props, then create a new bucket
       if (bucketName === undefined) {
         const info: ServerInfo = await client.getInfo();
@@ -172,9 +171,9 @@ class BucketSettingsForm extends React.Component<
         <>
           {error ? (
             <Alert
-              message={error}
+              title={error}
               type="error"
-              onClose={() => this.setState({ error: undefined })}
+              closable={{ onClose: () => this.setState({ error: undefined }) }}
             />
           ) : (
             <div />
@@ -192,12 +191,13 @@ class BucketSettingsForm extends React.Component<
         defaultValue={initValue}
         style={{ width: 70 }}
         onChange={onChange}
-      >
-        <Option value="B">B</Option>
-        <Option value="KB">KB</Option>
-        <Option value="MB">MB</Option>
-        <Option value="GB">GB</Option>
-      </Select>
+        options={[
+          { value: "B", label: "B" },
+          { value: "KB", label: "KB" },
+          { value: "MB", label: "MB" },
+          { value: "GB", label: "GB" },
+        ]}
+      />
     );
 
     const { bucketName, showAll } = this.props;
@@ -223,18 +223,18 @@ class BucketSettingsForm extends React.Component<
         labelCol={{ span: 6 }}
         wrapperCol={{ span: 15 }}
         onFinish={this.onFinish}
+        disabled={this.props.readOnly}
       >
         {error ? (
           <Alert
-            message={error}
+            title={error}
             type="error"
-            closable
-            onClose={() => this.setState({ error: undefined })}
+            closable={{ onClose: () => this.setState({ error: undefined }) }}
           />
         ) : (
           <div />
         )}
-        <Input.Group style={{ padding: "15px" }} size="small">
+        <div style={{ padding: "15px" }}>
           <Form.Item
             label="Name"
             name="name"
@@ -242,7 +242,6 @@ class BucketSettingsForm extends React.Component<
           >
             <Input
               id="InputName"
-              disabled={this.props.readOnly}
               onChange={(event) => validateBucketName(event.target.value)}
             />
           </Form.Item>
@@ -253,64 +252,77 @@ class BucketSettingsForm extends React.Component<
               settings.quotaType ? QuotaType[settings.quotaType] : "NONE"
             }
           >
-            <Select>
-              <Option value="NONE">NONE</Option>
-              <Option value="FIFO">FIFO</Option>
-              <Option value="HARD">HARD</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            label="Quota Size"
-            initialValue={initValueFromDefault(
-              quotaSizeFactor,
-              settings.quotaSize,
-            )}
-            name="quotaSize"
-          >
-            <InputNumber
-              controls={false}
-              stringMode
-              addonAfter={sizeSelector(quotaSizeFactor, (value) =>
-                this.setState({ quotaSizeFactor: value }),
-              )}
+            <Select
+              options={[
+                { value: "NONE", label: "NONE" },
+                { value: "FIFO", label: "FIFO" },
+                { value: "HARD", label: "HARD" },
+              ]}
             />
           </Form.Item>
-        </Input.Group>
+          <Form.Item label="Quota Size">
+            <Space.Compact>
+              <Form.Item
+                noStyle
+                name="quotaSize"
+                initialValue={initValueFromDefault(
+                  quotaSizeFactor,
+                  settings.quotaSize,
+                )}
+              >
+                <InputNumber controls={false} stringMode />
+              </Form.Item>
+              {sizeSelector(quotaSizeFactor, (value) =>
+                this.setState({ quotaSizeFactor: value }),
+              )}
+            </Space.Compact>
+          </Form.Item>
+        </div>
         <Collapse
           bordered={true}
           ghost={true}
           style={{ padding: "0px" }}
           defaultActiveKey={showAll ? ["1"] : []}
-        >
-          <Collapse.Panel header="Advanced Settings" key="1">
-            <Input.Group size="small">
-              <Form.Item
-                label="Max. Records"
-                initialValue={settings.maxBlockRecords}
-                name="maxBlockRecords"
-              >
-                <InputNumber controls={false} precision={0} stringMode />
-              </Form.Item>
-              <Form.Item
-                label="Max. Block Size"
-                initialValue={initValueFromDefault(
-                  maxBlockSizeFactor,
-                  settings.maxBlockSize,
-                )}
-                name="maxBlockSize"
-              >
-                <InputNumber
-                  controls={false}
-                  precision={0}
-                  stringMode
-                  addonAfter={sizeSelector(maxBlockSizeFactor, (value) =>
-                    this.setState({ maxBlockSizeFactor: value }),
-                  )}
-                />
-              </Form.Item>
-            </Input.Group>
-          </Collapse.Panel>
-        </Collapse>
+          items={[
+            {
+              key: "1",
+              label: "Advanced Settings",
+              forceRender: true,
+              children: (
+                <div>
+                  <Form.Item
+                    label="Max. Records"
+                    initialValue={settings.maxBlockRecords}
+                    name="maxBlockRecords"
+                  >
+                    <InputNumber controls={false} precision={0} stringMode />
+                  </Form.Item>
+                  <Form.Item label="Max. Block Size">
+                    <Space.Compact>
+                      <Form.Item
+                        noStyle
+                        name="maxBlockSize"
+                        initialValue={initValueFromDefault(
+                          maxBlockSizeFactor,
+                          settings.maxBlockSize,
+                        )}
+                      >
+                        <InputNumber
+                          controls={false}
+                          precision={0}
+                          stringMode
+                        />
+                      </Form.Item>
+                      {sizeSelector(maxBlockSizeFactor, (value) =>
+                        this.setState({ maxBlockSizeFactor: value }),
+                      )}
+                    </Space.Compact>
+                  </Form.Item>
+                </div>
+              ),
+            },
+          ]}
+        />
 
         <Form.Item wrapperCol={{ offset: 17, span: 17 }}>
           <Button
@@ -328,8 +340,9 @@ class BucketSettingsForm extends React.Component<
 }
 
 const BucketSettingsFormWrapper: React.FC<Props> = (props) => {
-  const history = props.history || useHistory();
-  return <BucketSettingsForm {...props} history={history} />;
+  const hookNavigate = useNavigate();
+  const nav = props.navigate || hookNavigate;
+  return <BucketSettingsForm {...props} navigate={nav} />;
 };
 
 export default BucketSettingsFormWrapper;

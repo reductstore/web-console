@@ -157,7 +157,7 @@ export function detectRangeKey(
       if (startDiff <= marginMicroseconds && endDiff <= marginMicroseconds) {
         return key;
       }
-    } catch (error) {
+    } catch {
       continue;
     }
   }

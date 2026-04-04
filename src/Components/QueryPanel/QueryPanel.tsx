@@ -13,20 +13,12 @@ import {
   QueryOptions,
   TokenPermissions,
 } from "reduct-js";
-import {
-  Typography,
-  Button,
-  Input,
-  Select,
-  Modal,
-  Space,
-  message,
-  Spin,
-} from "antd";
+import { Typography, Button, Input, Select, Modal, Space, message } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
   DeleteOutlined,
   DownloadOutlined,
+  LoadingOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
@@ -755,7 +747,7 @@ export default function QueryPanel({
   const renderLabels = (text: string) => {
     if (!text) return "-";
 
-    let parsed: Record<string, unknown> | null = null;
+    let parsed: Record<string, unknown> | null;
     try {
       parsed = typeof text === "string" ? JSON.parse(text) : text;
     } catch {
@@ -834,7 +826,7 @@ export default function QueryPanel({
       render: (_: unknown, row: RecordTableRow) => (
         <Space size="middle">
           {downloadingKey === row.key ? (
-            <Spin size="small" style={{ marginRight: 8 }} />
+            <LoadingOutlined style={{ cursor: "default" }} />
           ) : (
             <DownloadOutlined
               onClick={() => handleDownload(row)}
@@ -1077,13 +1069,11 @@ export default function QueryPanel({
                         }}
                         data-testid="bucket-query-select"
                         style={{ width: "100%" }}
-                      >
-                        {visibleBuckets.map((name) => (
-                          <Select.Option key={name} value={name}>
-                            {name}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                        options={visibleBuckets.map((name) => ({
+                          value: name,
+                          label: name,
+                        }))}
+                      />
                     </div>
                     <div className="queryFieldGroup queryFieldGroupEntries">
                       <Typography.Text
@@ -1095,7 +1085,6 @@ export default function QueryPanel({
                       <Select<string[]>
                         className="queryEntrySelect"
                         mode="tags"
-                        showSearch
                         placeholder="Select entries or type a pattern (e.g. sensor-*)"
                         value={selectedEntries}
                         popupMatchSelectWidth={false}
@@ -1106,12 +1095,7 @@ export default function QueryPanel({
                           setFetchError("");
                         }}
                         disabled={!bucketName}
-                        optionFilterProp="children"
-                        filterOption={(input, option) =>
-                          String(option?.label ?? "")
-                            .toLowerCase()
-                            .includes(input.toLowerCase())
-                        }
+                        showSearch={{ optionFilterProp: "label" }}
                         data-testid="entry-query-select"
                         style={{ width: "100%" }}
                         maxTagCount={4}
@@ -1138,10 +1122,11 @@ export default function QueryPanel({
                       onChange={handleFormatChange}
                       popupMatchSelectWidth={false}
                       style={{ width: 90 }}
-                    >
-                      <Select.Option value="UTC">UTC</Select.Option>
-                      <Select.Option value="Unix">Unix</Select.Option>
-                    </Select>
+                      options={[
+                        { value: "UTC", label: "UTC" },
+                        { value: "Unix", label: "Unix" },
+                      ]}
+                    />
                     <TimeRangeDropdown
                       onSelectRange={(start, end) => {
                         setTimeRange(start, end);
@@ -1156,26 +1141,50 @@ export default function QueryPanel({
                     />
                   </div>
                   <div className="queryTimeInputs">
-                    <Input
-                      placeholder="Start time (optional)"
-                      addonBefore="Start"
-                      value={timeRange.startText}
-                      onChange={(e) => {
-                        updateTimeRangeText("startText", e.target.value);
-                        parseInput(e.target.value, "start", setStartError);
-                      }}
-                      status={startError ? "error" : undefined}
-                    />
-                    <Input
-                      placeholder="Stop time (optional)"
-                      addonBefore="Stop"
-                      value={timeRange.stopText}
-                      onChange={(e) => {
-                        updateTimeRangeText("stopText", e.target.value);
-                        parseInput(e.target.value, "end", setStopError);
-                      }}
-                      status={stopError ? "error" : undefined}
-                    />
+                    <Space.Compact>
+                      <Input
+                        style={{
+                          width: 60,
+                          pointerEvents: "none",
+                          backgroundColor: "#fafafa",
+                          textAlign: "center",
+                        }}
+                        value="Start"
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <Input
+                        placeholder="Start time (optional)"
+                        value={timeRange.startText}
+                        onChange={(e) => {
+                          updateTimeRangeText("startText", e.target.value);
+                          parseInput(e.target.value, "start", setStartError);
+                        }}
+                        status={startError ? "error" : undefined}
+                      />
+                    </Space.Compact>
+                    <Space.Compact>
+                      <Input
+                        style={{
+                          width: 60,
+                          pointerEvents: "none",
+                          backgroundColor: "#fafafa",
+                          textAlign: "center",
+                        }}
+                        value="Stop"
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <Input
+                        placeholder="Stop time (optional)"
+                        value={timeRange.stopText}
+                        onChange={(e) => {
+                          updateTimeRangeText("stopText", e.target.value);
+                          parseInput(e.target.value, "end", setStopError);
+                        }}
+                        status={stopError ? "error" : undefined}
+                      />
+                    </Space.Compact>
                   </div>
                 </div>
               </div>
