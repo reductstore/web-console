@@ -31,6 +31,16 @@ if (
   });
 }
 
+// jsdom doesn't implement getComputedStyle with pseudo-elements, which antd
+// triggers internally. Patch it to return an empty style for pseudo-elements.
+const _origGetComputedStyle = window.getComputedStyle;
+window.getComputedStyle = (elt: Element, pseudoElt?: string | null) => {
+  if (pseudoElt) {
+    return {} as CSSStyleDeclaration;
+  }
+  return _origGetComputedStyle(elt);
+};
+
 // antd components use ResizeObserver internally via @rc-component/resize-observer
 global.ResizeObserver = class ResizeObserver {
   observe() {}
