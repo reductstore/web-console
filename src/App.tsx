@@ -3,7 +3,7 @@ import { ConfigProvider, Image, Layout, Menu } from "antd";
 import { useNavigate } from "react-router-dom";
 import type { MenuProps } from "antd";
 
-import logo from "./main_logo.png";
+import logo from "./logo.png";
 import "./App.css";
 import { IBackendAPI } from "./BackendAPI";
 import { AppRoutes } from "./Components/Routes";
