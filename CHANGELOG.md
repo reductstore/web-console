@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upgrade dependencies (React 19, TypeScript 6, antd 6, react-router-dom 7, Vite 8, Vitest 4, ESLint 10) and migrate tests from Enzyme to @testing-library/react, [PR-188](https://github.com/reductstore/web-console/pull/188)
 - Move time controls into the conditional query toolbox header, [PR-183](https://github.com/reductstore/web-console/pull/183)
 - Make existing attachment JSON editors expandable with conditional-query-style toolbar actions, [PR-184](https://github.com/reductstore/web-console/pull/184)
 - Update license message for Apache-licensed ReductStore Core and ReductStore Pro pricing, [PR-185](https://github.com/reductstore/web-console/pull/185)
