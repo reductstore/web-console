@@ -1,5 +1,5 @@
 import React from "react";
-import { mount } from "enzyme";
+import { render, screen } from "@testing-library/react";
 import UsageStatistics from "./UsageStatistics";
 import { ServerInfo, BucketInfo, Status } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
@@ -27,28 +27,25 @@ describe("UsageStatistics", () => {
   }));
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
   });
 
   it("should display the correct usage", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} />);
-    expect(
-      wrapper.find({ title: "Usage" }).find("Statistic").prop("value"),
-    ).toEqual("50 GB");
+    render(<UsageStatistics info={serverInfo} />);
+    expect(screen.getByText("Usage")).toBeInTheDocument();
+    expect(screen.getByText("50 GB")).toBeInTheDocument();
   });
 
   it("should display the correct number of buckets", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} />);
-    expect(
-      wrapper.find({ title: "Buckets" }).find("Statistic").prop("value"),
-    ).toEqual(buckets.length);
+    render(<UsageStatistics info={serverInfo} />);
+    expect(screen.getByText("Buckets")).toBeInTheDocument();
+    expect(screen.getByText(buckets.length.toString())).toBeInTheDocument();
   });
 
   it("should display the correct uptime", () => {
-    const wrapper = mount(<UsageStatistics info={serverInfo} />);
-    expect(
-      wrapper.find({ title: "Uptime" }).find("Statistic").prop("value"),
-    ).toEqual("1 day");
+    render(<UsageStatistics info={serverInfo} />);
+    expect(screen.getByText("Uptime")).toBeInTheDocument();
+    expect(screen.getByText("1 day")).toBeInTheDocument();
   });
 });

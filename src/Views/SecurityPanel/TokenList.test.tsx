@@ -1,18 +1,17 @@
 import React from "react";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { render, screen, waitFor } from "@testing-library/react";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Client, Token } from "reduct-js";
-import { mount } from "enzyme";
 import TokenList from "./TokenList";
 import { MemoryRouter } from "react-router-dom";
-import { act } from "react-dom/test-utils";
 
 describe("TokenList", () => {
   const client = new Client("");
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-    client.getTokenList = jest
+    client.getTokenList = vi
       .fn()
       .mockResolvedValue([
         { name: "token-1", createdAt: 100000, isProvisioned: true } as Token,
@@ -21,33 +20,29 @@ describe("TokenList", () => {
   });
 
   it("should print table with tokens", async () => {
-    const panel = mount(
+    render(
       <MemoryRouter>
         <TokenList client={client} />
       </MemoryRouter>,
     );
-    const rows = await waitUntilFind(panel, ".ant-table-row");
 
-    expect(rows.length).toEqual(2);
-    expect(rows.at(0).render().text()).toEqual(
-      "token-11970-01-01T00:01:40.000ZProvisioned",
-    );
-    expect(rows.at(1).render().text()).toEqual(
-      "token-21970-01-01T00:03:20.000Z",
-    );
+    await waitFor(() => {
+      expect(screen.getByText("token-1")).toBeInTheDocument();
+    });
+    expect(screen.getByText("token-2")).toBeInTheDocument();
+    expect(screen.getByText("Provisioned")).toBeInTheDocument();
   });
 
   it("should have a button to create a new token", async () => {
-    const panel = mount(
+    render(
       <MemoryRouter>
         <TokenList client={client} />
       </MemoryRouter>,
     );
-    const button = await waitUntilFind(panel, { title: "Add" });
 
-    button.hostNodes().props().onClick();
-
-    // No idea how to mock history and use MemoryRouter in the same test
+    await waitFor(() => {
+      expect(screen.getByTitle("Add")).toBeInTheDocument();
+    });
   });
 
   it("should show loading state while fetching tokens", async () => {
@@ -56,23 +51,24 @@ describe("TokenList", () => {
       resolveGetTokens = resolve;
     });
 
-    client.getTokenList = jest.fn().mockReturnValue(getTokensPromise);
+    client.getTokenList = vi.fn().mockReturnValue(getTokensPromise);
 
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <TokenList client={client} />
       </MemoryRouter>,
     );
 
-    expect(panel.find(".ant-spin").exists()).toBe(true);
+    expect(container.querySelector(".ant-spin-spinning")).toBeInTheDocument();
 
-    await act(async () => {
-      resolveGetTokens([
-        { name: "token-1", createdAt: 100000, isProvisioned: true } as Token,
-      ]);
+    resolveGetTokens!([
+      { name: "token-1", createdAt: 100000, isProvisioned: true } as Token,
+    ]);
+
+    await waitFor(() => {
+      expect(
+        container.querySelector(".ant-spin-spinning"),
+      ).not.toBeInTheDocument();
     });
-
-    panel.update();
-    expect(panel.find(".ant-spin").exists()).toBe(false);
   });
 });

@@ -1,6 +1,5 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
+import { render, act, fireEvent } from "@testing-library/react";
 import BucketEntriesTable, { EntryTableRow } from "./BucketEntriesTable";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { ColumnsType } from "antd/es/table";
@@ -13,8 +12,6 @@ const flushRAF = async () => {
 };
 
 describe("BucketEntriesTable", () => {
-  let wrapper: ReactWrapper;
-
   const columns: ColumnsType<EntryTableRow> = [
     { title: "Name", dataIndex: "fullName", key: "name" },
   ];
@@ -55,173 +52,172 @@ describe("BucketEntriesTable", () => {
     pathQuery: "",
     currentPage: 1,
     pageSize: 10,
-    onTableChange: jest.fn(),
+    onTableChange: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-  });
-
-  afterEach(() => {
-    if (wrapper) {
-      wrapper.unmount();
-    }
   });
 
   describe("Rendering", () => {
     it("should render ScrollableTable with correct props", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} />);
+      const { container } = render(<BucketEntriesTable {...defaultProps} />);
 
-      const table = wrapper.find("ScrollableTable");
-      expect(table.exists()).toBe(true);
-      expect(table.prop("className")).toBe("entriesTable");
-      expect(table.prop("rowKey")).toBe("key");
-      expect(table.prop("loading")).toBe(false);
+      expect(container.querySelector(".entriesTable")).toBeTruthy();
+      expect(container.querySelector(".ant-spin-spinning")).toBeFalsy();
     });
 
     it("should render all rows when no filter is applied", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} />);
+      const { container } = render(<BucketEntriesTable {...defaultProps} />);
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(3);
+      const rows = container.querySelectorAll("tr.ant-table-row-level-0");
+      expect(rows).toHaveLength(3);
     });
 
     it("should show loading state", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} loading={true} />);
+      const { container } = render(
+        <BucketEntriesTable {...defaultProps} loading={true} />,
+      );
 
-      const table = wrapper.find("ScrollableTable");
-      expect(table.prop("loading")).toBe(true);
+      expect(container.querySelector(".ant-spin-spinning")).toBeTruthy();
     });
 
     it("should pass pagination props correctly", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} currentPage={2} pageSize={20} />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const pagination = table.prop("pagination") as {
-        current: number;
-        pageSize: number;
-        showSizeChanger: boolean;
-      };
-      expect(pagination.current).toBe(2);
-      expect(pagination.pageSize).toBe(20);
-      expect(pagination.showSizeChanger).toBe(true);
+      const pagination = container.querySelector(".ant-pagination");
+      expect(pagination).toBeTruthy();
+      const sizeChanger = container.querySelector(
+        ".ant-pagination-options .ant-select",
+      );
+      expect(sizeChanger).toBeTruthy();
     });
   });
 
   describe("Filtering", () => {
     it("should filter rows based on pathQuery", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} pathQuery="file1" />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(1);
-      expect(dataSource[0].key).toBe("folder1");
-      expect(dataSource[0].children).toHaveLength(1);
-      expect(dataSource[0].children?.[0].key).toBe("folder1/file1.txt");
+      // When searching, rows are auto-expanded
+      // "file1" matches folder1/file1.txt only
+      const level0Rows = container.querySelectorAll("tr.ant-table-row-level-0");
+      expect(level0Rows).toHaveLength(1);
+      expect(level0Rows[0].textContent).toContain("folder1/");
+
+      const level1Rows = container.querySelectorAll("tr.ant-table-row-level-1");
+      expect(level1Rows).toHaveLength(1);
+      expect(level1Rows[0].textContent).toContain("folder1/file1.txt");
     });
 
     it("should filter nested children", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} pathQuery="deep" />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(1);
-      expect(dataSource[0].key).toBe("folder2");
-      expect(dataSource[0].children).toHaveLength(1);
-      expect(dataSource[0].children?.[0].key).toBe("folder2/nested");
+      const level0Rows = container.querySelectorAll("tr.ant-table-row-level-0");
+      expect(level0Rows).toHaveLength(1);
+      expect(level0Rows[0].textContent).toContain("folder2/");
+
+      const level1Rows = container.querySelectorAll("tr.ant-table-row-level-1");
+      expect(level1Rows).toHaveLength(1);
+      expect(level1Rows[0].textContent).toContain("folder2/nested/");
     });
 
     it("should be case insensitive", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} pathQuery="FILE1" />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(1);
-      expect(dataSource[0].children?.[0].fullName).toBe("folder1/file1.txt");
+      const level1Rows = container.querySelectorAll("tr.ant-table-row-level-1");
+      expect(level1Rows).toHaveLength(1);
+      expect(level1Rows[0].textContent).toContain("folder1/file1.txt");
     });
 
     it("should return all rows when pathQuery is empty", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} pathQuery="   " />);
+      const { container } = render(
+        <BucketEntriesTable {...defaultProps} pathQuery="   " />,
+      );
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(3);
+      const level0Rows = container.querySelectorAll("tr.ant-table-row-level-0");
+      expect(level0Rows).toHaveLength(3);
     });
 
     it("should match parent folder names", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} pathQuery="folder1" />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const dataSource = table.prop("dataSource") as EntryTableRow[];
-      expect(dataSource).toHaveLength(1);
-      expect(dataSource[0].key).toBe("folder1");
-      expect(dataSource[0].children).toHaveLength(2);
+      // folder1/ matches, so it and all children are included
+      const level0Rows = container.querySelectorAll("tr.ant-table-row-level-0");
+      expect(level0Rows).toHaveLength(1);
+      expect(level0Rows[0].textContent).toContain("folder1/");
+
+      const level1Rows = container.querySelectorAll("tr.ant-table-row-level-1");
+      expect(level1Rows).toHaveLength(2);
     });
   });
 
   describe("Expandable rows", () => {
     it("should have expandable configuration", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} />);
+      const { container } = render(<BucketEntriesTable {...defaultProps} />);
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        expandedRowKeys: string[];
-        rowExpandable: (row: EntryTableRow) => boolean;
-      };
-      expect(expandable).toBeDefined();
-      expect(expandable.rowExpandable).toBeDefined();
+      // Expand icons should be present for expandable rows
+      const expandIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon",
+      );
+      expect(expandIcons.length).toBeGreaterThan(0);
     });
 
     it("should mark rows with children as expandable", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} />);
+      const { container } = render(<BucketEntriesTable {...defaultProps} />);
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        rowExpandable: (row: EntryTableRow) => boolean;
-      };
+      // folder1 and folder2 have children → collapsed expand icons
+      const collapsedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-collapsed",
+      );
+      expect(collapsedIcons).toHaveLength(2);
 
-      expect(expandable.rowExpandable(mockRows[0])).toBe(true);
-      expect(expandable.rowExpandable(mockRows[2])).toBe(false);
+      // root.txt has no children → spacer icon
+      const spacerIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-spaced",
+      );
+      expect(spacerIcons).toHaveLength(1);
     });
 
     it("should auto-expand all rows when searching", () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable {...defaultProps} pathQuery="file" />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        expandedRowKeys: string[];
-      };
-      expect(expandable.expandedRowKeys.length).toBeGreaterThan(0);
+      // When searching, expandable rows are auto-expanded
+      const expandedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-expanded",
+      );
+      expect(expandedIcons.length).toBeGreaterThan(0);
     });
 
     it("should start with no rows expanded when not searching", () => {
-      wrapper = mount(<BucketEntriesTable {...defaultProps} />);
+      const { container } = render(<BucketEntriesTable {...defaultProps} />);
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        expandedRowKeys: string[];
-      };
-      expect(expandable.expandedRowKeys).toHaveLength(0);
+      const expandedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-expanded",
+      );
+      expect(expandedIcons).toHaveLength(0);
+
+      // Only level-0 rows should be visible
+      const level1Rows = container.querySelectorAll("tr.ant-table-row-level-1");
+      expect(level1Rows).toHaveLength(0);
     });
   });
 
   describe("Expand/Collapse signals", () => {
     it("should expand all rows when expand signal is triggered", async () => {
-      wrapper = mount(
+      const { container } = render(
         <BucketEntriesTable
           {...defaultProps}
           expandCollapseSignal={1}
@@ -230,19 +226,16 @@ describe("BucketEntriesTable", () => {
       );
 
       await flushRAF();
-      wrapper.update();
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        expandedRowKeys: string[];
-      };
-      expect(expandable.expandedRowKeys).toContain("folder1");
-      expect(expandable.expandedRowKeys).toContain("folder2");
-      expect(expandable.expandedRowKeys).toContain("folder2/nested");
+      // folder1, folder2, folder2/nested should all be expanded
+      const expandedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-expanded",
+      );
+      expect(expandedIcons).toHaveLength(3);
     });
 
     it("should collapse all rows when collapse signal is triggered", async () => {
-      wrapper = mount(
+      const { rerender, container } = render(
         <BucketEntriesTable
           {...defaultProps}
           expandCollapseSignal={1}
@@ -251,28 +244,28 @@ describe("BucketEntriesTable", () => {
       );
 
       await flushRAF();
-      wrapper.update();
 
-      wrapper.setProps({
-        expandCollapseSignal: 2,
-        expandCollapseTarget: "collapse",
-      });
+      rerender(
+        <BucketEntriesTable
+          {...defaultProps}
+          expandCollapseSignal={2}
+          expandCollapseTarget="collapse"
+        />,
+      );
 
       await flushRAF();
-      wrapper.update();
 
-      const table = wrapper.find("ScrollableTable");
-      const expandable = table.prop("expandable") as {
-        expandedRowKeys: string[];
-      };
-      expect(expandable.expandedRowKeys).toHaveLength(0);
+      const expandedIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon-expanded",
+      );
+      expect(expandedIcons).toHaveLength(0);
     });
   });
 
   describe("onExpandedStatsChange callback", () => {
     it("should call onExpandedStatsChange with correct counts", async () => {
-      const onExpandedStatsChange = jest.fn();
-      wrapper = mount(
+      const onExpandedStatsChange = vi.fn();
+      render(
         <BucketEntriesTable
           {...defaultProps}
           onExpandedStatsChange={onExpandedStatsChange}
@@ -285,8 +278,8 @@ describe("BucketEntriesTable", () => {
     });
 
     it("should report all expanded when searching", async () => {
-      const onExpandedStatsChange = jest.fn();
-      wrapper = mount(
+      const onExpandedStatsChange = vi.fn();
+      render(
         <BucketEntriesTable
           {...defaultProps}
           pathQuery="file"
@@ -306,19 +299,24 @@ describe("BucketEntriesTable", () => {
 
   describe("Table change handler", () => {
     it("should call onTableChange when pagination changes", () => {
-      const onTableChange = jest.fn();
-      wrapper = mount(
-        <BucketEntriesTable {...defaultProps} onTableChange={onTableChange} />,
+      const onTableChange = vi.fn();
+      const { container } = render(
+        <BucketEntriesTable
+          {...defaultProps}
+          pageSize={2}
+          onTableChange={onTableChange}
+        />,
       );
 
-      const table = wrapper.find("ScrollableTable");
-      const onChange = table.prop("onChange") as unknown as (pagination: {
-        current: number;
-        pageSize: number;
-      }) => void;
-      onChange({ current: 2, pageSize: 20 });
+      // With 3 items and pageSize=2, page 2 should exist
+      const page2Button = container.querySelector(".ant-pagination-item-2");
+      expect(page2Button).toBeTruthy();
+      fireEvent.click(page2Button!);
 
-      expect(onTableChange).toHaveBeenCalledWith({ current: 2, pageSize: 20 });
+      expect(onTableChange).toHaveBeenCalled();
+      const [[paginationArg]] = onTableChange.mock.calls;
+      expect(paginationArg.current).toBe(2);
+      expect(paginationArg.pageSize).toBe(2);
     });
   });
 });

@@ -1,18 +1,18 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import DebouncedButton from "./DebouncedButton";
 
 describe("DebouncedButton", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it("renders with correct text", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton onClick={mockOnClick}>Test Button</DebouncedButton>,
     );
@@ -21,7 +21,7 @@ describe("DebouncedButton", () => {
   });
 
   it("calls onClick immediately when clicked", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton onClick={mockOnClick}>Test Button</DebouncedButton>,
     );
@@ -33,7 +33,7 @@ describe("DebouncedButton", () => {
   });
 
   it("disables button during debounce period", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton onClick={mockOnClick} debounceMs={300}>
         Test Button
@@ -45,13 +45,15 @@ describe("DebouncedButton", () => {
 
     expect(button).toBeDisabled();
 
-    jest.advanceTimersByTime(300);
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
 
     expect(button).not.toBeDisabled();
   });
 
   it("prevents multiple clicks during debounce period", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton onClick={mockOnClick} debounceMs={300}>
         Test Button
@@ -68,7 +70,7 @@ describe("DebouncedButton", () => {
   });
 
   it("respects external disabled prop", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton onClick={mockOnClick} disabled>
         Test Button
@@ -83,7 +85,7 @@ describe("DebouncedButton", () => {
   });
 
   it("passes through other button props", () => {
-    const mockOnClick = jest.fn();
+    const mockOnClick = vi.fn();
     render(
       <DebouncedButton
         onClick={mockOnClick}

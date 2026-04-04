@@ -1,116 +1,115 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { Router } from "react-router-dom";
-import { createMemoryHistory, MemoryHistory } from "history";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import EntryBreadcrumb, { encodeEntryPath } from "./EntryBreadcrumb";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
-describe("EntryBreadcrumb", () => {
-  let wrapper: ReactWrapper;
-  let history: MemoryHistory;
+// Helper component to capture current location for assertions
+let testLocation: { pathname: string };
+function LocationCapture() {
+  testLocation = useLocation();
+  return null;
+}
 
+describe("EntryBreadcrumb", () => {
   beforeEach(() => {
     mockJSDOM();
-    history = createMemoryHistory();
+    testLocation = { pathname: "/" };
   });
 
-  afterEach(() => {
-    if (wrapper && wrapper.length > 0) {
-      wrapper.unmount();
-    }
-  });
-
-  const mountWithRouter = (component: React.ReactElement) => {
-    return mount(<Router history={history}>{component}</Router>);
+  const renderWithRouter = (component: React.ReactElement) => {
+    return render(
+      <MemoryRouter>
+        {component}
+        <LocationCapture />
+      </MemoryRouter>,
+    );
   };
 
   describe("Rendering", () => {
     it("should render bucket name as a link", () => {
-      wrapper = mountWithRouter(
+      const { container } = renderWithRouter(
         <EntryBreadcrumb bucketName="test-bucket" entryName="entry1" />,
       );
 
-      const links = wrapper.find("a");
-      expect(links.at(0).text()).toBe("test-bucket");
+      const links = container.querySelectorAll("a");
+      expect(links[0].textContent).toBe("test-bucket");
     });
 
     it("should render single segment entry name without link", () => {
-      wrapper = mountWithRouter(
+      const { container } = renderWithRouter(
         <EntryBreadcrumb bucketName="test-bucket" entryName="entry1" />,
       );
 
-      const spans = wrapper.find("span");
-      expect(spans.last().text()).toBe("entry1");
+      expect(screen.getByText("entry1")).toBeInTheDocument();
+      // entry1 should not be a link
+      const links = container.querySelectorAll("a");
+      const linkTexts = Array.from(links).map((l) => l.textContent);
+      expect(linkTexts).not.toContain("entry1");
     });
 
     it("should render multi-segment path with intermediate links", () => {
-      wrapper = mountWithRouter(
+      const { container } = renderWithRouter(
         <EntryBreadcrumb
           bucketName="test-bucket"
           entryName="folder/subfolder/file"
         />,
       );
 
-      const links = wrapper.find("a");
+      const links = container.querySelectorAll("a");
       expect(links).toHaveLength(3);
-      expect(links.at(0).text()).toBe("test-bucket");
-      expect(links.at(1).text()).toBe("folder");
-      expect(links.at(2).text()).toBe("subfolder");
+      expect(links[0].textContent).toBe("test-bucket");
+      expect(links[1].textContent).toBe("folder");
+      expect(links[2].textContent).toBe("subfolder");
 
-      const spans = wrapper.find("span");
-      expect(spans.last().text()).toBe("file");
+      expect(screen.getByText("file")).toBeInTheDocument();
     });
 
     it("should include separators between segments", () => {
-      wrapper = mountWithRouter(
+      const { container } = renderWithRouter(
         <EntryBreadcrumb bucketName="test-bucket" entryName="folder/file" />,
       );
 
-      const text = wrapper.text();
+      const text = container.textContent;
       expect(text).toContain("test-bucket / folder / file");
     });
   });
 
   describe("Navigation", () => {
     it("should navigate to bucket when bucket name is clicked", () => {
-      wrapper = mountWithRouter(
+      renderWithRouter(
         <EntryBreadcrumb bucketName="test-bucket" entryName="entry1" />,
       );
 
-      const bucketLink = wrapper.find("a").at(0);
-      bucketLink.simulate("click");
+      fireEvent.click(screen.getByText("test-bucket"));
 
-      expect(history.location.pathname).toBe("/buckets/test-bucket");
+      expect(testLocation.pathname).toBe("/buckets/test-bucket");
     });
 
     it("should navigate to intermediate path when segment is clicked", () => {
-      wrapper = mountWithRouter(
+      renderWithRouter(
         <EntryBreadcrumb
           bucketName="test-bucket"
           entryName="folder/subfolder/file"
         />,
       );
 
-      const folderLink = wrapper.find("a").at(1);
-      folderLink.simulate("click");
+      fireEvent.click(screen.getByText("folder"));
 
-      expect(history.location.pathname).toBe(
-        "/buckets/test-bucket/entries/folder",
-      );
+      expect(testLocation.pathname).toBe("/buckets/test-bucket/entries/folder");
     });
 
     it("should navigate to nested path when clicking deeper segment", () => {
-      wrapper = mountWithRouter(
+      renderWithRouter(
         <EntryBreadcrumb
           bucketName="test-bucket"
           entryName="folder/subfolder/file"
         />,
       );
 
-      const subfolderLink = wrapper.find("a").at(2);
-      subfolderLink.simulate("click");
+      fireEvent.click(screen.getByText("subfolder"));
 
-      expect(history.location.pathname).toBe(
+      expect(testLocation.pathname).toBe(
         "/buckets/test-bucket/entries/folder/subfolder",
       );
     });

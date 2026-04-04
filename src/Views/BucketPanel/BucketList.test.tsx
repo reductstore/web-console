@@ -1,19 +1,24 @@
 import React from "react";
-import { mount } from "enzyme";
-import waitUntil from "async-wait-until";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
+import { render, waitFor, fireEvent } from "@testing-library/react";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
 import { BucketInfo, Client, Status } from "reduct-js";
 import { MemoryRouter } from "react-router-dom";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
+
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 describe("BucketList", () => {
   const client = new Client("");
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-    client.getBucketList = jest.fn().mockResolvedValue([
+    client.getBucketList = vi.fn().mockResolvedValue([
       {
         name: "BucketWithData",
         entryCount: 2n,
@@ -33,123 +38,157 @@ describe("BucketList", () => {
   });
 
   it("should print table with information about buckets", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
 
-    const rows = panel.find(".ant-table-row");
+    const rows = container.querySelectorAll(".ant-table-row");
     expect(rows.length).toEqual(2);
-    expect(rows.at(0).render().text()).toEqual(
+    expect(rows[0].textContent).toEqual(
       "BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010ZProvisioned",
     );
-    expect(rows.at(1).render().text()).toEqual("EmptyBucket00 B---------");
+    expect(rows[1].textContent).toEqual("EmptyBucket00 B---------");
   });
 
   it("should add a new bucket", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
-    const button = await waitUntilFind(panel, { title: "Add" });
-    expect(button).toBeDefined();
+    await waitFor(() =>
+      expect(container.querySelector('[title="Add"]')).not.toBeNull(),
+    );
+    const button = container.querySelector('[title="Add"]');
+    expect(button).not.toBeNull();
 
     // TODO: How to test modal?
   });
 
   it("should hide button to add a new bucket if user has no permissions", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} permissions={{ fullAccess: false }} />
       </MemoryRouter>,
     );
-    const button = await waitUntilFind(panel, { title: "Add" });
-    expect(button).toBeUndefined();
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
+    const button = container.querySelector('[title="Add"]');
+    expect(button).toBeNull();
   });
 
   it("should display rename and remove icons for non-provisioned buckets", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
 
-    const rows = panel.find(".ant-table-row");
-    const emptyBucketRow = rows.at(1);
+    const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = emptyBucketRow.find('span[title="Rename"]');
-    const removeIcon = emptyBucketRow.find('span[title="Remove"]');
+    const renameIcon = emptyBucketRow.querySelector('span[title="Rename"]');
+    const removeIcon = emptyBucketRow.querySelector('span[title="Remove"]');
 
-    expect(renameIcon.exists()).toBe(true);
-    expect(removeIcon.exists()).toBe(true);
+    expect(renameIcon).not.toBeNull();
+    expect(removeIcon).not.toBeNull();
   });
 
   it("should not display rename and remove icons for provisioned buckets", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
 
-    const rows = panel.find(".ant-table-row");
-    const provisionedBucketRow = rows.at(0);
+    const [provisionedBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = provisionedBucketRow.find('span[title="Rename"]');
-    const removeIcon = provisionedBucketRow.find('span[title="Remove"]');
+    const renameIcon = provisionedBucketRow.querySelector(
+      'span[title="Rename"]',
+    );
+    const removeIcon = provisionedBucketRow.querySelector(
+      'span[title="Remove"]',
+    );
 
-    expect(renameIcon.exists()).toBe(false);
-    expect(removeIcon.exists()).toBe(false);
+    expect(renameIcon).toBeNull();
+    expect(removeIcon).toBeNull();
   });
 
   it("should open rename modal on rename icon click", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
 
-    const rows = panel.find(".ant-table-row");
-    const emptyBucketRow = rows.at(1);
+    const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = emptyBucketRow.find('span[title="Rename"]');
-    renameIcon.simulate("click");
+    const renameIcon = emptyBucketRow.querySelector('span[title="Rename"]');
+    fireEvent.click(renameIcon!);
 
-    const renameModal = panel.find('div[data-testid="rename-modal"]');
-    const removeModal = panel.find('div[data-testid="delete-modal"]');
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-testid="rename-modal"]'),
+      ).not.toBeNull(),
+    );
+    const removeModal = document.querySelector('[data-testid="delete-modal"]');
 
-    expect(renameModal.exists()).toBe(true);
-    expect(removeModal.exists()).toBe(false);
+    expect(removeModal).toBeNull();
   });
 
   it("should open remove confirmation modal on remove icon click", async () => {
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
 
-    const rows = panel.find(".ant-table-row");
-    const emptyBucketRow = rows.at(1);
+    const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const removeIcon = emptyBucketRow.find('span[title="Remove"]');
-    removeIcon.simulate("click");
+    const removeIcon = emptyBucketRow.querySelector('span[title="Remove"]');
+    fireEvent.click(removeIcon!);
 
-    const renameModal = panel.find('div[data-testid="rename-modal"]');
-    const removeModal = panel.find('div[data-testid="delete-modal"]');
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-testid="delete-modal"]'),
+      ).not.toBeNull(),
+    );
+    const renameModal = document.querySelector('[data-testid="rename-modal"]');
 
-    expect(renameModal.exists()).toBe(false);
-    expect(removeModal.exists()).toBe(true);
+    expect(renameModal).toBeNull();
   });
 
   it("should show deleting state and disable actions for deleting bucket", async () => {
-    client.getBucketList = jest.fn().mockResolvedValue([
+    client.getBucketList = vi.fn().mockResolvedValue([
       {
         name: "DeletingBucket",
         entryCount: 0n,
@@ -161,20 +200,24 @@ describe("BucketList", () => {
       } as BucketInfo,
     ]);
 
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
 
-    await waitUntil(() => panel.update().find(".ant-table-row").length > 0);
-    const row = panel.find(".ant-table-row").at(0);
-    expect(row.render().text()).toContain("Deleting");
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
+    const [row] = container.querySelectorAll(".ant-table-row");
+    expect(row.textContent).toContain("Deleting");
 
-    const renameIcon = row.find('span[title="Rename"]');
-    const removeIcon = row.find('span[title="Remove"]');
-    expect(renameIcon.prop("onClick")).toBeUndefined();
-    expect(removeIcon.prop("onClick")).toBeUndefined();
+    const renameIcon = row.querySelector('span[title="Rename"]');
+    const removeIcon = row.querySelector('span[title="Remove"]');
+    expect(renameIcon?.getAttribute("onclick")).toBeNull();
+    expect(removeIcon?.getAttribute("onclick")).toBeNull();
   });
 
   it("should show loading state while fetching buckets", async () => {
@@ -183,15 +226,15 @@ describe("BucketList", () => {
       resolveGetBuckets = resolve;
     });
 
-    client.getBucketList = jest.fn().mockReturnValue(getBucketsPromise);
+    client.getBucketList = vi.fn().mockReturnValue(getBucketsPromise);
 
-    const panel = mount(
+    const { container } = render(
       <MemoryRouter>
         <BucketList client={client} />
       </MemoryRouter>,
     );
 
-    expect(panel.find(".ant-spin").exists()).toBe(true);
+    expect(container.querySelector(".ant-spin-spinning")).not.toBeNull();
 
     await act(async () => {
       resolveGetBuckets([
@@ -206,7 +249,6 @@ describe("BucketList", () => {
       ]);
     });
 
-    panel.update();
-    expect(panel.find(".ant-spin").exists()).toBe(false);
+    expect(container.querySelector(".ant-spin-spinning")).toBeNull();
   });
 });

@@ -1,15 +1,13 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { Button, Typography, Alert } from "antd";
-import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import type { Mock } from "vitest";
 import RecordPreview from "./RecordPreview";
 import { Bucket, QueryOptions } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("RecordPreview", () => {
-  let wrapper: ReactWrapper;
   const mockBucket = {
-    createQueryLink: jest.fn(),
+    createQueryLink: vi.fn(),
   } as unknown as Bucket;
 
   const defaultProps = {
@@ -23,41 +21,35 @@ describe("RecordPreview", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
-    global.fetch = jest.fn();
-  });
-
-  afterEach(() => {
-    if (wrapper) {
-      wrapper.unmount();
-    }
+    global.fetch = vi.fn();
   });
 
   it("should render preview card", () => {
-    wrapper = mount(<RecordPreview {...defaultProps} />);
+    const { container } = render(<RecordPreview {...defaultProps} />);
 
-    expect(wrapper.find(".recordPreviewCard").exists()).toBe(true);
-    expect(wrapper.find(Typography.Text).at(0).text()).toBe("Content Preview");
+    expect(container.querySelector(".recordPreviewCard")).toBeTruthy();
+    expect(screen.getByText("Content Preview")).toBeInTheDocument();
   });
 
   it("should show hide/show toggle button", () => {
-    wrapper = mount(<RecordPreview {...defaultProps} />);
+    render(<RecordPreview {...defaultProps} />);
 
-    const toggleButton = wrapper.find(Button).at(0);
-    expect(toggleButton.exists()).toBe(true);
-    expect(toggleButton.find(EyeInvisibleOutlined).exists()).toBe(true);
+    expect(
+      screen.getByRole("button", { name: /hide preview/i }),
+    ).toBeInTheDocument();
   });
 
   it("should toggle preview visibility", () => {
-    wrapper = mount(<RecordPreview {...defaultProps} />);
+    const { container } = render(<RecordPreview {...defaultProps} />);
 
-    const toggleButton = wrapper.find(Button).at(0);
-    toggleButton.simulate("click");
-    wrapper.update();
+    fireEvent.click(screen.getByRole("button", { name: /hide preview/i }));
 
-    expect(wrapper.find(EyeOutlined).exists()).toBe(true);
-    expect(wrapper.find(".previewContent").exists()).toBe(false);
+    expect(
+      screen.getByRole("button", { name: /show preview/i }),
+    ).toBeInTheDocument();
+    expect(container.querySelector(".previewContent")).toBeNull();
   });
 
   it("should show unsupported message for large files", () => {
@@ -66,11 +58,11 @@ describe("RecordPreview", () => {
       size: 50 * 1024 * 1024,
     };
 
-    wrapper = mount(<RecordPreview {...largeFileProps} />);
+    render(<RecordPreview {...largeFileProps} />);
 
-    expect(wrapper.find(Typography.Text).last().text()).toContain(
-      "Text size exceeds 10 MB limit for preview",
-    );
+    expect(
+      screen.getByText(/Text size exceeds 10 MB limit for preview/),
+    ).toBeInTheDocument();
   });
 
   it("should handle image content type", () => {
@@ -79,11 +71,9 @@ describe("RecordPreview", () => {
       contentType: "image/png",
     };
 
-    (mockBucket.createQueryLink as jest.Mock).mockResolvedValue(
-      "http://test-url",
-    );
+    (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
 
-    wrapper = mount(<RecordPreview {...imageProps} />);
+    render(<RecordPreview {...imageProps} />);
 
     expect(mockBucket.createQueryLink).toHaveBeenCalled();
   });
@@ -94,21 +84,18 @@ describe("RecordPreview", () => {
       contentType: "text/plain",
     };
 
-    (mockBucket.createQueryLink as jest.Mock).mockResolvedValue(
-      "http://test-url",
-    );
-    (global.fetch as jest.Mock).mockResolvedValue({
+    (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("test content"),
     });
 
-    wrapper = mount(<RecordPreview {...textProps} />);
+    render(<RecordPreview {...textProps} />);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    wrapper.update();
-
-    expect(global.fetch).toHaveBeenCalledWith("http://test-url", {
-      signal: expect.any(AbortSignal),
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("http://test-url", {
+        signal: expect.any(AbortSignal),
+      });
     });
   });
 
@@ -118,15 +105,13 @@ describe("RecordPreview", () => {
     queryOptions.strict = true;
     queryOptions.head = false;
 
-    (mockBucket.createQueryLink as jest.Mock).mockResolvedValue(
-      "http://test-url",
-    );
-    (global.fetch as jest.Mock).mockResolvedValue({
+    (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("test content"),
     });
 
-    wrapper = mount(
+    render(
       <RecordPreview
         {...defaultProps}
         queryStart={10n}
@@ -136,31 +121,29 @@ describe("RecordPreview", () => {
       />,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    wrapper.update();
-
-    expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
-      "test-entry",
-      10n,
-      20n,
-      queryOptions,
-      2,
-      expect.any(Date),
-      "test.txt",
-      "http://localhost:8383",
-    );
+    await waitFor(() => {
+      expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
+        "test-entry",
+        10n,
+        20n,
+        queryOptions,
+        2,
+        expect.any(Date),
+        "test.txt",
+        "http://localhost:8383",
+      );
+    });
   });
 
   it("should show error on fetch failure", async () => {
-    (mockBucket.createQueryLink as jest.Mock).mockRejectedValue(
+    (mockBucket.createQueryLink as Mock).mockRejectedValue(
       new Error("Network error"),
     );
 
-    wrapper = mount(<RecordPreview {...defaultProps} />);
+    render(<RecordPreview {...defaultProps} />);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    wrapper.update();
-
-    expect(wrapper.find(Alert).exists()).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
   });
 });

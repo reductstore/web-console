@@ -26,7 +26,7 @@ describe("LicenseDetails", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
   });
 

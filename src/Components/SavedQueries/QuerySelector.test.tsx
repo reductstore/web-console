@@ -1,32 +1,24 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
-import { Select } from "antd";
+import { render, screen } from "@testing-library/react";
+import type { Mock } from "vitest";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import QuerySelector from "./QuerySelector";
 import { useQueryStore } from "../../stores/queryStore";
 
-jest.setTimeout(15000);
-
-const flush = () => new Promise((resolve) => setTimeout(resolve, 100));
+vi.setConfig({ testTimeout: 15000 });
 
 describe("QuerySelector", () => {
-  let wrapper: ReactWrapper;
-  let onLoadQuery: jest.Mock;
+  let onLoadQuery: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
     useQueryStore.getState().clearQueries();
 
-    onLoadQuery = jest.fn();
+    onLoadQuery = vi.fn();
   });
 
-  afterEach(() => {
-    if (wrapper) wrapper.unmount();
-  });
-
-  const mountSelector = async (
+  const renderSelector = (
     editable = true,
     queries: Array<{ name: string; query: string }> = [],
   ) => {
@@ -40,35 +32,31 @@ describe("QuerySelector", () => {
       .getState()
       .setLoadedQueryName("test-bucket", "test-entry", null);
 
-    await act(async () => {
-      wrapper = mount(
-        <QuerySelector
-          bucketName="test-bucket"
-          entryName="test-entry"
-          onLoadQuery={onLoadQuery}
-          editable={editable}
-        />,
-      );
-      await flush();
-    });
-    wrapper.update();
+    return render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        editable={editable}
+      />,
+    );
   };
 
-  it("renders nothing when no saved queries exist", async () => {
-    await mountSelector();
-    expect(wrapper.find(Select).length).toBe(0);
+  it("renders nothing when no saved queries exist", () => {
+    const { container } = renderSelector();
+    expect(container.querySelector(".ant-select")).toBeNull();
   });
 
-  it("renders select dropdown when queries exist", async () => {
-    await mountSelector(true, [
+  it("renders select dropdown when queries exist", () => {
+    const { container } = renderSelector(true, [
       { name: "my-query", query: '{"$each_t": "1s"}' },
     ]);
 
-    expect(wrapper.find(Select).length).toBe(1);
+    expect(container.querySelector(".ant-select")).toBeTruthy();
   });
 
-  it("shows queries from store", async () => {
-    await mountSelector(true, [{ name: "q1", query: "{}" }]);
+  it("shows queries from store", () => {
+    renderSelector(true, [{ name: "q1", query: "{}" }]);
 
     const queries = useQueryStore
       .getState()
@@ -77,15 +65,13 @@ describe("QuerySelector", () => {
     expect(queries[0].name).toBe("q1");
   });
 
-  it("hides delete buttons when not editable", async () => {
-    await mountSelector(false, [{ name: "q1", query: "{}" }]);
+  it("hides delete buttons when not editable", () => {
+    renderSelector(false, [{ name: "q1", query: "{}" }]);
 
-    expect(
-      wrapper.find('[data-testid="delete-query-q1"]').hostNodes().length,
-    ).toBe(0);
+    expect(screen.queryByTestId("delete-query-q1")).toBeNull();
   });
 
-  it("auto-loads last used query on mount", async () => {
+  it("auto-loads last used query on mount", () => {
     useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
       name: "q1",
       query: '{"$each_t": "5s"}',
@@ -94,18 +80,14 @@ describe("QuerySelector", () => {
       .getState()
       .setLoadedQueryName("test-bucket", "test-entry", "q1");
 
-    await act(async () => {
-      wrapper = mount(
-        <QuerySelector
-          bucketName="test-bucket"
-          entryName="test-entry"
-          onLoadQuery={onLoadQuery}
-          editable={true}
-        />,
-      );
-      await flush();
-    });
-    wrapper.update();
+    render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        editable={true}
+      />,
+    );
 
     expect(onLoadQuery).toHaveBeenCalledWith(
       expect.objectContaining({ name: "q1", query: '{"$each_t": "5s"}' }),

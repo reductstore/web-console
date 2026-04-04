@@ -1,8 +1,12 @@
 import React from "react";
-import { mount, ReactWrapper } from "enzyme";
-import { act } from "react-dom/test-utils";
-import { Card, Select } from "antd";
-import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
+import type { Mock } from "vitest";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 
 import ReplicationCard from "./ReplicationCard";
 import {
@@ -16,17 +20,23 @@ import { mockJSDOM } from "../../Helpers/TestHelpers";
 describe("ReplicationCard", () => {
   let clientMock: Client;
   let replicationMock: FullReplicationInfo;
-  let onRemoveMock: jest.Mock;
-  let onShowMock: jest.Mock;
-  let onModeChangeMock: jest.Mock;
-  let wrapper: ReactWrapper;
+  let onRemoveMock: Mock;
+  let onShowMock: Mock;
+  let onModeChangeMock: Mock;
 
   beforeEach(() => {
     mockJSDOM();
 
+    // Mock ResizeObserver for antd components
+    global.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+
     clientMock = new Client("dummyURL");
-    clientMock.deleteReplication = jest.fn().mockResolvedValue(undefined);
-    clientMock.setReplicationMode = jest.fn().mockResolvedValue(undefined);
+    clientMock.deleteReplication = vi.fn().mockResolvedValue(undefined);
+    clientMock.setReplicationMode = vi.fn().mockResolvedValue(undefined);
 
     replicationMock = {
       info: {
@@ -59,19 +69,13 @@ describe("ReplicationCard", () => {
       },
     };
 
-    onRemoveMock = jest.fn();
-    onShowMock = jest.fn();
-    onModeChangeMock = jest.fn();
-  });
-
-  afterEach(() => {
-    if (wrapper && wrapper.length) {
-      wrapper.unmount();
-    }
+    onRemoveMock = vi.fn();
+    onShowMock = vi.fn();
+    onModeChangeMock = vi.fn();
   });
 
   it("renders without crashing", async () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -84,12 +88,12 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find(Card).exists()).toBe(true);
-    expect(wrapper.find(".ReplicationCard").exists()).toBe(true);
+    expect(container.querySelector(".ant-card")).toBeTruthy();
+    expect(container.querySelector(".ReplicationCard")).toBeTruthy();
   });
 
   it("opens settings modal on settings icon click", () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -103,17 +107,15 @@ describe("ReplicationCard", () => {
     );
 
     act(() => {
-      wrapper.find(SettingOutlined).simulate("click");
+      fireEvent.click(container.querySelector('[title="Settings"]')!);
     });
-    wrapper.update();
 
-    expect(
-      wrapper.find("[data-testid='settings-modal']").at(0).prop("open"),
-    ).toBe(true);
+    // Modal renders in a portal; query on document
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("shows remove confirmation when remove icon is clicked", async () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -127,15 +129,15 @@ describe("ReplicationCard", () => {
     );
 
     await act(async () => {
-      wrapper.find(DeleteOutlined).simulate("click");
+      fireEvent.click(container.querySelector('[title="Remove"]')!);
     });
-    wrapper.update();
 
-    expect(wrapper.find("[data-testid='delete-modal']").exists()).toBe(true);
+    // Modal renders in a portal; query on document
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("removes replication on confirm", async () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -150,25 +152,34 @@ describe("ReplicationCard", () => {
 
     // Open the removal confirmation modal
     await act(async () => {
-      wrapper.find(DeleteOutlined).simulate("click");
+      fireEvent.click(container.querySelector('[title="Remove"]')!);
     });
 
-    // Make sure the modal is now part of the DOM
-    wrapper.update();
-
-    // Type the confirmation name into the input field
+    // Wait for the modal to appear, then type the confirmation name
+    await waitFor(() => {
+      expect(screen.getByTestId("confirm-input")).toBeInTheDocument();
+    });
     await act(async () => {
-      wrapper
-        .find("input[data-testid='confirm-input']")
-        .simulate("change", { target: { value: replicationMock.info.name } });
+      fireEvent.change(screen.getByTestId("confirm-input"), {
+        target: { value: replicationMock.info.name },
+      });
     });
 
-    // Click the confirmation button
+    // Click the confirmation button (disabled/loading clears once name matches)
+    await waitFor(() => {
+      const removeBtns = screen.getAllByRole("button");
+      const removeBtn = removeBtns.find(
+        (btn) => btn.textContent?.trim() === "Remove",
+      );
+      expect(removeBtn).toBeDefined();
+      expect(removeBtn).not.toBeDisabled();
+    });
     await act(async () => {
-      wrapper
-        .find("button")
-        .filterWhere((btn) => btn.text() === "Remove")
-        .simulate("click");
+      const removeBtns = screen.getAllByRole("button");
+      const removeBtn = removeBtns.find(
+        (btn) => btn.textContent?.trim() === "Remove",
+      )!;
+      fireEvent.click(removeBtn);
     });
 
     expect(clientMock.deleteReplication).toHaveBeenCalledWith(
@@ -186,7 +197,7 @@ describe("ReplicationCard", () => {
       },
     };
 
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={provisionedReplicationMock}
         client={clientMock}
@@ -199,16 +210,16 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    const deleteIcon = wrapper.find(DeleteOutlined);
-    expect(deleteIcon.exists()).toBe(true);
-    expect(deleteIcon.prop("style")).toEqual({
-      color: "gray",
+    const deleteIcon = container.querySelector('[title="Remove"]');
+    expect(deleteIcon).toBeTruthy();
+    expect(deleteIcon).toHaveStyle({
+      color: "rgb(128, 128, 128)",
       cursor: "not-allowed",
     });
   });
 
   it("shows mode selector when showPanel is true", () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -222,11 +233,11 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find("[data-testid='mode-select']").exists()).toBe(true);
+    expect(container.querySelector("[data-testid='mode-select']")).toBeTruthy();
   });
 
   it("changes replication mode successfully", async () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -240,13 +251,37 @@ describe("ReplicationCard", () => {
       />,
     );
 
+    // Open the Select dropdown
+    const selectEl = container.querySelector(
+      ".ant-select:not(.ant-select-disabled)",
+    );
+    expect(selectEl).toBeTruthy();
     await act(async () => {
-      wrapper.find(Select).props().onChange?.(ReplicationMode.PAUSED, {
-        value: ReplicationMode.PAUSED,
-        label: "Paused",
-      });
+      fireEvent.mouseDown(selectEl!);
     });
-    wrapper.update();
+
+    // Click the "Paused" option (dropdown renders in portal)
+    // In antd 6 options may use different attributes
+    await waitFor(() => {
+      const option =
+        document.querySelector(".ant-select-item[title='Paused']") ||
+        document.querySelector(
+          ".ant-select-item-option[data-value='paused']",
+        ) ||
+        Array.from(document.querySelectorAll(".ant-select-item-option")).find(
+          (el) => el.textContent?.includes("Paused"),
+        );
+      expect(option).toBeTruthy();
+    });
+
+    const option =
+      document.querySelector(".ant-select-item[title='Paused']") ||
+      Array.from(document.querySelectorAll(".ant-select-item-option")).find(
+        (el) => el.textContent?.includes("Paused"),
+      );
+    await act(async () => {
+      fireEvent.click(option!);
+    });
 
     expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
       replicationMock.info.name,
@@ -260,11 +295,11 @@ describe("ReplicationCard", () => {
 
   it("handles mode change error gracefully", async () => {
     const errorMessage = "Failed to change mode";
-    clientMock.setReplicationMode = jest
+    clientMock.setReplicationMode = vi
       .fn()
       .mockRejectedValue(new APIError(errorMessage, 500));
 
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -278,13 +313,33 @@ describe("ReplicationCard", () => {
       />,
     );
 
+    // Open the Select dropdown
+    const selectEl2 = container.querySelector(
+      ".ant-select:not(.ant-select-disabled)",
+    );
+    expect(selectEl2).toBeTruthy();
     await act(async () => {
-      wrapper.find(Select).props().onChange?.(ReplicationMode.DISABLED, {
-        value: ReplicationMode.DISABLED,
-        label: "Disabled",
-      });
+      fireEvent.mouseDown(selectEl2!);
     });
-    wrapper.update();
+
+    // Click the "Disabled" option (dropdown renders in portal)
+    await waitFor(() => {
+      const option =
+        document.querySelector(".ant-select-item[title='Disabled']") ||
+        Array.from(document.querySelectorAll(".ant-select-item-option")).find(
+          (el) => el.textContent?.includes("Disabled"),
+        );
+      expect(option).toBeTruthy();
+    });
+
+    const disabledOption =
+      document.querySelector(".ant-select-item[title='Disabled']") ||
+      Array.from(document.querySelectorAll(".ant-select-item-option")).find(
+        (el) => el.textContent?.includes("Disabled"),
+      );
+    await act(async () => {
+      fireEvent.click(disabledOption!);
+    });
 
     expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
       replicationMock.info.name,
@@ -302,7 +357,7 @@ describe("ReplicationCard", () => {
       },
     };
 
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={provisionedReplicationMock}
         client={clientMock}
@@ -316,11 +371,12 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find(Select).props().disabled).toBe(false);
+    const selectEl = container.querySelector("[data-testid='mode-select']");
+    expect(selectEl?.classList.contains("ant-select-disabled")).toBe(false);
   });
 
   it("disables mode selector when user does not have fullAccess", () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -334,11 +390,12 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find(Select).props().disabled).toBe(true);
+    const selectEl = container.querySelector("[data-testid='mode-select']");
+    expect(selectEl?.classList.contains("ant-select-disabled")).toBe(true);
   });
 
   it("shows status tags when showPanel is false", () => {
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={replicationMock}
         client={clientMock}
@@ -351,8 +408,8 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.find("[data-testid='mode-select']").exists()).toBe(false);
-    expect(wrapper.text()).toContain("Target Reachable");
+    expect(container.querySelector("[data-testid='mode-select']")).toBeFalsy();
+    expect(container.textContent).toContain("Target Reachable");
   });
 
   it("shows Inactive status tag when mode is disabled", () => {
@@ -364,7 +421,7 @@ describe("ReplicationCard", () => {
       },
     };
 
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={disabledReplicationMock}
         client={clientMock}
@@ -377,7 +434,7 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.text()).toContain("Inactive");
+    expect(container.textContent).toContain("Inactive");
   });
 
   it("shows Target Unreachable status tag when not active", () => {
@@ -389,7 +446,7 @@ describe("ReplicationCard", () => {
       },
     };
 
-    wrapper = mount(
+    const { container } = render(
       <ReplicationCard
         replication={inactiveReplicationMock}
         client={clientMock}
@@ -402,6 +459,6 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(wrapper.text()).toContain("Target Unreachable");
+    expect(container.textContent).toContain("Target Unreachable");
   });
 });

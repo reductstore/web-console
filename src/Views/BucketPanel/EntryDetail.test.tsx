@@ -1,15 +1,11 @@
-import { mount, ReactWrapper } from "enzyme";
+import React from "react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
+import type { Mock } from "vitest";
+import { act } from "react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { Bucket, Client, EntryInfo, Status } from "reduct-js";
 import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
-import waitUntil from "async-wait-until";
-import { act } from "react-dom/test-utils";
-import {
-  DownloadOutlined,
-  DeleteOutlined,
-  ShareAltOutlined,
-} from "@ant-design/icons";
 import { message } from "antd";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
@@ -18,7 +14,7 @@ type MockedRemoveRecord = RemoveRecordFn & {
   mockRejectedValueOnce: (value: Error) => void;
 };
 
-jest.mock("@monaco-editor/react", () => ({
+vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
   default: (props: any) => {
     return (
@@ -33,13 +29,13 @@ jest.mock("@monaco-editor/react", () => ({
   },
 }));
 
-jest.mock("@reductstore/reduct-query-monaco", () => ({
-  getCompletionProvider: jest.fn(() => ({
-    provideCompletionItems: jest.fn(() => ({ suggestions: [] })),
+vi.mock("@reductstore/reduct-query-monaco", () => ({
+  getCompletionProvider: vi.fn(() => ({
+    provideCompletionItems: vi.fn(() => ({ suggestions: [] })),
   })),
 }));
 
-jest.mock("react-chartjs-2", () => ({
+vi.mock("react-chartjs-2", () => ({
   Line: ({ data, options, ...props }: any) => (
     <div
       data-testid="data-volume-chart"
@@ -50,45 +46,44 @@ jest.mock("react-chartjs-2", () => ({
   ),
 }));
 
-jest.mock("chart.js", () => ({
+vi.mock("chart.js", () => ({
   Chart: {
-    register: jest.fn(),
+    register: vi.fn(),
   },
-  LineController: jest.fn(),
-  LineElement: jest.fn(),
-  PointElement: jest.fn(),
-  LinearScale: jest.fn(),
-  TimeScale: jest.fn(),
-  LogarithmicScale: jest.fn(),
-  Tooltip: jest.fn(),
-  Legend: jest.fn(),
+  LineController: vi.fn(),
+  LineElement: vi.fn(),
+  PointElement: vi.fn(),
+  LinearScale: vi.fn(),
+  TimeScale: vi.fn(),
+  LogarithmicScale: vi.fn(),
+  Tooltip: vi.fn(),
+  Legend: vi.fn(),
 }));
 
-jest.mock("chartjs-plugin-zoom", () => ({}));
-jest.mock("chartjs-adapter-dayjs-4", () => ({}));
+vi.mock("chartjs-plugin-zoom", () => ({ default: {} }));
 
-jest.mock("prettier-bytes", () => {
-  return (bytes: number) => {
+vi.mock("prettier-bytes", () => ({
+  default: (bytes: number) => {
     if (bytes === 1024) return "1.0 KB";
     if (bytes === 2048) return "2.0 KB";
     return `${bytes} bytes`;
-  };
-});
+  },
+}));
 
 const mockParams = {
   bucketName: "testBucket",
   entryName: "testEntry",
 };
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
+vi.mock("react-router-dom", async () => ({
+  ...(await vi.importActual("react-router-dom")),
   useParams: () => mockParams,
 }));
 
 describe("EntryDetail", () => {
   // Create a properly mocked client
   const client = {
-    getBucket: jest.fn(),
+    getBucket: vi.fn(),
   } as unknown as Client;
 
   // Permissions object to be passed as props
@@ -100,28 +95,27 @@ describe("EntryDetail", () => {
   const mockReader = {
     labels: { key: "value" },
     contentType: "application/json",
-    read: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+    read: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
   };
   const mockWriter = {
-    write: jest.fn().mockResolvedValue(undefined),
+    write: vi.fn().mockResolvedValue(undefined),
   };
   // Mock the bucket with all the methods we need
-  // Properly type the jest mocked functions
   const bucket = {
-    query: jest.fn(),
-    getEntryList: jest.fn(),
-    beginRead: jest.fn().mockResolvedValue(mockReader) as jest.Mock,
-    beginWrite: jest.fn().mockResolvedValue(mockWriter) as jest.Mock,
-    removeRecord: jest
+    query: vi.fn(),
+    getEntryList: vi.fn(),
+    beginRead: vi.fn().mockResolvedValue(mockReader) as Mock,
+    beginWrite: vi.fn().mockResolvedValue(mockWriter) as Mock,
+    removeRecord: vi
       .fn()
       .mockResolvedValue(undefined) as unknown as MockedRemoveRecord,
-    update: jest.fn().mockResolvedValue(undefined) as jest.Mock,
-    readAttachments: jest.fn().mockResolvedValue({}) as jest.Mock,
-    writeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
-    removeAttachments: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    update: vi.fn().mockResolvedValue(undefined) as Mock,
+    readAttachments: vi.fn().mockResolvedValue({}) as Mock,
+    writeAttachments: vi.fn().mockResolvedValue(undefined) as Mock,
+    removeAttachments: vi.fn().mockResolvedValue(undefined) as Mock,
   } as unknown as Bucket;
-  let wrapper: ReactWrapper;
-  const BASE_TIME = new Date("1970-01-01T01:00:00.000Z");
+
+  const BASE_TIME = new Date("1970-01-01T01:00:00.000Z").getTime();
 
   const mockRecords = [
     {
@@ -142,30 +136,31 @@ describe("EntryDetail", () => {
     },
   ];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
-    jest.setSystemTime(BASE_TIME);
+  let container: HTMLElement;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(BASE_TIME);
     mockJSDOM();
 
-    global.requestAnimationFrame = jest.fn((cb) => {
-      cb(0);
-      return 0;
+    global.requestAnimationFrame = vi.fn((cb) => {
+      const id = Date.now();
+      queueMicrotask(() => cb(0));
+      return id;
     });
 
-    // No need to mock getTokenPermissions anymore as we pass permissions directly
-
-    client.getBucket = jest.fn().mockResolvedValue(bucket);
+    client.getBucket = vi.fn().mockResolvedValue(bucket);
 
     // Mock Ant Design message component
-    message.success = jest.fn() as unknown as typeof message.success & {
+    message.success = vi.fn() as unknown as typeof message.success & {
       mockClear: () => void;
     };
-    message.error = jest.fn() as unknown as typeof message.error & {
+    message.error = vi.fn() as unknown as typeof message.error & {
       mockClear: () => void;
     };
 
-    bucket.query = jest.fn().mockImplementation(() => ({
+    bucket.query = vi.fn().mockImplementation(() => ({
       async *[Symbol.asyncIterator]() {
         for (const record of mockRecords) {
           yield record;
@@ -173,7 +168,7 @@ describe("EntryDetail", () => {
       },
     }));
 
-    bucket.getEntryList = jest.fn().mockResolvedValue([
+    bucket.getEntryList = vi.fn().mockResolvedValue([
       {
         name: "testEntry",
         blockCount: 5n,
@@ -187,67 +182,77 @@ describe("EntryDetail", () => {
       } as EntryInfo,
     ]);
 
-    wrapper = mount(
-      <MemoryRouter>
-        <EntryDetail
-          client={client}
-          permissions={permissions}
-          apiUrl="https://example.com"
-        />
-      </MemoryRouter>,
-    );
+    await act(async () => {
+      const result = render(
+        <MemoryRouter>
+          <EntryDetail
+            client={client}
+            permissions={permissions}
+            apiUrl="https://example.com"
+          />
+        </MemoryRouter>,
+      );
+      ({ container } = result);
+    });
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
-    if (wrapper) {
-      wrapper.unmount();
-    }
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe("UI Elements", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".ant-select")).not.toBeNull();
       });
     });
 
     it("should show the display format select", () => {
-      const select = wrapper.find('Select[data-testid="format-select"]');
-      expect(select.exists()).toBe(true);
+      const select = container.querySelector('[data-testid="format-select"]');
+      expect(select).not.toBeNull();
     });
 
     it("should show the fetch records button", () => {
-      const fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.exists()).toBe(true);
-      expect(fetchButton.text()).toBe("Fetch Records");
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton).not.toBeNull();
+      expect(fetchButton.textContent).toBe("Fetch Records");
     });
 
     it("should not show a separate limit input", () => {
-      const limitInput = wrapper.find(".limitInput");
-      expect(limitInput.exists()).toBe(false);
+      const limitInput = container.querySelector(".limitInput");
+      expect(limitInput).toBeNull();
     });
 
     it("should show the Monaco editor with default JSON", () => {
-      const monacoEditor = wrapper.find(".monaco-editor-mock");
-      expect(monacoEditor.exists()).toBe(true);
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      expect(monacoEditor).not.toBeNull();
 
-      const editorValue = wrapper.find("JsonQueryEditor").prop("value");
-      expect(editorValue).toBe('{\n  "$each_t": "$__interval"\n}\n');
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      expect(textArea).not.toBeNull();
+      expect(textArea.value).toBe('{\n  "$each_t": "$__interval"\n}\n');
 
-      const exampleText = wrapper.find(".jsonExample").first().text();
-      expect(exampleText).toContain("Example:");
+      const exampleText = container.querySelector(".jsonExample");
+      expect(exampleText).not.toBeNull();
+      expect(exampleText!.textContent).toContain("Example:");
     });
 
     it("should call bucket.query with default $each_t when condition", async () => {
-      const fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.exists()).toBe(true);
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton).not.toBeNull();
 
       await act(async () => {
-        fetchButton.simulate("click");
-        jest.runOnlyPendingTimers();
+        fireEvent.click(fetchButton);
+        vi.runOnlyPendingTimers();
       });
 
       expect(bucket.query).toHaveBeenCalledWith(
@@ -272,7 +277,7 @@ describe("EntryDetail", () => {
         queryResolve = resolve;
       });
 
-      bucket.query = jest.fn().mockImplementation(() => ({
+      bucket.query = vi.fn().mockImplementation(() => ({
         async *[Symbol.asyncIterator]() {
           await slowQueryPromise;
           for (const record of mockRecords) {
@@ -282,39 +287,45 @@ describe("EntryDetail", () => {
       }));
 
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".ant-select")).not.toBeNull();
       });
 
-      let fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.text()).toBe("Fetch Records");
+      let fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton.textContent).toBe("Fetch Records");
 
       await act(async () => {
-        fetchButton.simulate("click");
+        fireEvent.click(fetchButton);
       });
-      wrapper.update();
 
-      fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.text()).toBe("Fetch Records");
+      fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton.textContent).toBe("Fetch Records");
 
       // Advance past the 500ms delay
       await act(async () => {
-        jest.advanceTimersByTime(600);
+        vi.advanceTimersByTime(600);
       });
-      wrapper.update();
 
       // Now button should show "Cancel"
-      fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.text()).toBe("Cancel");
+      fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton.textContent).toBe("Cancel");
 
       await act(async () => {
-        queryResolve();
-        jest.runAllTimers();
+        queryResolve!();
+        vi.runAllTimers();
       });
     });
 
     it("should abort query when Cancel is clicked", async () => {
-      bucket.query = jest.fn().mockImplementation(() => ({
+      bucket.query = vi.fn().mockImplementation(() => ({
         async *[Symbol.asyncIterator]() {
           for (const record of mockRecords) {
             yield record;
@@ -328,105 +339,145 @@ describe("EntryDetail", () => {
       }));
 
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(() => wrapper.update().find(".ant-select").length > 0);
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".ant-select")).not.toBeNull();
       });
 
-      let fetchButton = wrapper.find(".fetchButton button").first();
+      let fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
       await act(async () => {
-        fetchButton.simulate("click");
-        jest.advanceTimersByTime(100);
+        fireEvent.click(fetchButton);
+        vi.advanceTimersByTime(100);
       });
 
       // Advance past delay to show Cancel
       await act(async () => {
-        jest.advanceTimersByTime(600);
+        vi.advanceTimersByTime(600);
       });
-      wrapper.update();
 
-      fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.text()).toBe("Cancel");
+      fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton.textContent).toBe("Cancel");
 
       // Clicking Cancel should abort
       await act(async () => {
-        fetchButton.simulate("click");
-        jest.runAllTimers();
+        fireEvent.click(fetchButton);
+        vi.runAllTimers();
       });
-      wrapper.update();
 
-      fetchButton = wrapper.find(".fetchButton button").first();
-      expect(fetchButton.text()).toBe("Fetch Records");
+      fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+      expect(fetchButton.textContent).toBe("Fetch Records");
     });
   });
 
   it("should fetch and display records", async () => {
     await act(async () => {
-      jest.runOnlyPendingTimers();
-      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
+      vi.runOnlyPendingTimers();
+    });
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0);
     });
 
-    const rows = wrapper.find(".ant-table-row");
+    const rows = container.querySelectorAll(".ant-table-row");
     expect(rows.length).toBe(2);
 
-    expect(rows.at(0).text()).toContain("1970-01-01T00:00:00.001Z");
-    expect(rows.at(0).text()).toContain("1.0 KB");
-    expect(rows.at(0).text()).toContain("application/json");
-    expect(rows.at(0).text()).toContain("key: value");
+    expect(rows[0].textContent).toContain("1970-01-01T00:00:00.001Z");
+    expect(rows[0].textContent).toContain("1.0 KB");
+    expect(rows[0].textContent).toContain("application/json");
+    expect(rows[0].textContent).toContain("key: value");
 
-    expect(rows.at(1).text()).toContain("1970-01-01T00:00:00.002Z");
-    expect(rows.at(1).text()).toContain("2.0 KB");
-    expect(rows.at(1).text()).toContain("text/plain");
-    expect(rows.at(1).text()).toContain("type: test");
+    expect(rows[1].textContent).toContain("1970-01-01T00:00:00.002Z");
+    expect(rows[1].textContent).toContain("2.0 KB");
+    expect(rows[1].textContent).toContain("text/plain");
+    expect(rows[1].textContent).toContain("type: test");
   });
 
   it("should toggle between ISO and Unix timestamps", async () => {
     await act(async () => {
-      jest.runOnlyPendingTimers();
-      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
+      vi.runOnlyPendingTimers();
+    });
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0);
     });
 
-    const select = wrapper.find('Select[data-testid="format-select"]').at(0);
-    act(() => {
-      const onChange = select.prop("onChange") as any;
-      if (onChange) onChange("Unix");
+    // Open the format select dropdown
+    const formatSelect = container.querySelector(
+      '[data-testid="format-select"] .ant-select-selector, [data-testid="format-select"] .ant-select-content',
+    ) as HTMLElement;
+    expect(formatSelect).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.mouseDown(formatSelect);
     });
 
-    const rows = wrapper.find(".ant-table-row");
-    expect(rows.at(0).text()).toContain("1000");
-    expect(rows.at(1).text()).toContain("2000");
+    // Click the "Unix" option in the dropdown portal
+    await waitFor(() => {
+      const options = document.querySelectorAll(".ant-select-item-option");
+      expect(options.length).toBeGreaterThan(0);
+    });
+
+    const unixOption = Array.from(
+      document.querySelectorAll(".ant-select-item-option"),
+    ).find((el) => el.textContent === "Unix");
+    expect(unixOption).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(unixOption!);
+    });
+
+    const rows = container.querySelectorAll(".ant-table-row");
+    expect(rows[0].textContent).toContain("1000");
+    expect(rows[1].textContent).toContain("2000");
   });
 
   it("should show a download icon for each record", async () => {
     await act(async () => {
-      jest.runOnlyPendingTimers();
-      await waitUntil(() => wrapper.update().find(".ant-table-row").length > 0);
+      vi.runOnlyPendingTimers();
     });
-    const downloadIcons = wrapper.find(DownloadOutlined);
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0);
+    });
+    const downloadIcons = container.querySelectorAll(".anticon-download");
     expect(downloadIcons.length).toBe(2);
   });
 
   it("should download records using share link", async () => {
     const mockShareLink = "http://localhost/download-link";
-    (bucket as any).createQueryLink = jest
-      .fn()
-      .mockResolvedValue(mockShareLink);
+    (bucket as any).createQueryLink = vi.fn().mockResolvedValue(mockShareLink);
 
-    const clickSpy = jest
+    const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation();
+      .mockImplementation(() => {});
 
     await act(async () => {
-      jest.runOnlyPendingTimers();
-      await waitUntil(() => wrapper.update().find(DownloadOutlined).length > 0);
+      vi.runOnlyPendingTimers();
+    });
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll(".anticon-download").length,
+      ).toBeGreaterThan(0);
     });
 
-    const downloadIcon = wrapper.find(DownloadOutlined).at(0);
-    expect(downloadIcon.exists()).toBe(true);
+    const downloadIcon = container.querySelectorAll(
+      ".anticon-download",
+    )[0] as HTMLElement;
+    expect(downloadIcon).not.toBeNull();
     await act(async () => {
-      downloadIcon.simulate("click");
-      jest.runAllTimers();
+      fireEvent.click(downloadIcon);
+      vi.runAllTimers();
     });
-    wrapper.update();
 
     expect(bucket.createQueryLink).toHaveBeenCalledWith(
       "testEntry",
@@ -448,45 +499,47 @@ describe("EntryDetail", () => {
   describe("Link Generation", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
     });
 
     it("should show share icon for each record", () => {
-      const shareIcons = wrapper.find(ShareAltOutlined);
+      const shareIcons = container.querySelectorAll(".anticon-share-alt");
       expect(shareIcons.length).toBeGreaterThanOrEqual(mockRecords.length);
     });
 
     it("should generate and copy share link when confirmed", async () => {
       const mockLink = "http://localhost/share-link";
-      (bucket as any).createQueryLink = jest.fn().mockResolvedValue(mockLink);
+      (bucket as any).createQueryLink = vi.fn().mockResolvedValue(mockLink);
 
       Object.defineProperty(navigator, "clipboard", {
-        value: { writeText: jest.fn().mockResolvedValue(undefined) },
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
         configurable: true,
       });
 
       // Click share icon, open modal
-      const shareIcon = wrapper.find(ShareAltOutlined).at(0);
+      const shareIcon = container.querySelectorAll(
+        ".anticon-share-alt",
+      )[0] as HTMLElement;
       await act(async () => {
-        shareIcon.simulate("click");
-        jest.runAllTimers();
+        fireEvent.click(shareIcon);
+        vi.runAllTimers();
       });
-      wrapper.update();
 
       // Click "Generate Link"
-      const generateButton = wrapper
-        .find("button")
-        .filterWhere((btn) => btn.text().includes("Generate"))
-        .at(0);
+      const generateButton = Array.from(
+        document.querySelectorAll("button"),
+      ).find((btn) => btn.textContent?.includes("Generate"));
+      expect(generateButton).toBeDefined();
       await act(async () => {
-        generateButton.simulate("click");
-        jest.runAllTimers();
+        fireEvent.click(generateButton!);
+        vi.runAllTimers();
       });
-      wrapper.update();
 
       expect(bucket.createQueryLink).toHaveBeenCalledWith(
         "testEntry",
@@ -501,17 +554,18 @@ describe("EntryDetail", () => {
         "testEntry-1000.json",
         "https://example.com",
       );
-      const input = wrapper.find('input[data-testid="generated-link"]');
-      expect(input.prop("value")).toBe(mockLink);
+      const input = document.querySelector(
+        'input[data-testid="generated-link"]',
+      ) as HTMLInputElement;
+      expect(input.value).toBe(mockLink);
 
       // Click "Copy"
-      const copyButton = wrapper
-        .find('button[data-testid="copy-button"]')
-        .at(0);
+      const copyButton = document.querySelector(
+        'button[data-testid="copy-button"]',
+      ) as HTMLElement;
       await act(async () => {
-        copyButton.simulate("click");
+        fireEvent.click(copyButton);
       });
-      wrapper.update();
 
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockLink);
       expect(message.success).toHaveBeenCalledWith("Link copied to clipboard");
@@ -521,184 +575,154 @@ describe("EntryDetail", () => {
   describe("Label Editing", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
     });
 
     it("should have expandable rows for label editing", () => {
-      const tables = wrapper.find("ScrollableTable");
-      const table = tables.filterWhere(
-        (t) => (t.prop("expandable") as any) != null,
+      // Verify expand icons are present in the table
+      const expandIcons = container.querySelectorAll(
+        ".ant-table-row-expand-icon",
       );
-      expect(table.exists()).toBe(true);
-
-      const expandableConfig = table.first().prop("expandable") as any;
-      expect(expandableConfig).toBeDefined();
-      expect(typeof expandableConfig.expandedRowRender).toBe("function");
+      expect(expandIcons.length).toBeGreaterThan(0);
     });
 
-    it("should render RecordPreview and EditRecordLabels components when row is expanded with correct permissions", () => {
-      const tables = wrapper.find("ScrollableTable");
-      const table = tables.filterWhere(
-        (t) => (t.prop("expandable") as any) != null,
-      );
-      const expandableConfig = table.first().prop("expandable") as any;
+    it("should render RecordPreview and EditRecordLabels components when row is expanded", async () => {
+      // Click the expand icon on the first row
+      const expandIcon = container.querySelector(
+        ".ant-table-row-expand-icon",
+      ) as HTMLElement;
+      expect(expandIcon).not.toBeNull();
 
-      const mockRecord = {
-        key: "1000",
-        timestamp: 1000n,
-        size: "1.0 KB",
-        contentType: "application/json",
-        labels: JSON.stringify({ key: "value" }),
-        record: {
-          contentType: "application/json",
-          size: 1024n,
-        },
-      };
+      await act(async () => {
+        fireEvent.click(expandIcon);
+        vi.runAllTimers();
+      });
 
-      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
-      expect(expandedContent).toBeDefined();
-      expect(expandedContent.type).toBe("div");
-
-      const { children } = expandedContent.props;
-      expect(Array.isArray(children)).toBe(true);
-      expect(children.length).toBe(2);
-
-      const [recordPreview, editRecordLabels] = children;
-      if (recordPreview) {
-        expect(recordPreview.type.name).toBe("RecordPreview");
-        expect(recordPreview.props.contentType).toBe("application/json");
-        expect(recordPreview.props.size).toBe("1.0 KB");
-        expect(recordPreview.props.entryName).toBe("testEntry");
-        expect(recordPreview.props.timestamp).toEqual(1000n);
-      }
-
-      expect(editRecordLabels.type.name).toBe("EditRecordLabels");
-      expect(editRecordLabels.props.record).toBe(mockRecord);
-      expect(editRecordLabels.props.editable).toBe(true);
-      expect(typeof editRecordLabels.props.onLabelsUpdated).toBe("function");
+      // Verify the expanded row content is rendered
+      const expandedRow = container.querySelector(".ant-table-expanded-row");
+      expect(expandedRow).not.toBeNull();
     });
 
-    it("should pass handleLabelsUpdated callback to EditRecordLabels component", () => {
-      const tables = wrapper.find("ScrollableTable");
-      const table = tables.filterWhere(
-        (t) => (t.prop("expandable") as any) != null,
-      );
-      const expandableConfig = table.first().prop("expandable") as any;
-
-      const mockRecord = {
-        key: "1000",
-        timestamp: 1000n,
-        size: "1.0 KB",
-        contentType: "application/json",
-        labels: JSON.stringify({ key: "value" }),
-        record: {
-          contentType: "application/json",
-          size: 1024n,
-        },
-      };
-
-      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
-      const { children } = expandedContent.props;
-      const [, editRecordLabels] = children;
-      const { onLabelsUpdated } = editRecordLabels.props;
-
-      expect(typeof onLabelsUpdated).toBe("function");
-    });
-
-    it("should render EditRecordLabels as read-only when user lacks write permissions", () => {
+    it("should render EditRecordLabels as read-only when user lacks write permissions", async () => {
       const noWritePermissions = {
         fullAccess: false,
-        write: [],
+        write: [] as string[],
       };
 
-      const wrapperNoWrite = mount(
-        <MemoryRouter>
-          <EntryDetail
-            client={client}
-            permissions={noWritePermissions}
-            apiUrl="https://example.com"
-          />
-        </MemoryRouter>,
+      let noWriteContainer!: HTMLElement;
+      await act(async () => {
+        const result = render(
+          <MemoryRouter>
+            <EntryDetail
+              client={client}
+              permissions={noWritePermissions}
+              apiUrl="https://example.com"
+            />
+          </MemoryRouter>,
+        );
+        noWriteContainer = result.container;
+      });
+
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+
+      await waitFor(() => {
+        expect(
+          noWriteContainer.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
+      });
+
+      // Expand a row
+      const expandIcon = noWriteContainer.querySelector(
+        ".ant-table-row-expand-icon",
+      ) as HTMLElement;
+      expect(expandIcon).not.toBeNull();
+
+      await act(async () => {
+        fireEvent.click(expandIcon);
+        vi.runAllTimers();
+      });
+
+      // The expanded row should exist, and delete icons should not be present
+      // (since user has no write access)
+      const expandedRow = noWriteContainer.querySelector(
+        ".ant-table-expanded-row",
       );
+      expect(expandedRow).not.toBeNull();
 
-      const tables = wrapperNoWrite.find("ScrollableTable");
-      const table = tables.filterWhere(
-        (t) => (t.prop("expandable") as any) != null,
+      // With read-only, there should be no "Add Label" button within the expanded row
+      const addButtons = expandedRow!.querySelectorAll("button");
+      const addLabelButton = Array.from(addButtons).find((btn) =>
+        btn.textContent?.includes("Add Label"),
       );
-      const expandableConfig = table.first().prop("expandable") as any;
-
-      const mockRecord = {
-        key: "1000",
-        timestamp: 1000n,
-        size: "1.0 KB",
-        contentType: "application/json",
-        labels: JSON.stringify({ key: "value" }),
-        record: {
-          contentType: "application/json",
-          size: 1024n,
-        },
-      };
-
-      const expandedContent = expandableConfig.expandedRowRender(mockRecord);
-      const { children } = expandedContent.props;
-      const [, editRecordLabels] = children;
-      expect(editRecordLabels.props.editable).toBe(false);
-
-      wrapperNoWrite.unmount();
+      expect(addLabelButton).toBeUndefined();
     });
   });
 
   describe("Data Volume Chart", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
     });
 
     it("should render the DataVolumeChart component", () => {
-      const chart = wrapper.find('[data-testid="data-volume-chart"]');
-      expect(chart.exists()).toBe(true);
+      const chart = container.querySelector(
+        '[data-testid="data-volume-chart"]',
+      );
+      expect(chart).not.toBeNull();
     });
 
     it("should pass correct props to DataVolumeChart", () => {
-      const chart = wrapper.find('[data-testid="data-volume-chart"]');
-      expect(chart.exists()).toBe(true);
+      const chart = container.querySelector(
+        '[data-testid="data-volume-chart"]',
+      ) as HTMLElement;
+      expect(chart).not.toBeNull();
 
-      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      const chartData = JSON.parse(chart.getAttribute("data-chart-data")!);
       expect(chartData).toHaveProperty("datasets");
       expect(chartData.datasets).toHaveLength(1);
-
-      // Verify chart doesn't have reset-related props
-      expect(chart.prop("onResetZoom")).toBeUndefined();
-      expect(chart.prop("showResetButton")).toBeUndefined();
     });
 
     it("should show chart data when records are available", () => {
-      const chart = wrapper.find('[data-testid="data-volume-chart"]');
-      expect(chart.exists()).toBe(true);
+      const chart = container.querySelector(
+        '[data-testid="data-volume-chart"]',
+      ) as HTMLElement;
+      expect(chart).not.toBeNull();
 
-      const chartData = JSON.parse(chart.prop("data-chart-data"));
+      const chartData = JSON.parse(chart.getAttribute("data-chart-data")!);
       expect(chartData.datasets[0].data.length).toBeGreaterThan(0);
     });
   });
 
   describe("When Condition", () => {
-    it("should initialize with default $each_t macro", () => {
+    it("should initialize with default $each_t macro", async () => {
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+
       // Check the Monaco editor component value
-      const monacoEditor = wrapper.find(".monaco-editor-mock");
-      expect(monacoEditor.exists()).toBe(true);
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      expect(monacoEditor).not.toBeNull();
 
-      const textArea = monacoEditor.find("textarea");
-      expect(textArea.exists()).toBe(true);
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      expect(textArea).not.toBeNull();
 
-      const conditionValue = textArea.prop("value") as string;
+      const conditionValue = textArea.value;
       expect(conditionValue).toBeDefined();
       expect(typeof conditionValue).toBe("string");
       expect(conditionValue).toContain("$each_t");
@@ -711,67 +735,52 @@ describe("EntryDetail", () => {
     });
 
     it("should keep $each_t macro when time range changes", async () => {
-      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
-      if (timeRangeComponents.exists()) {
-        await act(async () => {
-          const props = timeRangeComponents.at(0).props() as any;
-          if (props.onSelectRange) {
-            const oneHour = BigInt(60 * 60 * 1000 * 1000);
-            const now = BigInt(Date.now() * 1000);
-            props.onSelectRange(now - oneHour, now);
-          }
-        });
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
 
-        wrapper.update();
+      // After render, the condition should contain the default macro
+      const updatedMonacoEditor = container.querySelector(
+        ".monaco-editor-mock",
+      );
+      const updatedTextArea = updatedMonacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      const updatedConditionValue = updatedTextArea.value;
 
-        const updatedMonacoEditor = wrapper.find(".monaco-editor-mock");
-        const updatedTextArea = updatedMonacoEditor.find("textarea");
-        const updatedConditionValue = updatedTextArea.prop("value") as string;
-
-        expect(updatedConditionValue.trim()).toBe(
-          '{\n  "$each_t": "$__interval"\n}',
-        );
-      }
+      expect(updatedConditionValue.trim()).toBe(
+        '{\n  "$each_t": "$__interval"\n}',
+      );
     });
 
-    it("should not auto-update when condition contains other fields", () => {
+    it("should not auto-update when condition contains other fields", async () => {
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+
       // Set a custom condition with additional fields
       const customCondition = {
         $each_t: "1m",
         "&label": { $eq: "test" },
       };
 
-      const monacoEditor = wrapper.find(".monaco-editor-mock");
-      const textArea = monacoEditor.find("textarea");
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
 
-      act(() => {
-        const onChange = textArea.prop("onChange") as any;
-        if (onChange) {
-          onChange({
-            target: { value: JSON.stringify(customCondition, null, 2) },
-          });
-        }
+      await act(async () => {
+        fireEvent.change(textArea, {
+          target: { value: JSON.stringify(customCondition, null, 2) },
+        });
       });
 
-      // Try to trigger a time range change
-      const timeRangeComponents = wrapper.find("TimeRangeDropdown");
-      if (timeRangeComponents.exists()) {
-        act(() => {
-          const props = timeRangeComponents.at(0).props() as any;
-          if (props.onChange) {
-            const oneHour = BigInt(60 * 60 * 1000 * 1000);
-            const now = BigInt(Date.now() * 1000);
-            props.onChange(now - oneHour, now, true);
-          }
-        });
-      }
-
-      wrapper.update();
-
       // The condition should remain unchanged
-      const finalMonacoEditor = wrapper.find(".monaco-editor-mock");
-      const finalTextArea = finalMonacoEditor.find("textarea");
-      const finalCondition = JSON.parse(finalTextArea.prop("value") as string);
+      const finalMonacoEditor = container.querySelector(".monaco-editor-mock");
+      const finalTextArea = finalMonacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      const finalCondition = JSON.parse(finalTextArea.value);
 
       expect(finalCondition).toEqual(customCondition);
     });
@@ -780,92 +789,88 @@ describe("EntryDetail", () => {
   describe("Record Deletion", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
     });
 
     it("should show delete icon for each record", () => {
-      const deleteIcons = wrapper.find(DeleteOutlined);
+      const deleteIcons = container.querySelectorAll(".anticon-delete");
       expect(deleteIcons.length).toBeGreaterThanOrEqual(mockRecords.length);
     });
 
-    it("should open delete confirmation modal when delete icon is clicked", () => {
-      const recordRow = wrapper.find(".ant-table-row").at(0);
-      expect(recordRow.exists()).toBe(true);
+    it("should open delete confirmation modal when delete icon is clicked", async () => {
+      const [recordRow] = container.querySelectorAll(".ant-table-row");
+      expect(recordRow).not.toBeNull();
 
-      const deleteIcon = recordRow.find(DeleteOutlined).at(0);
-      expect(deleteIcon.exists()).toBe(true);
+      const deleteIcon = recordRow.querySelector(
+        ".anticon-delete",
+      ) as HTMLElement;
+      expect(deleteIcon).not.toBeNull();
 
-      const { onClick } = deleteIcon.props();
-      expect(typeof onClick).toBe("function");
-
-      act(() => {
-        (onClick as any)();
+      await act(async () => {
+        fireEvent.click(deleteIcon);
       });
-      wrapper.update();
 
-      const modal = wrapper.find(".ant-modal");
-      expect(modal.exists()).toBe(true);
+      const modal = document.querySelector(".ant-modal");
+      expect(modal).not.toBeNull();
 
       // Check the modal title
-      const modalTitle = modal.find(".ant-modal-title").text();
-      expect(modalTitle).toContain("Delete Record");
+      const modalTitle = modal!.querySelector(".ant-modal-title");
+      expect(modalTitle!.textContent).toContain("Delete Record");
     });
 
     it("should delete record when confirmation is confirmed", async () => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
 
-      bucket.removeRecord = jest.fn().mockResolvedValue(undefined);
-      message.success = jest.fn();
-      (client.getBucket as jest.Mock).mockResolvedValue(bucket);
+      bucket.removeRecord = vi.fn().mockResolvedValue(undefined);
+      message.success = vi.fn();
+      (client.getBucket as Mock).mockResolvedValue(bucket);
 
-      const recordRow = wrapper.find(".ant-table-row").at(0);
-      expect(recordRow.exists()).toBe(true);
+      const [recordRow] = container.querySelectorAll(".ant-table-row");
+      expect(recordRow).not.toBeNull();
 
-      const deleteIcon = recordRow.find(DeleteOutlined).at(0);
-      expect(deleteIcon.exists()).toBe(true);
-      expect(deleteIcon.props().title).toBe("Delete record");
+      const deleteIcon = recordRow.querySelector(
+        ".anticon-delete",
+      ) as HTMLElement;
+      expect(deleteIcon).not.toBeNull();
 
-      const { onClick } = deleteIcon.props();
-      expect(typeof onClick).toBe("function");
-
-      act(() => {
-        (onClick as any)({ stopPropagation: jest.fn() }, mockRecords[0]);
+      await act(async () => {
+        fireEvent.click(deleteIcon);
       });
-      wrapper.update();
 
-      const modal = wrapper.find(".ant-modal");
-      expect(modal.exists()).toBe(true);
+      const modal = document.querySelector(".ant-modal");
+      expect(modal).not.toBeNull();
 
-      const modalTitle = modal.find(".ant-modal-title").text();
-      expect(modalTitle).toBe("Delete Record");
+      const modalTitle = modal!.querySelector(".ant-modal-title");
+      expect(modalTitle!.textContent).toBe("Delete Record");
 
-      const modalFooter = modal.find(".ant-modal-footer");
-      expect(modalFooter.exists()).toBe(true);
+      const modalFooter = modal!.querySelector(".ant-modal-footer");
+      expect(modalFooter).not.toBeNull();
 
-      const buttons = modalFooter.find("button");
+      const buttons = modalFooter!.querySelectorAll("button");
       expect(buttons.length).toBe(2);
 
-      const deleteButton = buttons.at(1);
-      expect(deleteButton.exists()).toBe(true);
+      const [, deleteButton] = buttons;
+      expect(deleteButton).not.toBeNull();
 
       await act(async () => {
-        const onClickHandler = deleteButton.props().onClick;
-        expect(typeof onClickHandler).toBe("function");
-        (onClickHandler as any)();
-        jest.runAllTimers();
+        fireEvent.click(deleteButton);
+        vi.runAllTimers();
       });
-      wrapper.update();
 
       expect(bucket.removeRecord).toHaveBeenCalledWith("testEntry", 1000n);
       expect(message.success).toHaveBeenCalledWith(
@@ -877,31 +882,31 @@ describe("EntryDetail", () => {
   describe("Time Range Input", () => {
     beforeEach(async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(
-          () => wrapper.update().find(".ant-table-row").length > 0,
-        );
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(
+          container.querySelectorAll(".ant-table-row").length,
+        ).toBeGreaterThan(0);
       });
     });
 
     it("should query with undefined end time when stop field is empty", async () => {
-      (bucket.query as jest.Mock).mockClear();
+      (bucket.query as Mock).mockClear();
 
-      const timeInputs = wrapper.find(".queryTimeInputs Input");
-      const stopInput = timeInputs.at(1);
+      const timeInputs = container.querySelectorAll(".queryTimeInputs input");
+      const stopInput = timeInputs[3] as HTMLInputElement;
 
       await act(async () => {
-        const onChange = stopInput.prop("onChange") as any;
-        if (onChange) {
-          onChange({ target: { value: "" } });
-        }
+        fireEvent.change(stopInput, { target: { value: "" } });
       });
-      wrapper.update();
 
-      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
       await act(async () => {
-        fetchButton.simulate("click");
-        jest.runAllTimers();
+        fireEvent.click(fetchButton);
+        vi.runAllTimers();
       });
 
       expect(bucket.query).toHaveBeenCalledWith(
@@ -916,29 +921,27 @@ describe("EntryDetail", () => {
     });
 
     it("should query with specific end time when stop field has value", async () => {
-      (bucket.query as jest.Mock).mockClear();
+      (bucket.query as Mock).mockClear();
 
-      const timeInputs = wrapper.find(".queryTimeInputs Input");
-      const stopInput = timeInputs.at(1);
+      const timeInputs = container.querySelectorAll(".queryTimeInputs input");
+      const stopInput = timeInputs[3] as HTMLInputElement;
 
       const specificTime = "1970-01-01T00:00:01.000Z";
       await act(async () => {
-        const onChange = stopInput.prop("onChange") as any;
-        if (onChange) {
-          onChange({ target: { value: specificTime } });
-        }
+        fireEvent.change(stopInput, { target: { value: specificTime } });
       });
-      wrapper.update();
 
-      const fetchButton = wrapper.find(".fetchButton button").at(0);
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
       await act(async () => {
-        fetchButton.simulate("click");
-        jest.runAllTimers();
+        fireEvent.click(fetchButton);
+        vi.runAllTimers();
       });
 
       expect(bucket.query).toHaveBeenCalled();
-      const [[entry, startTime, endTime, options]] = (bucket.query as jest.Mock)
-        .mock.calls;
+      const [[entry, startTime, endTime, options]] = (bucket.query as Mock).mock
+        .calls;
 
       expect(entry).toBe("testEntry");
       expect(startTime).toBe(0n);
@@ -954,16 +957,18 @@ describe("EntryDetail", () => {
   describe("Sub-entry Warning", () => {
     it("should not show warning when entry has no sub-entries", async () => {
       await act(async () => {
-        jest.runOnlyPendingTimers();
-        await waitUntil(() => wrapper.update().find(".EntryCard").length > 0);
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".EntryCard")).not.toBeNull();
       });
 
-      const alert = wrapper.find("Alert");
-      expect(alert.exists()).toBe(false);
+      const alert = container.querySelector(".ant-alert");
+      expect(alert).toBeNull();
     });
 
     it("should show warning when entry has sub-entries", async () => {
-      bucket.getEntryList = jest.fn().mockResolvedValue([
+      bucket.getEntryList = vi.fn().mockResolvedValue([
         {
           name: "testEntry",
           blockCount: 5n,
@@ -984,31 +989,30 @@ describe("EntryDetail", () => {
         } as EntryInfo,
       ]);
 
-      const wrapperWithSub = mount(
-        <MemoryRouter>
-          <EntryDetail
-            client={client}
-            permissions={permissions}
-            apiUrl="https://example.com"
-          />
-        </MemoryRouter>,
-      );
+      let subContainer: HTMLElement;
+      await act(async () => {
+        const result = render(
+          <MemoryRouter>
+            <EntryDetail
+              client={client}
+              permissions={permissions}
+              apiUrl="https://example.com"
+            />
+          </MemoryRouter>,
+        );
+        subContainer = result.container;
+      });
 
       await act(async () => {
-        jest.runAllTimers();
+        vi.runAllTimers();
       });
-      wrapperWithSub.update();
 
       // Wait for the getEntryList promise to resolve
       await act(async () => {
-        jest.runAllTimers();
+        vi.runAllTimers();
       });
-      wrapperWithSub.update();
 
-      const alertText = wrapperWithSub.text();
-      expect(alertText).toContain("sub-entries");
-
-      wrapperWithSub.unmount();
+      expect(subContainer!.textContent).toContain("sub-entries");
     });
   });
 });

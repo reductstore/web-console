@@ -3,11 +3,11 @@ import { render, fireEvent } from "@testing-library/react";
 import RenameModal from "./RenameModal";
 
 describe("RenameModal", () => {
-  const mockOnRename = jest.fn();
-  const mockOnCancel = jest.fn();
+  const mockOnRename = vi.fn();
+  const mockOnCancel = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should render the modal with the correct title", () => {

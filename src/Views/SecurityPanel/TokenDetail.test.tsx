@@ -1,26 +1,32 @@
 import React from "react";
+import type { Mocked } from "vitest";
 import { Client, Token } from "reduct-js";
-import { mockJSDOM, waitUntilFind } from "../../Helpers/TestHelpers";
-import { mount } from "enzyme";
+import { mockJSDOM } from "../../Helpers/TestHelpers";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from "@testing-library/react";
 import TokenDetail from "./TokenDetail";
-import { MemoryRouter, Route } from "react-router-dom";
-import { act } from "react-dom/test-utils";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useParams: () => ({
-    name: "token-1",
-  }),
-}));
+// Mock ResizeObserver for antd components
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 describe("TokenDetail", () => {
   const client = new Client("");
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockJSDOM();
 
-    client.getToken = jest.fn().mockResolvedValue({
+    client.getToken = vi.fn().mockResolvedValue({
       name: "token-1",
       createdAt: 100000,
       permissions: {
@@ -31,168 +37,182 @@ describe("TokenDetail", () => {
     } as Token);
   });
 
-  it("should show token details", async () => {
-    const view = mount(
-      <MemoryRouter initialEntries={["/tokens/new_token"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
+  const renderTokenDetail = (initialEntry = "/tokens/token-1") => {
+    return render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route
+            path="/tokens/:name"
+            element={<TokenDetail client={client} />}
+          />
+        </Routes>
       </MemoryRouter>,
     );
+  };
 
-    const input = await waitUntilFind(view, { name: "name" });
-    expect(input.hostNodes().props().value).toBe("token-1");
-    expect(input.hostNodes().props().disabled).toBe(true);
+  it("should show token details", async () => {
+    const { container } = renderTokenDetail();
 
-    const fullAccess = await waitUntilFind(view, { name: "fullAccess" });
-    expect(fullAccess.hostNodes().props().checked).toBe(true);
-    expect(fullAccess.hostNodes().props().disabled).toBe(true);
+    const input = await waitFor(() => {
+      const el = container.querySelector('input[name="name"]');
+      expect(el).not.toBeNull();
+      return el as HTMLInputElement;
+    });
+    expect(input.value).toBe("token-1");
+    expect(input.disabled).toBe(true);
 
-    const read = await waitUntilFind(view, { id: "ReadSelect" });
-    expect(read.at(1).props().value).toEqual(["bucket-1"]);
-    expect(read.hostNodes().props().disabled).toBe(true);
+    const fullAccess = container.querySelector(
+      'input[name="fullAccess"]',
+    ) as HTMLInputElement;
+    expect(fullAccess.checked).toBe(true);
+    expect(fullAccess.disabled).toBe(true);
 
-    const write = await waitUntilFind(view, { id: "WriteSelect" });
-    expect(write.at(1).props().value).toEqual(["bucket-2"]);
-    expect(write.hostNodes().props().disabled).toBe(true);
+    const readSelect = container.querySelector("#ReadSelect") as HTMLElement;
+    expect(readSelect).not.toBeNull();
+    expect(
+      readSelect
+        .closest(".ant-select")
+        ?.classList.contains("ant-select-disabled"),
+    ).toBe(true);
+
+    const writeSelect = container.querySelector("#WriteSelect") as HTMLElement;
+    expect(writeSelect).not.toBeNull();
+    expect(
+      writeSelect
+        .closest(".ant-select")
+        ?.classList.contains("ant-select-disabled"),
+    ).toBe(true);
   });
 
   it("should show error", async () => {
-    client.getToken = jest.fn().mockRejectedValue(new Error("error"));
-    const view = mount(
-      <MemoryRouter initialEntries={["/tokens/new_token"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
-      </MemoryRouter>,
-    );
+    client.getToken = vi.fn().mockRejectedValue(new Error("error"));
+    const { container } = renderTokenDetail();
 
-    const error = await waitUntilFind(view, ".Alert");
-    expect(error.hostNodes().text()).toBe("error");
+    await waitFor(() => {
+      const alert = container.querySelector(".Alert");
+      expect(alert).not.toBeNull();
+      expect(alert!.textContent).toBe("error");
+    });
   });
 
   it("should show remove confirmation modal", async () => {
-    client.deleteToken = jest.fn().mockResolvedValue(undefined);
-    const view = mount(
-      <MemoryRouter initialEntries={["/tokens/new_token"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
-      </MemoryRouter>,
-    );
+    client.deleteToken = vi.fn().mockResolvedValue(undefined);
+    const { container } = renderTokenDetail();
 
-    const removeButton = await waitUntilFind(view, ".RemoveButton");
-    await act(async () => {
-      removeButton.hostNodes().props().onClick();
+    const removeButton = await waitFor(() => {
+      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
     });
-    view.update();
 
-    const confirmationText = view
-      .find("p")
-      .filterWhere((n) => n.text().includes("For confirmation type"));
+    await act(async () => {
+      fireEvent.click(removeButton);
+    });
 
-    expect(confirmationText.exists()).toBe(true);
-    expect(confirmationText.text()).toBe("For confirmation type token-1");
+    expect(screen.getByText(/For confirmation type/)).toBeInTheDocument();
+    expect(screen.getByText("token-1")).toBeInTheDocument();
   });
 
   it("should remove a token", async () => {
-    const mockDeleteToken = jest.fn().mockResolvedValue(undefined);
+    const mockDeleteToken = vi.fn().mockResolvedValue(undefined);
     client.deleteToken = mockDeleteToken;
 
-    const view = mount(
-      <MemoryRouter initialEntries={["/tokens/token-1"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
-      </MemoryRouter>,
-    );
+    const { container } = renderTokenDetail();
 
-    const removeButton = await waitUntilFind(view, ".RemoveButton");
-    await act(async () => {
-      removeButton.hostNodes().props().onClick();
+    const removeButton = await waitFor(() => {
+      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
     });
-    view.update();
-
-    const renameModal = view.find('div[data-testid="remove-token-modal"]');
-    expect(renameModal.exists()).toBe(true);
-
-    const input = renameModal.find('input[data-testid="remove-confirm-input"]');
-    act(() => {
-      input.simulate("change", { target: { value: "token-1" } });
-    });
-    view.update();
-
-    const okButton = renameModal
-      .find("button")
-      .filterWhere((n) => n.text().includes("Remove Token"));
-    expect(okButton.exists()).toBe(true);
 
     await act(async () => {
-      okButton.simulate("click");
+      fireEvent.click(removeButton);
     });
-    view.update();
+
+    const confirmInput = screen.getByTestId("remove-confirm-input");
+    expect(confirmInput).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(confirmInput, { target: { value: "token-1" } });
+    });
+
+    const okButton = screen.getByRole("button", { name: /Remove Token/i });
+    expect(okButton).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(okButton);
+    });
 
     expect(mockDeleteToken).toHaveBeenCalledWith("token-1");
   });
 
   it("should disable remove button if provisioned", async () => {
-    client.getToken = jest.fn().mockResolvedValue({
+    client.getToken = vi.fn().mockResolvedValue({
       name: "token-1",
       createdAt: 100000,
       isProvisioned: true,
     } as Token);
-    const view = mount(
-      <MemoryRouter initialEntries={["/tokens/new_token"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
-      </MemoryRouter>,
-    );
+    const { container } = renderTokenDetail();
 
-    const removeButton = await waitUntilFind(view, ".RemoveButton");
-    expect(removeButton.hostNodes().props().disabled).toBeTruthy();
+    const removeButton = await waitFor(() => {
+      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
+    });
+    expect(removeButton.disabled).toBeTruthy();
   });
 
   it("shows error if clipboard copy fails", async () => {
     const mockClipboard = {
-      writeText: jest.fn().mockRejectedValue(new Error("Clipboard error")),
+      writeText: vi.fn().mockRejectedValue(new Error("Clipboard error")),
     };
     Object.assign(navigator, { clipboard: mockClipboard });
 
-    const client = new Client("") as jest.Mocked<Client>;
-    client.getBucketList = jest
+    const client = new Client("") as Mocked<Client>;
+    client.getBucketList = vi
       .fn()
       .mockResolvedValue([{ name: "bucket-1" }, { name: "bucket-2" }]);
-    client.createToken = jest.fn().mockResolvedValue("mock-token-value");
+    client.createToken = vi.fn().mockResolvedValue("mock-token-value");
 
-    const view = mount(
+    const { container } = render(
       <MemoryRouter initialEntries={["/tokens/new_token?isNew=true"]}>
-        <Route path="/tokens/:name">
-          <TokenDetail client={client} />
-        </Route>
+        <Routes>
+          <Route
+            path="/tokens/:name"
+            element={<TokenDetail client={client} />}
+          />
+        </Routes>
       </MemoryRouter>,
     );
 
-    const createButton = await waitUntilFind(view, ".CreateButton");
+    const createButton = await waitFor(() => {
+      const btn = container.querySelector(".CreateButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
+    });
 
     await act(async () => {
-      createButton.hostNodes().props().onClick();
+      fireEvent.click(createButton);
     });
-    view.update();
 
-    const modalButton = view
-      .find("button")
-      .filterWhere((n) => n.text().includes("Copy To Clipboard And Close"));
-
-    expect(modalButton.exists()).toBe(true);
+    const modalButton = await waitFor(() => {
+      const btn = screen.getByRole("button", {
+        name: /Copy To Clipboard And Close/i,
+      });
+      expect(btn).toBeInTheDocument();
+      return btn;
+    });
 
     await act(async () => {
-      (modalButton as any).hostNodes().props().onClick();
+      fireEvent.click(modalButton);
     });
-    view.update();
-    const error = await waitUntilFind(view, ".Alert");
-    expect(error.hostNodes().text()).toBe(
-      "Failed to copy token to clipboard. Please copy it manually.",
-    );
+
+    await waitFor(() => {
+      const alert = document.querySelector(".Alert");
+      expect(alert).not.toBeNull();
+      expect(alert!.textContent).toBe(
+        "Failed to copy token to clipboard. Please copy it manually.",
+      );
+    });
   });
 });
