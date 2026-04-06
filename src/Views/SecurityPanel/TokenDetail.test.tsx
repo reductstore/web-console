@@ -1,6 +1,7 @@
 import React from "react";
 import type { Mocked } from "vitest";
 import { Client, Token } from "reduct-js";
+import { message } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import {
   render,
@@ -25,6 +26,8 @@ describe("TokenDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockJSDOM();
+
+    message.error = vi.fn();
 
     client.getToken = vi.fn().mockResolvedValue({
       name: "token-1",
@@ -91,12 +94,10 @@ describe("TokenDetail", () => {
 
   it("should show error", async () => {
     client.getToken = vi.fn().mockRejectedValue(new Error("error"));
-    const { container } = renderTokenDetail();
+    renderTokenDetail();
 
     await waitFor(() => {
-      const alert = container.querySelector(".Alert");
-      expect(alert).not.toBeNull();
-      expect(alert!.textContent).toBe("error");
+      expect(message.error).toHaveBeenCalledWith("error");
     });
   });
 

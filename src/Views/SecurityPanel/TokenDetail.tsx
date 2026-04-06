@@ -10,6 +10,7 @@ import {
   Form,
   Input,
   InputNumber,
+  message,
   Modal,
   Select,
   SelectProps,
@@ -48,7 +49,6 @@ export default function TokenDetail(props: Readonly<Props>) {
   const [expiresAt, setExpiresAt] = useState<number | undefined>();
   const [ipAllowlist, setIpAllowlist] = useState<string[]>([]);
 
-  const [error, setError] = useState<string>();
   const [tokenError, setTokenError] = useState<string>();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
@@ -68,7 +68,7 @@ export default function TokenDetail(props: Readonly<Props>) {
             }),
           ),
         )
-        .catch((err) => setError(err.message));
+        .catch((err) => message.error(err.message));
 
       setToken({
         createdAt: Date.now(),
@@ -82,7 +82,7 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .getToken(name)
       .then((token) => setToken(token))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   }, []);
 
   const removeToken = () => {
@@ -90,12 +90,12 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .deleteToken(name)
       .then(() => navigate("/tokens"))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   };
 
   const createToken = () => {
     if (token.permissions === undefined) {
-      setError("Permissions must be set");
+      message.error("Permissions must be set");
       return;
     }
     const { client } = props;
@@ -109,12 +109,12 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .createToken(token.name, request)
       .then((value) => setTokenValue(value))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   };
 
   const cancelCreatedToken = () => {
     const { client } = props;
-    client.deleteToken(token.name).catch((err) => setError(err.message));
+    client.deleteToken(token.name).catch((err) => message.error(err.message));
   };
 
   const rotateToken = () => {
@@ -122,7 +122,7 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .rotateToken(name)
       .then((value) => setTokenValue(value))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   };
 
   const setPermissions = (permissions?: {
@@ -156,15 +156,6 @@ export default function TokenDetail(props: Readonly<Props>) {
   const renderTokenDetails = () => {
     return [
       <Typography.Title level={3}>Access Token</Typography.Title>,
-
-      error ? (
-        <Alert
-          className="Alert"
-          title={error}
-          type="error"
-          closable={{ onClose: () => setError(undefined) }}
-        />
-      ) : null,
 
       <Input
         name="name"
@@ -412,20 +403,7 @@ export default function TokenDetail(props: Readonly<Props>) {
       size={"large"}
       style={{ margin: "2em", width: "70%" }}
     >
-      {token === undefined ? (
-        error ? (
-          <Alert
-            className="Alert"
-            title={error}
-            type="error"
-            closable={{ onClose: () => setError(undefined) }}
-          />
-        ) : (
-          <div />
-        )
-      ) : (
-        renderTokenDetails()
-      )}
+      {token === undefined ? <div /> : renderTokenDetails()}
     </Space>
   );
 }

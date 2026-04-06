@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
 import { Link, useNavigate } from "react-router-dom";
-import { Alert, Button, Table, Tag, Typography } from "antd";
+import { Button, message, Table, Tag, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import humanizeDuration from "humanize-duration";
 
@@ -11,7 +11,6 @@ interface Props {
 
 export default function TokenList(props: Readonly<Props>) {
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -26,7 +25,7 @@ export default function TokenList(props: Readonly<Props>) {
         setIsLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        message.error(err.message);
       })
       .finally(() => {
         setIsLoading(false);
@@ -113,15 +112,6 @@ export default function TokenList(props: Readonly<Props>) {
           title="Add"
         />
       </Typography.Title>
-      {error ? (
-        <Alert
-          title={error}
-          type="error"
-          closable={{ onClose: () => setError(null) }}
-        />
-      ) : (
-        <div />
-      )}
       <Table
         id="TokenTable"
         columns={columns}
