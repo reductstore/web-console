@@ -26,26 +26,28 @@ async function seedData(bucketName: string) {
 }
 
 async function cleanUp(bucketName: string) {
-  const bucket = await client.getBucket(bucketName);
-  await bucket.remove();
+  try {
+    const bucket = await client.getBucket(bucketName);
+    await bucket.remove();
+  } catch {
+    // Bucket may already be gone
+  }
 }
 
-const test = base.extend<{ seeded: void; BUCKET: string }>({
-  BUCKET: [
+const test = base.extend<{ BUCKET: string }, { _seeded: string }>({
+  _seeded: [
     // eslint-disable-next-line no-empty-pattern
-    async ({}, use, testInfo) => {
-      await use(`e2e-${testInfo.project.name}`);
+    async ({ }, use, workerInfo) => {
+      const bucketName = `e2e-${workerInfo.project.name}`;
+      await seedData(bucketName);
+      await use(bucketName);
+      await cleanUp(bucketName);
     },
-    { scope: "test" },
+    { scope: "worker", auto: true },
   ],
-  seeded: [
-    async ({ BUCKET }, use) => {
-      await seedData(BUCKET);
-      await use();
-      await cleanUp(BUCKET);
-    },
-    { auto: true },
-  ],
+  BUCKET: async ({ _seeded }, use) => {
+    await use(_seeded);
+  },
 });
 
 export { test, expect, ENTRY, RS_API_TOKEN };
