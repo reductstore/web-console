@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   test: {
+    exclude: ["e2e/**", "node_modules/**"],
     globals: true,
     environment: "jsdom",
     environmentOptions: {
