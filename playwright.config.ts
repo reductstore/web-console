@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 3 : 1,
+  workers: 1,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   timeout: 60_000,
   use: {
@@ -20,23 +20,33 @@ export default defineConfig({
       slowMo: Number.isFinite(slowMo) && slowMo > 0 ? slowMo : 0,
     },
   },
-  projects: [
-    {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        permissions: ["clipboard-read", "clipboard-write"],
-      },
-    },
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
-    },
-  ],
+  projects: process.env.CI
+    ? [
+        {
+          name: "chromium",
+          use: {
+            ...devices["Desktop Chrome"],
+            permissions: ["clipboard-read", "clipboard-write"],
+          },
+        },
+      ]
+    : [
+        {
+          name: "chromium",
+          use: {
+            ...devices["Desktop Chrome"],
+            permissions: ["clipboard-read", "clipboard-write"],
+          },
+        },
+        {
+          name: "firefox",
+          use: { ...devices["Desktop Firefox"] },
+        },
+        {
+          name: "webkit",
+          use: { ...devices["Desktop Safari"] },
+        },
+      ],
   webServer: {
     command: "npx vite --port 5173 --strictPort",
     url: "http://localhost:5173/ui/",
