@@ -44,6 +44,16 @@ export default function App(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
+    backendApi.onUnauthorized = () => {
+      setPermissions(undefined);
+      navigate("/login");
+    };
+    return () => {
+      backendApi.onUnauthorized = undefined;
+    };
+  }, [backendApi, navigate]);
+
+  useEffect(() => {
     backendApi
       .isAllowed()
       .then((isAllowed) => {

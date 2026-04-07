@@ -5,6 +5,7 @@ export interface IBackendAPI {
   login: (token: string) => Promise<void>;
   logout: () => void;
   isAllowed: () => Promise<boolean>;
+  onUnauthorized?: () => void;
 
   me: () => Promise<Token>;
 }
@@ -13,17 +14,16 @@ export class BackendAPI implements IBackendAPI {
   private apiToken?: string;
   private readonly url: string;
   private mClient: Client;
+  onUnauthorized?: () => void;
 
   constructor(url: string) {
     const apiToken = sessionStorage.getItem("apiToken");
     if (apiToken) {
       this.apiToken = apiToken;
-      this.mClient = new Client(url, { apiToken });
-    } else {
-      this.mClient = new Client(url);
     }
 
     this.url = url;
+    this.mClient = this.createClient();
   }
 
   get client() {
@@ -36,17 +36,19 @@ export class BackendAPI implements IBackendAPI {
 
     this.apiToken = apiToken;
     sessionStorage.setItem("apiToken", apiToken);
-    this.mClient = new Client(this.url, { apiToken });
+    this.mClient = this.createClient();
   }
 
   logout() {
+    this.apiToken = undefined;
     sessionStorage.removeItem("apiToken");
-    this.mClient = new Client(this.url);
+    this.mClient = this.createClient();
   }
 
   async isAllowed(): Promise<boolean> {
     try {
-      await this.client.getInfo();
+      const raw = this.createRawClient();
+      await raw.getInfo();
       return true;
     } catch (err) {
       if (err instanceof APIError && err.status == 401) {
@@ -60,7 +62,8 @@ export class BackendAPI implements IBackendAPI {
 
   async me(): Promise<Token> {
     try {
-      return this.client.me();
+      const raw = this.createRawClient();
+      return raw.me();
     } catch (err) {
       if (err instanceof APIError && err.status == 401) {
         sessionStorage.removeItem("apiToken");
@@ -74,5 +77,40 @@ export class BackendAPI implements IBackendAPI {
 
       throw err;
     }
+  }
+
+  private createRawClient(): Client {
+    return this.apiToken
+      ? new Client(this.url, { apiToken: this.apiToken })
+      : new Client(this.url);
+  }
+
+  /**
+   * Create a Client that intercepts 401 errors to trigger logout and redirect.
+   * Swallows 401 errors so components don't show redundant toasts.
+   */
+  private createClient(): Client {
+    const raw = this.createRawClient();
+
+    return new Proxy(raw, {
+      get: (target, prop, receiver) => {
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof value !== "function") return value;
+
+        return (...args: unknown[]) => {
+          const result = value.apply(target, args);
+          if (!(result instanceof Promise)) return result;
+
+          return result.catch((err: unknown) => {
+            if (err instanceof APIError && err.status === 401) {
+              this.logout();
+              this.onUnauthorized?.();
+              return new Promise(() => {});
+            }
+            throw err;
+          });
+        };
+      },
+    });
   }
 }
