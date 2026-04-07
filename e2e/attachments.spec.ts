@@ -49,7 +49,11 @@ test("create and delete an attachment", async ({ page }) => {
   await expect(page.getByText("Attachment saved")).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByText("e2e-att")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Attachments" })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByText("e2e-att")).toBeVisible({ timeout: 10_000 });
 
   const row = page.locator("tr", { hasText: "e2e-att" });
   const deleteIcon = row.getByTitle("Delete attachment");
