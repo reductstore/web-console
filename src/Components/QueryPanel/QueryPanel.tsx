@@ -1115,77 +1115,75 @@ export default function QueryPanel({
                   Time Range
                 </Typography.Text>
                 <div className="queryTimeRow">
-                  <div className="queryTimeControls">
-                    <Select
-                      data-testid="format-select"
-                      value={showUnix ? "Unix" : "UTC"}
-                      onChange={handleFormatChange}
-                      popupMatchSelectWidth={false}
-                      style={{ width: 90 }}
-                      options={[
-                        { value: "UTC", label: "UTC" },
-                        { value: "Unix", label: "Unix" },
-                      ]}
-                    />
-                    <TimeRangeDropdown
-                      onSelectRange={(start, end) => {
-                        setTimeRange(start, end);
-                        setStartError(false);
-                        setStopError(false);
+                  <Select
+                    data-testid="format-select"
+                    value={showUnix ? "Unix" : "UTC"}
+                    onChange={handleFormatChange}
+                    popupMatchSelectWidth={false}
+                    style={{ width: 90 }}
+                    options={[
+                      { value: "UTC", label: "UTC" },
+                      { value: "Unix", label: "Unix" },
+                    ]}
+                  />
+                  <TimeRangeDropdown
+                    onSelectRange={(start, end) => {
+                      setTimeRange(start, end);
+                      setStartError(false);
+                      setStopError(false);
+                    }}
+                    initialRangeKey={DEFAULT_RANGE_KEY}
+                    currentRange={{
+                      start: timeRange.start,
+                      end: timeRange.end,
+                    }}
+                  />
+                  <Space.Compact style={{ width: 300, flexShrink: 0 }}>
+                    <Input
+                      style={{
+                        width: 70,
+                        flexShrink: 0,
+                        pointerEvents: "none",
+                        backgroundColor: "#fafafa",
+                        textAlign: "center",
                       }}
-                      initialRangeKey={DEFAULT_RANGE_KEY}
-                      currentRange={{
-                        start: timeRange.start,
-                        end: timeRange.end,
-                      }}
+                      value="Start"
+                      readOnly
+                      tabIndex={-1}
                     />
-                  </div>
-                  <div className="queryTimeInputs">
-                    <Space.Compact>
-                      <Input
-                        style={{
-                          width: 60,
-                          pointerEvents: "none",
-                          backgroundColor: "#fafafa",
-                          textAlign: "center",
-                        }}
-                        value="Start"
-                        readOnly
-                        tabIndex={-1}
-                      />
-                      <Input
-                        placeholder="Start time (optional)"
-                        value={timeRange.startText}
-                        onChange={(e) => {
-                          updateTimeRangeText("startText", e.target.value);
-                          parseInput(e.target.value, "start", setStartError);
-                        }}
-                        status={startError ? "error" : undefined}
-                      />
-                    </Space.Compact>
-                    <Space.Compact>
-                      <Input
-                        style={{
-                          width: 60,
-                          pointerEvents: "none",
-                          backgroundColor: "#fafafa",
-                          textAlign: "center",
-                        }}
-                        value="Stop"
-                        readOnly
-                        tabIndex={-1}
-                      />
-                      <Input
-                        placeholder="Stop time (optional)"
-                        value={timeRange.stopText}
-                        onChange={(e) => {
-                          updateTimeRangeText("stopText", e.target.value);
-                          parseInput(e.target.value, "end", setStopError);
-                        }}
-                        status={stopError ? "error" : undefined}
-                      />
-                    </Space.Compact>
-                  </div>
+                    <Input
+                      placeholder="Start time (optional)"
+                      value={timeRange.startText}
+                      onChange={(e) => {
+                        updateTimeRangeText("startText", e.target.value);
+                        parseInput(e.target.value, "start", setStartError);
+                      }}
+                      status={startError ? "error" : undefined}
+                    />
+                  </Space.Compact>
+                  <Space.Compact style={{ width: 300, flexShrink: 0 }}>
+                    <Input
+                      style={{
+                        width: 70,
+                        flexShrink: 0,
+                        pointerEvents: "none",
+                        backgroundColor: "#fafafa",
+                        textAlign: "center",
+                      }}
+                      value="Stop"
+                      readOnly
+                      tabIndex={-1}
+                    />
+                    <Input
+                      placeholder="Stop time (optional)"
+                      value={timeRange.stopText}
+                      onChange={(e) => {
+                        updateTimeRangeText("stopText", e.target.value);
+                        parseInput(e.target.value, "end", setStopError);
+                      }}
+                      status={stopError ? "error" : undefined}
+                    />
+                  </Space.Compact>
                 </div>
               </div>
 
