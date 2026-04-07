@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Alert, Button, Card, Form, Input } from "antd";
+import React from "react";
+import { Button, Card, Form, Input, message } from "antd";
 import { IBackendAPI } from "../../BackendAPI";
 
 import "./Login.css";
@@ -11,7 +11,6 @@ interface Props {
 }
 
 export default function Login(props: Props) {
-  const [error, setError] = useState<string | undefined>();
   const onFinish = async (values: { token: string }) => {
     try {
       await props.backendApi.login(values.token);
@@ -19,11 +18,7 @@ export default function Login(props: Props) {
     } catch (err) {
       console.error(err);
       if (err instanceof APIError) {
-        if (err.status == 401) {
-          setError("Wrong API token");
-        } else {
-          setError(err.message);
-        }
+        message.error(err.message);
       }
     }
   };
@@ -34,20 +29,6 @@ export default function Login(props: Props) {
       className="LoginForm"
       variant="outlined"
     >
-      <div>
-        {error ? (
-          <Alert
-            title={error}
-            type="error"
-            closable={{
-              onClose: () => setError(undefined),
-            }}
-            style={{ marginBottom: 16 }}
-          />
-        ) : (
-          <div />
-        )}
-      </div>
       <Form onFinish={onFinish}>
         <Form.Item label="API Token" name="token">
           <Input.Password />

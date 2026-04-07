@@ -11,12 +11,23 @@ describe("TokenList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockJSDOM();
-    client.getTokenList = vi
-      .fn()
-      .mockResolvedValue([
-        { name: "token-1", createdAt: 100000, isProvisioned: true } as Token,
-        { name: "token-2", createdAt: 200000 } as Token,
-      ]);
+    client.getTokenList = vi.fn().mockResolvedValue([
+      {
+        name: "token-1",
+        createdAt: 100000,
+        isProvisioned: true,
+        isExpired: false,
+        expiresAt: 9999999999000,
+        ttl: 3600,
+        lastAccess: 500000,
+        ipAllowlist: ["192.168.1.0/24"],
+      } as Token,
+      {
+        name: "token-2",
+        createdAt: 200000,
+        isExpired: true,
+      } as Token,
+    ]);
   });
 
   it("should print table with tokens", async () => {
@@ -31,6 +42,32 @@ describe("TokenList", () => {
     });
     expect(screen.getByText("token-2")).toBeInTheDocument();
     expect(screen.getByText("Provisioned")).toBeInTheDocument();
+  });
+
+  it("should show status tags", async () => {
+    render(
+      <MemoryRouter>
+        <TokenList client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Active")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+
+  it("should show TTL, expiry, last access, and IP allowlist", async () => {
+    render(
+      <MemoryRouter>
+        <TokenList client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("192.168.1.0/24")).toBeInTheDocument();
+    });
+    expect(screen.getByText("1 hour")).toBeInTheDocument();
   });
 
   it("should have a button to create a new token", async () => {

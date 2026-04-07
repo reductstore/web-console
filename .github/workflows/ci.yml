@@ -11,7 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm i
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
       - run: npm run fmt:check
 
   test:
@@ -19,9 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: format
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install modules
-        run: npm install
+        run: npm ci
       - name: Audit for vulnerabilities
         run: npm run audit:ci
       - name: Run ESLint

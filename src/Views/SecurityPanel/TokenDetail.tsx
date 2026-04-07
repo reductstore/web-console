@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { Client, Token } from "reduct-js";
+import { Client, Token, TokenCreateRequest } from "reduct-js";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Button,
   Checkbox,
+  DatePicker,
+  Descriptions,
   Form,
   Input,
+  InputNumber,
+  message,
   Modal,
   Select,
   SelectProps,
   Space,
+  Tag,
   Typography,
 } from "antd";
+import dayjs from "../../Helpers/dayjsConfig";
+import humanizeDuration from "humanize-duration";
 
 interface Props {
   client: Client;
@@ -38,8 +45,10 @@ export default function TokenDetail(props: Readonly<Props>) {
   const [token, setToken] = useState<Token>(undefined as unknown as Token);
   const [bucketOptions, setBucketOptions] = useState<SelectProps[]>([]);
   const [tokenValue, setTokenValue] = useState<string>();
+  const [ttl, setTtl] = useState<number | undefined>();
+  const [expiresAt, setExpiresAt] = useState<number | undefined>();
+  const [ipAllowlist, setIpAllowlist] = useState<string[]>([]);
 
-  const [error, setError] = useState<string>();
   const [tokenError, setTokenError] = useState<string>();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
@@ -59,7 +68,7 @@ export default function TokenDetail(props: Readonly<Props>) {
             }),
           ),
         )
-        .catch((err) => setError(err.message));
+        .catch((err) => message.error(err.message));
 
       setToken({
         createdAt: Date.now(),
@@ -73,7 +82,7 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .getToken(name)
       .then((token) => setToken(token))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   }, []);
 
   const removeToken = () => {
@@ -81,24 +90,39 @@ export default function TokenDetail(props: Readonly<Props>) {
     client
       .deleteToken(name)
       .then(() => navigate("/tokens"))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   };
 
   const createToken = () => {
     if (token.permissions === undefined) {
-      setError("Permissions must be set");
+      message.error("Permissions must be set");
       return;
     }
     const { client } = props;
+
+    const request: TokenCreateRequest = {
+      permissions: token.permissions,
+      ttl,
+      expiresAt,
+      ipAllowlist: ipAllowlist.length > 0 ? ipAllowlist : undefined,
+    };
     client
-      .createToken(token.name, token.permissions)
+      .createToken(token.name, request)
       .then((value) => setTokenValue(value))
-      .catch((err) => setError(err.message));
+      .catch((err) => message.error(err.message));
   };
 
   const cancelCreatedToken = () => {
     const { client } = props;
-    client.deleteToken(token.name).catch((err) => setError(err.message));
+    client.deleteToken(token.name).catch((err) => message.error(err.message));
+  };
+
+  const rotateToken = () => {
+    const { client } = props;
+    client
+      .rotateToken(name)
+      .then((value) => setTokenValue(value))
+      .catch((err) => message.error(err.message));
   };
 
   const setPermissions = (permissions?: {
@@ -171,6 +195,81 @@ export default function TokenDetail(props: Readonly<Props>) {
           onChange={(value) => setPermissions({ write: value })}
         />
       </Space.Compact>,
+
+      isNew ? (
+        <>
+          <Space.Compact block orientation={"vertical"}>
+            TTL (seconds):
+            <InputNumber
+              id="TtlInput"
+              min={1}
+              precision={0}
+              value={ttl}
+              onChange={(value) => setTtl(value ?? undefined)}
+              placeholder="No TTL"
+              style={{ width: "100%" }}
+            />
+          </Space.Compact>
+          <Space.Compact block orientation={"vertical"}>
+            Expires At:
+            <DatePicker
+              id="ExpiresAtPicker"
+              showTime
+              value={expiresAt ? dayjs.utc(expiresAt) : null}
+              onChange={(date) =>
+                setExpiresAt(date ? date.utc().valueOf() : undefined)
+              }
+              style={{ width: "100%" }}
+            />
+          </Space.Compact>
+          <Space.Compact block orientation={"vertical"}>
+            IP Allowlist:
+            <Select
+              id="IpAllowlistSelect"
+              mode="tags"
+              open={false}
+              suffixIcon={null}
+              value={ipAllowlist}
+              onChange={(value) => setIpAllowlist(value)}
+              placeholder="e.g. 192.168.1.0/24"
+            />
+          </Space.Compact>
+        </>
+      ) : !isNew ? (
+        <Descriptions
+          column={1}
+          bordered
+          size="small"
+          style={{ marginTop: "1em" }}
+        >
+          <Descriptions.Item label="Status">
+            {token.isExpired ? (
+              <Tag color="error">Expired</Tag>
+            ) : (
+              <Tag color="success">Active</Tag>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Expires At">
+            {token.expiresAt !== undefined
+              ? dayjs(token.expiresAt).fromNow()
+              : "—"}
+          </Descriptions.Item>
+          <Descriptions.Item label="TTL">
+            {token.ttl ? humanizeDuration(token.ttl * 1000) : "—"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Last Access">
+            {token.lastAccess !== undefined
+              ? dayjs(token.lastAccess).fromNow()
+              : "—"}
+          </Descriptions.Item>
+          <Descriptions.Item label="IP Allowlist">
+            {token.ipAllowlist && token.ipAllowlist.length > 0
+              ? token.ipAllowlist.join(", ")
+              : "—"}
+          </Descriptions.Item>
+        </Descriptions>
+      ) : null,
+
       <Space>
         <Button onClick={() => navigate("/tokens")}>Back</Button>
         {isNew ? (
@@ -182,15 +281,28 @@ export default function TokenDetail(props: Readonly<Props>) {
             Create
           </Button>
         ) : (
-          <Button
-            className="RemoveButton"
-            danger
-            disabled={token.isProvisioned}
-            type="primary"
-            onClick={() => setConfirmRemove(true)}
-          >
-            Remove
-          </Button>
+          <>
+            <Button
+              className="RotateButton"
+              type="primary"
+              disabled={
+                token.isProvisioned ||
+                (token.expiresAt !== undefined && token.expiresAt < Date.now())
+              }
+              onClick={() => rotateToken()}
+            >
+              Rotate
+            </Button>
+            <Button
+              className="RemoveButton"
+              danger
+              disabled={token.isProvisioned}
+              type="primary"
+              onClick={() => setConfirmRemove(true)}
+            >
+              Remove
+            </Button>
+          </>
         )}
 
         <Modal
@@ -230,16 +342,18 @@ export default function TokenDetail(props: Readonly<Props>) {
           open={!!tokenValue}
           closable={false}
           footer={[
-            <Button
-              key="back"
-              onClick={async () => {
-                cancelCreatedToken();
-                setTokenError(undefined);
-                setTokenValue(undefined);
-              }}
-            >
-              Cancel
-            </Button>,
+            isNew ? (
+              <Button
+                key="back"
+                onClick={async () => {
+                  cancelCreatedToken();
+                  setTokenError(undefined);
+                  setTokenValue(undefined);
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null,
             <Button
               key="submit"
               type="primary"
@@ -294,16 +408,6 @@ export default function TokenDetail(props: Readonly<Props>) {
       size={"large"}
       style={{ margin: "2em", width: "70%" }}
     >
-      {error ? (
-        <Alert
-          className="Alert"
-          title={error}
-          type="error"
-          closable={{ onClose: () => setError(undefined) }}
-        />
-      ) : (
-        <div />
-      )}
       {token === undefined ? <div /> : renderTokenDetails()}
     </Space>
   );

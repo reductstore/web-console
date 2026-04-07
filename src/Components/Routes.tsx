@@ -19,15 +19,19 @@ interface Props {
   apiUrl: string;
   onLogin: () => void;
   permissions?: TokenPermissions;
+  authLoading?: boolean;
 }
 
 function PrivateRoute({
   children,
   authorized,
+  loading,
 }: {
   children: React.ReactNode;
   authorized: boolean;
+  loading?: boolean;
 }) {
+  if (loading) return null;
   return authorized ? <>{children}</> : <Navigate to="/login" />;
 }
 
@@ -45,13 +49,18 @@ function KeyedEntryDetail(
 
 export function AppRoutes(props: Props): React.ReactElement {
   const authorized = props.permissions !== undefined;
+  const loading = props.authLoading;
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          authorized ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+          loading ? null : authorized ? (
+            <Navigate to="/dashboard" />
+          ) : (
+            <Navigate to="/login" />
+          )
         }
       />
 
@@ -60,7 +69,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/dashboard"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <Dashboard {...props} />
           </PrivateRoute>
         }
@@ -69,7 +78,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/buckets"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <BucketList client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -78,7 +87,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/buckets/:name"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <BucketDetail client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -87,7 +96,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/buckets/:bucketName/entries/:entryName/*"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <KeyedEntryDetail client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -96,7 +105,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/query"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <QueryPanelPage client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -105,7 +114,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/replications"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <Replications client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -114,7 +123,7 @@ export function AppRoutes(props: Props): React.ReactElement {
       <Route
         path="/replications/:name"
         element={
-          <PrivateRoute authorized={authorized}>
+          <PrivateRoute authorized={authorized} loading={loading}>
             <ReplicationDetail client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
@@ -125,6 +134,7 @@ export function AppRoutes(props: Props): React.ReactElement {
         element={
           <PrivateRoute
             authorized={authorized && !!props.permissions?.fullAccess}
+            loading={loading}
           >
             <TokenList client={props.backendApi.client} />
           </PrivateRoute>
@@ -136,6 +146,7 @@ export function AppRoutes(props: Props): React.ReactElement {
         element={
           <PrivateRoute
             authorized={authorized && !!props.permissions?.fullAccess}
+            loading={loading}
           >
             <TokenDetail client={props.backendApi.client} />
           </PrivateRoute>

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
 import { Link, useNavigate } from "react-router-dom";
-import { Alert, Button, Table, Tag, Typography } from "antd";
+import { Button, message, Table, Tag, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import humanizeDuration from "humanize-duration";
+import dayjs from "../../Helpers/dayjsConfig";
 
 interface Props {
   client: Client;
@@ -10,7 +12,6 @@ interface Props {
 
 export default function TokenList(props: Readonly<Props>) {
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function TokenList(props: Readonly<Props>) {
         setIsLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        message.error(err.message);
       })
       .finally(() => {
         setIsLoading(false);
@@ -44,10 +45,47 @@ export default function TokenList(props: Readonly<Props>) {
       ),
     },
     {
+      title: "Status",
+      key: "status",
+      render: (_: unknown, record: Token) => {
+        if (record.isExpired) {
+          return <Tag color="error">Expired</Tag>;
+        }
+        return <Tag color="success">Active</Tag>;
+      },
+    },
+    {
       title: "Created At",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (time: number) => new Date(time).toISOString(),
+      render: (time: number) => dayjs(time).fromNow(),
+    },
+    {
+      title: "Expires At",
+      dataIndex: "expiresAt",
+      key: "expiresAt",
+      render: (time?: number) =>
+        time !== undefined ? dayjs(time).fromNow() : "—",
+    },
+    {
+      title: "TTL",
+      dataIndex: "ttl",
+      key: "ttl",
+      render: (ttl?: number) => (ttl ? humanizeDuration(ttl * 1000) : "—"),
+    },
+    {
+      title: "Last Access",
+      dataIndex: "lastAccess",
+      key: "lastAccess",
+      render: (time?: number) =>
+        time !== undefined ? dayjs(time).fromNow() : "—",
+    },
+    {
+      title: "IP Allowlist",
+      dataIndex: "ipAllowlist",
+      key: "ipAllowlist",
+      render: (ips?: string[]) =>
+        ips && ips.length > 0 ? ips.join(", ") : "—",
     },
     {
       title: "",
@@ -74,15 +112,6 @@ export default function TokenList(props: Readonly<Props>) {
           title="Add"
         />
       </Typography.Title>
-      {error ? (
-        <Alert
-          title={error}
-          type="error"
-          closable={{ onClose: () => setError(null) }}
-        />
-      ) : (
-        <div />
-      )}
       <Table
         id="TokenTable"
         columns={columns}

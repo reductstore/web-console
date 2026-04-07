@@ -1,6 +1,7 @@
 import React from "react";
 import type { Mocked } from "vitest";
 import { Client, Token } from "reduct-js";
+import { message } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import {
   render,
@@ -26,9 +27,16 @@ describe("TokenDetail", () => {
     vi.clearAllMocks();
     mockJSDOM();
 
+    message.error = vi.fn();
+
     client.getToken = vi.fn().mockResolvedValue({
       name: "token-1",
       createdAt: 100000,
+      isExpired: false,
+      expiresAt: 9999999999000,
+      ttl: 3600,
+      lastAccess: 500000,
+      ipAllowlist: ["10.0.0.0/8"],
       permissions: {
         fullAccess: true,
         read: ["bucket-1"],
@@ -86,12 +94,10 @@ describe("TokenDetail", () => {
 
   it("should show error", async () => {
     client.getToken = vi.fn().mockRejectedValue(new Error("error"));
-    const { container } = renderTokenDetail();
+    renderTokenDetail();
 
     await waitFor(() => {
-      const alert = container.querySelector(".Alert");
-      expect(alert).not.toBeNull();
-      expect(alert!.textContent).toBe("error");
+      expect(message.error).toHaveBeenCalledWith("error");
     });
   });
 
@@ -160,6 +166,114 @@ describe("TokenDetail", () => {
       return btn;
     });
     expect(removeButton.disabled).toBeTruthy();
+  });
+
+  it("should disable rotate button if provisioned", async () => {
+    client.getToken = vi.fn().mockResolvedValue({
+      name: "token-1",
+      createdAt: 100000,
+      isProvisioned: true,
+    } as Token);
+    const { container } = renderTokenDetail();
+
+    const rotateButton = await waitFor(() => {
+      const btn = container.querySelector(".RotateButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
+    });
+    expect(rotateButton.disabled).toBeTruthy();
+  });
+
+  it("should show token metadata in view mode", async () => {
+    renderTokenDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("Active")).toBeInTheDocument();
+    });
+    expect(screen.getByText("1 hour")).toBeInTheDocument();
+    expect(screen.getByText("10.0.0.0/8")).toBeInTheDocument();
+  });
+
+  it("should show expired status", async () => {
+    client.getToken = vi.fn().mockResolvedValue({
+      name: "token-1",
+      createdAt: 100000,
+      isExpired: true,
+      permissions: {
+        fullAccess: false,
+        read: [],
+        write: [],
+      },
+    } as Token);
+    renderTokenDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("Expired")).toBeInTheDocument();
+    });
+  });
+
+  it("should rotate a token", async () => {
+    const mockRotateToken = vi
+      .fn()
+      .mockResolvedValue("new-rotated-token-value");
+    client.rotateToken = mockRotateToken;
+
+    const { container } = renderTokenDetail();
+
+    const rotateButton = await waitFor(() => {
+      const btn = container.querySelector(".RotateButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
+    });
+
+    await act(async () => {
+      fireEvent.click(rotateButton);
+    });
+
+    await waitFor(() => {
+      expect(mockRotateToken).toHaveBeenCalledWith("token-1");
+    });
+
+    expect(
+      screen.getByRole("button", { name: /Copy To Clipboard And Close/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("should create token with v2 fields", async () => {
+    const mockCreateToken = vi.fn().mockResolvedValue("new-token-value");
+    const client = new Client("") as Mocked<Client>;
+    client.getBucketList = vi
+      .fn()
+      .mockResolvedValue([{ name: "bucket-1" }, { name: "bucket-2" }]);
+    client.createToken = mockCreateToken;
+
+    const { container } = render(
+      <MemoryRouter initialEntries={["/tokens/new_token?isNew=true"]}>
+        <Routes>
+          <Route
+            path="/tokens/:name"
+            element={<TokenDetail client={client} />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const createButton = await waitFor(() => {
+      const btn = container.querySelector(".CreateButton") as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+      return btn;
+    });
+
+    await act(async () => {
+      fireEvent.click(createButton);
+    });
+
+    expect(mockCreateToken).toHaveBeenCalledWith(
+      "new_token",
+      expect.objectContaining({
+        permissions: expect.objectContaining({ fullAccess: false }),
+      }),
+    );
   });
 
   it("shows error if clipboard copy fails", async () => {

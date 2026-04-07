@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for entry attachments with a dedicated UI for viewing and adding JSON attachments, [PR-171](https://github.com/reductstore/web-console/pull/171)
 - Save and load conditional queries in the browser with time range and format settings, [PR-186](https://github.com/reductstore/web-console/pull/186)
 - Query page for querying across multiple entries with wildcard pattern support, saved query management, and manual condition validation, [PR-187](https://github.com/reductstore/web-console/pull/187)
+- Token API v2 support: TTL, expiry, IP allowlist fields on token create; status, expiry, TTL, last access, IP allowlist in token list and detail views; token rotate action, [PR-190](https://github.com/reductstore/web-console/pull/190)
 
 ### Fixed
 
