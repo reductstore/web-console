@@ -251,7 +251,7 @@ export default function TokenDetail(props: Readonly<Props>) {
           </Descriptions.Item>
           <Descriptions.Item label="Expires At">
             {token.expiresAt !== undefined
-              ? new Date(token.expiresAt).toISOString()
+              ? dayjs(token.expiresAt).fromNow()
               : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="TTL">
@@ -259,7 +259,7 @@ export default function TokenDetail(props: Readonly<Props>) {
           </Descriptions.Item>
           <Descriptions.Item label="Last Access">
             {token.lastAccess !== undefined
-              ? new Date(token.lastAccess).toISOString()
+              ? dayjs(token.lastAccess).fromNow()
               : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="IP Allowlist">

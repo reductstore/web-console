@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button, message, Table, Tag, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import humanizeDuration from "humanize-duration";
+import dayjs from "../../Helpers/dayjsConfig";
 
 interface Props {
   client: Client;
@@ -57,14 +58,14 @@ export default function TokenList(props: Readonly<Props>) {
       title: "Created At",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (time: number) => new Date(time).toISOString(),
+      render: (time: number) => dayjs(time).fromNow(),
     },
     {
       title: "Expires At",
       dataIndex: "expiresAt",
       key: "expiresAt",
       render: (time?: number) =>
-        time !== undefined ? new Date(time).toISOString() : "—",
+        time !== undefined ? dayjs(time).fromNow() : "—",
     },
     {
       title: "TTL",
@@ -77,7 +78,7 @@ export default function TokenList(props: Readonly<Props>) {
       dataIndex: "lastAccess",
       key: "lastAccess",
       render: (time?: number) =>
-        time !== undefined ? new Date(time).toISOString() : "—",
+        time !== undefined ? dayjs(time).fromNow() : "—",
     },
     {
       title: "IP Allowlist",
