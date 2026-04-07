@@ -18,7 +18,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
+import dayjs from "../../Helpers/dayjsConfig";
 import humanizeDuration from "humanize-duration";
 
 interface Props {
@@ -215,9 +215,9 @@ export default function TokenDetail(props: Readonly<Props>) {
             <DatePicker
               id="ExpiresAtPicker"
               showTime
-              value={expiresAt ? dayjs(expiresAt) : null}
+              value={expiresAt ? dayjs.utc(expiresAt) : null}
               onChange={(date) =>
-                setExpiresAt(date ? date.valueOf() : undefined)
+                setExpiresAt(date ? date.utc().valueOf() : undefined)
               }
               style={{ width: "100%" }}
             />
@@ -283,7 +283,7 @@ export default function TokenDetail(props: Readonly<Props>) {
             <Button
               className="RotateButton"
               type="primary"
-              disabled={token.isProvisioned}
+              disabled={token.isProvisioned || token.isExpired}
               onClick={() => rotateToken()}
             >
               Rotate
