@@ -37,7 +37,7 @@ async function cleanUp(bucketName: string) {
 const test = base.extend<{ BUCKET: string }, { _seeded: string }>({
   _seeded: [
     // eslint-disable-next-line no-empty-pattern
-    async ({ }, use, workerInfo) => {
+    async ({}, use, workerInfo) => {
       const bucketName = `e2e-${workerInfo.project.name}`;
       await seedData(bucketName);
       await use(bucketName);
