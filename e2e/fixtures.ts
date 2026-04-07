@@ -3,17 +3,16 @@ import { Client, QuotaType } from "reduct-js";
 
 const RS_URL = process.env.RS_URL ?? "http://localhost:8383";
 const RS_API_TOKEN = process.env.RS_API_TOKEN ?? "";
-const BUCKET = "e2e-test";
 const ENTRY = "test-entry";
 
 const client = new Client(RS_URL, {
   apiToken: RS_API_TOKEN || undefined,
 });
 
-async function seedData() {
+async function seedData(bucketName: string) {
   for (let i = 0; i < 10; i++) {
     try {
-      const bucket = await client.getOrCreateBucket(BUCKET, {
+      const bucket = await client.getOrCreateBucket(bucketName, {
         quotaType: QuotaType.NONE,
       });
       const record = await bucket.beginWrite(ENTRY);
@@ -26,21 +25,27 @@ async function seedData() {
   throw new Error("Failed to seed data after retries");
 }
 
-async function cleanUp() {
-  const bucket = await client.getBucket(BUCKET);
+async function cleanUp(bucketName: string) {
+  const bucket = await client.getBucket(bucketName);
   await bucket.remove();
 }
 
-const test = base.extend<{ seeded: void }>({
-  seeded: [
+const test = base.extend<{ seeded: void; BUCKET: string }>({
+  BUCKET: [
     // eslint-disable-next-line no-empty-pattern
-    async ({}, use) => {
-      await seedData();
+    async ({}, use, testInfo) => {
+      await use(`e2e-${testInfo.project.name}`);
+    },
+    { scope: "test" },
+  ],
+  seeded: [
+    async ({ BUCKET }, use) => {
+      await seedData(BUCKET);
       await use();
-      await cleanUp();
+      await cleanUp(BUCKET);
     },
     { auto: true },
   ],
 });
 
-export { test, expect, BUCKET, ENTRY, RS_API_TOKEN };
+export { test, expect, ENTRY, RS_API_TOKEN };

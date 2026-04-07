@@ -1,4 +1,4 @@
-import { test, expect, BUCKET, ENTRY, RS_API_TOKEN } from "./fixtures";
+import { test, expect, ENTRY, RS_API_TOKEN } from "./fixtures";
 import { type Page } from "@playwright/test";
 
 async function login(page: Page) {
@@ -10,7 +10,7 @@ async function login(page: Page) {
   await expect(page.getByText("Dashboard")).toBeVisible({ timeout: 10_000 });
 }
 
-test("lists buckets and navigates to detail", async ({ page }) => {
+test("lists buckets and navigates to detail", async ({ page, BUCKET }) => {
   await login(page);
   await page.getByText("Buckets", { exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Buckets" })).toBeVisible();
@@ -23,7 +23,7 @@ test("lists buckets and navigates to detail", async ({ page }) => {
   await expect(page.getByText(ENTRY)).toBeVisible();
 });
 
-test("navigates to entry detail", async ({ page }) => {
+test("navigates to entry detail", async ({ page, BUCKET }) => {
   await login(page);
   await page.goto(`./buckets/${BUCKET}`);
   await expect(page.getByText(ENTRY)).toBeVisible({ timeout: 10_000 });

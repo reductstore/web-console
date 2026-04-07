@@ -1,4 +1,4 @@
-import { test, expect, BUCKET, ENTRY, RS_API_TOKEN } from "./fixtures";
+import { test, expect, ENTRY, RS_API_TOKEN } from "./fixtures";
 import { type Page, type Locator } from "@playwright/test";
 
 async function fillMonacoEditor(page: Page, container: Locator, value: string) {
@@ -31,7 +31,7 @@ async function login(page: Page) {
   await expect(page.getByText("Dashboard")).toBeVisible({ timeout: 10_000 });
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, BUCKET }) => {
   await login(page);
   await page.goto(`./buckets/${BUCKET}/entries/${ENTRY}`);
   await expect(page.getByText("Attachments")).toBeVisible({ timeout: 10_000 });
@@ -50,10 +50,12 @@ test("create and delete an attachment", async ({ page }) => {
   await expect(page.getByText("e2e-att")).toBeVisible();
 
   const row = page.locator("tr", { hasText: "e2e-att" });
-  await row.getByTitle("Delete attachment").click();
+  const deleteIcon = row.getByTitle("Delete attachment");
+  await deleteIcon.waitFor({ state: "visible" });
+  await deleteIcon.click();
   const deleteModal = page.getByRole("dialog", { name: "Delete Attachment" });
-  await expect(deleteModal).toBeVisible();
+  await expect(deleteModal).toBeVisible({ timeout: 10_000 });
   await deleteModal.getByRole("button", { name: "Delete" }).click();
-  await expect(deleteModal).not.toBeVisible({ timeout: 10_000 });
+  await expect(deleteModal).not.toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("e2e-att")).not.toBeVisible({ timeout: 10_000 });
 });

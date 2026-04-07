@@ -1,4 +1,4 @@
-import { test, expect, BUCKET, ENTRY, RS_API_TOKEN } from "./fixtures";
+import { test, expect, ENTRY, RS_API_TOKEN } from "./fixtures";
 import { type Page } from "@playwright/test";
 
 async function login(page: Page) {
@@ -10,7 +10,7 @@ async function login(page: Page) {
   await expect(page.getByText("Dashboard")).toBeVisible({ timeout: 10_000 });
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, BUCKET }) => {
   await login(page);
   await page.goto(`./buckets/${BUCKET}/entries/${ENTRY}`);
   await expect(page.getByText("Attachments")).toBeVisible({ timeout: 10_000 });
