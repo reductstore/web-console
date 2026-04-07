@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm i
+      - run: npm ci
       - run: npm run fmt:check
 
   test:
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install modules
-        run: npm install
+        run: npm ci
       - name: Audit for vulnerabilities
         run: npm run audit:ci
       - name: Run ESLint
