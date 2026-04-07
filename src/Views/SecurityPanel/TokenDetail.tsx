@@ -227,6 +227,8 @@ export default function TokenDetail(props: Readonly<Props>) {
             <Select
               id="IpAllowlistSelect"
               mode="tags"
+              open={false}
+              suffixIcon={null}
               value={ipAllowlist}
               onChange={(value) => setIpAllowlist(value)}
               placeholder="e.g. 192.168.1.0/24"
