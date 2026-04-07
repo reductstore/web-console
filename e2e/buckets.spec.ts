@@ -29,6 +29,8 @@ test("navigates to entry detail", async ({ page, BUCKET }) => {
   await expect(page.getByText(ENTRY)).toBeVisible({ timeout: 10_000 });
 
   await page.getByText(ENTRY).click();
-  await expect(page.getByText("Attachments")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: "Attachments" })).toBeVisible({
+    timeout: 10_000,
+  });
   await expect(page.getByText("Records").first()).toBeVisible();
 });

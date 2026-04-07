@@ -34,7 +34,9 @@ async function login(page: Page) {
 test.beforeEach(async ({ page, BUCKET }) => {
   await login(page);
   await page.goto(`./buckets/${BUCKET}/entries/${ENTRY}`);
-  await expect(page.getByText("Attachments")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: "Attachments" })).toBeVisible({
+    timeout: 10_000,
+  });
 });
 
 test("create and delete an attachment", async ({ page }) => {

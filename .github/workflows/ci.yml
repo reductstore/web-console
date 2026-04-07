@@ -48,6 +48,8 @@ jobs:
         image: reduct/store:latest
         ports:
           - 8383:8383
+        env:
+          RS_CORS_ALLOW_ORIGIN: "*"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
