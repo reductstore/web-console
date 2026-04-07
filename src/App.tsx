@@ -33,6 +33,7 @@ export default function App(props: Readonly<Props>) {
   const [permissions, setPermissions] = useState<TokenPermissions | undefined>({
     fullAccess: false,
   });
+  const [authLoading, setAuthLoading] = useState(true);
   const [siderCollapsed, setSiderCollapsed] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1024,
@@ -51,7 +52,8 @@ export default function App(props: Readonly<Props>) {
       .then((token) =>
         setPermissions((token && token.permissions) ?? undefined),
       )
-      .catch((err) => console.error(err));
+      .catch((err) => console.error(err))
+      .finally(() => setAuthLoading(false));
   }, [backendApi]);
 
   useEffect(() => {
@@ -237,6 +239,7 @@ export default function App(props: Readonly<Props>) {
               backendApi={backendApi}
               apiUrl={props.apiUrl}
               permissions={permissions}
+              authLoading={authLoading}
               onLogin={onLogin}
             />
           </Layout.Content>
