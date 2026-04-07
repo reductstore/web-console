@@ -285,7 +285,10 @@ export default function TokenDetail(props: Readonly<Props>) {
             <Button
               className="RotateButton"
               type="primary"
-              disabled={token.isProvisioned || token.isExpired}
+              disabled={
+                token.isProvisioned ||
+                (token.expiresAt !== undefined && token.expiresAt < Date.now())
+              }
               onClick={() => rotateToken()}
             >
               Rotate
