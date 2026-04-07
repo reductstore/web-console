@@ -70,8 +70,7 @@ export default function TokenList(props: Readonly<Props>) {
       title: "TTL",
       dataIndex: "ttl",
       key: "ttl",
-      render: (ttl?: number) =>
-        ttl !== undefined ? humanizeDuration(ttl * 1000) : "—",
+      render: (ttl?: number) => (ttl ? humanizeDuration(ttl * 1000) : "—"),
     },
     {
       title: "Last Access",

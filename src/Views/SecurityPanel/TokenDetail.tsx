@@ -253,7 +253,7 @@ export default function TokenDetail(props: Readonly<Props>) {
               : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="TTL">
-            {token.ttl !== undefined ? humanizeDuration(token.ttl * 1000) : "—"}
+            {token.ttl ? humanizeDuration(token.ttl * 1000) : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="Last Access">
             {token.lastAccess !== undefined
