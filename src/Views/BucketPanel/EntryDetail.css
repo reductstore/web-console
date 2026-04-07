@@ -67,27 +67,6 @@
   width: 100%;
 }
 
-.queryTimeRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--entry-detail-inner-spacing);
-  align-items: flex-end;
-}
-
-.queryTimeControls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.queryTimeInputs {
-  display: flex;
-  gap: var(--entry-detail-inner-spacing);
-  flex: 1 1 0%;
-  min-width: 280px;
-}
-
 .queryEntrySelect .ant-select-content {
   flex-wrap: nowrap;
   overflow: hidden;
@@ -124,18 +103,25 @@
   min-width: 0 !important;
 }
 
+.queryTimeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--entry-detail-inner-spacing);
+  align-items: center;
+}
+
 /* INPUT focus styles */
-.queryTimeInputs .ant-input-affix-wrapper:focus,
-.queryTimeInputs .ant-input-affix-wrapper-focused,
-.queryTimeInputs .ant-input:focus,
-.queryTimeInputs .ant-input-focused {
+.queryTimeRow .ant-input-affix-wrapper:focus,
+.queryTimeRow .ant-input-affix-wrapper-focused,
+.queryTimeRow .ant-input:focus,
+.queryTimeRow .ant-input-focused {
   box-shadow: none !important;
   outline: none !important;
 }
 
 /* SELECT focus styles */
-.queryTimeControls .ant-select-selector:focus,
-.queryTimeControls .ant-select-focused .ant-select-selector,
+.queryTimeRow .ant-select-selector:focus,
+.queryTimeRow .ant-select-focused .ant-select-selector,
 .querySourceRow .ant-select-selector:focus,
 .querySourceRow .ant-select-focused .ant-select-selector {
   box-shadow: none !important;
@@ -153,10 +139,6 @@
   .queryTimeRow {
     flex-direction: column;
     align-items: stretch;
-  }
-  .queryTimeInputs {
-    flex-direction: column;
-    min-width: 0;
   }
 }
 

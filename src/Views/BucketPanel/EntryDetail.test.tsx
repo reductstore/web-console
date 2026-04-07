@@ -894,8 +894,9 @@ describe("EntryDetail", () => {
     it("should query with undefined end time when stop field is empty", async () => {
       (bucket.query as Mock).mockClear();
 
-      const timeInputs = container.querySelectorAll(".queryTimeInputs input");
-      const stopInput = timeInputs[3] as HTMLInputElement;
+      const stopInput = container.querySelector(
+        'input[placeholder="Stop time (optional)"]',
+      ) as HTMLInputElement;
 
       await act(async () => {
         fireEvent.change(stopInput, { target: { value: "" } });
@@ -923,8 +924,9 @@ describe("EntryDetail", () => {
     it("should query with specific end time when stop field has value", async () => {
       (bucket.query as Mock).mockClear();
 
-      const timeInputs = container.querySelectorAll(".queryTimeInputs input");
-      const stopInput = timeInputs[3] as HTMLInputElement;
+      const stopInput = container.querySelector(
+        'input[placeholder="Stop time (optional)"]',
+      ) as HTMLInputElement;
 
       const specificTime = "1970-01-01T00:00:01.000Z";
       await act(async () => {
