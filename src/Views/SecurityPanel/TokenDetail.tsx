@@ -258,7 +258,7 @@ export default function TokenDetail(props: Readonly<Props>) {
           <Descriptions.Item label="Last Access">
             {token.lastAccess !== undefined
               ? new Date(token.lastAccess).toISOString()
-              : "Never"}
+              : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="IP Allowlist">
             {token.ipAllowlist && token.ipAllowlist.length > 0

@@ -77,7 +77,7 @@ export default function TokenList(props: Readonly<Props>) {
       dataIndex: "lastAccess",
       key: "lastAccess",
       render: (time?: number) =>
-        time !== undefined ? new Date(time).toISOString() : "Never",
+        time !== undefined ? new Date(time).toISOString() : "—",
     },
     {
       title: "IP Allowlist",
