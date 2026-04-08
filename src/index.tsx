@@ -21,8 +21,6 @@ if (uiUrl && !window.location.pathname.startsWith(uiUrl)) {
   );
 }
 
-const backendApi = new BackendAPI(apiUrl);
-
 const resizeObserverMessages = new Set([
   "ResizeObserver loop completed with undelivered notifications.",
   "ResizeObserver loop limit exceeded",
@@ -37,15 +35,6 @@ window.addEventListener("error", (event) => {
     event.preventDefault();
   }
 });
-
-const root = createRoot(document.getElementById("root") as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <BrowserRouter basename={uiUrl}>
-      <App backendApi={backendApi} publicUrl={uiUrl} apiUrl={apiUrl} />
-    </BrowserRouter>
-  </React.StrictMode>,
-);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
@@ -96,3 +85,14 @@ if (!supportsRequestStreams || process.env.NODE_ENV === "development") {
     return originalFetch(input, init);
   };
 }
+
+const backendApi = new BackendAPI(apiUrl);
+
+const root = createRoot(document.getElementById("root") as HTMLElement);
+root.render(
+  <React.StrictMode>
+    <BrowserRouter basename={uiUrl}>
+      <App backendApi={backendApi} publicUrl={uiUrl} apiUrl={apiUrl} />
+    </BrowserRouter>
+  </React.StrictMode>,
+);
