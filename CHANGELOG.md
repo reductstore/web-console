@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 1.14.1 - 2026-04-08
+
+### Fixed
+
+- update reduct-js to 1.19.1 to prevent "Illegal invocation" in browsers without global `fetch`, [PR-194](https://github.com/reductstore/web-console/pull/194)
+
 ## 1.14.0 - 2026-04-08
 
 ### Added
