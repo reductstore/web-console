@@ -58,6 +58,17 @@ jobs:
       - run: npm ci
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+      - name: Wait for ReductStore API
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8383/api/v1/info >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ReductStore API is not reachable"
+          docker ps
+          exit 1
       - name: Run e2e tests
         run: npm run e2e
         env:
