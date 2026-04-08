@@ -71,7 +71,7 @@ const supportsRequestStreams = (() => {
 // Only apply polyfill if browser doesn't support streaming request bodies
 // or in development environment because of proxy issues with webpack-dev-server
 if (!supportsRequestStreams || process.env.NODE_ENV === "development") {
-  const originalFetch = window.fetch;
+  const originalFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     if (init?.body instanceof ReadableStream) {
       const reader = init.body.getReader();
