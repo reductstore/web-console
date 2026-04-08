@@ -61,7 +61,7 @@ jobs:
       - name: Run e2e tests
         run: npm run e2e
         env:
-          RS_URL: http://localhost:8383
+          RS_URL: http://127.0.0.1:8383
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v4
