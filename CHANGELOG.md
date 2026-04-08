@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 1.14.0 - 2026-04-08
+
 ### Added
 
 - Display entries as hierarchical tree with aggregated statistics, breadcrumb navigation, path search, and expand/collapse controls, [PR-170](https://github.com/reductstore/web-console/pull/170)
