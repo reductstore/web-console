@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 1.14.0 - 2026-04-08
+
 ### Added
 
 - Display entries as hierarchical tree with aggregated statistics, breadcrumb navigation, path search, and expand/collapse controls, [PR-170](https://github.com/reductstore/web-console/pull/170)
@@ -19,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Hide "Add Attachment" button when using read-only token, [PR-173](https://github.com/reductstore/web-console/pull/173)
-- Update `reduct-js` to `1.19.0-beta.1` for fixed batch timeout handling, [PR-181](https://github.com/reductstore/web-console/pull/181)
 
 ### Changed
 
