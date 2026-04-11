@@ -894,24 +894,18 @@ export default function QueryPanel({
         } catch {
           // ignore invalid range keys
         }
-      } else if (
-        saved.rangeKey === "custom" &&
-        saved.rangeStart &&
-        saved.rangeEnd
-      ) {
-        start = BigInt(saved.rangeStart);
-        end = BigInt(saved.rangeEnd);
+      } else if (saved.rangeKey === "custom") {
+        start = saved.rangeStart ? BigInt(saved.rangeStart) : undefined;
+        end = saved.rangeEnd ? BigInt(saved.rangeEnd) : undefined;
       }
 
-      if (start !== undefined && end !== undefined) {
-        setTimeRangeState((prev) => ({
-          ...prev,
-          start,
-          end,
-          startText: formatValue(start, useUnix),
-          stopText: formatValue(end, useUnix),
-        }));
-      }
+      setTimeRangeState((prev) => ({
+        ...prev,
+        start,
+        end,
+        startText: formatValue(start, useUnix),
+        stopText: formatValue(end, useUnix),
+      }));
     },
     [showUnix, showSelectionControls],
   );
