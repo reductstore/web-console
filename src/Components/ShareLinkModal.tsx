@@ -17,6 +17,7 @@ import { getExtensionFromContentType } from "../Helpers/contentType";
 
 export interface ShareLinkRecord {
   key: string;
+  timestamp: bigint;
   contentType: string | undefined;
 }
 
@@ -61,13 +62,15 @@ export default function ShareLinkModal({
   const ext = record
     ? getExtensionFromContentType(record.contentType || "")
     : "";
-  const defaultFileName = record ? `${entryName}-${record.key}${ext}` : "";
+  const defaultFileName = record
+    ? `${entryName}-${record.timestamp.toString()}${ext}`
+    : "";
 
   // Reset state when record changes or modal opens with new record
   useEffect(() => {
     if (open && record) {
       const newExt = getExtensionFromContentType(record.contentType || "");
-      const newDefaultFileName = `${entryName}-${record.key}${newExt}`;
+      const newDefaultFileName = `${entryName}-${record.timestamp.toString()}${newExt}`;
       setFileName(newDefaultFileName);
       setLink("");
       setExpireAt(dayjs().add(24, "hour"));
