@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix preview and share link for multi-entry queries, [PR-199](https://github.com/reductstore/web-console/pull/199)
+
 ## 1.14.1 - 2026-04-08
 
 ### Fixed
