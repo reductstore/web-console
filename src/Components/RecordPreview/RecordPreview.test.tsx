@@ -10,20 +10,29 @@ describe("RecordPreview", () => {
     createQueryLink: vi.fn(),
   } as unknown as Bucket;
 
+  const queryOptions = new QueryOptions();
+  queryOptions.head = false;
+  queryOptions.strict = true;
+  queryOptions.when = { "&entry_1": { $gt: 10 } };
+
   const defaultProps = {
     contentType: "text/plain",
     size: 1024,
     fileName: "test.txt",
-    entryName: "test-entry",
+    entryName: "test-entry" as string | string[],
     timestamp: 1000n,
     bucket: mockBucket,
     apiUrl: "http://localhost:8383",
+    queryStart: 500n,
+    queryEnd: 2000n,
+    queryOptions: queryOptions,
+    recordIndex: 5,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockJSDOM();
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
   });
 
   it("should render preview card", () => {
@@ -85,7 +94,7 @@ describe("RecordPreview", () => {
     };
 
     (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
-    (global.fetch as Mock).mockResolvedValue({
+    (globalThis.fetch as Mock).mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("test content"),
     });
@@ -93,41 +102,61 @@ describe("RecordPreview", () => {
     render(<RecordPreview {...textProps} />);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("http://test-url", {
+      expect(globalThis.fetch).toHaveBeenCalledWith("http://test-url", {
         signal: expect.any(AbortSignal),
       });
     });
   });
 
   it("should pass query context to createQueryLink", async () => {
-    const queryOptions = new QueryOptions();
-    queryOptions.when = { "&label": { $eq: "test" } };
-    queryOptions.strict = true;
-    queryOptions.head = false;
-
     (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
-    (global.fetch as Mock).mockResolvedValue({
+    (globalThis.fetch as Mock).mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("test content"),
     });
 
-    render(
-      <RecordPreview
-        {...defaultProps}
-        queryStart={10n}
-        queryEnd={20n}
-        queryOptions={queryOptions}
-        recordIndex={2}
-      />,
-    );
+    render(<RecordPreview {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
         "test-entry",
-        10n,
-        20n,
+        500n,
+        2000n,
         queryOptions,
-        2,
+        5,
+        expect.any(Date),
+        "test.txt",
+        "http://localhost:8383",
+      );
+    });
+  });
+
+  it("should fall back to timestamp and index 0 when no query context", async () => {
+    const propsWithoutContext = {
+      contentType: "text/plain",
+      size: 1024,
+      fileName: "test.txt",
+      entryName: "test-entry" as string | string[],
+      timestamp: 1000n,
+      bucket: mockBucket,
+      apiUrl: "http://localhost:8383",
+    };
+
+    (mockBucket.createQueryLink as Mock).mockResolvedValue("http://test-url");
+    (globalThis.fetch as Mock).mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("test content"),
+    });
+
+    render(<RecordPreview {...propsWithoutContext} />);
+
+    await waitFor(() => {
+      expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
+        "test-entry",
+        1000n,
+        undefined,
+        undefined,
+        0,
         expect.any(Date),
         "test.txt",
         "http://localhost:8383",
