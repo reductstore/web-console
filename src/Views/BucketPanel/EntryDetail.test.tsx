@@ -484,8 +484,11 @@ describe("EntryDetail", () => {
       0n,
       3600000000n,
       expect.objectContaining({
+        head: false,
         strict: true,
-        when: { $each_t: "30s" },
+        when: expect.objectContaining({
+          $each_t: "30s",
+        }),
       }),
       0,
       expect.any(Date),
@@ -546,8 +549,11 @@ describe("EntryDetail", () => {
         0n,
         3600000000n,
         expect.objectContaining({
+          head: false,
           strict: true,
-          when: { $each_t: "30s" },
+          when: expect.objectContaining({
+            $each_t: "30s",
+          }),
         }),
         0,
         expect.any(Date),

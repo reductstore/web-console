@@ -11,12 +11,12 @@ interface RecordPreviewProps {
   fileName: string;
   entryName: string | string[];
   timestamp: bigint;
+  bucket: Bucket;
+  apiUrl: string;
   queryStart?: bigint;
   queryEnd?: bigint;
   queryOptions?: QueryOptions;
   recordIndex?: number;
-  bucket: Bucket;
-  apiUrl: string;
 }
 
 const MAX_LOAD_SIZE = 10 * 1024 * 1024; // 10 MB limit for loading preview
@@ -43,12 +43,12 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   fileName,
   entryName,
   timestamp,
+  bucket,
+  apiUrl,
   queryStart,
   queryEnd,
   queryOptions,
   recordIndex,
-  bucket,
-  apiUrl,
 }) => {
   const shouldAutoPreview = size <= AUTO_PREVIEW_SIZE;
   const [isPreviewVisible, setIsPreviewVisible] = useState(shouldAutoPreview);
