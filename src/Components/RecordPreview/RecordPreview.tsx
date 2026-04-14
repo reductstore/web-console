@@ -103,6 +103,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
 
       if (isImageType(contentType)) {
         setPreviewContent(generatedQueryLink);
+        return;
       } else if (isTextType(contentType)) {
         const response = await fetch(generatedQueryLink, {
           signal: abortSignal,
@@ -160,7 +161,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   }, []);
 
   const renderPreviewContent = () => {
-    if (isLoading) {
+    if (isLoading && !previewContent) {
       return (
         <div className="previewLoading">
           <Spin />
@@ -180,15 +181,25 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
     if (isImageType(contentType)) {
       return (
         <div className="previewImageContainer">
+          {isLoading && (
+            <div className="previewLoading">
+              <Spin />
+              <Typography.Text>Loading preview...</Typography.Text>
+            </div>
+          )}
           <Image
             src={previewContent}
             alt={fileName}
-            style={{ maxWidth: "100%", maxHeight: "400px" }}
-            placeholder={
-              <div className="imagePlaceholder">
-                <Spin size="large" />
-              </div>
-            }
+            style={{
+              maxWidth: "100%",
+              maxHeight: "400px",
+              display: isLoading ? "none" : undefined,
+            }}
+            onLoad={() => setIsLoading(false)}
+            onError={() => {
+              setIsLoading(false);
+              setError("Failed to load image");
+            }}
           />
         </div>
       );
