@@ -7,7 +7,7 @@ import { act } from "react";
 import dayjs from "dayjs";
 
 // Mock ResizeObserver for antd DatePicker popup
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
@@ -89,7 +89,7 @@ describe("UploadFileForm", () => {
     vi.clearAllMocks();
     mockJSDOM();
 
-    global.File = MockFile as unknown as typeof File;
+    globalThis.File = MockFile as unknown as typeof File;
     bucket = {
       getInfo: vi.fn().mockResolvedValue({}),
       beginWrite: vi.fn().mockResolvedValue({

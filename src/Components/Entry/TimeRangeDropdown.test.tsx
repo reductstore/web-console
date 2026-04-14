@@ -7,7 +7,7 @@ import { getTimeRangeFromKey } from "../../Helpers/timeRangeUtils";
 describe("TimeRangeDropdown", () => {
   beforeEach(() => {
     mockJSDOM();
-    global.ResizeObserver = class {
+    globalThis.ResizeObserver = class {
       observe() {}
       unobserve() {}
       disconnect() {}

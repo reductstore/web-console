@@ -14,7 +14,7 @@ import TokenDetail from "./TokenDetail";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 // Mock ResizeObserver for antd components
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}

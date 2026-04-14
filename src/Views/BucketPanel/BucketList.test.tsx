@@ -6,7 +6,7 @@ import { BucketInfo, Client, Status } from "reduct-js";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react";
 
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}

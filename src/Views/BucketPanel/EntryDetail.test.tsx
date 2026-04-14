@@ -144,7 +144,7 @@ describe("EntryDetail", () => {
     vi.setSystemTime(BASE_TIME);
     mockJSDOM();
 
-    global.requestAnimationFrame = vi.fn((cb) => {
+    globalThis.requestAnimationFrame = vi.fn((cb) => {
       const id = Date.now();
       queueMicrotask(() => cb(0));
       return id;
