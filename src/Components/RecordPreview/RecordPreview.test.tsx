@@ -131,7 +131,7 @@ describe("RecordPreview", () => {
     });
   });
 
-  it("should fall back to timestamp and index 0 when no query context", async () => {
+  it("should fall back to undefined start when no query context", async () => {
     const propsWithoutContext = {
       contentType: "text/plain",
       size: 1024,
@@ -153,7 +153,7 @@ describe("RecordPreview", () => {
     await waitFor(() => {
       expect(mockBucket.createQueryLink).toHaveBeenCalledWith(
         "test-entry",
-        1000n,
+        undefined,
         undefined,
         undefined,
         { entry: "test-entry", timestamp: 1000n },

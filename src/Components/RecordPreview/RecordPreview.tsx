@@ -92,7 +92,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
         (typeof entryName === "string" ? entryName : entryName[0]);
       const generatedQueryLink = await bucket.createQueryLink(
         entryName,
-        queryStart ?? timestamp,
+        queryStart,
         queryEnd,
         queryOptions,
         { entry: resolvedEntryName, timestamp },
