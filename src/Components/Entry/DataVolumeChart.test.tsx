@@ -39,7 +39,7 @@ describe("DataVolumeChart", () => {
   beforeEach(() => {
     mockJSDOM();
     vi.clearAllMocks();
-    global.requestAnimationFrame = vi.fn((cb) => {
+    globalThis.requestAnimationFrame = vi.fn((cb) => {
       cb(0);
       return 0;
     });

@@ -6,7 +6,7 @@ import { mockJSDOM } from "../../Helpers/TestHelpers";
 import EntryAttachmentsCard from "./EntryAttachmentsCard";
 
 // Mock ResizeObserver for antd Table
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}

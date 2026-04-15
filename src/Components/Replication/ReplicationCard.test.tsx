@@ -28,7 +28,7 @@ describe("ReplicationCard", () => {
     mockJSDOM();
 
     // Mock ResizeObserver for antd components
-    global.ResizeObserver = class {
+    globalThis.ResizeObserver = class {
       observe() {}
       unobserve() {}
       disconnect() {}

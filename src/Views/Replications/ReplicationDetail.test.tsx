@@ -8,7 +8,7 @@ import { mockJSDOM } from "../../Helpers/TestHelpers";
 import ReplicationDetail from "./ReplicationDetail";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
 
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}

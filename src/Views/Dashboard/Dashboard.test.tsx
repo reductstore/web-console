@@ -11,7 +11,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 // antd components use ResizeObserver
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}

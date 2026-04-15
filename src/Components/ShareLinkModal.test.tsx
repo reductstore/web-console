@@ -7,6 +7,7 @@ describe("ShareLinkModal", () => {
   const mockOnCancel = vi.fn();
   const record: ShareLinkRecord = {
     key: "0",
+    timestamp: 0n,
     contentType: "application/octet-stream",
   };
 

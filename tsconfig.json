@@ -18,7 +18,8 @@
     "types": [
       "vitest/globals",
       "vite/client",
-      "@testing-library/jest-dom/vitest"
+      "@testing-library/jest-dom/vitest",
+      "node"
     ],
     "allowArbitraryExtensions": true,
     "noUncheckedSideEffectImports": false,

@@ -15,7 +15,7 @@ vi.mock("react-router-dom", async () => ({
   useLocation: () => ({ pathname: "/buckets/testBucket" }),
 }));
 
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}

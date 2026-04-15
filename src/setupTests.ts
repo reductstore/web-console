@@ -42,7 +42,7 @@ window.getComputedStyle = (elt: Element, pseudoElt?: string | null) => {
 };
 
 // antd components use ResizeObserver internally via @rc-component/resize-observer
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}

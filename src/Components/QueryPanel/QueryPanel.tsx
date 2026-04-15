@@ -56,17 +56,17 @@ import { SavedQuery, useQueryStore } from "../../stores/queryStore";
 import UploadFileForm from "../Entry/UploadFileForm";
 import "../../Views/BucketPanel/EntryDetail.css";
 
+interface IndexedReadableRecord {
+  record: ReadableRecord;
+  tableIndex: number;
+}
+
 interface RecordQueryContext {
   bucketName: string;
   entries: string[];
   start?: bigint;
   end?: bigint;
-  options?: QueryOptions;
-}
-
-interface IndexedReadableRecord {
-  record: ReadableRecord;
-  tableIndex: number;
+  options: QueryOptions;
 }
 
 interface RecordTableRow {
@@ -139,9 +139,6 @@ export default function QueryPanel({
   const [availableEntries, setAvailableEntries] = useState<string[]>([]);
   const [bucketEntryInfo, setBucketEntryInfo] = useState<EntryInfo[]>([]);
   const [records, setRecords] = useState<IndexedReadableRecord[]>([]);
-  const [queryContext, setQueryContext] = useState<RecordQueryContext | null>(
-    null,
-  );
   const [startError, setStartError] = useState(false);
   const [stopError, setStopError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,6 +159,9 @@ export default function QueryPanel({
   );
   const [isSaveQueryModalVisible, setIsSaveQueryModalVisible] = useState(false);
   const [bucket, setBucket] = useState<Bucket | null>(null);
+  const [queryContext, setQueryContext] = useState<RecordQueryContext | null>(
+    null,
+  );
   const [showUnix, setShowUnix] = useState(false);
   const fetchCtrlRef = useRef<AbortController | null>(null);
 
@@ -290,16 +290,6 @@ export default function QueryPanel({
     };
   };
 
-  const buildLinkQueryOptions = (
-    source?: QueryOptions,
-  ): QueryOptions | undefined => {
-    if (!source) return undefined;
-    const linkOptions = new QueryOptions();
-    Object.assign(linkOptions, source);
-    linkOptions.head = false;
-    return linkOptions;
-  };
-
   const loadVisibleBuckets = useCallback(async () => {
     if (!showSelectionControls) {
       return;
@@ -420,6 +410,14 @@ export default function QueryPanel({
     }
   }, [canUploadToSelection, uploadTriggerRef]);
 
+  const buildLinkQueryOptions = (options: QueryOptions): QueryOptions => {
+    const linkOptions = new QueryOptions();
+    linkOptions.head = false;
+    linkOptions.strict = options.strict;
+    linkOptions.when = options.when;
+    return linkOptions;
+  };
+
   const hasValidSelection =
     bucketName.trim().length > 0 && !!selectedEntryQuery;
 
@@ -493,7 +491,7 @@ export default function QueryPanel({
 
         setQueryContext({
           bucketName,
-          entries: [...selectedEntries],
+          entries: selectedEntries,
           start,
           end,
           options,
@@ -514,9 +512,10 @@ export default function QueryPanel({
           });
           count++;
 
-          if (count % 20 === 0) {
-            setRecords((prev) => [...prev, ...batch]);
+          if (batch.length >= 20) {
+            const flushed = batch;
             batch = [];
+            setRecords((prev) => [...prev, ...flushed]);
           }
         }
 
@@ -591,23 +590,22 @@ export default function QueryPanel({
   };
 
   const handleDownload = async (row: RecordTableRow) => {
-    if (!queryContext || downloadingKey !== null) return;
+    if (!bucket || !queryContext || downloadingKey !== null) return;
     setDownloadingKey(row.key);
 
     try {
-      const bucketInstance = await client.getBucket(queryContext.bucketName);
       const fileName = generateFileName(
         row.entryName,
-        row.key,
+        row.timestamp.toString(),
         row.contentType || "",
       );
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
-      const shareLink = await bucketInstance.createQueryLink(
+      const shareLink = await bucket.createQueryLink(
         entrySelectionToQueryArg(queryContext.entries) ?? row.entryName,
         queryContext.start,
         queryContext.end,
         buildLinkQueryOptions(queryContext.options),
-        row.tableIndex,
+        { entry: row.entryName, timestamp: row.timestamp },
         expireAt,
         fileName,
         apiUrl,
@@ -638,17 +636,16 @@ export default function QueryPanel({
     expireAt: Date,
     fileName: string,
   ): Promise<string> => {
-    if (!queryContext || !recordToShare) {
-      throw new Error("No query context available");
+    if (!bucket || !recordToShare || !queryContext) {
+      throw new Error("No bucket or record available");
     }
 
-    const bucketInstance = await client.getBucket(queryContext.bucketName);
-    return bucketInstance.createQueryLink(
+    return bucket.createQueryLink(
       entrySelectionToQueryArg(queryContext.entries) ?? recordToShare.entryName,
       queryContext.start,
       queryContext.end,
       buildLinkQueryOptions(queryContext.options),
-      recordToShare.tableIndex,
+      { entry: recordToShare.entryName, timestamp: recordToShare.timestamp },
       expireAt,
       fileName,
       apiUrl,
@@ -668,7 +665,7 @@ export default function QueryPanel({
       const bucketInstance = await client.getBucket(bucketName);
       await bucketInstance.removeRecord(
         recordToDelete.entryName,
-        BigInt(recordToDelete.key),
+        recordToDelete.timestamp,
       );
       message.success("Record deleted successfully");
       setIsDeleteModalVisible(false);
@@ -855,7 +852,7 @@ export default function QueryPanel({
     const entryName = getRecordEntryName(indexedRecord.record);
     const ts = indexedRecord.record.time.toString();
     return {
-      key: showEntryColumn ? `${entryName}:${ts}` : ts,
+      key: `${entryName}:${ts}:${indexedRecord.tableIndex}`,
       entryName,
       timestamp: indexedRecord.record.time,
       tableIndex: indexedRecord.tableIndex,
@@ -894,24 +891,18 @@ export default function QueryPanel({
         } catch {
           // ignore invalid range keys
         }
-      } else if (
-        saved.rangeKey === "custom" &&
-        saved.rangeStart &&
-        saved.rangeEnd
-      ) {
-        start = BigInt(saved.rangeStart);
-        end = BigInt(saved.rangeEnd);
+      } else if (saved.rangeKey === "custom") {
+        start = saved.rangeStart ? BigInt(saved.rangeStart) : undefined;
+        end = saved.rangeEnd ? BigInt(saved.rangeEnd) : undefined;
       }
 
-      if (start !== undefined && end !== undefined) {
-        setTimeRangeState((prev) => ({
-          ...prev,
-          start,
-          end,
-          startText: formatValue(start, useUnix),
-          stopText: formatValue(end, useUnix),
-        }));
-      }
+      setTimeRangeState((prev) => ({
+        ...prev,
+        start,
+        end,
+        startText: formatValue(start, useUnix),
+        stopText: formatValue(end, useUnix),
+      }));
     },
     [showUnix, showSelectionControls],
   );
@@ -1090,8 +1081,8 @@ export default function QueryPanel({
                         popupMatchSelectWidth={false}
                         onChange={(values) => {
                           setSelectedEntries(normalizeEntrySelection(values));
-                          setRecords([]);
                           setQueryContext(null);
+                          setRecords([]);
                           setFetchError("");
                         }}
                         disabled={!bucketName}
@@ -1312,7 +1303,7 @@ export default function QueryPanel({
                   size={row.size}
                   fileName={generateFileName(
                     row.entryName,
-                    row.key,
+                    row.timestamp.toString(),
                     row.contentType || "",
                   )}
                   entryName={
@@ -1325,7 +1316,7 @@ export default function QueryPanel({
                   queryStart={queryContext.start}
                   queryEnd={queryContext.end}
                   queryOptions={buildLinkQueryOptions(queryContext.options)}
-                  recordIndex={row.tableIndex}
+                  recordEntryName={row.entryName}
                 />
               )}
               <EditRecordLabels

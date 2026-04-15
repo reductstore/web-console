@@ -144,7 +144,7 @@ describe("EntryDetail", () => {
     vi.setSystemTime(BASE_TIME);
     mockJSDOM();
 
-    global.requestAnimationFrame = vi.fn((cb) => {
+    globalThis.requestAnimationFrame = vi.fn((cb) => {
       const id = Date.now();
       queueMicrotask(() => cb(0));
       return id;
@@ -484,10 +484,13 @@ describe("EntryDetail", () => {
       0n,
       3600000000n,
       expect.objectContaining({
+        head: false,
         strict: true,
-        when: { $each_t: "30s" },
+        when: expect.objectContaining({
+          $each_t: "30s",
+        }),
       }),
-      0,
+      { entry: "testEntry", timestamp: 1000n },
       expect.any(Date),
       "testEntry-1000.json",
       "https://example.com",
@@ -546,10 +549,13 @@ describe("EntryDetail", () => {
         0n,
         3600000000n,
         expect.objectContaining({
+          head: false,
           strict: true,
-          when: { $each_t: "30s" },
+          when: expect.objectContaining({
+            $each_t: "30s",
+          }),
         }),
-        0,
+        { entry: "testEntry", timestamp: 1000n },
         expect.any(Date),
         "testEntry-1000.json",
         "https://example.com",
