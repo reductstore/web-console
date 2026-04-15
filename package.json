@@ -28,7 +28,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",
-    "reduct-js": "^1.19.2",
+    "reduct-js": "^1.19.3",
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.5",
