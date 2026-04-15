@@ -16,7 +16,7 @@ interface RecordPreviewProps {
   queryStart?: bigint;
   queryEnd?: bigint;
   queryOptions?: QueryOptions;
-  recordIndex?: number;
+  recordEntryName?: string;
 }
 
 const MAX_LOAD_SIZE = 10 * 1024 * 1024; // 10 MB limit for loading preview
@@ -48,7 +48,7 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
   queryStart,
   queryEnd,
   queryOptions,
-  recordIndex,
+  recordEntryName,
 }) => {
   const shouldAutoPreview = size <= AUTO_PREVIEW_SIZE;
   const [isPreviewVisible, setIsPreviewVisible] = useState(shouldAutoPreview);
@@ -87,12 +87,15 @@ const RecordPreview: React.FC<RecordPreviewProps> = ({
 
     try {
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
+      const resolvedEntryName =
+        recordEntryName ??
+        (typeof entryName === "string" ? entryName : entryName[0]);
       const generatedQueryLink = await bucket.createQueryLink(
         entryName,
         queryStart ?? timestamp,
         queryEnd,
         queryOptions,
-        recordIndex ?? 0,
+        { entry: resolvedEntryName, timestamp },
         expireAt,
         fileName,
         apiUrl,

@@ -605,7 +605,7 @@ export default function QueryPanel({
         queryContext.start,
         queryContext.end,
         buildLinkQueryOptions(queryContext.options),
-        row.tableIndex,
+        { entry: row.entryName, timestamp: row.timestamp },
         expireAt,
         fileName,
         apiUrl,
@@ -645,7 +645,7 @@ export default function QueryPanel({
       queryContext.start,
       queryContext.end,
       buildLinkQueryOptions(queryContext.options),
-      recordToShare.tableIndex,
+      { entry: recordToShare.entryName, timestamp: recordToShare.timestamp },
       expireAt,
       fileName,
       apiUrl,
@@ -1316,7 +1316,7 @@ export default function QueryPanel({
                   queryStart={queryContext.start}
                   queryEnd={queryContext.end}
                   queryOptions={buildLinkQueryOptions(queryContext.options)}
-                  recordIndex={row.tableIndex}
+                  recordEntryName={row.entryName}
                 />
               )}
               <EditRecordLabels

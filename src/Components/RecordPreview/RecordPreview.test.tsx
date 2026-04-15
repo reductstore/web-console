@@ -26,7 +26,7 @@ describe("RecordPreview", () => {
     queryStart: 500n,
     queryEnd: 2000n,
     queryOptions: queryOptions,
-    recordIndex: 5,
+    recordEntryName: "test-entry",
   };
 
   beforeEach(() => {
@@ -123,7 +123,7 @@ describe("RecordPreview", () => {
         500n,
         2000n,
         queryOptions,
-        5,
+        { entry: "test-entry", timestamp: 1000n },
         expect.any(Date),
         "test.txt",
         "http://localhost:8383",
@@ -156,7 +156,7 @@ describe("RecordPreview", () => {
         1000n,
         undefined,
         undefined,
-        0,
+        { entry: "test-entry", timestamp: 1000n },
         expect.any(Date),
         "test.txt",
         "http://localhost:8383",
