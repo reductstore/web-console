@@ -227,7 +227,9 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
                 </Typography.Text>
               </div>
             )}
-            <div className={`attachmentEditorBody${expanded ? " expanded" : ""}`}>
+            <div
+              className={`attachmentEditorBody${expanded ? " expanded" : ""}`}
+            >
               <Editor
                 height={expanded ? "100%" : `${editorHeight}px`}
                 language="json"
@@ -302,7 +304,9 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
           )}
           {!binaryMode && (
             <Tooltip
-              title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
+              title={
+                readOnly ? "Cannot format in read-only mode" : "Format JSON"
+              }
             >
               <Button
                 size="small"
