@@ -26,6 +26,8 @@ interface AttachmentEditorProps {
   initialValue?: string;
   /** Whether the editor is read-only */
   readOnly?: boolean;
+  /** Whether this is a binary attachment (no content editing) */
+  binaryMode?: boolean;
   /** Callback when save is clicked. Returns true if save succeeded. */
   onSave: (key: string, value: string) => Promise<boolean>;
   /** Callback when close/cancel is clicked */
@@ -46,6 +48,7 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
   initialKey = "",
   initialValue = "",
   readOnly = false,
+  binaryMode = false,
   onSave,
   onClose,
   isSaving = false,
@@ -64,7 +67,9 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
 
   const displayError = error ?? localError;
 
-  const hasChanges = name !== initialKey || content !== initialValue;
+  const hasChanges = binaryMode
+    ? name !== initialKey
+    : name !== initialKey || content !== initialValue;
 
   const validateJson = (value: string): string | null => {
     try {
@@ -83,7 +88,7 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
   };
 
   const handleSave = async () => {
-    if (!readOnly && editorInstance) {
+    if (!readOnly && !binaryMode && editorInstance) {
       await editorInstance.getAction("editor.action.formatDocument")?.run();
     }
 
@@ -98,10 +103,12 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
       return;
     }
 
-    const jsonError = validateJson(currentContent);
-    if (jsonError) {
-      setLocalError(`Invalid JSON: ${jsonError}`);
-      return;
+    if (!binaryMode) {
+      const jsonError = validateJson(currentContent);
+      if (jsonError) {
+        setLocalError(`Invalid JSON: ${jsonError}`);
+        return;
+      }
     }
 
     const success = await onSave(trimmedKey, currentContent);
@@ -197,54 +204,67 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
           placeholder="Name"
           disabled={readOnly}
         />
-        <div
-          className={`monacoEditorWrapper${isDragOver ? " dragOver" : ""}${expanded ? " expanded" : ""}`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        >
-          {isDragOver && (
-            <div className="editorDropOverlay">
-              <Typography.Text type="secondary">
-                Drop JSON file here
-              </Typography.Text>
-            </div>
-          )}
-          <div className={`attachmentEditorBody${expanded ? " expanded" : ""}`}>
-            <Editor
-              height={expanded ? "100%" : `${editorHeight}px`}
-              language="json"
-              value={content}
-              onChange={handleContentChange}
-              onMount={(editor) => setEditorInstance(editor)}
-              options={{
-                minimap: { enabled: false },
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-                automaticLayout: true,
-                folding: false,
-                glyphMargin: false,
-                lineDecorationsWidth: 10,
-                lineNumbersMinChars: 3,
-                renderLineHighlight: "none",
-                scrollbar: {
-                  vertical: "auto",
-                  horizontal: "hidden",
-                  verticalScrollbarSize: 8,
-                },
-                readOnly: readOnly,
-                quickSuggestions: false,
-                suggestOnTriggerCharacters: false,
-                parameterHints: { enabled: false },
-              }}
-            />
+        {binaryMode ? (
+          <div
+            className={`monacoEditorWrapper${expanded ? " expanded" : ""}`}
+            style={{ padding: "8px 12px" }}
+          >
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              Format is not supported for preview
+            </Typography.Text>
           </div>
-        </div>
+        ) : (
+          <div
+            className={`monacoEditorWrapper${isDragOver ? " dragOver" : ""}${expanded ? " expanded" : ""}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            {isDragOver && (
+              <div className="editorDropOverlay">
+                <Typography.Text type="secondary">
+                  Drop JSON file here
+                </Typography.Text>
+              </div>
+            )}
+            <div
+              className={`attachmentEditorBody${expanded ? " expanded" : ""}`}
+            >
+              <Editor
+                height={expanded ? "100%" : `${editorHeight}px`}
+                language="json"
+                value={content}
+                onChange={handleContentChange}
+                onMount={(editor) => setEditorInstance(editor)}
+                options={{
+                  minimap: { enabled: false },
+                  lineNumbers: "on",
+                  scrollBeyondLastLine: false,
+                  wordWrap: "on",
+                  automaticLayout: true,
+                  folding: false,
+                  glyphMargin: false,
+                  lineDecorationsWidth: 10,
+                  lineNumbersMinChars: 3,
+                  renderLineHighlight: "none",
+                  scrollbar: {
+                    vertical: "auto",
+                    horizontal: "hidden",
+                    verticalScrollbarSize: 8,
+                  },
+                  readOnly: readOnly,
+                  quickSuggestions: false,
+                  suggestOnTriggerCharacters: false,
+                  parameterHints: { enabled: false },
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
       <div className="attachmentEditorToolbar">
         <div className="attachmentEditorToolbarStatus">
-          {!readOnly && !displayError && (
+          {!readOnly && !binaryMode && !displayError && (
             <span className="dropHintText">
               <Typography.Text type="secondary">
                 Tip: drag & drop JSON file
@@ -282,17 +302,21 @@ const AttachmentEditor: React.FC<AttachmentEditorProps> = ({
               Save
             </Button>
           )}
-          <Tooltip
-            title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
-          >
-            <Button
-              size="small"
-              aria-label="Format JSON"
-              icon={<FormatPainterOutlined />}
-              onClick={handleFormat}
-              disabled={readOnly}
-            />
-          </Tooltip>
+          {!binaryMode && (
+            <Tooltip
+              title={
+                readOnly ? "Cannot format in read-only mode" : "Format JSON"
+              }
+            >
+              <Button
+                size="small"
+                aria-label="Format JSON"
+                icon={<FormatPainterOutlined />}
+                onClick={handleFormat}
+                disabled={readOnly}
+              />
+            </Tooltip>
+          )}
           {expandable && (
             <Tooltip title={isExpanded ? "Collapse editor" : "Expand editor"}>
               <Button

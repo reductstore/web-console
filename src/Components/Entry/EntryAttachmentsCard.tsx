@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Input, Modal, Typography, message } from "antd";
+import { Alert, Button, Modal, Typography, message } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
   DeleteOutlined,
   UploadOutlined,
   DownloadOutlined,
-  SearchOutlined,
 } from "@ant-design/icons";
-import { APIError, Client } from "reduct-js";
+import { APIError, Client, AttachmentEntry } from "reduct-js";
+import prettierBytes from "prettier-bytes";
 import ScrollableTable from "../ScrollableTable";
 import { naturalNameSort } from "../../Views/BucketPanel/tree";
+import { getExtensionFromContentType } from "../../Helpers/contentType";
 import AttachmentEditor from "./AttachmentEditor";
 import "./EntryAttachmentsCard.css";
 
@@ -23,8 +24,10 @@ interface EntryAttachmentsCardProps {
 interface AttachmentTableRow {
   key: string;
   name: string;
-  content: string;
   rawValue: unknown;
+  contentType: string;
+  size: number;
+  isBinary: boolean;
 }
 
 interface EditingState {
@@ -36,11 +39,11 @@ const formatAttachmentValue = (value: unknown): string => {
   return JSON.stringify(value, null, 2);
 };
 
-const truncateContent = (value: unknown, maxLen = 50): string => {
-  const str = formatAttachmentValue(value);
-  const oneLine = str.replace(/\n/g, " ").replace(/\s+/g, " ");
-  if (oneLine.length <= maxLen) return oneLine;
-  return oneLine.slice(0, maxLen - 3) + "...";
+const isJsonContentType = (contentType: string): boolean => {
+  const ct = contentType.split(";")[0].trim().toLowerCase();
+  return (
+    ct === "application/json" || ct === "text/json" || ct.endsWith("+json")
+  );
 };
 
 const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
@@ -49,7 +52,9 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
   entryName,
   editable,
 }) => {
-  const [attachments, setAttachments] = useState<Record<string, unknown>>({});
+  const [attachments, setAttachments] = useState<
+    Record<string, AttachmentEntry>
+  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +68,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     setIsLoading(true);
     try {
       const bucket = await client.getBucket(bucketName);
-      const data = await bucket.readAttachments(entryName);
+      const data = await bucket.readAttachmentsDetailed(entryName);
       setAttachments(data || {});
     } catch (err) {
       if (err instanceof APIError) {
@@ -124,19 +129,11 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
 
     try {
       const bucket = await client.getBucket(bucketName);
-      const updated: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(attachments)) {
-        if (k === originalName) continue;
-        updated[k] = v;
-      }
-      updated[trimmedKey] = parsedValue;
+      await bucket.writeAttachments(entryName, { [trimmedKey]: parsedValue });
 
       if (originalName !== trimmedKey && originalName in attachments) {
         await bucket.removeAttachments(entryName, [originalName]);
       }
-
-      await bucket.writeAttachments(entryName, updated);
-      setAttachments(updated);
       setExpandedRowKeys((keys) => keys.filter((key) => key !== originalName));
       clearRowError(originalName);
       message.success("Attachment saved");
@@ -157,17 +154,79 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     }
   };
 
-  const downloadAttachment = (name: string, value: unknown) => {
-    const json = JSON.stringify(value, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+  const renameAttachment = async (
+    originalName: string,
+    newName: string,
+    contentType: string,
+  ): Promise<boolean> => {
+    const trimmedName = newName.trim();
+    if (!trimmedName || trimmedName === originalName) return false;
+    if (trimmedName in attachments) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [originalName]: `Name '${trimmedName}' already exists.`,
+      }));
+      return false;
+    }
+
+    setIsSaving(true);
+    try {
+      const bucket = await client.getBucket(bucketName);
+      const entry = attachments[originalName];
+      await bucket.writeAttachments(
+        entryName,
+        { [trimmedName]: entry.value },
+        contentType,
+      );
+      await bucket.removeAttachments(entryName, [originalName]);
+      setExpandedRowKeys((keys) => keys.filter((key) => key !== originalName));
+      clearRowError(originalName);
+      message.success("Attachment renamed");
+      await loadAttachments();
+      return true;
+    } catch (err) {
+      const errorMsg =
+        err instanceof APIError
+          ? err.message || "Failed to rename attachment."
+          : "Failed to rename attachment.";
+      setRowErrors((prev) => ({
+        ...prev,
+        [originalName]: errorMsg,
+      }));
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const downloadAttachment = (name: string, row: AttachmentTableRow) => {
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `${name}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (row.isBinary) {
+      const binary = atob(row.rawValue as string);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: row.contentType });
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      const ext = getExtensionFromContentType(row.contentType);
+      a.download = name.includes(".") ? name : `${name}${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const json = JSON.stringify(row.rawValue, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = `${name}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   const saveNewAttachment = async (
@@ -193,11 +252,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
 
     try {
       const bucket = await client.getBucket(bucketName);
-      const updated: Record<string, unknown> = { ...attachments };
-      updated[trimmedKey] = parsedValue;
-
-      await bucket.writeAttachments(entryName, updated);
-      setAttachments(updated);
+      await bucket.writeAttachments(entryName, { [trimmedKey]: parsedValue });
       setEditing(null);
       setAddError(null);
       message.success("Attachment saved");
@@ -219,9 +274,6 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
     const bucket = await client.getBucket(bucketName);
     await bucket.removeAttachments(entryName, [key]);
     message.success("Attachment removed");
-    const updated = { ...attachments };
-    delete updated[key];
-    setAttachments(updated);
     if (editing?.originalKey === key) {
       setEditing(null);
     }
@@ -231,12 +283,20 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
   const attachmentEntries = Object.entries(attachments);
 
   const tableData: AttachmentTableRow[] = attachmentEntries.map(
-    ([name, value]) => ({
-      key: name,
-      name,
-      content: truncateContent(value),
-      rawValue: value,
-    }),
+    ([name, entry]) => {
+      const isBinary = !isJsonContentType(entry.contentType);
+      const size = isBinary
+        ? Math.floor(((entry.value as string).length * 3) / 4)
+        : new Blob([JSON.stringify(entry.value)]).size;
+      return {
+        key: name,
+        name,
+        rawValue: entry.value,
+        contentType: entry.contentType,
+        size,
+        isBinary,
+      };
+    },
   );
 
   const isAddingNew = editing !== null && editing.originalKey === null;
@@ -246,67 +306,21 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
       title: "Name",
       dataIndex: "name",
       key: "name",
-      width: 200,
       sorter: (a, b) => naturalNameSort(a.name, b.name),
       showSorterTooltip: false,
-      filterDropdown: ({
-        setSelectedKeys,
-        selectedKeys,
-        confirm,
-        clearFilters,
-      }) => (
-        <div className="filterDropdown">
-          <Input
-            placeholder="Search key"
-            value={selectedKeys[0]}
-            onChange={(e) =>
-              setSelectedKeys(e.target.value ? [e.target.value] : [])
-            }
-            onPressEnter={() => confirm()}
-            className="filterInput"
-          />
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            className="filterButton"
-          >
-            Search
-          </Button>
-          <Button
-            onClick={() => clearFilters?.()}
-            size="small"
-            className="resetButton"
-          >
-            Reset
-          </Button>
-        </div>
-      ),
-      filterIcon: (filtered) => (
-        <SearchOutlined className={`filterIcon${filtered ? " active" : ""}`} />
-      ),
-      onFilter: (value, record) =>
-        record.name.toLowerCase().includes((value as string).toLowerCase()),
-      render: (text: string) => {
-        return (
-          <Typography.Text strong style={{ fontSize: 13 }}>
-            {text}
-          </Typography.Text>
-        );
-      },
     },
     {
-      title: "Content",
-      dataIndex: "content",
-      key: "content",
-      render: (text: string) => {
-        return (
-          <Typography.Text type="secondary" className="contentPreview">
-            {text}
-          </Typography.Text>
-        );
-      },
+      title: "Size",
+      dataIndex: "size",
+      key: "size",
+      sorter: (a, b) => a.size - b.size,
+      showSorterTooltip: false,
+      render: (_: number, row: AttachmentTableRow) => prettierBytes(row.size),
+    },
+    {
+      title: "Content Type",
+      dataIndex: "contentType",
+      key: "contentType",
     },
   ];
 
@@ -322,7 +336,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
             size="small"
             icon={<DownloadOutlined />}
             title="Download"
-            onClick={() => downloadAttachment(row.name, row.rawValue)}
+            onClick={() => downloadAttachment(row.name, row)}
             className="actionIcon"
           />
           {editable && (
@@ -389,7 +403,7 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
 
       {hasAttachments && (
         <ScrollableTable
-          scroll={{ x: "max-content" }}
+          scroll={{ x: true }}
           columns={columns}
           dataSource={tableData}
           size="small"
@@ -408,6 +422,28 @@ const EntryAttachmentsCard: React.FC<EntryAttachmentsCardProps> = ({
               setExpandedRowKeys(newKeys);
             },
             expandedRowRender: (record: AttachmentTableRow) => {
+              if (record.isBinary) {
+                return (
+                  <AttachmentEditor
+                    initialKey={record.name}
+                    initialValue=""
+                    readOnly={!editable}
+                    binaryMode
+                    onSave={(key) =>
+                      renameAttachment(record.name, key, record.contentType)
+                    }
+                    onClose={() => {
+                      setExpandedRowKeys((keys) =>
+                        keys.filter((key) => key !== record.name),
+                      );
+                      clearRowError(record.name);
+                    }}
+                    isSaving={isSaving}
+                    error={rowErrors[record.name]}
+                    onClearError={() => clearRowError(record.name)}
+                  />
+                );
+              }
               return (
                 <AttachmentEditor
                   initialKey={record.name}

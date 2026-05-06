@@ -72,11 +72,6 @@
   border-radius: 4px;
 }
 
-.contentPreview {
-  font-size: 12px;
-  font-family: monospace;
-}
-
 .rowActions {
   display: flex;
   align-items: center;
@@ -93,32 +88,6 @@
 }
 
 .actionIcon.saveIcon {
-  color: var(--primary-bg);
-}
-/* Filter dropdown styles */
-.filterDropdown {
-  padding: 8px;
-}
-
-.filterDropdown .filterInput {
-  margin-bottom: 8px;
-  display: block;
-}
-
-.filterDropdown .filterButton {
-  width: 90px;
-  margin-right: 8px;
-}
-
-.filterDropdown .resetButton {
-  width: 90px;
-}
-
-.filterIcon {
-  color: inherit;
-}
-
-.filterIcon.active {
   color: var(--primary-bg);
 }
 

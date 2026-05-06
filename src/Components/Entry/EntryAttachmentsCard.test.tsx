@@ -35,7 +35,9 @@ describe("EntryAttachmentsCard", () => {
   let container: HTMLElement;
 
   const makeBucket = () => ({
-    readAttachments: vi.fn().mockResolvedValue({ schema: { version: 1 } }),
+    readAttachmentsDetailed: vi.fn().mockResolvedValue({
+      schema: { value: { version: 1 }, contentType: "application/json" },
+    }),
     writeAttachments: vi.fn().mockResolvedValue(undefined),
     removeAttachments: vi.fn().mockResolvedValue(undefined),
   });
@@ -65,7 +67,7 @@ describe("EntryAttachmentsCard", () => {
     );
     ({ container } = result);
     await waitFor(() => {
-      expect(bucket.readAttachments).toHaveBeenCalled();
+      expect(bucket.readAttachmentsDetailed).toHaveBeenCalled();
     });
   };
 
@@ -73,7 +75,7 @@ describe("EntryAttachmentsCard", () => {
     await mountCard();
 
     expect(client.getBucket).toHaveBeenCalledWith("bucket");
-    expect(bucket.readAttachments).toHaveBeenCalledWith("entry");
+    expect(bucket.readAttachmentsDetailed).toHaveBeenCalledWith("entry");
     expect(container.textContent).toContain("schema");
     expect(container.textContent).toContain("Attachments");
   });
@@ -95,7 +97,7 @@ describe("EntryAttachmentsCard", () => {
   });
 
   it("shows 'No attachments' message when not editable and no attachments", async () => {
-    bucket.readAttachments.mockResolvedValue({});
+    bucket.readAttachmentsDetailed.mockResolvedValue({});
     await mountCard(false);
 
     await waitFor(() => {
@@ -104,7 +106,7 @@ describe("EntryAttachmentsCard", () => {
   });
 
   it("does not show 'No attachments' message when editable", async () => {
-    bucket.readAttachments.mockResolvedValue({});
+    bucket.readAttachmentsDetailed.mockResolvedValue({});
     await mountCard(true);
 
     expect(container.textContent).not.toContain("No attachments");
@@ -153,21 +155,6 @@ describe("EntryAttachmentsCard", () => {
     });
   });
 
-  it("truncates content preview to 50 characters", async () => {
-    const longValue = { data: "a".repeat(100) };
-    bucket.readAttachments.mockResolvedValueOnce({ longKey: longValue });
-    await mountCard();
-
-    await waitFor(() => {
-      const contentPreview = container.querySelector(
-        ".contentPreview",
-      ) as HTMLElement;
-      expect(contentPreview).toBeTruthy();
-      expect(contentPreview.textContent!.length).toBeLessThanOrEqual(50);
-      expect(contentPreview.textContent).toContain("...");
-    });
-  });
-
   it("has download button for attachments", async () => {
     await mountCard();
 
@@ -178,7 +165,9 @@ describe("EntryAttachmentsCard", () => {
 
   it("expands row to show full content", async () => {
     const testValue = { expanded: true, nested: { data: "test" } };
-    bucket.readAttachments.mockResolvedValueOnce({ testKey: testValue });
+    bucket.readAttachmentsDetailed.mockResolvedValueOnce({
+      testKey: { value: testValue, contentType: "application/json" },
+    });
     await mountCard();
 
     await waitFor(() => {
@@ -200,7 +189,9 @@ describe("EntryAttachmentsCard", () => {
 
   it("collapses expanded row on second click", async () => {
     const testValue = { expanded: true, nested: { data: "test".repeat(20) } };
-    bucket.readAttachments.mockResolvedValueOnce({ testKey: testValue });
+    bucket.readAttachmentsDetailed.mockResolvedValueOnce({
+      testKey: { value: testValue, contentType: "application/json" },
+    });
     await mountCard();
 
     await waitFor(() => {
@@ -361,14 +352,6 @@ describe("EntryAttachmentsCard", () => {
 
     await waitFor(() => {
       expect(container.querySelector(".ant-table-column-sorter")).toBeTruthy();
-    });
-  });
-
-  it("has search filter on key column", async () => {
-    await mountCard();
-
-    await waitFor(() => {
-      expect(container.querySelector(".filterIcon")).toBeTruthy();
     });
   });
 

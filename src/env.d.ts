@@ -1,3 +1,7 @@
+declare module "prettier-bytes" {
+  export default function prettierBytes(bytes: number): string;
+}
+
 declare namespace NodeJS {
   interface ProcessEnv {
     readonly NODE_ENV: "development" | "production" | "test";
