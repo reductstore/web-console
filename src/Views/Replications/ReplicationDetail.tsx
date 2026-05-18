@@ -97,6 +97,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
             index={0}
             {...props}
             showPanel
+            onBack={() => navigate("/replications")}
             onRemove={() => navigate("/replications")}
             onShow={() => null}
             onModeChange={() => getReplication()}
