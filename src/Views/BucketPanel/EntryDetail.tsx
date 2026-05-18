@@ -6,6 +6,7 @@ import EntryCard from "../../Components/Entry/EntryCard";
 import EntryAttachmentsCard from "../../Components/Entry/EntryAttachmentsCard";
 import QueryPanel from "../../Components/QueryPanel/QueryPanel";
 import { checkWritePermission } from "../../Helpers/permissionUtils";
+import { encodeEntryPath } from "../../Components/Entry/EntryBreadcrumb";
 import "./EntryDetail.css";
 
 interface CustomPermissions {
@@ -90,6 +91,17 @@ export default function EntryDetail(props: Readonly<Props>) {
         bucketName={bucketName}
         permissions={permissions as TokenPermissions}
         client={props.client}
+        onBack={() => {
+          const lastSlash = decodedEntryName.lastIndexOf("/");
+          if (lastSlash > 0) {
+            const parent = decodedEntryName.slice(0, lastSlash);
+            navigate(
+              `/buckets/${bucketName}/entries/${encodeEntryPath(parent)}`,
+            );
+          } else {
+            navigate(`/buckets/${bucketName}`);
+          }
+        }}
         onRemoved={(removedEntryName) => {
           const prefix = `${removedEntryName}/`;
           setAvailableEntries((prev) =>
