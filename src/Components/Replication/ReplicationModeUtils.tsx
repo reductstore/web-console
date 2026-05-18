@@ -1,15 +1,15 @@
 import React from "react";
 import { ReplicationMode } from "reduct-js";
 import {
+  CheckCircleOutlined,
   PauseCircleOutlined,
-  PlayCircleOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 
 export const getModeIcon = (mode: ReplicationMode): React.ReactNode => {
   switch (mode) {
     case ReplicationMode.ENABLED:
-      return <PlayCircleOutlined style={{ color: "#52c41a" }} />;
+      return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
     case ReplicationMode.PAUSED:
       return <PauseCircleOutlined style={{ color: "#faad14" }} />;
     case ReplicationMode.DISABLED:
@@ -24,7 +24,7 @@ export const MODE_SELECT_OPTIONS = [
     value: ReplicationMode.ENABLED,
     label: (
       <span>
-        <PlayCircleOutlined style={{ color: "#52c41a" }} /> Enabled
+        <CheckCircleOutlined style={{ color: "#52c41a" }} /> Enabled
       </span>
     ),
   },
