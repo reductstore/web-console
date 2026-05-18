@@ -1,6 +1,6 @@
 import React from "react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import EntryCard from "./EntryCard";
 import { EntryInfo, Client, Status } from "reduct-js";
@@ -143,7 +143,7 @@ describe("EntryCard", () => {
         />,
       );
 
-      expect(screen.getByTitle("Entry Stats")).toBeInTheDocument();
+      expect(screen.getByText("Include sub-entries")).toBeInTheDocument();
     });
 
     it("hides aggregation toggle button for leaf entries", () => {
@@ -158,7 +158,7 @@ describe("EntryCard", () => {
         />,
       );
 
-      expect(screen.queryByTitle("Entry Stats")).toBeNull();
+      expect(screen.queryByText("Include sub-entries")).toBeNull();
     });
 
     it("aggregates stats from sub-entries when showAggregated is true", () => {
@@ -173,10 +173,18 @@ describe("EntryCard", () => {
         />,
       );
 
+      // Default is "This entry" (not aggregated)
       const statValues = container.querySelectorAll(
         ".ant-statistic-content-value",
       );
-      expect(statValues[1].textContent).toEqual("7");
+      expect(statValues[1].textContent).toEqual("5");
+
+      // Click "Include sub-entries" to aggregate
+      fireEvent.click(screen.getByText("Include sub-entries"));
+      const updatedStatValues = container.querySelectorAll(
+        ".ant-statistic-content-value",
+      );
+      expect(updatedStatValues[1].textContent).toEqual("7");
     });
   });
 });
