@@ -95,9 +95,13 @@ export default function EntryDetail(props: Readonly<Props>) {
           const lastSlash = decodedEntryName.lastIndexOf("/");
           if (lastSlash > 0) {
             const parent = decodedEntryName.slice(0, lastSlash);
-            navigate(
-              `/buckets/${bucketName}/entries/${encodeEntryPath(parent)}`,
-            );
+            if (availableEntries.includes(parent)) {
+              navigate(
+                `/buckets/${bucketName}/entries/${encodeEntryPath(parent)}`,
+              );
+            } else {
+              navigate(`/buckets/${bucketName}`);
+            }
           } else {
             navigate(`/buckets/${bucketName}`);
           }

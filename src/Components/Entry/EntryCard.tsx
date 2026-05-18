@@ -140,7 +140,10 @@ export default function EntryCard(props: Readonly<Props>) {
   const [forwardPopoverOpen, setForwardPopoverOpen] = useState(false);
 
   const childKeys = useMemo(
-    () => getImmediateChildKeys(allNames, entryInfo.name),
+    () =>
+      getImmediateChildKeys(allNames, entryInfo.name).filter((k) =>
+        allNames.includes(k),
+      ),
     [allNames, entryInfo.name],
   );
 
@@ -327,17 +330,17 @@ export default function EntryCard(props: Readonly<Props>) {
           e.name.startsWith(`${entryInfo.name}/`),
         ) ??
           false) && (
-          <Segmented
-            size="small"
-            value={showAggregated ? "aggregated" : "single"}
-            options={[
-              { label: "This entry", value: "single" },
-              { label: "Include sub-entries", value: "aggregated" },
-            ]}
-            onChange={(val) => setShowAggregated(val === "aggregated")}
-            style={{ marginTop: 16 }}
-          />
-        )}
+            <Segmented
+              size="small"
+              value={showAggregated ? "aggregated" : "single"}
+              options={[
+                { label: "This entry", value: "single" },
+                { label: "Include sub-entries", value: "aggregated" },
+              ]}
+              onChange={(val) => setShowAggregated(val === "aggregated")}
+              style={{ marginTop: 16 }}
+            />
+          )}
       </Card>
       <RemoveConfirmationModal
         key={entryToRemove}
