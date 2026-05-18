@@ -1,0 +1,385 @@
+import React from "react";
+import {
+  APIError,
+  Client,
+  FullLifecycleInfo,
+  LifecycleSettings,
+  LifecycleType,
+} from "reduct-js";
+import {
+  Alert,
+  Button,
+  Col,
+  Form,
+  Input,
+  Row,
+  Select,
+  Tooltip,
+  Typography,
+} from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
+
+import "./LifecycleSettingsForm.css";
+import { JsonQueryEditor } from "../JsonEditor";
+import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
+
+const isTestEnvironment = process.env.NODE_ENV === "test";
+
+interface Props {
+  client: Client;
+  onCreated: () => void;
+  sourceBuckets: string[];
+  lifecycleName?: string;
+  readOnly?: boolean;
+}
+
+interface State {
+  settings?: LifecycleSettings;
+  formattedWhen: string;
+  entries: string[];
+  error?: string;
+  selectedBucket?: string;
+  selectedEntries: string[];
+}
+
+interface FormValues {
+  name: string;
+  bucket: string;
+  maxAge: string;
+  interval?: string;
+  entries: string[];
+}
+
+const convertWhenToString = (when: any): string => {
+  return typeof when === "string" ? when : JSON.stringify(when || {});
+};
+
+export default class LifecycleSettingsForm extends React.Component<
+  Props,
+  State
+> {
+  state: State = {
+    settings: undefined,
+    formattedWhen: "{}\n",
+    entries: [],
+    selectedBucket: undefined,
+    selectedEntries: [],
+  };
+
+  onFinish = async (values: FormValues) => {
+    const { lifecycleName, client, onCreated } = this.props;
+
+    try {
+      let parsedWhen: Record<string, any> = {};
+      if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
+        const processResult = processWhenCondition(this.state.formattedWhen);
+        if (!processResult.success) {
+          this.setState({ error: processResult.error });
+          return;
+        }
+        parsedWhen = processResult.value;
+      }
+
+      const lifecycleSettings: LifecycleSettings = {
+        lifecycleType: LifecycleType.DELETE,
+        bucket: values.bucket,
+        entries: values.entries || [],
+        maxAge: values.maxAge,
+        interval: values.interval || undefined,
+        when: parsedWhen,
+        mode: this.state.settings?.mode,
+      };
+
+      if (lifecycleName) {
+        await client.updateLifecycle(lifecycleName, lifecycleSettings);
+      } else {
+        await client.createLifecycle(values.name, lifecycleSettings);
+      }
+
+      onCreated();
+    } catch (err) {
+      this.handleError(err);
+    }
+  };
+
+  loadLifecycleData = async () => {
+    const { lifecycleName, client } = this.props;
+    if (lifecycleName) {
+      try {
+        const lifecycle: FullLifecycleInfo =
+          await client.getLifecycle(lifecycleName);
+        const { settings } = lifecycle;
+
+        let whenString = convertWhenToString(settings.when);
+        const formatResult = parseAndFormat(whenString);
+        whenString = formatResult.error ? whenString : formatResult.formatted;
+
+        this.setState(
+          {
+            settings,
+            formattedWhen: whenString,
+            entries: settings.entries || [],
+            selectedBucket: settings.bucket,
+            selectedEntries: settings.entries || [],
+          },
+          () => {
+            if (settings.bucket) {
+              this.handleBucketChange(settings.bucket);
+            }
+          },
+        );
+      } catch (err) {
+        this.handleError(err);
+      }
+    }
+  };
+
+  handleBucketChange = async (selectedBucket: string) => {
+    try {
+      const bucket = await this.props.client.getBucket(selectedBucket);
+      const entries = await bucket.getEntryList();
+
+      if (this.state.settings) {
+        this.setState({
+          entries: entries.map((entry) => entry.name),
+          settings: {
+            ...this.state.settings,
+            bucket: selectedBucket,
+          },
+        });
+      } else {
+        this.setState({ entries: entries.map((entry) => entry.name) });
+      }
+    } catch (err) {
+      this.handleError(err);
+    }
+  };
+
+  handleFormValuesChange = (
+    _changed: Partial<FormValues>,
+    values: FormValues,
+  ) => {
+    this.setState({
+      selectedBucket: values.bucket,
+      selectedEntries: Array.isArray(values.entries) ? values.entries : [],
+    });
+  };
+
+  handleError = (err: unknown) => {
+    if (err instanceof APIError) {
+      this.setState({ error: err.message });
+    } else {
+      console.error("Unexpected error: ", err);
+    }
+  };
+
+  async componentDidMount() {
+    await this.loadLifecycleData();
+  }
+
+  getInitialFormValues = () => {
+    const { settings, formattedWhen, entries } = this.state;
+    const { lifecycleName: name } = this.props;
+
+    if (!settings) {
+      return { name };
+    }
+
+    return {
+      name,
+      bucket: settings.bucket,
+      maxAge: settings.maxAge,
+      interval: settings.interval,
+      entries: settings.entries || entries,
+      when: formattedWhen,
+    };
+  };
+
+  handleWhenConditionChange = (value: string) => {
+    if (this.props.readOnly) {
+      return;
+    }
+    this.setState((prevState) => ({
+      ...prevState,
+      formattedWhen: value,
+      error: undefined,
+    }));
+  };
+
+  render() {
+    const { error } = this.state;
+    const { lifecycleName, readOnly, sourceBuckets } = this.props;
+
+    if (this.state.settings === undefined && lifecycleName) {
+      return <></>;
+    }
+
+    return (
+      <>
+        <Form
+          name="lifecycleForm"
+          onFinish={this.onFinish}
+          onValuesChange={this.handleFormValuesChange}
+          layout="vertical"
+          initialValues={this.getInitialFormValues()}
+        >
+          <Form.Item
+            label="Lifecycle Name"
+            name="name"
+            rules={[
+              { required: true, message: "Please input the lifecycle name!" },
+            ]}
+          >
+            <Input
+              disabled={readOnly || this.props.lifecycleName !== undefined}
+            />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label={
+                  <span>
+                    Bucket&nbsp;
+                    <Tooltip title="Select the bucket where lifecycle policy is applied.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="bucket"
+                rules={[
+                  { required: true, message: "Please select the bucket!" },
+                ]}
+                className="LifecycleField"
+              >
+                <Select
+                  disabled={readOnly}
+                  placeholder="Select a bucket"
+                  onChange={this.handleBucketChange}
+                  options={sourceBuckets?.map((bucket) => ({
+                    value: bucket,
+                    label: bucket,
+                  }))}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    Entries&nbsp;
+                    <Tooltip title="Select entries to be affected. If empty, all entries are affected.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="entries"
+                className="LifecycleField"
+              >
+                <Select
+                  mode="tags"
+                  style={{ width: "100%" }}
+                  placeholder="Add entries"
+                  disabled={readOnly}
+                  options={this.state.entries.map((entry) => ({
+                    value: entry,
+                    label: entry,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                label={
+                  <span>
+                    Max Age&nbsp;
+                    <Tooltip title="Maximum record age, e.g. 1h, 30d, 3600s.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="maxAge"
+                rules={[{ required: true, message: "Please input max age." }]}
+                className="LifecycleField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    Interval&nbsp;
+                    <Tooltip title="Optional run interval, e.g. 10m, 1h.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="interval"
+                className="LifecycleField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label={
+              <span>
+                When&nbsp;
+                <Tooltip title="Define JSON-based rules to match records for lifecycle processing.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </span>
+            }
+          >
+            {!isTestEnvironment && (
+              <JsonQueryEditor
+                value={this.state.formattedWhen}
+                onChange={(value: string) =>
+                  this.handleWhenConditionChange(value)
+                }
+                height={200}
+                readOnly={readOnly}
+                validationContext={{
+                  client: this.props.client,
+                  bucket: this.state.selectedBucket,
+                  entries: this.state.selectedEntries,
+                }}
+              />
+            )}
+            {error && (
+              <Alert
+                type="error"
+                message={error}
+                showIcon
+                style={{ marginTop: 8 }}
+              />
+            )}
+            <Typography.Text type="secondary" className="jsonExample">
+              Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
+              <br />
+              Use <code>&label</code> for standard labels and{" "}
+              <code>@label</code> for computed labels.
+              <br />
+              <strong>
+                <a
+                  href="https://www.reduct.store/docs/conditional-query"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Conditional Query Reference →
+                </a>
+              </strong>
+            </Typography.Text>
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" disabled={readOnly}>
+              {lifecycleName ? "Update Lifecycle" : "Create Lifecycle"}
+            </Button>
+          </Form.Item>
+        </Form>
+      </>
+    );
+  }
+}
