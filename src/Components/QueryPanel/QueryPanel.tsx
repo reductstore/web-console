@@ -13,7 +13,16 @@ import {
   QueryOptions,
   TokenPermissions,
 } from "reduct-js";
-import { Typography, Button, Input, Select, Modal, Space, message } from "antd";
+import {
+  Typography,
+  Button,
+  Input,
+  Select,
+  Modal,
+  Space,
+  message,
+  theme,
+} from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
   DeleteOutlined,
@@ -54,6 +63,11 @@ import SaveQueryModal from "../SavedQueries/SaveQueryModal";
 import QuerySelector from "../SavedQueries/QuerySelector";
 import { SavedQuery, useQueryStore } from "../../stores/queryStore";
 import UploadFileForm from "../Entry/UploadFileForm";
+import {
+  QueryStatusLabel,
+  QueryProgressBar,
+  QueryStatus,
+} from "./QueryProgress";
 import "../../Views/BucketPanel/EntryDetail.css";
 
 interface IndexedReadableRecord {
@@ -127,6 +141,7 @@ export default function QueryPanel({
   title = "Records",
   warning,
 }: Readonly<QueryPanelProps>) {
+  const { token } = theme.useToken();
   const normalizedInitialEntries = useMemo(
     () => normalizeEntrySelection(initialEntries),
     [initialEntries],
@@ -164,6 +179,8 @@ export default function QueryPanel({
   );
   const [showUnix, setShowUnix] = useState(false);
   const fetchCtrlRef = useRef<AbortController | null>(null);
+  const [queryStatus, setQueryStatus] = useState<QueryStatus>("idle");
+  const [queryPercent, setQueryPercent] = useState(0);
 
   const defaultRange = useMemo(() => getDefaultTimeRange(), []);
   const [timeRange, setTimeRangeState] = useState(() => ({
@@ -456,6 +473,8 @@ export default function QueryPanel({
       cancelDelayRef.current = setTimeout(() => setShowCancel(true), 500);
       setFetchError("");
       setRecords([]);
+      setQueryStatus("fetching");
+      setQueryPercent(0);
 
       try {
         const bucketInstance = await client.getBucket(bucketName);
@@ -479,6 +498,7 @@ export default function QueryPanel({
           if (!conditionResult.success) {
             setFetchError(conditionResult.error || "Invalid condition");
             setIsLoading(false);
+            setQueryStatus("idle");
             return;
           }
 
@@ -497,6 +517,34 @@ export default function QueryPanel({
           options,
         });
 
+        // Compute time window for progress estimation
+        const selectedInfo = bucketEntryInfo.filter((e) =>
+          selectedEntries.includes(e.name),
+        );
+        let totalSpan = BigInt(0);
+        const entryWindows: Map<string, { start: bigint; stop: bigint }> =
+          new Map();
+        for (const entry of selectedInfo) {
+          if (entry.recordCount === BigInt(0)) continue;
+          const wStart =
+            start !== undefined && start > entry.oldestRecord
+              ? start
+              : entry.oldestRecord;
+          const wStop =
+            end !== undefined && end < entry.latestRecord
+              ? end
+              : entry.latestRecord;
+          if (wStart <= wStop) {
+            entryWindows.set(entry.name, { start: wStart, stop: wStop });
+            totalSpan += wStop - wStart + BigInt(1);
+          }
+        }
+        if (totalSpan === BigInt(0)) totalSpan = BigInt(1);
+
+        const coveredByEntry = new Map<string, bigint>();
+        let coveredTotal = BigInt(0);
+        let lastReportedPct = -1;
+
         let batch: IndexedReadableRecord[] = [];
         let count = 0;
         for await (const record of bucketInstance.query(
@@ -505,12 +553,47 @@ export default function QueryPanel({
           end,
           options,
         )) {
-          if (abortSignal.aborted) return;
+          if (abortSignal.aborted) {
+            if (batch.length) {
+              setRecords((prev) => [...prev, ...batch]);
+            }
+            setQueryStatus("cancelled");
+            return;
+          }
           batch.push({
             record,
             tableIndex: count,
           });
           count++;
+
+          // Update progress estimation based on timestamp coverage
+          const entryName =
+            record.entry ||
+            (selectedEntries.length === 1 ? selectedEntries[0] : "");
+          const window =
+            entryWindows.get(entryName) ?? entryWindows.values().next().value;
+          if (window) {
+            const ts = record.time;
+            const covered =
+              ts < window.start
+                ? BigInt(0)
+                : (ts < window.stop ? ts : window.stop) -
+                  window.start +
+                  BigInt(1);
+            const prev = coveredByEntry.get(entryName) ?? BigInt(0);
+            if (covered > prev) {
+              coveredTotal += covered - prev;
+              coveredByEntry.set(entryName, covered);
+            }
+            const pct = Math.min(
+              Number((coveredTotal * BigInt(100)) / totalSpan),
+              99,
+            );
+            if (pct !== lastReportedPct) {
+              lastReportedPct = pct;
+              setQueryPercent(pct);
+            }
+          }
 
           if (batch.length >= 20) {
             const flushed = batch;
@@ -520,12 +603,23 @@ export default function QueryPanel({
         }
 
         if (batch.length) {
-          if (abortSignal.aborted) return;
+          if (abortSignal.aborted) {
+            setRecords((prev) => [...prev, ...batch]);
+            setQueryStatus("cancelled");
+            return;
+          }
           setRecords((prev) => [...prev, ...batch]);
         }
-      } catch (err) {
-        if (abortSignal.aborted) return;
 
+        setQueryPercent(100);
+        setQueryStatus("done");
+      } catch (err) {
+        if (abortSignal.aborted) {
+          setQueryStatus("cancelled");
+          return;
+        }
+
+        setQueryStatus("idle");
         if (err instanceof APIError && err.message) {
           setFetchError(err.message);
         } else if (err instanceof SyntaxError) {
@@ -1258,79 +1352,92 @@ export default function QueryPanel({
                       getRecords(timeRange.start, timeRange.end).then();
                     }
                   }}
-                  type="primary"
-                  danger={showCancel}
+                  type={showCancel ? "default" : "primary"}
                   disabled={!hasValidSelection}
                   style={{
                     width: 130,
                     whiteSpace: "nowrap",
                     textAlign: "center",
+                    ...(showCancel
+                      ? {
+                          borderColor: token.colorPrimary,
+                          color: token.colorPrimary,
+                        }
+                      : {}),
                   }}
                 >
                   {showCancel ? "Cancel" : "Fetch Records"}
                 </Button>
+                <QueryStatusLabel
+                  status={queryStatus}
+                  recordCount={records.length}
+                />
               </div>
+              <QueryProgressBar status={queryStatus} percent={queryPercent} />
             </div>
           </div>
         </div>
-        {records.length > 0 && (
-          <div className="chartContainer">
-            <DataVolumeChart
-              records={records.map((r) => r.record)}
-              setTimeRange={(start, end) => {
-                setTimeRange(start, end);
-                getRecords(start, end).then();
-              }}
-              isLoading={isLoading}
-              showUnix={showUnix}
-              interval={timeRange.interval}
-            />
-          </div>
-        )}
-      </div>
-
-      <ScrollableTable
-        scroll={{ x: "max-content" }}
-        size="small"
-        columns={columns}
-        dataSource={data}
-        expandable={{
-          expandedRowRender: (row: RecordTableRow) => (
-            <div key={`expanded-row-${row.entryName}-${row.key}`}>
-              {bucket && queryContext && (
-                <RecordPreview
-                  contentType={row.contentType || ""}
-                  size={row.size}
-                  fileName={generateFileName(
-                    row.entryName,
-                    row.timestamp.toString(),
-                    row.contentType || "",
-                  )}
-                  entryName={
-                    entrySelectionToQueryArg(queryContext.entries) ??
-                    row.entryName
-                  }
-                  timestamp={row.timestamp}
-                  bucket={bucket}
-                  apiUrl={apiUrl}
-                  queryStart={queryContext.start}
-                  queryEnd={queryContext.end}
-                  queryOptions={buildLinkQueryOptions(queryContext.options)}
-                  recordEntryName={row.entryName}
-                />
-              )}
-              <EditRecordLabels
-                key={`edit-labels-${row.entryName}-${row.key}`}
-                record={row}
-                onLabelsUpdated={(newLabels, timestamp) =>
-                  handleLabelsUpdated(row.entryName, newLabels, timestamp)
-                }
-                editable={hasWritePermission}
+        {records.length > 0 &&
+          (queryStatus === "done" || queryStatus === "cancelled") && (
+            <div className="chartContainer">
+              <DataVolumeChart
+                records={records.map((r) => r.record)}
+                setTimeRange={(start, end) => {
+                  setTimeRange(start, end);
+                  getRecords(start, end).then();
+                }}
+                isLoading={isLoading}
+                showUnix={showUnix}
+                interval={timeRange.interval}
               />
             </div>
-          ),
-        }}
-      />
+          )}
+      </div>
+
+      {(queryStatus === "done" || queryStatus === "cancelled") && (
+        <ScrollableTable
+          scroll={{ x: "max-content" }}
+          size="small"
+          columns={columns}
+          dataSource={data}
+          expandable={{
+            expandedRowRender: (row: RecordTableRow) => (
+              <div key={`expanded-row-${row.entryName}-${row.key}`}>
+                {bucket && queryContext && (
+                  <RecordPreview
+                    contentType={row.contentType || ""}
+                    size={row.size}
+                    fileName={generateFileName(
+                      row.entryName,
+                      row.timestamp.toString(),
+                      row.contentType || "",
+                    )}
+                    entryName={
+                      entrySelectionToQueryArg(queryContext.entries) ??
+                      row.entryName
+                    }
+                    timestamp={row.timestamp}
+                    bucket={bucket}
+                    apiUrl={apiUrl}
+                    queryStart={queryContext.start}
+                    queryEnd={queryContext.end}
+                    queryOptions={buildLinkQueryOptions(queryContext.options)}
+                    recordEntryName={row.entryName}
+                  />
+                )}
+                <EditRecordLabels
+                  key={`edit-labels-${row.entryName}-${row.key}`}
+                  record={row}
+                  onLabelsUpdated={(newLabels, timestamp) =>
+                    handleLabelsUpdated(row.entryName, newLabels, timestamp)
+                  }
+                  editable={hasWritePermission}
+                />
+              </div>
+            ),
+          }}
+        />
+      )}
 
       <SaveQueryModal
         open={isSaveQueryModalVisible}
