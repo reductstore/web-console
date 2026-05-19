@@ -55,24 +55,21 @@ describe("Replications", () => {
     expect(rows.length).toEqual(2);
 
     expect(rows[0].querySelector("a")!.textContent).toEqual("Replication1");
-    expect(rows[0].querySelector("span.ant-tag-success")!.textContent).toEqual(
-      "Target Reachable",
-    );
+    expect(rows[0].textContent).toContain("Target Reachable");
     expect(rows[0].querySelector("span.ant-tag-processing")).toBeFalsy();
     const row0Cells = rows[0].querySelectorAll("td");
     expect(row0Cells[2].textContent).toEqual("100");
     expect(row0Cells[3].textContent).toEqual("Target Reachable");
 
     expect(rows[1].querySelector("a")!.textContent).toEqual("Replication2");
-    expect(rows[1].querySelector("span.ant-tag-error")!.textContent).toEqual(
-      "Target Unreachable",
-    );
+    expect(rows[1].textContent).toContain("Target Unreachable");
     expect(
       rows[1].querySelector("span.ant-tag-processing")!.textContent,
-    ).toEqual("Provisioned");
+    ).toEqual("Yes");
     const row1Cells = rows[1].querySelectorAll("td");
     expect(row1Cells[2].textContent).toEqual("50");
-    expect(row1Cells[3].textContent).toEqual("Target UnreachableProvisioned");
+    expect(row1Cells[3].textContent).toEqual("Target Unreachable");
+    expect(row1Cells[4].textContent).toEqual("Yes");
   });
 
   it("shows the add replication button", () => {

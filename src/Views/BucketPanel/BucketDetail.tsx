@@ -530,6 +530,7 @@ export default function BucketDetail(props: Readonly<Props>) {
           index={0}
           {...props}
           showPanel
+          onBack={() => navigate("/buckets")}
           onRemoved={() => {
             if (location.pathname === `/buckets/${name}`) {
               navigate(-1);

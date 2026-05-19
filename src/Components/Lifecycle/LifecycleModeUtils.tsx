@@ -1,18 +1,18 @@
 import React from "react";
-import { ReplicationMode } from "reduct-js";
+import { LifecycleMode } from "reduct-js";
 import {
   CheckCircleOutlined,
-  PauseCircleOutlined,
+  ExperimentOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 
-export const getModeIcon = (mode: ReplicationMode): React.ReactNode => {
+export const getModeIcon = (mode: LifecycleMode): React.ReactNode => {
   switch (mode) {
-    case ReplicationMode.ENABLED:
+    case LifecycleMode.ENABLED:
       return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
-    case ReplicationMode.PAUSED:
-      return <PauseCircleOutlined style={{ color: "#faad14" }} />;
-    case ReplicationMode.DISABLED:
+    case LifecycleMode.DRY_RUN:
+      return <ExperimentOutlined style={{ color: "#1677ff" }} />;
+    case LifecycleMode.DISABLED:
       return <StopOutlined style={{ color: "#ff4d4f" }} />;
     default:
       return null;
@@ -21,7 +21,7 @@ export const getModeIcon = (mode: ReplicationMode): React.ReactNode => {
 
 export const MODE_SELECT_OPTIONS = [
   {
-    value: ReplicationMode.ENABLED,
+    value: LifecycleMode.ENABLED,
     label: (
       <span>
         <CheckCircleOutlined style={{ color: "#52c41a" }} /> Enabled
@@ -29,15 +29,15 @@ export const MODE_SELECT_OPTIONS = [
     ),
   },
   {
-    value: ReplicationMode.PAUSED,
+    value: LifecycleMode.DRY_RUN,
     label: (
       <span>
-        <PauseCircleOutlined style={{ color: "#faad14" }} /> Paused
+        <ExperimentOutlined style={{ color: "#1677ff" }} /> Dry Run
       </span>
     ),
   },
   {
-    value: ReplicationMode.DISABLED,
+    value: LifecycleMode.DISABLED,
     label: (
       <span>
         <StopOutlined style={{ color: "#ff4d4f" }} /> Disabled

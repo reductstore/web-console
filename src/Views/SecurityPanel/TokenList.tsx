@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Client, Token } from "reduct-js";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, message, Table, Tag, Typography } from "antd";
+import { Badge, Button, message, Table, Tag, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import humanizeDuration from "humanize-duration";
 import dayjs from "../../Helpers/dayjsConfig";
@@ -47,11 +47,12 @@ export default function TokenList(props: Readonly<Props>) {
     {
       title: "Status",
       key: "status",
+      width: 150,
       render: (_: unknown, record: Token) => {
         if (record.isExpired) {
-          return <Tag color="error">Expired</Tag>;
+          return <Badge status="error" text="Expired" />;
         }
-        return <Tag color="success">Active</Tag>;
+        return <Badge status="success" text="Active" />;
       },
     },
     {
@@ -88,16 +89,15 @@ export default function TokenList(props: Readonly<Props>) {
         ips && ips.length > 0 ? ips.join(", ") : "—",
     },
     {
-      title: "",
+      title: "Provisioned",
       dataIndex: "isProvisioned",
       key: "provisioned",
-      render: (isProvisioned: boolean) => {
-        if (isProvisioned) {
-          return <Tag color="processing">Provisioned</Tag>;
-        } else {
-          return <div />;
-        }
-      },
+      render: (isProvisioned: boolean) =>
+        isProvisioned ? (
+          <Tag color="processing">Yes</Tag>
+        ) : (
+          <Tag color="orange">No</Tag>
+        ),
     },
   ];
 

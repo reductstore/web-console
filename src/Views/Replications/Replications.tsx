@@ -7,7 +7,16 @@ import {
   TokenPermissions,
   BucketInfo,
 } from "reduct-js";
-import { Button, message, Modal, Select, Table, Tag, Typography } from "antd";
+import {
+  Badge,
+  Button,
+  message,
+  Modal,
+  Select,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 
 import "../../App.css";
@@ -157,43 +166,27 @@ export default function Replications(props: Readonly<Props>) {
         _: unknown,
         record: {
           isActive: boolean;
-          isProvisioned: boolean;
           mode: ReplicationMode;
         },
       ) => {
-        const tags = [];
         if (record.mode === ReplicationMode.DISABLED) {
-          tags.push(
-            <Tag key="disabled" color="default">
-              Inactive
-            </Tag>,
-          );
+          return <Badge status="default" text="Inactive" />;
         } else if (record.isActive) {
-          tags.push(
-            <Tag key="reachable" color="success">
-              Target Reachable
-            </Tag>,
-          );
+          return <Badge status="success" text="Target Reachable" />;
         } else {
-          tags.push(
-            <Tag key="unreachable" color="error">
-              Target Unreachable
-            </Tag>,
-          );
+          return <Badge status="error" text="Target Unreachable" />;
         }
-        if (record.isProvisioned) {
-          tags.push(
-            <Tag key="provisioned" color="processing">
-              Provisioned
-            </Tag>,
-          );
-        }
-        return (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            {tags}
-          </div>
-        );
       },
+    },
+    {
+      title: "Provisioned",
+      key: "provisioned",
+      render: (_: unknown, record: { isProvisioned: boolean }) =>
+        record.isProvisioned ? (
+          <Tag color="processing">Yes</Tag>
+        ) : (
+          <Tag color="orange">No</Tag>
+        ),
     },
   ];
 

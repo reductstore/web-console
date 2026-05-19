@@ -3,7 +3,9 @@ import { Client, Token, TokenCreateRequest } from "reduct-js";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
+  Badge,
   Button,
+  Card,
   Checkbox,
   DatePicker,
   Descriptions,
@@ -16,8 +18,15 @@ import {
   SelectProps,
   Space,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
+import {
+  ArrowLeftOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import dayjs from "../../Helpers/dayjsConfig";
 import humanizeDuration from "humanize-duration";
 
@@ -48,12 +57,19 @@ export default function TokenDetail(props: Readonly<Props>) {
   const [ttl, setTtl] = useState<number | undefined>();
   const [expiresAt, setExpiresAt] = useState<number | undefined>();
   const [ipAllowlist, setIpAllowlist] = useState<string[]>([]);
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
 
   const [tokenError, setTokenError] = useState<string>();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const { client } = props;
@@ -155,46 +171,48 @@ export default function TokenDetail(props: Readonly<Props>) {
 
   const renderTokenDetails = () => {
     return [
-      <Typography.Title level={3}>Access Token</Typography.Title>,
-
-      <Input
-        name="name"
-        disabled={!isNew}
-        value={token.name}
-        onChange={(event) => setToken({ ...token, name: event.target.value })}
-      />,
-      <Checkbox
-        name="fullAccess"
-        disabled={!isNew}
-        checked={token.permissions?.fullAccess}
-        onChange={(event) =>
-          setPermissions({ fullAccess: event.target.checked })
-        }
-      >
-        Full Access
-      </Checkbox>,
-      <Space.Compact block orientation={"vertical"}>
-        Read Access:
-        <Select
-          id="ReadSelect"
-          disabled={!isNew}
-          mode="tags"
-          value={token.permissions?.read}
-          options={[...bucketOptions, { value: "*", label: "*" }]}
-          onChange={(value) => setPermissions({ read: value })}
+      isNew ? (
+        <Input
+          name="name"
+          value={token.name}
+          onChange={(event) => setToken({ ...token, name: event.target.value })}
         />
-      </Space.Compact>,
-      <Space.Compact block orientation={"vertical"}>
-        Write Access:
-        <Select
-          id="WriteSelect"
-          disabled={!isNew}
-          mode="tags"
-          value={token.permissions?.write}
-          options={[...bucketOptions, { value: "*", label: "*" }]}
-          onChange={(value) => setPermissions({ write: value })}
-        />
-      </Space.Compact>,
+      ) : null,
+      isNew ? (
+        <Checkbox
+          name="fullAccess"
+          checked={token.permissions?.fullAccess}
+          onChange={(event) =>
+            setPermissions({ fullAccess: event.target.checked })
+          }
+        >
+          Full Access
+        </Checkbox>
+      ) : null,
+      isNew ? (
+        <Space.Compact block orientation={"vertical"}>
+          Read Access:
+          <Select
+            id="ReadSelect"
+            mode="tags"
+            value={token.permissions?.read}
+            options={[...bucketOptions, { value: "*", label: "*" }]}
+            onChange={(value) => setPermissions({ read: value })}
+          />
+        </Space.Compact>
+      ) : null,
+      isNew ? (
+        <Space.Compact block orientation={"vertical"}>
+          Write Access:
+          <Select
+            id="WriteSelect"
+            mode="tags"
+            value={token.permissions?.write}
+            options={[...bucketOptions, { value: "*", label: "*" }]}
+            onChange={(value) => setPermissions({ write: value })}
+          />
+        </Space.Compact>
+      ) : null,
 
       isNew ? (
         <>
@@ -237,16 +255,23 @@ export default function TokenDetail(props: Readonly<Props>) {
         </>
       ) : !isNew ? (
         <Descriptions
-          column={1}
+          column={isSmallScreen ? 1 : 2}
           bordered
           size="small"
-          style={{ marginTop: "1em" }}
+          layout={isSmallScreen ? "vertical" : "horizontal"}
         >
-          <Descriptions.Item label="Status">
-            {token.isExpired ? (
-              <Tag color="error">Expired</Tag>
+          <Descriptions.Item label="Full Access">
+            {token.permissions?.fullAccess ? (
+              <Tag color="processing">Yes</Tag>
             ) : (
-              <Tag color="success">Active</Tag>
+              <Tag color="orange">No</Tag>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Provisioned">
+            {token.isProvisioned ? (
+              <Tag color="processing">Yes</Tag>
+            ) : (
+              <Tag color="orange">No</Tag>
             )}
           </Descriptions.Item>
           <Descriptions.Item label="Expires At">
@@ -262,49 +287,30 @@ export default function TokenDetail(props: Readonly<Props>) {
               ? dayjs(token.lastAccess).fromNow()
               : "—"}
           </Descriptions.Item>
-          <Descriptions.Item label="IP Allowlist">
+          <Descriptions.Item label="IP Allowlist" span="filled">
             {token.ipAllowlist && token.ipAllowlist.length > 0
               ? token.ipAllowlist.join(", ")
               : "—"}
           </Descriptions.Item>
+          <Descriptions.Item label="Read Access" span="filled">
+            {token.permissions?.read && token.permissions.read.length > 0
+              ? token.permissions.read.join(", ")
+              : "—"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Write Access" span="filled">
+            {token.permissions?.write && token.permissions.write.length > 0
+              ? token.permissions.write.join(", ")
+              : "—"}
+          </Descriptions.Item>
         </Descriptions>
       ) : null,
+    ];
+  };
 
-      <Space>
-        <Button onClick={() => navigate("/tokens")}>Back</Button>
-        {isNew ? (
-          <Button
-            className="CreateButton"
-            type={"primary"}
-            onClick={() => createToken()}
-          >
-            Create
-          </Button>
-        ) : (
-          <>
-            <Button
-              className="RotateButton"
-              type="primary"
-              disabled={
-                token.isProvisioned ||
-                (token.expiresAt !== undefined && token.expiresAt < Date.now())
-              }
-              onClick={() => rotateToken()}
-            >
-              Rotate
-            </Button>
-            <Button
-              className="RemoveButton"
-              danger
-              disabled={token.isProvisioned}
-              type="primary"
-              onClick={() => setConfirmRemove(true)}
-            >
-              Remove
-            </Button>
-          </>
-        )}
-
+  const renderModals = () => {
+    if (!token) return null;
+    return (
+      <>
         <Modal
           open={confirmRemove}
           closable={false}
@@ -398,17 +404,98 @@ export default function TokenDetail(props: Readonly<Props>) {
             />
           </Space>
         </Modal>
-      </Space>,
+      </>
+    );
+  };
+
+  const getCardActions = () => {
+    if (!token) return undefined;
+
+    if (isNew) {
+      return [
+        <Tooltip title="Back" key="back">
+          <ArrowLeftOutlined onClick={() => navigate("/tokens")} />
+        </Tooltip>,
+        <Tooltip title="Create" key="create">
+          <PlusOutlined
+            className="CreateButton"
+            onClick={() => createToken()}
+          />
+        </Tooltip>,
+      ];
+    }
+
+    return [
+      <Tooltip title="Back" key="back">
+        <ArrowLeftOutlined onClick={() => navigate("/tokens")} />
+      </Tooltip>,
+      token.isProvisioned ? (
+        <Tooltip title="Cannot rotate provisioned token" key="rotate">
+          <ReloadOutlined
+            className="RotateButton"
+            data-disabled="true"
+            style={{ color: "gray", cursor: "not-allowed" }}
+          />
+        </Tooltip>
+      ) : token.expiresAt !== undefined && token.expiresAt < Date.now() ? (
+        <Tooltip title="Cannot rotate expired token" key="rotate">
+          <ReloadOutlined
+            className="RotateButton"
+            data-disabled="true"
+            style={{ color: "gray", cursor: "not-allowed" }}
+          />
+        </Tooltip>
+      ) : (
+        <Tooltip title="Rotate" key="rotate">
+          <ReloadOutlined
+            className="RotateButton"
+            onClick={() => rotateToken()}
+          />
+        </Tooltip>
+      ),
+      token.isProvisioned ? (
+        <Tooltip title="Cannot remove provisioned token" key="delete">
+          <DeleteOutlined
+            className="RemoveButton"
+            data-disabled="true"
+            style={{ color: "gray", cursor: "not-allowed" }}
+          />
+        </Tooltip>
+      ) : (
+        <Tooltip title="Remove" key="delete">
+          <DeleteOutlined
+            className="RemoveButton"
+            style={{ color: "red" }}
+            onClick={() => setConfirmRemove(true)}
+          />
+        </Tooltip>
+      ),
     ];
   };
 
   return (
-    <Space
-      orientation={"vertical"}
-      size={"large"}
-      style={{ margin: "2em", width: "70%" }}
-    >
-      {token === undefined ? <div /> : renderTokenDetails()}
-    </Space>
+    <div style={{ padding: "2em", width: "100%" }}>
+      <Typography.Title level={3} style={{ marginBottom: "0.5em" }}>
+        Access Token
+      </Typography.Title>
+      <Card
+        title={!isNew && token ? token.name : undefined}
+        extra={
+          !isNew && token ? (
+            token.isExpired ? (
+              <Badge status="error" text="Expired" />
+            ) : (
+              <Badge status="success" text="Active" />
+            )
+          ) : undefined
+        }
+        actions={token ? getCardActions() : undefined}
+      >
+        <Space orientation="vertical" size={22} style={{ width: "100%" }}>
+          {token === undefined ? <div /> : renderTokenDetails()}
+        </Space>
+        {renderModals()}
+      </Card>
+    </div>
   );
 }

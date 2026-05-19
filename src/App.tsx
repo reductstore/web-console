@@ -9,6 +9,7 @@ import { IBackendAPI } from "./BackendAPI";
 import { AppRoutes } from "./Components/Routes";
 import {
   BorderOuterOutlined,
+  ClockCircleOutlined,
   DatabaseOutlined,
   LineChartOutlined,
   LockOutlined,
@@ -123,6 +124,12 @@ export default function App(props: Readonly<Props>) {
             icon: <ShareAltOutlined />,
             label: "Replications",
             onClick: () => navigate("/replications"),
+          },
+          {
+            key: "lifecycles",
+            icon: <ClockCircleOutlined />,
+            label: "Lifecycles",
+            onClick: () => navigate("/lifecycles"),
           },
           {
             key: "security",

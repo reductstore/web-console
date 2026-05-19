@@ -9,6 +9,7 @@ import {
   waitFor,
   fireEvent,
   act,
+  within,
 } from "@testing-library/react";
 import TokenDetail from "./TokenDetail";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -61,35 +62,18 @@ describe("TokenDetail", () => {
   it("should show token details", async () => {
     const { container } = renderTokenDetail();
 
-    const input = await waitFor(() => {
-      const el = container.querySelector('input[name="name"]');
-      expect(el).not.toBeNull();
-      return el as HTMLInputElement;
+    await waitFor(() => {
+      expect(screen.getByText("Access Token")).toBeInTheDocument();
+      expect(screen.getByText("token-1")).toBeInTheDocument();
     });
-    expect(input.value).toBe("token-1");
-    expect(input.disabled).toBe(true);
-
-    const fullAccess = container.querySelector(
-      'input[name="fullAccess"]',
-    ) as HTMLInputElement;
-    expect(fullAccess.checked).toBe(true);
-    expect(fullAccess.disabled).toBe(true);
-
-    const readSelect = container.querySelector("#ReadSelect") as HTMLElement;
-    expect(readSelect).not.toBeNull();
-    expect(
-      readSelect
-        .closest(".ant-select")
-        ?.classList.contains("ant-select-disabled"),
-    ).toBe(true);
-
-    const writeSelect = container.querySelector("#WriteSelect") as HTMLElement;
-    expect(writeSelect).not.toBeNull();
-    expect(
-      writeSelect
-        .closest(".ant-select")
-        ?.classList.contains("ant-select-disabled"),
-    ).toBe(true);
+    const input = container.querySelector('input[name="name"]');
+    expect(input).toBeNull();
+    expect(screen.getByText("Full Access")).toBeInTheDocument();
+    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.getByText("Read Access")).toBeInTheDocument();
+    expect(screen.getByText("bucket-1")).toBeInTheDocument();
+    expect(screen.getByText("Write Access")).toBeInTheDocument();
+    expect(screen.getByText("bucket-2")).toBeInTheDocument();
   });
 
   it("should show error", async () => {
@@ -106,7 +90,7 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     const removeButton = await waitFor(() => {
-      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      const btn = container.querySelector(".RemoveButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
@@ -115,8 +99,11 @@ describe("TokenDetail", () => {
       fireEvent.click(removeButton);
     });
 
-    expect(screen.getByText(/For confirmation type/)).toBeInTheDocument();
-    expect(screen.getByText("token-1")).toBeInTheDocument();
+    const modal = screen.getByTestId("remove-token-modal");
+    expect(
+      within(modal).getByText(/For confirmation type/),
+    ).toBeInTheDocument();
+    expect(within(modal).getByText("token-1")).toBeInTheDocument();
   });
 
   it("should remove a token", async () => {
@@ -126,7 +113,7 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     const removeButton = await waitFor(() => {
-      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      const btn = container.querySelector(".RemoveButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
@@ -161,11 +148,11 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     const removeButton = await waitFor(() => {
-      const btn = container.querySelector(".RemoveButton") as HTMLButtonElement;
+      const btn = container.querySelector(".RemoveButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
-    expect(removeButton.disabled).toBeTruthy();
+    expect(removeButton.dataset.disabled).toBe("true");
   });
 
   it("should disable rotate button if provisioned", async () => {
@@ -177,11 +164,11 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     const rotateButton = await waitFor(() => {
-      const btn = container.querySelector(".RotateButton") as HTMLButtonElement;
+      const btn = container.querySelector(".RotateButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
-    expect(rotateButton.disabled).toBeTruthy();
+    expect(rotateButton.dataset.disabled).toBe("true");
   });
 
   it("should show token metadata in view mode", async () => {
@@ -190,6 +177,8 @@ describe("TokenDetail", () => {
     await waitFor(() => {
       expect(screen.getByText("Active")).toBeInTheDocument();
     });
+    expect(screen.getByText("Provisioned")).toBeInTheDocument();
+    expect(screen.getByText("No")).toBeInTheDocument();
     expect(screen.getByText("1 hour")).toBeInTheDocument();
     expect(screen.getByText("10.0.0.0/8")).toBeInTheDocument();
   });
@@ -221,7 +210,7 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     const rotateButton = await waitFor(() => {
-      const btn = container.querySelector(".RotateButton") as HTMLButtonElement;
+      const btn = container.querySelector(".RotateButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
@@ -259,7 +248,7 @@ describe("TokenDetail", () => {
     );
 
     const createButton = await waitFor(() => {
-      const btn = container.querySelector(".CreateButton") as HTMLButtonElement;
+      const btn = container.querySelector(".CreateButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });
@@ -300,7 +289,7 @@ describe("TokenDetail", () => {
     );
 
     const createButton = await waitFor(() => {
-      const btn = container.querySelector(".CreateButton") as HTMLButtonElement;
+      const btn = container.querySelector(".CreateButton") as HTMLElement;
       expect(btn).not.toBeNull();
       return btn;
     });

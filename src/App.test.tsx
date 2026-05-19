@@ -58,6 +58,11 @@ describe("App", () => {
     expect(screen.getByText("Replications")).toBeInTheDocument();
   });
 
+  it("should have a link to lifecycle panel", async () => {
+    await renderApp({ fullAccess: true });
+    expect(screen.getByText("Lifecycles")).toBeInTheDocument();
+  });
+
   it("should have a link to security panel", async () => {
     await renderApp({ fullAccess: true });
     expect(screen.getByText("Security")).toBeInTheDocument();
@@ -71,6 +76,11 @@ describe("App", () => {
   it("should hide replications panel", async () => {
     await renderApp({ fullAccess: false });
     expect(screen.queryByText("Replications")).not.toBeInTheDocument();
+  });
+
+  it("should hide lifecycles panel", async () => {
+    await renderApp({ fullAccess: false });
+    expect(screen.queryByText("Lifecycles")).not.toBeInTheDocument();
   });
 
   it("should show help menu", async () => {
