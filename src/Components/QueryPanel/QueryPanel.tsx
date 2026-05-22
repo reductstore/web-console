@@ -63,11 +63,8 @@ import SaveQueryModal from "../SavedQueries/SaveQueryModal";
 import QuerySelector from "../SavedQueries/QuerySelector";
 import { SavedQuery, useQueryStore } from "../../stores/queryStore";
 import UploadFileForm from "../Entry/UploadFileForm";
-import {
-  QueryStatusLabel,
-  QueryProgressBar,
-  QueryStatus,
-} from "./QueryProgress";
+import { QueryStatusLabel, QueryProgressBar } from "./QueryProgress";
+import { useQueryProgress } from "../../hooks/useQueryProgress";
 import "../../Views/BucketPanel/EntryDetail.css";
 
 interface IndexedReadableRecord {
@@ -179,8 +176,7 @@ export default function QueryPanel({
   );
   const [showUnix, setShowUnix] = useState(false);
   const fetchCtrlRef = useRef<AbortController | null>(null);
-  const [queryStatus, setQueryStatus] = useState<QueryStatus>("idle");
-  const [queryPercent, setQueryPercent] = useState(0);
+  const progress = useQueryProgress();
 
   const defaultRange = useMemo(() => getDefaultTimeRange(), []);
   const [timeRange, setTimeRangeState] = useState(() => ({
@@ -473,8 +469,6 @@ export default function QueryPanel({
       cancelDelayRef.current = setTimeout(() => setShowCancel(true), 500);
       setFetchError("");
       setRecords([]);
-      setQueryStatus("fetching");
-      setQueryPercent(0);
 
       try {
         const bucketInstance = await client.getBucket(bucketName);
@@ -498,7 +492,7 @@ export default function QueryPanel({
           if (!conditionResult.success) {
             setFetchError(conditionResult.error || "Invalid condition");
             setIsLoading(false);
-            setQueryStatus("idle");
+            progress.reset();
             return;
           }
 
@@ -517,33 +511,7 @@ export default function QueryPanel({
           options,
         });
 
-        // Compute time window for progress estimation
-        const selectedInfo = bucketEntryInfo.filter((e) =>
-          selectedEntries.includes(e.name),
-        );
-        let totalSpan = BigInt(0);
-        const entryWindows: Map<string, { start: bigint; stop: bigint }> =
-          new Map();
-        for (const entry of selectedInfo) {
-          if (entry.recordCount === BigInt(0)) continue;
-          const wStart =
-            start !== undefined && start > entry.oldestRecord
-              ? start
-              : entry.oldestRecord;
-          const wStop =
-            end !== undefined && end < entry.latestRecord
-              ? end
-              : entry.latestRecord;
-          if (wStart <= wStop) {
-            entryWindows.set(entry.name, { start: wStart, stop: wStop });
-            totalSpan += wStop - wStart + BigInt(1);
-          }
-        }
-        if (totalSpan === BigInt(0)) totalSpan = BigInt(1);
-
-        const coveredByEntry = new Map<string, bigint>();
-        let coveredTotal = BigInt(0);
-        let lastReportedPct = -1;
+        progress.start(bucketEntryInfo, selectedEntries, start, end);
 
         let batch: IndexedReadableRecord[] = [];
         let count = 0;
@@ -557,7 +525,7 @@ export default function QueryPanel({
             if (batch.length) {
               setRecords((prev) => [...prev, ...batch]);
             }
-            setQueryStatus("cancelled");
+            progress.cancel();
             return;
           }
           batch.push({
@@ -566,34 +534,10 @@ export default function QueryPanel({
           });
           count++;
 
-          // Update progress estimation based on timestamp coverage
           const entryName =
             record.entry ||
             (selectedEntries.length === 1 ? selectedEntries[0] : "");
-          const window =
-            entryWindows.get(entryName) ?? entryWindows.values().next().value;
-          if (window) {
-            const ts = record.time;
-            const covered =
-              ts < window.start
-                ? BigInt(0)
-                : (ts < window.stop ? ts : window.stop) -
-                  window.start +
-                  BigInt(1);
-            const prev = coveredByEntry.get(entryName) ?? BigInt(0);
-            if (covered > prev) {
-              coveredTotal += covered - prev;
-              coveredByEntry.set(entryName, covered);
-            }
-            const pct = Math.min(
-              Number((coveredTotal * BigInt(100)) / totalSpan),
-              99,
-            );
-            if (pct !== lastReportedPct) {
-              lastReportedPct = pct;
-              setQueryPercent(pct);
-            }
-          }
+          progress.update(entryName, record.time);
 
           if (batch.length >= 20) {
             const flushed = batch;
@@ -605,21 +549,20 @@ export default function QueryPanel({
         if (batch.length) {
           if (abortSignal.aborted) {
             setRecords((prev) => [...prev, ...batch]);
-            setQueryStatus("cancelled");
+            progress.cancel();
             return;
           }
           setRecords((prev) => [...prev, ...batch]);
         }
 
-        setQueryPercent(100);
-        setQueryStatus("done");
+        progress.done();
       } catch (err) {
         if (abortSignal.aborted) {
-          setQueryStatus("cancelled");
+          progress.cancel();
           return;
         }
 
-        setQueryStatus("idle");
+        progress.reset();
         if (err instanceof APIError && err.message) {
           setFetchError(err.message);
         } else if (err instanceof SyntaxError) {
@@ -1366,19 +1309,24 @@ export default function QueryPanel({
                       : {}),
                   }}
                 >
-                  {showCancel ? "Cancel" : "Fetch Records"}
+                  {showCancel ? "Stop" : "Fetch Records"}
                 </Button>
                 <QueryStatusLabel
-                  status={queryStatus}
+                  status={progress.status}
                   recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
                 />
               </div>
-              <QueryProgressBar status={queryStatus} percent={queryPercent} />
+              <QueryProgressBar
+                status={progress.status}
+                percent={progress.percent}
+              />
             </div>
           </div>
         </div>
         {records.length > 0 &&
-          (queryStatus === "done" || queryStatus === "cancelled") && (
+          (progress.status === "done" || progress.status === "stopped") && (
             <div className="chartContainer">
               <DataVolumeChart
                 records={records.map((r) => r.record)}
@@ -1394,7 +1342,7 @@ export default function QueryPanel({
           )}
       </div>
 
-      {(queryStatus === "done" || queryStatus === "cancelled") && (
+      {(progress.status === "done" || progress.status === "stopped") && (
         <ScrollableTable
           scroll={{ x: "max-content" }}
           size="small"

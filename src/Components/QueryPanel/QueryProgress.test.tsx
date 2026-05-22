@@ -13,13 +13,6 @@ describe("QueryStatusLabel", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("returns null for error status", () => {
-    const { container } = render(
-      <QueryStatusLabel status="error" recordCount={0} />,
-    );
-    expect(container.innerHTML).toBe("");
-  });
-
   it("shows Fetching label when fetching", () => {
     render(<QueryStatusLabel status="fetching" recordCount={5} />);
     expect(screen.getByText("Fetching")).toBeTruthy();
@@ -32,9 +25,9 @@ describe("QueryStatusLabel", () => {
     expect(screen.getByText("· 10 records")).toBeTruthy();
   });
 
-  it("shows Cancelled label when cancelled", () => {
-    render(<QueryStatusLabel status="cancelled" recordCount={3} />);
-    expect(screen.getByText("Cancelled")).toBeTruthy();
+  it("shows Stopped label when stopped", () => {
+    render(<QueryStatusLabel status="stopped" recordCount={3} />);
+    expect(screen.getByText("Stopped")).toBeTruthy();
     expect(screen.getByText("· 3 records")).toBeTruthy();
   });
 
@@ -58,13 +51,6 @@ describe("QueryProgressBar", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("returns null for error status", () => {
-    const { container } = render(
-      <QueryProgressBar status="error" percent={50} />,
-    );
-    expect(container.innerHTML).toBe("");
-  });
-
   it("renders progress bar when fetching", () => {
     const { container } = render(
       <QueryProgressBar status="fetching" percent={42} />,
@@ -79,9 +65,9 @@ describe("QueryProgressBar", () => {
     expect(container.querySelector(".ant-progress")).toBeTruthy();
   });
 
-  it("renders progress bar when cancelled", () => {
+  it("renders progress bar when stopped", () => {
     const { container } = render(
-      <QueryProgressBar status="cancelled" percent={60} />,
+      <QueryProgressBar status="stopped" percent={60} />,
     );
     expect(container.querySelector(".ant-progress")).toBeTruthy();
   });

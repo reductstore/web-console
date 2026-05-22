@@ -5,34 +5,35 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { Progress, theme } from "antd";
+import type { QueryStatus } from "../../hooks/useQueryProgress";
 
-export type QueryStatus = "idle" | "fetching" | "done" | "cancelled" | "error";
+export type { QueryStatus };
 
 interface QueryStatusLabelProps {
   status: QueryStatus;
   recordCount: number;
+  elapsed?: string | null;
+  eta?: string | null;
 }
 
 export function QueryStatusLabel({
   status,
   recordCount,
+  elapsed,
+  eta,
 }: Readonly<QueryStatusLabelProps>) {
   const { token } = theme.useToken();
   const color = token.colorPrimary;
 
-  if (status === "idle" || status === "error") return null;
+  if (status === "idle") return null;
 
   const label =
-    status === "done"
-      ? "Done"
-      : status === "cancelled"
-        ? "Cancelled"
-        : "Fetching";
+    status === "done" ? "Done" : status === "stopped" ? "Stopped" : "Fetching";
 
   const icon =
     status === "done" ? (
       <CheckCircleOutlined />
-    ) : status === "cancelled" ? (
+    ) : status === "stopped" ? (
       <StopOutlined />
     ) : (
       <CloudDownloadOutlined />
@@ -50,9 +51,15 @@ export function QueryStatusLabel({
       }}
     >
       {icon} {label}
+      {elapsed && (
+        <span style={{ color: token.colorTextSecondary }}>· {elapsed}</span>
+      )}
+      {eta && status === "fetching" && (
+        <span style={{ color: token.colorTextSecondary }}>· ETA {eta}</span>
+      )}
       {recordCount > 0 && (
-        <span style={{ color: "rgba(0, 0, 0, 0.45)" }}>
-          · {recordCount} record{recordCount !== 1 ? "s" : ""}
+        <span style={{ color: token.colorTextSecondary }}>
+          · {recordCount.toLocaleString()} record{recordCount !== 1 ? "s" : ""}
         </span>
       )}
     </span>
@@ -71,10 +78,10 @@ export function QueryProgressBar({
   const { token } = theme.useToken();
   const color = token.colorPrimary;
 
-  if (status === "idle" || status === "error") return null;
+  if (status === "idle") return null;
 
   return (
-    <div style={{ width: "100%", paddingTop: 5 }}>
+    <div style={{ width: "100%", paddingTop: 10, paddingBottom: 5 }}>
       <Progress
         percent={Math.min(Math.round(percent), 100)}
         strokeColor={color}
