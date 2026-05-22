@@ -5,7 +5,6 @@ interface UseBulkDeleteOptions {
   onStart?: (keys: string[]) => void;
   onSuccess?: () => void;
   onError?: (failures: string[]) => void;
-  resourceType: string;
   delay?: number;
 }
 
@@ -22,7 +21,6 @@ export function useBulkDelete({
   onStart,
   onSuccess,
   onError,
-  resourceType,
   delay = 300,
 }: UseBulkDeleteOptions): UseBulkDeleteResult {
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -65,7 +63,7 @@ export function useBulkDelete({
 
       onSuccess?.();
     },
-    [onDelete, onStart, onSuccess, onError, resourceType, delay],
+    [onDelete, onStart, onSuccess, onError, delay],
   );
 
   return {
