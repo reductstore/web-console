@@ -40,7 +40,7 @@ describe("BucketList", () => {
   it("should print table with information about buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -64,9 +64,9 @@ describe("BucketList", () => {
       </MemoryRouter>,
     );
     await waitFor(() =>
-      expect(container.querySelector('[title="Add"]')).not.toBeNull(),
+      expect(container.querySelector('[aria-label="Add"]')).not.toBeNull(),
     );
-    const button = container.querySelector('[title="Add"]');
+    const button = container.querySelector('[aria-label="Add"]');
     expect(button).not.toBeNull();
 
     // TODO: How to test modal?
@@ -83,14 +83,14 @@ describe("BucketList", () => {
         container.querySelectorAll(".ant-table-row").length,
       ).toBeGreaterThan(0),
     );
-    const button = container.querySelector('[title="Add"]');
+    const button = container.querySelector('[aria-label="Add"]');
     expect(button).toBeNull();
   });
 
   it("should display rename and remove icons for non-provisioned buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -111,7 +111,7 @@ describe("BucketList", () => {
   it("should not display rename and remove icons for provisioned buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -136,7 +136,7 @@ describe("BucketList", () => {
   it("should open rename modal on rename icon click", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -163,7 +163,7 @@ describe("BucketList", () => {
   it("should open remove confirmation modal on remove icon click", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -202,7 +202,7 @@ describe("BucketList", () => {
 
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
 
