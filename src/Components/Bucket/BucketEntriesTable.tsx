@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import type { TableProps } from "antd";
 import ScrollableTable from "../ScrollableTable";
 
 export interface EntryTableRow {
@@ -19,6 +20,7 @@ interface Props<T extends EntryTableRow> {
   expandCollapseSignal?: number;
   expandCollapseTarget?: "expand" | "collapse";
   onExpandedStatsChange?: (openCount: number, totalCount: number) => void;
+  rowSelection?: TableProps<T>["rowSelection"];
 }
 
 const collectExpandableKeys = <T extends EntryTableRow>(
@@ -116,10 +118,11 @@ export default function BucketEntriesTable<T extends EntryTableRow>(
     <ScrollableTable
       scroll={{ x: "max-content" }}
       className="entriesTable"
-      columns={props.columns as any[]}
+      columns={props.columns}
       dataSource={filteredRows}
       loading={props.loading}
       rowKey="key"
+      rowSelection={props.rowSelection}
       expandable={{
         expandedRowKeys,
         onExpandedRowsChange: (keys: readonly React.Key[]) => {
