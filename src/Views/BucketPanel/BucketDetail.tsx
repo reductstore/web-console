@@ -351,7 +351,7 @@ export default function BucketDetail(props: Readonly<Props>) {
     },
     onError: (failures) => {
       message.error(`${failures.length} entry/entries failed to remove`);
-    }
+    },
   });
 
   const handleBulkDeleteEntries = () => {

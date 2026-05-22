@@ -60,7 +60,7 @@ export default function TokenList(props: Readonly<Props>) {
     },
     onError: (failures) => {
       message.error(`${failures.length} token(s) failed to remove`);
-    }
+    },
   });
 
   const columns = [

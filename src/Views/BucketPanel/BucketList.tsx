@@ -123,7 +123,7 @@ export default function BucketList(props: Readonly<Props>) {
     },
     onError: (failures) => {
       message.error(`${failures.length} bucket(s) failed to remove`);
-    }
+    },
   });
 
   const removeBucket = async (name: string) => {
