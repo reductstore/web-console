@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Multi-select and bulk delete for buckets, entries, and tokens, [PR-209](https://github.com/reductstore/web-console/pull/209)
+
 ### Changed
 
 - Pin Docker GitHub Actions to latest stable commit SHAs in CI workflows, [PR-205](https://github.com/reductstore/web-console/pull/205)
