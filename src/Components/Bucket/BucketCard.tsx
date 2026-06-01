@@ -141,7 +141,7 @@ export default function BucketCard(props: Readonly<Props>) {
         bucketInfo.isProvisioned || isDeleting ? (
           <Space size="small">
             {bucketInfo.isProvisioned ? (
-              <Tag color="processing">Provisioned</Tag>
+              <Tag color="default">Provisioned</Tag>
             ) : null}
             {isDeleting ? (
               <Tag color="processing" icon={<LoadingOutlined spin />}>

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Query progress bar with time-window-based percentage estimation, [PR-208](https://github.com/reductstore/web-console/pull/208)
+- Multi-select and bulk delete for buckets, entries, and tokens, [PR-209](https://github.com/reductstore/web-console/pull/209)
 
 ### Changed
 

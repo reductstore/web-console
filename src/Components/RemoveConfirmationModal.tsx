@@ -8,6 +8,7 @@ interface RemoveConfirmationModalProps {
   resourceType: string;
   open: boolean;
   errorMessage?: string | null;
+  warning?: string | null;
 }
 
 export default function RemoveConfirmationModal({
@@ -17,6 +18,7 @@ export default function RemoveConfirmationModal({
   resourceType,
   open,
   errorMessage,
+  warning,
 }: RemoveConfirmationModalProps) {
   const [confirmName, setConfirmName] = useState(false);
 
@@ -47,6 +49,7 @@ export default function RemoveConfirmationModal({
       ]}
     >
       <Flex vertical gap="small">
+        {warning && <Alert title={warning} type="warning" showIcon />}
         {errorMessage && (
           <Alert
             title={errorMessage}

@@ -78,7 +78,7 @@ describe("TokenList", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTitle("Add")).toBeInTheDocument();
+      expect(screen.getByLabelText("Add")).toBeInTheDocument();
     });
   });
 

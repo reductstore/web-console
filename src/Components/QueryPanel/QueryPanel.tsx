@@ -1005,6 +1005,7 @@ export default function QueryPanel({
     <>
       <Modal
         title="Upload File"
+        centered
         open={isUploadModalVisible}
         onCancel={() => setIsUploadModalVisible(false)}
         footer={null}

@@ -148,31 +148,27 @@ export default function ReplicationCard(props: Readonly<Props>) {
 
   const getStatusTags = () => {
     const tags = [];
-    if (info.mode === ReplicationMode.DISABLED) {
-      tags.push(
-        <Tag key="disabled" color="default">
-          Inactive
-        </Tag>,
-      );
-    } else if (info.isActive) {
-      tags.push(
-        <Tag key="reachable" color="success">
-          Target Reachable
-        </Tag>,
-      );
-    } else {
-      tags.push(
-        <Tag key="unreachable" color="error">
-          Target Unreachable
-        </Tag>,
-      );
-    }
     if (info.isProvisioned) {
       tags.push(
-        <Tag key="provisioned" color="processing">
+        <Tag key="provisioned" color="default">
           Provisioned
         </Tag>,
       );
+    }
+    if (info.mode !== ReplicationMode.DISABLED) {
+      if (info.isActive) {
+        tags.push(
+          <Tag key="reachable" color="success">
+            Target Reachable
+          </Tag>,
+        );
+      } else {
+        tags.push(
+          <Tag key="unreachable" color="error">
+            Target Unreachable
+          </Tag>,
+        );
+      }
     }
     return tags;
   };
@@ -224,6 +220,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
         title="Settings"
         open={changeSettings}
         footer={null}
+        centered
         onCancel={() => setChangeSettings(false)}
         data-testid="settings-modal"
       >
