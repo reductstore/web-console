@@ -271,7 +271,7 @@ describe("EntryDetail", () => {
   });
 
   describe("Query Cancellation", () => {
-    it("should show Cancel button after delay during long query", async () => {
+    it("should show Stop button after delay during long query", async () => {
       let queryResolve: () => void;
       const slowQueryPromise = new Promise<void>((resolve) => {
         queryResolve = resolve;
@@ -312,11 +312,11 @@ describe("EntryDetail", () => {
         vi.advanceTimersByTime(600);
       });
 
-      // Now button should show "Cancel"
+      // Now button should show "Stop"
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Cancel");
+      expect(fetchButton.textContent).toBe("Stop");
 
       await act(async () => {
         queryResolve!();
@@ -324,7 +324,7 @@ describe("EntryDetail", () => {
       });
     });
 
-    it("should abort query when Cancel is clicked", async () => {
+    it("should abort query when Stop is clicked", async () => {
       bucket.query = vi.fn().mockImplementation(() => ({
         async *[Symbol.asyncIterator]() {
           for (const record of mockRecords) {
@@ -353,7 +353,7 @@ describe("EntryDetail", () => {
         vi.advanceTimersByTime(100);
       });
 
-      // Advance past delay to show Cancel
+      // Advance past delay to show Stop
       await act(async () => {
         vi.advanceTimersByTime(600);
       });
@@ -361,9 +361,9 @@ describe("EntryDetail", () => {
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Cancel");
+      expect(fetchButton.textContent).toBe("Stop");
 
-      // Clicking Cancel should abort
+      // Clicking Stop should abort
       await act(async () => {
         fireEvent.click(fetchButton);
         vi.runAllTimers();
