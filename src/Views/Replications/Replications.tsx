@@ -327,25 +327,27 @@ export default function Replications(props: Readonly<Props>) {
         ];
         return (
           <Flex gap="middle" align="center">
-            <Dropdown
-              menu={{
-                items: modeMenuItems,
-                onClick: ({ key }) =>
-                  onModeChange(record.name, key as ReplicationMode),
-              }}
-              trigger={["click"]}
-              disabled={changingMode !== null}
-            >
-              <span
-                style={{
-                  cursor: changingMode !== null ? "not-allowed" : "pointer",
-                  fontSize: "16px",
+            <Tooltip title="Change mode">
+              <Dropdown
+                menu={{
+                  items: modeMenuItems,
+                  onClick: ({ key }) =>
+                    onModeChange(record.name, key as ReplicationMode),
                 }}
-                title="Change mode"
+                trigger={["click"]}
+                disabled={changingMode !== null}
               >
-                {getModeIcon(record.mode)}
-              </span>
-            </Dropdown>
+                <span
+                  style={{
+                    cursor: changingMode !== null ? "not-allowed" : "pointer",
+                    fontSize: "16px",
+                  }}
+                  title="Change mode"
+                >
+                  {getModeIcon(record.mode)}
+                </span>
+              </Dropdown>
+            </Tooltip>
             <ActionIcon
               icon={<SettingOutlined style={{ fontSize: "16px" }} />}
               onClick={() => {
