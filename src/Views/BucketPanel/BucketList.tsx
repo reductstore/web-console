@@ -17,13 +17,13 @@ import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import { Link } from "react-router-dom";
 import {
   PlusOutlined,
-  EditOutlined,
+  SettingOutlined,
   DeleteOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import BucketSettingsForm from "../../Components/Bucket/BucketSettingsForm";
-import RenameModal from "../../Components/RenameModal";
 import ScrollableTable from "../../Components/ScrollableTable";
+import ActionIcon from "../../Components/ActionIcon";
 import { usePaginationStore } from "../../stores/paginationStore";
 import { useSelectionMode } from "../../hooks/useSelectionMode";
 import { useBulkDelete } from "../../hooks/useBulkDelete";
@@ -42,17 +42,15 @@ export default function BucketList(props: Readonly<Props>) {
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [bucketToRemove, setBucketToRemove] = useState<string>("");
-  const [bucketToRename, setBucketToRename] = useState<string>("");
+  const [bucketToEdit, setBucketToEdit] = useState<string>("");
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [renameError, setRenameError] = useState<string | null>(null);
   const [creatingBucket, setCreatingBucket] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   const deletionTooltip = "Deletion in progress. Action disabled.";
-  const disabledActionStyle = { color: "#bfbfbf", cursor: "not-allowed" };
 
   const paginationStorageKey = "bucket-list-pagination";
   const { setPageSize, getPageSize } = usePaginationStore();
@@ -155,32 +153,9 @@ export default function BucketList(props: Readonly<Props>) {
     setIsRemoveModalOpen(true);
   };
 
-  const renameBucket = async (name: string) => {
-    if (name.trim() === "") {
-      setRenameError("Name cannot be empty.");
-      return;
-    }
-    try {
-      const { client } = props;
-      const bucket = await client.getBucket(bucketToRename);
-      if (bucket.getName() === name) {
-        setRenameError("The new name must be different from the current name.");
-        return;
-      }
-      await bucket.rename(name);
-      getBuckets();
-      setRenameError(null);
-      setIsRenameModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      if (err instanceof APIError && err.message) setRenameError(err.message);
-      else setRenameError("Failed to rename bucket.");
-    }
-  };
-
-  const handleOpenRenameModal = (bucketName: string) => {
-    setBucketToRename(bucketName);
-    setIsRenameModalOpen(true);
+  const handleOpenSettingsModal = (bucketName: string) => {
+    setBucketToEdit(bucketName);
+    setIsSettingsModalOpen(true);
   };
 
   useEffect(() => {
@@ -191,10 +166,10 @@ export default function BucketList(props: Readonly<Props>) {
 
   const data = buckets.map((bucket) => {
     const printIsoDate = (timestamp: bigint) => {
-      if (bucket.entryCount === 0n) return "---";
+      if (bucket.entryCount === 0n) return "—";
       const ms = Number(timestamp / 1000n);
       const date = new Date(ms);
-      return isNaN(date.getTime()) ? "---" : date.toISOString();
+      return isNaN(date.getTime()) ? "—" : date.toISOString();
     };
     return {
       name: bucket.name,
@@ -202,7 +177,7 @@ export default function BucketList(props: Readonly<Props>) {
       actions: bucket.isProvisioned,
       entryCount: bucket.entryCount.toString(),
       size: prettierBytes(Number(bucket.size)),
-      history: bucket.entryCount !== 0n ? getHistory(bucket) : "---",
+      history: bucket.entryCount !== 0n ? getHistory(bucket) : "—",
       oldestRecord: printIsoDate(bucket.oldestRecord),
       latestRecord: printIsoDate(bucket.latestRecord),
       status: bucket.status,
@@ -215,7 +190,10 @@ export default function BucketList(props: Readonly<Props>) {
       dataIndex: "name",
       key: "name",
       fixed: "left" as const,
-      render: (name: string, record: { status?: Status }) => {
+      render: (
+        name: string,
+        record: { status?: Status; provisioned?: boolean },
+      ) => {
         const isDeleting = record.status === Status.DELETING;
         return (
           <span>
@@ -233,6 +211,11 @@ export default function BucketList(props: Readonly<Props>) {
                 style={{ marginLeft: 8 }}
               >
                 Deleting
+              </Tag>
+            ) : null}
+            {record.provisioned && !isDeleting ? (
+              <Tag color="default" style={{ marginLeft: 8 }}>
+                Provisioned
               </Tag>
             ) : null}
           </span>
@@ -270,55 +253,47 @@ export default function BucketList(props: Readonly<Props>) {
               const isDeleting = record.status === Status.DELETING;
               if (provisioned) {
                 return (
-                  <Tooltip title="Provisioned buckets cannot be renamed or removed.">
-                    <Tag key={`provisioned-${record.name}`} color="processing">
-                      Provisioned
-                    </Tag>
-                  </Tooltip>
+                  <Flex gap="middle">
+                    <ActionIcon
+                      icon={<SettingOutlined style={{ fontSize: "16px" }} />}
+                      onClick={() => handleOpenSettingsModal(record.name)}
+                      tooltip="Settings"
+                      showTooltipWhenEnabled
+                    />
+                    <ActionIcon
+                      icon={<DeleteOutlined style={{ fontSize: "16px" }} />}
+                      disabled
+                      tooltip="Provisioned buckets cannot be removed"
+                      showTooltipWhenEnabled
+                    />
+                  </Flex>
                 );
               } else {
                 return (
                   <Flex gap="middle">
                     {!record.provisioned && (
-                      <>
-                        {isDeleting ? (
-                          <Tooltip title={deletionTooltip}>
-                            <span>
-                              <EditOutlined
-                                key={`rename-${record.name}`}
-                                title="Rename"
-                                style={disabledActionStyle}
-                              />
-                            </span>
-                          </Tooltip>
-                        ) : (
-                          <EditOutlined
-                            key={`rename-${record.name}`}
-                            title="Rename"
-                            onClick={() => handleOpenRenameModal(record.name)}
-                          />
-                        )}
-                      </>
-                    )}
-                    {isDeleting ? (
-                      <Tooltip title={deletionTooltip}>
-                        <span>
-                          <DeleteOutlined
-                            key={`remove-${record.name}`}
-                            title="Remove"
-                            className="removeButton"
-                            style={disabledActionStyle}
-                          />
-                        </span>
-                      </Tooltip>
-                    ) : (
-                      <DeleteOutlined
-                        key={`remove-${record.name}`}
-                        title="Remove"
-                        className="removeButton"
-                        onClick={() => handleOpenRemoveModal(record.name)}
+                      <ActionIcon
+                        icon={<SettingOutlined style={{ fontSize: "16px" }} />}
+                        onClick={() => handleOpenSettingsModal(record.name)}
+                        disabled={isDeleting}
+                        tooltip={isDeleting ? deletionTooltip : "Settings"}
+                        showTooltipWhenEnabled
                       />
                     )}
+                    <ActionIcon
+                      icon={
+                        <DeleteOutlined
+                          style={{
+                            fontSize: "16px",
+                            color: isDeleting ? undefined : "#ff4d4f",
+                          }}
+                        />
+                      }
+                      onClick={() => handleOpenRemoveModal(record.name)}
+                      disabled={isDeleting}
+                      tooltip={isDeleting ? deletionTooltip : "Remove bucket"}
+                      showTooltipWhenEnabled
+                    />
                   </Flex>
                 );
               }
@@ -403,17 +378,23 @@ export default function BucketList(props: Readonly<Props>) {
         open={isRemoveModalOpen}
         errorMessage={removeError}
       />
-      <RenameModal
-        name={bucketToRename}
-        onRename={(newName) => renameBucket(newName)}
-        onCancel={() => {
-          setIsRenameModalOpen(false);
-          setRenameError(null);
-        }}
-        resourceType="bucket"
-        open={isRenameModalOpen}
-        errorMessage={renameError}
-      />
+      <Modal
+        title="Settings"
+        open={isSettingsModalOpen}
+        footer={null}
+        onCancel={() => setIsSettingsModalOpen(false)}
+      >
+        <BucketSettingsForm
+          client={props.client}
+          key={bucketToEdit}
+          bucketName={bucketToEdit}
+          readOnly={buckets.find((b) => b.name === bucketToEdit)?.isProvisioned}
+          onCreated={() => {
+            setIsSettingsModalOpen(false);
+            getBuckets();
+          }}
+        />
+      </Modal>
       <BulkRemoveConfirmationModal
         count={selectedKeys.length}
         resourceType="bucket"

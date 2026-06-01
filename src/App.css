@@ -10,7 +10,17 @@
   --input-error: #ff4d4f;
 }
 
+/* --- Table Row Selection --- */
+.ant-table-row-selected > td {
+  background: rgba(35, 27, 73, 0.04) !important;
+}
+
 /* --- Menu Styles --- */
+.ant-dropdown .ant-dropdown-menu-title-content,
+.ant-dropdown-menu-title-content {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
 .ant-menu-submenu-popup,
 .ant-menu-submenu-popup .ant-menu,
 .ant-menu-submenu-popup .ant-menu-item,
@@ -20,7 +30,7 @@
 }
 .ant-menu-submenu-popup .ant-menu-item-selected,
 .ant-menu-submenu-popup .ant-menu-item-active,
-.ant-menu-item-active {
+.ant-layout-sider .ant-menu-item-active {
   background: var(--primary-fg) !important;
   color: var(--primary-bg) !important;
 }

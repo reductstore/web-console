@@ -412,7 +412,7 @@ describe("ReplicationCard", () => {
     expect(container.textContent).toContain("Target Reachable");
   });
 
-  it("shows Inactive status tag when mode is disabled", () => {
+  it("does not show target status tag when mode is disabled", () => {
     const disabledReplicationMock: FullReplicationInfo = {
       ...replicationMock,
       info: {
@@ -434,7 +434,8 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(container.textContent).toContain("Inactive");
+    expect(container.textContent).not.toContain("Target Reachable");
+    expect(container.textContent).not.toContain("Target Unreachable");
   });
 
   it("shows Target Unreachable status tag when not active", () => {

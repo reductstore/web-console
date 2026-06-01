@@ -51,6 +51,7 @@ export default function TokenDetail(props: Readonly<Props>) {
 
   const [tokenError, setTokenError] = useState<string>();
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmRotate, setConfirmRotate] = useState(false);
   const [confirmName, setConfirmName] = useState(false);
 
   const navigate = useNavigate();
@@ -289,7 +290,7 @@ export default function TokenDetail(props: Readonly<Props>) {
                 token.isProvisioned ||
                 (token.expiresAt !== undefined && token.expiresAt < Date.now())
               }
-              onClick={() => rotateToken()}
+              onClick={() => setConfirmRotate(true)}
             >
               Rotate
             </Button>
@@ -304,6 +305,24 @@ export default function TokenDetail(props: Readonly<Props>) {
             </Button>
           </>
         )}
+
+        <Modal
+          open={confirmRotate}
+          closable={false}
+          title="Rotate Token"
+          onOk={() => {
+            setConfirmRotate(false);
+            rotateToken();
+          }}
+          onCancel={() => setConfirmRotate(false)}
+          okText="Rotate"
+        >
+          <p>
+            Are you sure you want to rotate token <b>{token.name}</b>? The
+            current token value will be invalidated and a new value will be
+            generated.
+          </p>
+        </Modal>
 
         <Modal
           open={confirmRemove}
