@@ -592,18 +592,23 @@ export default function QueryPanel({
     ],
   );
 
+  const autoFetchRef = useRef<() => void>(() => {});
+  autoFetchRef.current = () => {
+    getRecords(timeRange.start, timeRange.end).then();
+  };
+
   useEffect(() => {
     if (!autoFetchOnSelectionChange || !hasValidSelection) {
       return;
     }
 
-    getRecords(timeRange.start, timeRange.end).then();
+    autoFetchRef.current();
+    // Only re-fetch when the selection (bucket/entries) changes
   }, [
     autoFetchOnSelectionChange,
-    getRecords,
     hasValidSelection,
-    timeRange.end,
-    timeRange.start,
+    bucketName,
+    selectedEntryQuery,
   ]);
 
   useEffect(() => {
