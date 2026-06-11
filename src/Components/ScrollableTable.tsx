@@ -1,19 +1,19 @@
 import React, { useMemo } from "react";
 import { Table } from "antd";
+import type { TableProps } from "antd";
 
-interface ScrollableTableProps {
+type ScrollableTableProps<T = any> = TableProps<T> & {
   children?: React.ReactNode;
-  [key: string]: any;
-}
+};
 
 /**
  * Prevents "ResizeObserver loop" warning by only applying `scroll` prop
  * when the table has data or a custom body component.
  */
-const ScrollableTable = ({
+function ScrollableTable<T extends object = any>({
   children: childrenProp,
   ...restProps
-}: ScrollableTableProps) => {
+}: ScrollableTableProps<T>) {
   const scroll = useMemo(() => {
     if (
       (restProps.components?.body || restProps.dataSource?.length) &&
@@ -25,10 +25,10 @@ const ScrollableTable = ({
   }, [restProps]);
 
   return (
-    <Table {...restProps} scroll={scroll}>
+    <Table<T> {...restProps} scroll={scroll}>
       {childrenProp}
     </Table>
   );
-};
+}
 
 export default ScrollableTable;

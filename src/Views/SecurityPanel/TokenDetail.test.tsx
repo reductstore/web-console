@@ -219,6 +219,15 @@ describe("TokenDetail", () => {
       fireEvent.click(rotateButton);
     });
 
+    // Confirm in the rotation modal
+    const modalButtons = await waitFor(() => {
+      return screen.getAllByRole("button", { name: /Rotate/i });
+    });
+    const confirmButton = modalButtons[modalButtons.length - 1];
+    await act(async () => {
+      fireEvent.click(confirmButton);
+    });
+
     await waitFor(() => {
       expect(mockRotateToken).toHaveBeenCalledWith("token-1");
     });

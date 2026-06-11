@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react";
 import Replications from "./Replications";
-import { Client } from "reduct-js";
+import { Client, ReplicationMode } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 describe("Replications", () => {
@@ -19,12 +19,14 @@ describe("Replications", () => {
         isActive: true,
         isProvisioned: false,
         pendingRecords: 100n,
+        mode: ReplicationMode.ENABLED,
       },
       {
         name: "Replication2",
         isActive: false,
         isProvisioned: true,
         pendingRecords: 50n,
+        mode: ReplicationMode.PAUSED,
       },
     ]);
     client.getBucketList = vi.fn().mockResolvedValue([]);
@@ -56,20 +58,14 @@ describe("Replications", () => {
 
     expect(rows[0].querySelector("a")!.textContent).toEqual("Replication1");
     expect(rows[0].textContent).toContain("Target Reachable");
-    expect(rows[0].querySelector("span.ant-tag-processing")).toBeFalsy();
-    const row0Cells = rows[0].querySelectorAll("td");
-    expect(row0Cells[2].textContent).toEqual("100");
-    expect(row0Cells[3].textContent).toEqual("Target Reachable");
+    expect(rows[0].textContent).toContain("Enabled");
+    expect(rows[0].textContent).not.toContain("Provisioned");
 
     expect(rows[1].querySelector("a")!.textContent).toEqual("Replication2");
     expect(rows[1].textContent).toContain("Target Unreachable");
-    expect(
-      rows[1].querySelector("span.ant-tag-processing")!.textContent,
-    ).toEqual("Yes");
-    const row1Cells = rows[1].querySelectorAll("td");
-    expect(row1Cells[2].textContent).toEqual("50");
-    expect(row1Cells[3].textContent).toEqual("Target Unreachable");
-    expect(row1Cells[4].textContent).toEqual("Yes");
+    expect(rows[1].textContent).toContain("Paused");
+    expect(rows[1].textContent).toContain("Provisioned");
+    expect(rows[1].textContent).toContain("50");
   });
 
   it("shows the add replication button", () => {
@@ -147,6 +143,7 @@ describe("Replications", () => {
           isActive: true,
           isProvisioned: false,
           pendingRecords: 100n,
+          mode: ReplicationMode.ENABLED,
         },
       ]);
     });

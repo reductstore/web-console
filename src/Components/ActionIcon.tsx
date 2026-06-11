@@ -36,9 +36,6 @@ export default function ActionIcon({
   const wrapperStyle: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    height: "100%",
     cursor: disabled ? "not-allowed" : "pointer",
   };
 

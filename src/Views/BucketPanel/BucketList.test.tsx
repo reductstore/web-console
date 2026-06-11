@@ -40,7 +40,7 @@ describe("BucketList", () => {
   it("should print table with information about buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -52,9 +52,9 @@ describe("BucketList", () => {
     const rows = container.querySelectorAll(".ant-table-row");
     expect(rows.length).toEqual(2);
     expect(rows[0].textContent).toEqual(
-      "BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010ZProvisioned",
+      "BucketWithDataProvisioned210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010Z",
     );
-    expect(rows[1].textContent).toEqual("EmptyBucket00 B---------");
+    expect(rows[1].textContent).toEqual("EmptyBucket00 B\u2014\u2014\u2014");
   });
 
   it("should add a new bucket", async () => {
@@ -64,9 +64,9 @@ describe("BucketList", () => {
       </MemoryRouter>,
     );
     await waitFor(() =>
-      expect(container.querySelector('[title="Add"]')).not.toBeNull(),
+      expect(container.querySelector('[aria-label="Add"]')).not.toBeNull(),
     );
-    const button = container.querySelector('[title="Add"]');
+    const button = container.querySelector('[aria-label="Add"]');
     expect(button).not.toBeNull();
 
     // TODO: How to test modal?
@@ -83,14 +83,14 @@ describe("BucketList", () => {
         container.querySelectorAll(".ant-table-row").length,
       ).toBeGreaterThan(0),
     );
-    const button = container.querySelector('[title="Add"]');
+    const button = container.querySelector('[aria-label="Add"]');
     expect(button).toBeNull();
   });
 
-  it("should display rename and remove icons for non-provisioned buckets", async () => {
+  it("should display settings and remove icons for non-provisioned buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -101,17 +101,17 @@ describe("BucketList", () => {
 
     const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = emptyBucketRow.querySelector('span[title="Rename"]');
-    const removeIcon = emptyBucketRow.querySelector('span[title="Remove"]');
+    const settingsIcon = emptyBucketRow.querySelector(".anticon-setting");
+    const removeIcon = emptyBucketRow.querySelector(".anticon-delete");
 
-    expect(renameIcon).not.toBeNull();
+    expect(settingsIcon).not.toBeNull();
     expect(removeIcon).not.toBeNull();
   });
 
-  it("should not display rename and remove icons for provisioned buckets", async () => {
+  it("should display disabled remove icon for provisioned buckets", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -122,21 +122,20 @@ describe("BucketList", () => {
 
     const [provisionedBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = provisionedBucketRow.querySelector(
-      'span[title="Rename"]',
-    );
-    const removeIcon = provisionedBucketRow.querySelector(
-      'span[title="Remove"]',
-    );
+    const settingsIcon = provisionedBucketRow.querySelector(".anticon-setting");
+    const removeIcon = provisionedBucketRow.querySelector(".anticon-delete");
 
-    expect(renameIcon).toBeNull();
-    expect(removeIcon).toBeNull();
+    expect(settingsIcon).not.toBeNull();
+    expect(removeIcon).not.toBeNull();
+    expect(
+      (removeIcon?.closest("span[style]") as HTMLElement)?.style.cursor,
+    ).toEqual("not-allowed");
   });
 
-  it("should open rename modal on rename icon click", async () => {
+  it("should open settings modal on settings icon click", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -147,23 +146,21 @@ describe("BucketList", () => {
 
     const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const renameIcon = emptyBucketRow.querySelector('span[title="Rename"]');
-    fireEvent.click(renameIcon!);
+    const settingsIcon = emptyBucketRow.querySelector(".anticon-setting");
+    fireEvent.click(settingsIcon!.closest("span[style]")!);
 
     await waitFor(() =>
-      expect(
-        document.querySelector('[data-testid="rename-modal"]'),
-      ).not.toBeNull(),
+      expect(document.querySelector(".ant-modal-title")).not.toBeNull(),
     );
-    const removeModal = document.querySelector('[data-testid="delete-modal"]');
-
-    expect(removeModal).toBeNull();
+    expect(document.querySelector(".ant-modal-title")?.textContent).toBe(
+      "Settings",
+    );
   });
 
   it("should open remove confirmation modal on remove icon click", async () => {
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
     await waitFor(() =>
@@ -174,8 +171,8 @@ describe("BucketList", () => {
 
     const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
 
-    const removeIcon = emptyBucketRow.querySelector('span[title="Remove"]');
-    fireEvent.click(removeIcon!);
+    const removeIcon = emptyBucketRow.querySelector(".anticon-delete");
+    fireEvent.click(removeIcon!.closest("span[style]")!);
 
     await waitFor(() =>
       expect(
@@ -202,7 +199,7 @@ describe("BucketList", () => {
 
     const { container } = render(
       <MemoryRouter>
-        <BucketList client={client} />
+        <BucketList client={client} permissions={{ fullAccess: true }} />
       </MemoryRouter>,
     );
 
@@ -214,10 +211,15 @@ describe("BucketList", () => {
     const [row] = container.querySelectorAll(".ant-table-row");
     expect(row.textContent).toContain("Deleting");
 
-    const renameIcon = row.querySelector('span[title="Rename"]');
-    const removeIcon = row.querySelector('span[title="Remove"]');
-    expect(renameIcon?.getAttribute("onclick")).toBeNull();
-    expect(removeIcon?.getAttribute("onclick")).toBeNull();
+    const settingsIcon = row.querySelector(".anticon-setting");
+    const removeIcon = row.querySelector(".anticon-delete");
+    // Disabled ActionIcons have cursor: not-allowed on wrapper
+    expect(
+      (settingsIcon?.closest("span[style]") as HTMLElement)?.style.cursor,
+    ).toEqual("not-allowed");
+    expect(
+      (removeIcon?.closest("span[style]") as HTMLElement)?.style.cursor,
+    ).toEqual("not-allowed");
   });
 
   it("should show loading state while fetching buckets", async () => {

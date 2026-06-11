@@ -186,6 +186,8 @@
 /* --- Button --- */
 .fetchButton {
   display: flex;
+  align-items: flex-end;
+  gap: 10px;
   padding-top: 12px;
 }
 

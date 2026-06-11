@@ -47,6 +47,9 @@ import BucketEntriesTable, {
 import { buildEntryTree, EntryTreeNode, naturalNameSort } from "./tree";
 import { getHistory } from "../../Components/Bucket/BucketCard";
 import ActionIcon from "../../Components/ActionIcon";
+import { useSelectionMode } from "../../hooks/useSelectionMode";
+import { useBulkDelete } from "../../hooks/useBulkDelete";
+import BulkRemoveConfirmationModal from "../../Components/BulkRemoveConfirmationModal";
 
 interface Props {
   client: Client;
@@ -169,6 +172,7 @@ export default function BucketDetail(props: Readonly<Props>) {
   const [expandCollapseTarget, setExpandCollapseTarget] = useState<
     "expand" | "collapse"
   >("collapse");
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   const deletionTooltip = "Deletion in progress. Action disabled.";
 
@@ -229,6 +233,11 @@ export default function BucketDetail(props: Readonly<Props>) {
       const bucket: Bucket = await props.client.getBucket(info.name);
       await bucket.removeEntry(entryName);
       setEntryToRemove("");
+      setSelectedKeys(
+        selectedKeys.filter(
+          (key) => key !== entryName && !key.startsWith(prefix),
+        ),
+      );
       setEntries((prevEntries) =>
         prevEntries.filter(
           (entry) => entry.name !== entryName && !entry.name.startsWith(prefix),
@@ -261,6 +270,94 @@ export default function BucketDetail(props: Readonly<Props>) {
   const hasWritePermission = info
     ? checkWritePermission(props.permissions, info.name)
     : false;
+
+  const { selectedKeys, setSelectedKeys, clearSelection, rowSelection } =
+    useSelectionMode({
+      getDisabledKeys: () =>
+        entries.filter((e) => e.status === Status.DELETING).map((e) => e.name),
+    });
+
+  const deduplicateSelectedEntries = (keys: string[]): string[] => {
+    const sorted = [...keys].sort();
+    return sorted.filter((key) => {
+      return !sorted.some(
+        (other) => other !== key && key.startsWith(`${other}/`),
+      );
+    });
+  };
+
+  const bulkDeleteWarning = useMemo(() => {
+    const allNames = entries.map((e) => e.name);
+    const keysWithSubs = selectedKeys.filter((key) =>
+      allNames.some((name) => name.startsWith(`${key}/`)),
+    );
+    if (keysWithSubs.length === 0) return null;
+    return keysWithSubs.length === 1
+      ? "A selected entry has sub-entries that will also be deleted."
+      : "Some selected entries have sub-entries that will also be deleted.";
+  }, [selectedKeys, entries]);
+
+  const singleDeleteWarning = useMemo(() => {
+    if (!entryToRemove) return null;
+    const hasSubEntries = entries.some((e) =>
+      e.name.startsWith(`${entryToRemove}/`),
+    );
+    return hasSubEntries
+      ? "This entry has sub-entries that will also be deleted."
+      : null;
+  }, [entryToRemove, entries]);
+
+  const {
+    handleBulkDelete,
+    bulkDeleting,
+    bulkProgress,
+    bulkError,
+    setBulkError,
+  } = useBulkDelete({
+    onDelete: async (entryName) => {
+      if (!info) throw new Error("No bucket info");
+      const prefix = `${entryName}/`;
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.name === entryName || entry.name.startsWith(prefix)
+            ? { ...entry, status: Status.DELETING }
+            : entry,
+        ),
+      );
+      try {
+        const bucket: Bucket = await props.client.getBucket(info.name);
+        await bucket.removeEntry(entryName);
+        setEntries((prev) =>
+          prev.filter(
+            (entry) =>
+              entry.name !== entryName && !entry.name.startsWith(prefix),
+          ),
+        );
+      } catch (err) {
+        setEntries((prev) =>
+          prev.map((entry) =>
+            entry.name === entryName || entry.name.startsWith(prefix)
+              ? { ...entry, status: Status.READY }
+              : entry,
+          ),
+        );
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      setIsBulkDeleteOpen(false);
+      clearSelection();
+      getEntries();
+    },
+    onError: (failures) => {
+      message.error(`${failures.length} entry/entries failed to remove`);
+    },
+  });
+
+  const handleBulkDeleteEntries = () => {
+    const deduplicated = deduplicateSelectedEntries(selectedKeys);
+    handleBulkDelete(deduplicated);
+  };
 
   useEffect(() => {
     getEntries().then();
@@ -631,6 +728,23 @@ export default function BucketDetail(props: Readonly<Props>) {
               </Tooltip>
             </>
           )}
+          {hasWritePermission && (
+            <Tooltip
+              title={
+                selectedKeys.length > 0
+                  ? `Delete ${selectedKeys.length} selected`
+                  : "Select entries to delete"
+              }
+              placement="bottomLeft"
+            >
+              <Button
+                icon={<DeleteOutlined />}
+                onClick={() => setIsBulkDeleteOpen(true)}
+                danger
+                disabled={selectedKeys.length === 0}
+              />
+            </Tooltip>
+          )}
           <Tooltip title="Refresh entries" placement="bottomLeft">
             <Button
               icon={<ReloadOutlined />}
@@ -655,10 +769,12 @@ export default function BucketDetail(props: Readonly<Props>) {
           setExpandedOpenCount(open);
           setExpandedTotalCount(total);
         }}
+        rowSelection={hasWritePermission ? rowSelection : undefined}
       />
 
       <Modal
         title="Upload File"
+        centered
         open={isUploadModalVisible}
         onCancel={() => setIsUploadModalVisible(false)}
         footer={null}
@@ -687,6 +803,7 @@ export default function BucketDetail(props: Readonly<Props>) {
         resourceType="entry"
         open={isRemoveModalOpen}
         errorMessage={removeError}
+        warning={singleDeleteWarning}
       />
       <RenameModal
         name={entryToRename}
@@ -698,6 +815,20 @@ export default function BucketDetail(props: Readonly<Props>) {
         resourceType="entry"
         open={isRenameModalOpen}
         errorMessage={renameError}
+      />
+      <BulkRemoveConfirmationModal
+        count={selectedKeys.length}
+        resourceType="entry"
+        open={isBulkDeleteOpen}
+        onConfirm={handleBulkDeleteEntries}
+        onCancel={() => {
+          setIsBulkDeleteOpen(false);
+          setBulkError(null);
+        }}
+        loading={bulkDeleting}
+        progress={bulkProgress ?? undefined}
+        errorMessage={bulkError}
+        warningMessage={bulkDeleteWarning}
       />
     </div>
   );

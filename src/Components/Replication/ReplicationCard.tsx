@@ -168,7 +168,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
     }
     if (info.isProvisioned) {
       tags.push(
-        <Tag key="provisioned" color="processing">
+        <Tag key="provisioned" color="default">
           Provisioned
         </Tag>,
       );
@@ -223,6 +223,7 @@ export default function ReplicationCard(props: Readonly<Props>) {
         title="Settings"
         open={changeSettings}
         footer={null}
+        centered
         onCancel={() => setChangeSettings(false)}
         data-testid="settings-modal"
       >
