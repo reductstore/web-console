@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       "/api": {
         // target: "https://orion.reductsoft.eu",
-        target: "http://localhost:8383",
-        //target: "https://play.reduct.store",
+        // target: "http://localhost:8383",
+        target: "https://play.reduct.store",
         changeOrigin: true,
         secure: false,
       },
