@@ -24,6 +24,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import "./LifecycleSettingsForm.css";
 import { JsonQueryEditor } from "../JsonEditor";
 import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
+import { LIFECYCLE_TYPE_OPTIONS } from "./LifecycleModeUtils";
 
 const isTestEnvironment = process.env.NODE_ENV === "test";
 
@@ -42,13 +43,14 @@ interface State {
   error?: string;
   selectedBucket?: string;
   selectedEntries: string[];
+  selectedLifecycleType?: LifecycleType;
 }
 
 interface FormValues {
   name: string;
   lifecycleType: LifecycleType;
   bucket: string;
-  maxAge: string;
+  olderThan: string;
   interval?: string;
   entries: string[];
   dryRun?: boolean;
@@ -74,8 +76,14 @@ export default class LifecycleSettingsForm extends React.Component<
     const { lifecycleName, client, onCreated } = this.props;
 
     try {
-      let parsedWhen: Record<string, any> = {};
-      if (this.state.formattedWhen && this.state.formattedWhen.trim()) {
+      const supportsWhen = values.lifecycleType !== LifecycleType.COMPRESS;
+
+      let parsedWhen: Record<string, any> | undefined;
+      if (
+        supportsWhen &&
+        this.state.formattedWhen &&
+        this.state.formattedWhen.trim()
+      ) {
         const processResult = processWhenCondition(this.state.formattedWhen);
         if (!processResult.success) {
           this.setState({ error: processResult.error });
@@ -93,9 +101,9 @@ export default class LifecycleSettingsForm extends React.Component<
         lifecycleType: values.lifecycleType,
         bucket: values.bucket,
         entries: values.entries || [],
-        maxAge: values.maxAge,
+        olderThan: values.olderThan,
         interval: values.interval || undefined,
-        when: parsedWhen,
+        when: supportsWhen ? (parsedWhen ?? {}) : undefined,
         mode,
       };
 
@@ -130,6 +138,7 @@ export default class LifecycleSettingsForm extends React.Component<
             entries: settings.entries || [],
             selectedBucket: settings.bucket,
             selectedEntries: settings.entries || [],
+            selectedLifecycleType: settings.lifecycleType,
           },
           () => {
             if (settings.bucket) {
@@ -171,6 +180,7 @@ export default class LifecycleSettingsForm extends React.Component<
     this.setState({
       selectedBucket: values.bucket,
       selectedEntries: Array.isArray(values.entries) ? values.entries : [],
+      selectedLifecycleType: values.lifecycleType,
     });
   };
 
@@ -198,7 +208,7 @@ export default class LifecycleSettingsForm extends React.Component<
       name,
       lifecycleType: settings.lifecycleType,
       bucket: settings.bucket,
-      maxAge: settings.maxAge,
+      olderThan: settings.olderThan,
       interval: settings.interval,
       entries: settings.entries || entries,
       when: formattedWhen,
@@ -228,6 +238,7 @@ export default class LifecycleSettingsForm extends React.Component<
       <>
         <Form
           name="lifecycleForm"
+          className="LifecycleForm"
           onFinish={this.onFinish}
           onValuesChange={this.handleFormValuesChange}
           layout="vertical"
@@ -256,163 +267,164 @@ export default class LifecycleSettingsForm extends React.Component<
             }
             name="lifecycleType"
             rules={[{ required: true, message: "Please select the type." }]}
-            style={{ marginBottom: 8 }}
           >
             <Select
               disabled={readOnly}
               placeholder="Select a type"
-              options={[{ value: LifecycleType.DELETE, label: "Delete" }]}
+              options={LIFECYCLE_TYPE_OPTIONS}
             />
           </Form.Item>
 
-          {!lifecycleName && (
-            <Form.Item name="dryRun" valuePropName="checked">
-              <Checkbox disabled={readOnly}>
-                Start in dry run mode&nbsp;
-                <Tooltip title="Simulate the policy and report what it would do without applying any changes. You can enable it later.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </Checkbox>
-            </Form.Item>
+          {this.state.selectedLifecycleType && (
+            <>
+              {!lifecycleName && (
+                <Form.Item name="dryRun" valuePropName="checked">
+                  <Checkbox disabled={readOnly}>
+                    Start in dry run mode&nbsp;
+                    <Tooltip title="Simulate the policy and report in the logs what it would do without applying any changes. You can enable it later.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </Checkbox>
+                </Form.Item>
+              )}
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Bucket&nbsp;
+                        <Tooltip title="Select the bucket where lifecycle policy is applied.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="bucket"
+                    rules={[
+                      { required: true, message: "Please select the bucket!" },
+                    ]}
+                    className="LifecycleField"
+                  >
+                    <Select
+                      disabled={readOnly}
+                      placeholder="Select a bucket"
+                      onChange={this.handleBucketChange}
+                      options={sourceBuckets?.map((bucket) => ({
+                        value: bucket,
+                        label: bucket,
+                      }))}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span>
+                        Entries&nbsp;
+                        <Tooltip title="Select entries to be affected. If empty, all entries are affected.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="entries"
+                    className="LifecycleField"
+                  >
+                    <Select
+                      mode="tags"
+                      style={{ width: "100%" }}
+                      placeholder="Add entries"
+                      disabled={readOnly}
+                      options={this.state.entries.map((entry) => ({
+                        value: entry,
+                        label: entry,
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        Older Than&nbsp;
+                        <Tooltip title="Apply to records older than this age, e.g. 1h, 30d, 3600s.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="olderThan"
+                    rules={[
+                      { required: true, message: "Please input the value!" },
+                    ]}
+                    className="LifecycleField"
+                  >
+                    <Input disabled={readOnly} />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span>
+                        Interval&nbsp;
+                        <Tooltip title="Optional run interval, e.g. 10m, 1h.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="interval"
+                    className="LifecycleField"
+                  >
+                    <Input disabled={readOnly} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {this.state.selectedLifecycleType !== LifecycleType.COMPRESS && (
+                <Form.Item
+                  label={
+                    <span>
+                      When&nbsp;
+                      <Tooltip title="Define JSON-based rules to match records for lifecycle processing.">
+                        <InfoCircleOutlined />
+                      </Tooltip>
+                    </span>
+                  }
+                >
+                  {!isTestEnvironment && (
+                    <JsonQueryEditor
+                      value={this.state.formattedWhen}
+                      onChange={(value: string) =>
+                        this.handleWhenConditionChange(value)
+                      }
+                      height={200}
+                      readOnly={readOnly}
+                      validationContext={{
+                        client: this.props.client,
+                        bucket: this.state.selectedBucket,
+                        entries: this.state.selectedEntries,
+                      }}
+                    />
+                  )}
+                  <Typography.Text type="secondary" className="jsonExample">
+                    Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
+                    <br />
+                    Use <code>&label</code> for standard labels and{" "}
+                    <code>@label</code> for computed labels.
+                    <br />
+                    <strong>
+                      <a
+                        href="https://www.reduct.store/docs/conditional-query"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Conditional Query Reference →
+                      </a>
+                    </strong>
+                  </Typography.Text>
+                </Form.Item>
+              )}
+            </>
           )}
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Bucket&nbsp;
-                    <Tooltip title="Select the bucket where lifecycle policy is applied.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="bucket"
-                rules={[
-                  { required: true, message: "Please select the bucket!" },
-                ]}
-                className="LifecycleField"
-              >
-                <Select
-                  disabled={readOnly}
-                  placeholder="Select a bucket"
-                  onChange={this.handleBucketChange}
-                  options={sourceBuckets?.map((bucket) => ({
-                    value: bucket,
-                    label: bucket,
-                  }))}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span>
-                    Entries&nbsp;
-                    <Tooltip title="Select entries to be affected. If empty, all entries are affected.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="entries"
-                className="LifecycleField"
-              >
-                <Select
-                  mode="tags"
-                  style={{ width: "100%" }}
-                  placeholder="Add entries"
-                  disabled={readOnly}
-                  options={this.state.entries.map((entry) => ({
-                    value: entry,
-                    label: entry,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label={
-                  <span>
-                    Older Than&nbsp;
-                    <Tooltip title="Apply to records older than this age, e.g. 1h, 30d, 3600s.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="maxAge"
-                rules={[{ required: true, message: "Please input the value!" }]}
-                className="LifecycleField"
-              >
-                <Input disabled={readOnly} />
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span>
-                    Interval&nbsp;
-                    <Tooltip title="Optional run interval, e.g. 10m, 1h.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="interval"
-                className="LifecycleField"
-              >
-                <Input disabled={readOnly} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label={
-              <span>
-                When&nbsp;
-                <Tooltip title="Define JSON-based rules to match records for lifecycle processing.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-          >
-            {!isTestEnvironment && (
-              <JsonQueryEditor
-                value={this.state.formattedWhen}
-                onChange={(value: string) =>
-                  this.handleWhenConditionChange(value)
-                }
-                height={200}
-                readOnly={readOnly}
-                validationContext={{
-                  client: this.props.client,
-                  bucket: this.state.selectedBucket,
-                  entries: this.state.selectedEntries,
-                }}
-              />
-            )}
-            {error && (
-              <Alert
-                type="error"
-                message={error}
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            )}
-            <Typography.Text type="secondary" className="jsonExample">
-              Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
-              <br />
-              Use <code>&label</code> for standard labels and{" "}
-              <code>@label</code> for computed labels.
-              <br />
-              <strong>
-                <a
-                  href="https://www.reduct.store/docs/conditional-query"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View Conditional Query Reference →
-                </a>
-              </strong>
-            </Typography.Text>
-          </Form.Item>
+          {error && <Alert type="error" title={error} showIcon />}
 
           <Form.Item>
             <Button type="primary" htmlType="submit" disabled={readOnly}>

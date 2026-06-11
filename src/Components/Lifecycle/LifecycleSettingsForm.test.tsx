@@ -31,7 +31,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
       type: "delete",
       bucket: "Bucket1",
       entries: ["entry1", "entry2"],
-      max_age: "1h",
+      older_than: "1h",
       interval: "10m",
       when: {},
       mode: "enabled",
@@ -70,7 +70,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     expect(container.querySelector("form")).toBeTruthy();
     expect(container.querySelector("#lifecycleForm_name")).toBeTruthy();
     expect(container.querySelector("#lifecycleForm_bucket")).toBeTruthy();
-    expect(container.querySelector("#lifecycleForm_maxAge")).toBeTruthy();
+    expect(container.querySelector("#lifecycleForm_olderThan")).toBeTruthy();
   });
 
   it("shows lifecycle name and disables it for update mode", () => {
@@ -104,7 +104,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         name: "new-lifecycle",
         lifecycleType: "delete",
         bucket: "Bucket1",
-        maxAge: "1h",
+        olderThan: "1h",
         interval: "10m",
         entries: ["entry1"],
       });
@@ -117,7 +117,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
       expect.objectContaining({
         lifecycleType: "delete",
         bucket: "Bucket1",
-        maxAge: "1h",
+        olderThan: "1h",
         interval: "10m",
         entries: ["entry1"],
       }),
@@ -144,7 +144,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         name: "new-lifecycle",
         lifecycleType: "delete",
         bucket: "Bucket1",
-        maxAge: "1h",
+        olderThan: "1h",
         entries: [],
         dryRun: true,
       });
@@ -184,7 +184,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         name: "test-lifecycle",
         lifecycleType: "delete",
         bucket: "Bucket2",
-        maxAge: "2h",
+        olderThan: "2h",
         interval: "15m",
         entries: ["entry2"],
       });
@@ -197,7 +197,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
       expect.objectContaining({
         lifecycleType: "delete",
         bucket: "Bucket2",
-        maxAge: "2h",
+        olderThan: "2h",
         interval: "15m",
         entries: ["entry2"],
       }),
@@ -236,7 +236,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         name: "test-lifecycle",
         lifecycleType: "delete",
         bucket: "Bucket1",
-        maxAge: "1h",
+        olderThan: "1h",
         entries: [],
       });
     });

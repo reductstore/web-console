@@ -33,6 +33,7 @@ import ModeDropdown from "../../Components/ModeDropdown";
 import {
   MODE_DROPDOWN_OPTIONS,
   getLifecycleStatus,
+  getLifecycleTypeColor,
 } from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
@@ -318,7 +319,9 @@ export default function LifecycleDetail(props: Readonly<Props>) {
             layout={isSmallScreen ? "vertical" : "horizontal"}
           >
             <Descriptions.Item label="Type">
-              <Tag color="red">
+              <Tag
+                color={getLifecycleTypeColor(lifecycle.settings.lifecycleType)}
+              >
                 {(lifecycle.settings.lifecycleType ?? "delete").toUpperCase()}
               </Tag>
             </Descriptions.Item>
@@ -326,7 +329,7 @@ export default function LifecycleDetail(props: Readonly<Props>) {
               {lifecycle.settings.bucket}
             </Descriptions.Item>
             <Descriptions.Item label="Older Than">
-              {lifecycle.settings.maxAge}
+              {lifecycle.settings.olderThan}
             </Descriptions.Item>
             <Descriptions.Item label="Interval">
               {lifecycle.settings.interval || "-"}

@@ -1,11 +1,26 @@
 import React from "react";
-import { LifecycleMode } from "reduct-js";
+import { LifecycleMode, LifecycleType } from "reduct-js";
 import {
   CheckCircleOutlined,
   ExperimentOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 import { ModeOption } from "../ModeDropdown";
+
+export const LIFECYCLE_TYPE_OPTIONS = [
+  { value: LifecycleType.DELETE, label: "Delete" },
+  { value: LifecycleType.COMPRESS, label: "Compress" },
+];
+
+export const getLifecycleTypeColor = (type?: LifecycleType): string => {
+  switch (type) {
+    case LifecycleType.COMPRESS:
+      return "blue";
+    case LifecycleType.DELETE:
+    default:
+      return "red";
+  }
+};
 
 export const getModeIcon = (mode: LifecycleMode): React.ReactNode => {
   switch (mode) {

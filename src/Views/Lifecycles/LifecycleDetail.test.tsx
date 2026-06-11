@@ -37,7 +37,7 @@ describe("LifecycleDetail", () => {
       type: "delete",
       bucket: "bucket1",
       entries: ["entry1", "entry2"],
-      max_age: "1h",
+      older_than: "1h",
       interval: "10m",
       when: {},
       mode: "enabled",
