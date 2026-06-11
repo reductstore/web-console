@@ -3,12 +3,14 @@ import {
   APIError,
   Client,
   FullLifecycleInfo,
+  LifecycleMode,
   LifecycleSettings,
   LifecycleType,
 } from "reduct-js";
 import {
   Alert,
   Button,
+  Checkbox,
   Col,
   Form,
   Input,
@@ -44,10 +46,12 @@ interface State {
 
 interface FormValues {
   name: string;
+  lifecycleType: LifecycleType;
   bucket: string;
   maxAge: string;
   interval?: string;
   entries: string[];
+  dryRun?: boolean;
 }
 
 const convertWhenToString = (when: any): string => {
@@ -80,14 +84,19 @@ export default class LifecycleSettingsForm extends React.Component<
         parsedWhen = processResult.value;
       }
 
+      const mode =
+        !lifecycleName && values.dryRun
+          ? LifecycleMode.DRY_RUN
+          : this.state.settings?.mode;
+
       const lifecycleSettings: LifecycleSettings = {
-        lifecycleType: LifecycleType.DELETE,
+        lifecycleType: values.lifecycleType,
         bucket: values.bucket,
         entries: values.entries || [],
         maxAge: values.maxAge,
         interval: values.interval || undefined,
         when: parsedWhen,
-        mode: this.state.settings?.mode,
+        mode,
       };
 
       if (lifecycleName) {
@@ -187,6 +196,7 @@ export default class LifecycleSettingsForm extends React.Component<
 
     return {
       name,
+      lifecycleType: settings.lifecycleType,
       bucket: settings.bucket,
       maxAge: settings.maxAge,
       interval: settings.interval,
@@ -234,6 +244,37 @@ export default class LifecycleSettingsForm extends React.Component<
               disabled={readOnly || this.props.lifecycleName !== undefined}
             />
           </Form.Item>
+
+          <Form.Item
+            label={
+              <span>
+                Type&nbsp;
+                <Tooltip title="Action applied to matching records.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </span>
+            }
+            name="lifecycleType"
+            rules={[{ required: true, message: "Please select the type." }]}
+            style={{ marginBottom: 8 }}
+          >
+            <Select
+              disabled={readOnly}
+              placeholder="Select a type"
+              options={[{ value: LifecycleType.DELETE, label: "Delete" }]}
+            />
+          </Form.Item>
+
+          {!lifecycleName && (
+            <Form.Item name="dryRun" valuePropName="checked">
+              <Checkbox disabled={readOnly}>
+                Start in dry run mode&nbsp;
+                <Tooltip title="Simulate the policy and report what it would do without applying any changes. You can enable it later.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </Checkbox>
+            </Form.Item>
+          )}
 
           <Row gutter={16}>
             <Col span={12}>
@@ -292,14 +333,14 @@ export default class LifecycleSettingsForm extends React.Component<
               <Form.Item
                 label={
                   <span>
-                    Max Age&nbsp;
-                    <Tooltip title="Maximum record age, e.g. 1h, 30d, 3600s.">
+                    Older Than&nbsp;
+                    <Tooltip title="Apply to records older than this age, e.g. 1h, 30d, 3600s.">
                       <InfoCircleOutlined />
                     </Tooltip>
                   </span>
                 }
                 name="maxAge"
-                rules={[{ required: true, message: "Please input max age." }]}
+                rules={[{ required: true, message: "Please input the value!" }]}
                 className="LifecycleField"
               >
                 <Input disabled={readOnly} />

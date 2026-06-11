@@ -63,7 +63,6 @@ describe("TokenDetail", () => {
     const { container } = renderTokenDetail();
 
     await waitFor(() => {
-      expect(screen.getByText("Access Token")).toBeInTheDocument();
       expect(screen.getByText("token-1")).toBeInTheDocument();
     });
     const input = container.querySelector('input[name="name"]');
@@ -177,8 +176,7 @@ describe("TokenDetail", () => {
     await waitFor(() => {
       expect(screen.getByText("Active")).toBeInTheDocument();
     });
-    expect(screen.getByText("Provisioned")).toBeInTheDocument();
-    expect(screen.getByText("No")).toBeInTheDocument();
+    expect(screen.queryByText("Provisioned")).toBeNull();
     expect(screen.getByText("1 hour")).toBeInTheDocument();
     expect(screen.getByText("10.0.0.0/8")).toBeInTheDocument();
   });

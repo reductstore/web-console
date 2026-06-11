@@ -88,7 +88,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
   ];
 
   return (
-    <div style={{ margin: "1.4em" }}>
+    <div style={{ margin: "2em" }}>
       {replication && (
         <>
           <ReplicationCard

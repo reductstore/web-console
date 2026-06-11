@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Col,
-  message,
-  Modal,
-  Row,
-  Space,
-  Statistic,
-  Tag,
-  Tooltip,
-} from "antd";
+import { Card, Col, message, Modal, Row, Statistic, Tag, Tooltip } from "antd";
 import humanizeDuration from "humanize-duration";
 import {
   APIError,
@@ -155,19 +145,24 @@ export default function BucketCard(props: Readonly<Props>) {
       className="BucketCard"
       key={index}
       id={bucketInfo.name}
-      title={bucketInfo.name}
+      title={
+        <span>
+          {bucketInfo.name}
+          {bucketInfo.isProvisioned ? (
+            <Tag
+              color="default"
+              style={{ marginLeft: 8, fontWeight: "normal" }}
+            >
+              Provisioned
+            </Tag>
+          ) : null}
+        </span>
+      }
       extra={
-        bucketInfo.isProvisioned || isDeleting ? (
-          <Space size="small">
-            {bucketInfo.isProvisioned ? (
-              <Tag color="default">Provisioned</Tag>
-            ) : null}
-            {isDeleting ? (
-              <Tag color="processing" icon={<LoadingOutlined spin />}>
-                Deleting
-              </Tag>
-            ) : null}
-          </Space>
+        isDeleting ? (
+          <Tag color="processing" icon={<LoadingOutlined spin />}>
+            Deleting
+          </Tag>
         ) : null
       }
       hoverable={props.showPanel != true && !isDeleting}

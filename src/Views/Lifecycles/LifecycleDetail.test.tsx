@@ -73,18 +73,16 @@ describe("LifecycleDetail", () => {
   });
 
   it("shows lifecycle card content", async () => {
-    expect(screen.getByText("Lifecycle Policy")).toBeTruthy();
     expect(screen.getByText("TestLifecycle")).toBeTruthy();
-    expect(screen.getByText("Provisioned")).toBeTruthy();
-    expect(screen.getByText("No")).toBeTruthy();
+    expect(screen.queryByText("Provisioned")).toBeNull();
     expect(screen.getByText("DELETE")).toBeTruthy();
     expect(screen.getByText("{}", { exact: false })).toBeTruthy();
     expect(screen.getByText("bucket1")).toBeTruthy();
     expect(screen.getByText("1h")).toBeTruthy();
   });
 
-  it("renders mode selector and action buttons", async () => {
-    expect(screen.getByTestId("mode-select")).toBeTruthy();
+  it("renders mode control and action buttons", async () => {
+    expect(screen.getByLabelText("Change mode")).toBeTruthy();
     expect(screen.getByLabelText("Back")).toBeTruthy();
     expect(screen.getByLabelText("Settings")).toBeTruthy();
     expect(screen.getByLabelText("Remove")).toBeTruthy();

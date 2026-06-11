@@ -8,13 +8,14 @@ import {
   BucketInfo,
 } from "reduct-js";
 import {
+  Badge,
   Button,
-  Dropdown,
   Flex,
   message,
   Modal,
   Table,
   Tag,
+  theme,
   Tooltip,
   Typography,
 } from "antd";
@@ -27,7 +28,11 @@ import {
 } from "@ant-design/icons";
 
 import "../../App.css";
-import { getModeIcon } from "../../Components/Replication/ReplicationModeUtils";
+import {
+  MODE_DROPDOWN_OPTIONS,
+  getReplicationStatus,
+} from "../../Components/Replication/ReplicationModeUtils";
+import ModeDropdown from "../../Components/ModeDropdown";
 import { Link } from "react-router-dom";
 import ReplicationSettingsForm from "../../Components/Replication/ReplicationSettingsForm";
 import { useSelectionMode } from "../../hooks/useSelectionMode";
@@ -55,6 +60,7 @@ interface ReplicationRow {
  * Replications View
  */
 export default function Replications(props: Readonly<Props>) {
+  const { token } = theme.useToken();
   const [replications, setReplications] = useState<ReplicationInfo[]>([]);
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [isLoadingReplications, setIsLoadingReplications] = useState(true);
@@ -172,9 +178,7 @@ export default function Replications(props: Readonly<Props>) {
     try {
       setIsLoadingReplications(true);
       const { client } = props;
-      const replicationList: ReplicationInfo[] =
-        await client.getReplicationList();
-      setReplications(replicationList);
+      setReplications(await client.getReplicationList());
     } catch (err) {
       console.error(err);
     } finally {
@@ -226,55 +230,26 @@ export default function Replications(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: ReplicationRow) => (
-        <span>
-          <Link to={`/replications/${text}`}>
-            <b>{text}</b>
-          </Link>
-          {record.isProvisioned ? (
-            <Tag color="default" style={{ marginLeft: 8 }}>
-              Provisioned
-            </Tag>
-          ) : null}
-        </span>
+      render: (text: string) => (
+        <Link to={`/replications/${text}`}>
+          <b>{text}</b>
+        </Link>
       ),
     },
     {
       title: "Status",
       key: "status",
       render: (_, record) => {
-        const modeColorMap: Record<ReplicationMode, string> = {
-          [ReplicationMode.ENABLED]: "success",
-          [ReplicationMode.PAUSED]: "warning",
-          [ReplicationMode.DISABLED]: "default",
-        };
-        const tags = [];
-        if (record.mode) {
-          tags.push(
-            <Tag key="mode" color={modeColorMap[record.mode] || "default"}>
-              {record.mode.charAt(0).toUpperCase() + record.mode.slice(1)}
-            </Tag>,
-          );
-        }
-        if (record.mode !== ReplicationMode.DISABLED) {
-          if (record.isActive) {
-            tags.push(
-              <Tag key="reachable" color="success">
-                Target Reachable
-              </Tag>,
-            );
-          } else {
-            tags.push(
-              <Tag key="unreachable" color="error">
-                Target Unreachable
-              </Tag>,
-            );
-          }
-        }
+        const { status, text, colorToken } = getReplicationStatus(
+          record.mode,
+          record.isActive,
+        );
         return (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            {tags}
-          </div>
+          <Badge
+            color={colorToken ? token[colorToken] : undefined}
+            status={status}
+            text={text}
+          />
         );
       },
     },
@@ -284,70 +259,27 @@ export default function Replications(props: Readonly<Props>) {
       key: "pendingRecords",
     },
     {
+      title: "Provisioned",
+      key: "provisioned",
+      render: (_, record) =>
+        record.isProvisioned ? <Tag color="default">Provisioned</Tag> : null,
+    },
+    {
       title: "Actions",
       key: "actions",
       render: (_, record) => {
         if (!props.permissions?.fullAccess) {
           return null;
         }
-        const modeMenuItems = [
-          {
-            key: ReplicationMode.ENABLED,
-            icon: getModeIcon(ReplicationMode.ENABLED),
-            label:
-              record.mode === ReplicationMode.ENABLED ? (
-                <span style={{ fontWeight: 600 }}>Enable (current)</span>
-              ) : (
-                "Enable"
-              ),
-            disabled: record.mode === ReplicationMode.ENABLED,
-          },
-          {
-            key: ReplicationMode.PAUSED,
-            icon: getModeIcon(ReplicationMode.PAUSED),
-            label:
-              record.mode === ReplicationMode.PAUSED ? (
-                <span style={{ fontWeight: 600 }}>Pause (current)</span>
-              ) : (
-                "Pause"
-              ),
-            disabled: record.mode === ReplicationMode.PAUSED,
-          },
-          {
-            key: ReplicationMode.DISABLED,
-            icon: getModeIcon(ReplicationMode.DISABLED),
-            label:
-              record.mode === ReplicationMode.DISABLED ? (
-                <span style={{ fontWeight: 600 }}>Disable (current)</span>
-              ) : (
-                "Disable"
-              ),
-            disabled: record.mode === ReplicationMode.DISABLED,
-          },
-        ];
         return (
           <Flex gap="middle" align="center">
-            <Tooltip title="Change mode">
-              <Dropdown
-                menu={{
-                  items: modeMenuItems,
-                  onClick: ({ key }) =>
-                    onModeChange(record.name, key as ReplicationMode),
-                }}
-                trigger={["click"]}
-                disabled={changingMode !== null}
-              >
-                <span
-                  style={{
-                    cursor: changingMode !== null ? "not-allowed" : "pointer",
-                    fontSize: "16px",
-                  }}
-                  title="Change mode"
-                >
-                  {getModeIcon(record.mode)}
-                </span>
-              </Dropdown>
-            </Tooltip>
+            <ModeDropdown
+              mode={record.mode}
+              options={MODE_DROPDOWN_OPTIONS}
+              onChange={(newMode) => onModeChange(record.name, newMode)}
+              disabled={changingMode !== null}
+              fontSize={16}
+            />
             <ActionIcon
               icon={<SettingOutlined style={{ fontSize: "16px" }} />}
               onClick={() => {
@@ -440,6 +372,7 @@ export default function Replications(props: Readonly<Props>) {
           open={creatingReplication}
           footer={null}
           centered
+          destroyOnHidden
           onCancel={() => setCreatingReplication(false)}
         >
           <ReplicationSettingsForm

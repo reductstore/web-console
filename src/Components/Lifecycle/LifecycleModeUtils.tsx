@@ -5,6 +5,7 @@ import {
   ExperimentOutlined,
   StopOutlined,
 } from "@ant-design/icons";
+import { ModeOption } from "../ModeDropdown";
 
 export const getModeIcon = (mode: LifecycleMode): React.ReactNode => {
   switch (mode) {
@@ -47,3 +48,48 @@ export const MODE_SELECT_OPTIONS = [
 ];
 
 export const MODE_SELECT_STYLE = { minWidth: 120 };
+
+export interface LifecycleStatus {
+  status: "processing" | "warning" | "default";
+  text: string;
+  colorToken?: "colorPrimary" | "colorInfo";
+}
+
+export const getLifecycleStatus = (
+  mode: LifecycleMode,
+  isRunning: boolean,
+): LifecycleStatus => {
+  if (mode === LifecycleMode.DISABLED) {
+    return { status: "default", text: "Disabled" };
+  }
+
+  const isDryRun = mode === LifecycleMode.DRY_RUN;
+
+  if (isRunning) {
+    return {
+      status: "processing",
+      colorToken: isDryRun ? "colorInfo" : "colorPrimary",
+      text: isDryRun ? "Dry Running" : "Running",
+    };
+  }
+
+  return { status: "warning", text: isDryRun ? "Idle (Dry Run)" : "Idle" };
+};
+
+export const MODE_DROPDOWN_OPTIONS: ModeOption<LifecycleMode>[] = [
+  {
+    value: LifecycleMode.ENABLED,
+    actionLabel: "Enable",
+    icon: getModeIcon(LifecycleMode.ENABLED),
+  },
+  {
+    value: LifecycleMode.DRY_RUN,
+    actionLabel: "Dry Run",
+    icon: getModeIcon(LifecycleMode.DRY_RUN),
+  },
+  {
+    value: LifecycleMode.DISABLED,
+    actionLabel: "Disable",
+    icon: getModeIcon(LifecycleMode.DISABLED),
+  },
+];

@@ -10,20 +10,35 @@ import {
 import {
   Badge,
   Button,
+  Flex,
   message,
   Modal,
-  Select,
   Table,
   Tag,
+  theme,
+  Tooltip,
   Typography,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  SwapOutlined,
+} from "@ant-design/icons";
 
+import type { ColumnsType } from "antd/es/table";
 import { Link } from "react-router-dom";
 import LifecycleSettingsForm from "../../Components/Lifecycle/LifecycleSettingsForm";
+import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
+import BulkRemoveConfirmationModal from "../../Components/BulkRemoveConfirmationModal";
+import BulkModeChangeModal from "../../Components/Lifecycle/BulkModeChangeModal";
+import ActionIcon from "../../Components/ActionIcon";
+import ModeDropdown from "../../Components/ModeDropdown";
+import { useSelectionMode } from "../../hooks/useSelectionMode";
+import { useBulkDelete } from "../../hooks/useBulkDelete";
 import {
-  MODE_SELECT_OPTIONS,
-  MODE_SELECT_STYLE,
+  MODE_DROPDOWN_OPTIONS,
+  getLifecycleStatus,
 } from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
@@ -31,13 +46,102 @@ interface Props {
   permissions?: TokenPermissions;
 }
 
+interface LifecycleRow {
+  key: string;
+  name: string;
+  mode: LifecycleMode;
+  isRunning: boolean;
+  isProvisioned: boolean;
+}
+
 export default function Lifecycles(props: Readonly<Props>) {
+  const { token } = theme.useToken();
   const [lifecycles, setLifecycles] = useState<LifecycleInfo[]>([]);
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [isLoadingLifecycles, setIsLoadingLifecycles] = useState(true);
 
   const [creatingLifecycle, setCreatingLifecycle] = useState(false);
   const [changingMode, setChangingMode] = useState<string | null>(null);
+  const [lifecycleToEdit, setLifecycleToEdit] = useState<string>("");
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [lifecycleToRemove, setLifecycleToRemove] = useState<string>("");
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkModeChangeOpen, setIsBulkModeChangeOpen] = useState(false);
+  const [bulkModeChanging, setBulkModeChanging] = useState(false);
+  const [bulkModeProgress, setBulkModeProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [bulkModeError, setBulkModeError] = useState<string | null>(null);
+
+  const { selectedKeys, clearSelection, rowSelection } = useSelectionMode();
+
+  const {
+    handleBulkDelete,
+    bulkDeleting,
+    bulkProgress,
+    bulkError,
+    setBulkError,
+  } = useBulkDelete({
+    onDelete: (name) => props.client.deleteLifecycle(name),
+    onSuccess: () => {
+      setIsBulkDeleteOpen(false);
+      clearSelection();
+      getLifecycles();
+    },
+    onError: (failures) => {
+      message.error(`${failures.length} lifecycle(s) failed to remove`);
+    },
+  });
+
+  const handleBulkModeChange = async (mode: LifecycleMode) => {
+    setBulkModeChanging(true);
+    setBulkModeError(null);
+    const total = selectedKeys.length;
+    let done = 0;
+    const failures: string[] = [];
+
+    for (const name of selectedKeys) {
+      try {
+        await props.client.setLifecycleMode(name, mode);
+        done++;
+        setBulkModeProgress({ done, total });
+      } catch (err: any) {
+        failures.push(`${name}: ${err.message || "failed"}`);
+        done++;
+        setBulkModeProgress({ done, total });
+      }
+      if (done < total) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
+    setBulkModeChanging(false);
+    setBulkModeProgress(null);
+
+    if (failures.length > 0) {
+      setBulkModeError(`${failures.length} lifecycle(s) failed to change mode`);
+      message.error(`${failures.length} lifecycle(s) failed to change mode`);
+    }
+
+    setIsBulkModeChangeOpen(false);
+    clearSelection();
+    getLifecycles();
+  };
+
+  const onRemoveLifecycle = async () => {
+    try {
+      await props.client.deleteLifecycle(lifecycleToRemove);
+      setIsRemoveModalOpen(false);
+      setRemoveError(null);
+      await getLifecycles();
+    } catch (err) {
+      if (err instanceof APIError && err.message) setRemoveError(err.message);
+      else setRemoveError("Failed to remove lifecycle.");
+    }
+  };
 
   const onModeChange = async (name: string, newMode: LifecycleMode) => {
     setChangingMode(name);
@@ -95,15 +199,21 @@ export default function Lifecycles(props: Readonly<Props>) {
     return () => clearInterval(interval);
   }, []);
 
-  const data = lifecycles.map((lifecycle, index) => ({
-    key: `lifecycle-${index}`,
+  const data = lifecycles.map((lifecycle) => ({
+    key: lifecycle.name,
     name: lifecycle.name,
     mode: lifecycle.mode,
     isRunning: lifecycle.isRunning,
     isProvisioned: lifecycle.isProvisioned,
   }));
 
-  const columns = [
+  const provisionedNames = new Set(
+    lifecycles.filter((l) => l.isProvisioned).map((l) => l.name),
+  );
+  const deletableKeys = selectedKeys.filter((k) => !provisionedNames.has(k));
+  const provisionedSelectedCount = selectedKeys.length - deletableKeys.length;
+
+  const columns: ColumnsType<LifecycleRow> = [
     {
       title: "Name",
       dataIndex: "name",
@@ -115,60 +225,79 @@ export default function Lifecycles(props: Readonly<Props>) {
       ),
     },
     {
-      title: "Mode",
-      dataIndex: "mode",
-      key: "mode",
-      render: (mode: LifecycleMode, record: { name: string }) => {
-        const canChangeMode = props.permissions?.fullAccess;
-        if (!canChangeMode) {
-          const colorMap: Record<LifecycleMode, string> = {
-            [LifecycleMode.ENABLED]: "success",
-            [LifecycleMode.DRY_RUN]: "processing",
-            [LifecycleMode.DISABLED]: "error",
-          };
-          return <Tag color={colorMap[mode] || "default"}>{mode}</Tag>;
-        }
-
-        return (
-          <Select
-            value={mode}
-            onChange={(newMode) => onModeChange(record.name, newMode)}
-            loading={changingMode === record.name}
-            disabled={changingMode !== null}
-            style={MODE_SELECT_STYLE}
-            options={MODE_SELECT_OPTIONS}
-          />
-        );
-      },
-    },
-    {
       title: "Status",
       key: "status",
-      width: 150,
-      render: (
-        _: unknown,
-        record: { isRunning: boolean; mode: LifecycleMode },
-      ) => {
-        if (record.mode === LifecycleMode.DISABLED) {
-          return <Badge status="default" text="Disabled" />;
-        }
-
-        return record.isRunning ? (
-          <Badge color="#231b49" status="processing" text="Running" />
-        ) : (
-          <Badge status="warning" text="Idle" />
+      render: (_: unknown, record: LifecycleRow) => {
+        const { status, text, colorToken } = getLifecycleStatus(
+          record.mode,
+          record.isRunning,
+        );
+        return (
+          <Badge
+            color={colorToken ? token[colorToken] : undefined}
+            status={status}
+            text={text}
+          />
         );
       },
     },
     {
       title: "Provisioned",
       key: "provisioned",
-      render: (_: unknown, record: { isProvisioned: boolean }) =>
-        record.isProvisioned ? (
-          <Tag color="processing">Yes</Tag>
-        ) : (
-          <Tag color="orange">No</Tag>
-        ),
+      render: (_: unknown, record: LifecycleRow) =>
+        record.isProvisioned ? <Tag color="default">Provisioned</Tag> : null,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_: unknown, record: LifecycleRow) => {
+        if (!props.permissions?.fullAccess) {
+          return null;
+        }
+        return (
+          <Flex gap="middle" align="center">
+            <ModeDropdown
+              mode={record.mode}
+              options={MODE_DROPDOWN_OPTIONS}
+              onChange={(newMode) => onModeChange(record.name, newMode)}
+              disabled={changingMode !== null}
+              fontSize={16}
+            />
+            <ActionIcon
+              icon={<SettingOutlined style={{ fontSize: "16px" }} />}
+              onClick={() => {
+                setLifecycleToEdit(record.name);
+                setIsSettingsModalOpen(true);
+              }}
+              tooltip="Settings"
+              showTooltipWhenEnabled
+            />
+            {record.isProvisioned ? (
+              <ActionIcon
+                icon={<DeleteOutlined style={{ fontSize: "16px" }} />}
+                disabled
+                tooltip="Provisioned lifecycles cannot be removed"
+                showTooltipWhenEnabled
+              />
+            ) : (
+              <ActionIcon
+                icon={
+                  <DeleteOutlined
+                    style={{ fontSize: "16px", color: "#ff4d4f" }}
+                  />
+                }
+                onClick={() => {
+                  setLifecycleToRemove(record.name);
+                  setRemoveError(null);
+                  setIsRemoveModalOpen(true);
+                }}
+                tooltip="Delete lifecycle"
+                showTooltipWhenEnabled
+              />
+            )}
+          </Flex>
+        );
+      },
     },
   ];
 
@@ -184,11 +313,49 @@ export default function Lifecycles(props: Readonly<Props>) {
             title="Add"
           />
         ) : null}
+        {props.permissions?.fullAccess ? (
+          <>
+            <Tooltip
+              title={
+                selectedKeys.length > 0
+                  ? deletableKeys.length > 0
+                    ? `Delete ${deletableKeys.length} selected`
+                    : "All selected lifecycles are provisioned"
+                  : "Select lifecycles to delete"
+              }
+              placement="bottomLeft"
+            >
+              <Button
+                style={{ float: "right", marginRight: 8 }}
+                icon={<DeleteOutlined />}
+                onClick={() => setIsBulkDeleteOpen(true)}
+                danger
+                disabled={deletableKeys.length === 0}
+              />
+            </Tooltip>
+            <Tooltip
+              title={
+                selectedKeys.length > 0
+                  ? `Change mode for ${selectedKeys.length} selected`
+                  : "Select lifecycles to change mode"
+              }
+              placement="bottomLeft"
+            >
+              <Button
+                style={{ float: "right", marginRight: 8 }}
+                icon={<SwapOutlined />}
+                onClick={() => setIsBulkModeChangeOpen(true)}
+                disabled={selectedKeys.length === 0}
+              />
+            </Tooltip>
+          </>
+        ) : null}
         <Modal
           title="Add a new lifecycle"
           centered
           open={creatingLifecycle}
           footer={null}
+          destroyOnHidden
           onCancel={() => setCreatingLifecycle(false)}
         >
           <LifecycleSettingsForm
@@ -204,6 +371,69 @@ export default function Lifecycles(props: Readonly<Props>) {
         columns={columns}
         dataSource={data}
         loading={isLoadingLifecycles}
+        rowSelection={props.permissions?.fullAccess ? rowSelection : undefined}
+      />
+      <BulkRemoveConfirmationModal
+        count={deletableKeys.length}
+        resourceType="lifecycle"
+        open={isBulkDeleteOpen}
+        onConfirm={() => handleBulkDelete(deletableKeys)}
+        onCancel={() => {
+          setIsBulkDeleteOpen(false);
+          setBulkError(null);
+        }}
+        loading={bulkDeleting}
+        progress={bulkProgress ?? undefined}
+        errorMessage={bulkError}
+        warningMessage={
+          provisionedSelectedCount > 0
+            ? `${provisionedSelectedCount} provisioned lifecycle(s) will be skipped.`
+            : null
+        }
+      />
+      <BulkModeChangeModal
+        count={selectedKeys.length}
+        open={isBulkModeChangeOpen}
+        onConfirm={handleBulkModeChange}
+        onCancel={() => {
+          setIsBulkModeChangeOpen(false);
+          setBulkModeError(null);
+        }}
+        loading={bulkModeChanging}
+        progress={bulkModeProgress ?? undefined}
+        errorMessage={bulkModeError}
+      />
+      <Modal
+        title="Settings"
+        open={isSettingsModalOpen}
+        footer={null}
+        centered
+        onCancel={() => setIsSettingsModalOpen(false)}
+      >
+        <LifecycleSettingsForm
+          client={props.client}
+          key={lifecycleToEdit}
+          lifecycleName={lifecycleToEdit}
+          readOnly={
+            lifecycles.find((l) => l.name === lifecycleToEdit)?.isProvisioned
+          }
+          onCreated={() => {
+            setIsSettingsModalOpen(false);
+            getLifecycles();
+          }}
+          sourceBuckets={buckets.map((bucket) => bucket.name)}
+        />
+      </Modal>
+      <RemoveConfirmationModal
+        name={lifecycleToRemove}
+        onRemove={onRemoveLifecycle}
+        onCancel={() => {
+          setIsRemoveModalOpen(false);
+          setRemoveError(null);
+        }}
+        resourceType="lifecycle"
+        open={isRemoveModalOpen}
+        errorMessage={removeError}
       />
     </div>
   );

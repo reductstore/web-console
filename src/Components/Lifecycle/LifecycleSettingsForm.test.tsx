@@ -102,6 +102,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     await act(async () => {
       await component.onFinish({
         name: "new-lifecycle",
+        lifecycleType: "delete",
         bucket: "Bucket1",
         maxAge: "1h",
         interval: "10m",
@@ -120,6 +121,38 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         interval: "10m",
         entries: ["entry1"],
       }),
+    );
+  });
+
+  it("creates the lifecycle in dry run mode when the checkbox is set", async () => {
+    const ref = React.createRef<LifecycleSettingsForm>();
+
+    render(
+      <MemoryRouter>
+        <LifecycleSettingsForm
+          ref={ref}
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await ref.current!.onFinish({
+        name: "new-lifecycle",
+        lifecycleType: "delete",
+        bucket: "Bucket1",
+        maxAge: "1h",
+        entries: [],
+        dryRun: true,
+      });
+    });
+
+    expect(client.createLifecycle).toHaveBeenCalledWith(
+      "new-lifecycle",
+      expect.objectContaining({ mode: LifecycleMode.DRY_RUN }),
     );
   });
 
@@ -149,6 +182,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     await act(async () => {
       await component.onFinish({
         name: "test-lifecycle",
+        lifecycleType: "delete",
         bucket: "Bucket2",
         maxAge: "2h",
         interval: "15m",
@@ -200,6 +234,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     await act(async () => {
       await component.onFinish({
         name: "test-lifecycle",
+        lifecycleType: "delete",
         bucket: "Bucket1",
         maxAge: "1h",
         entries: [],

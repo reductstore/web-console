@@ -117,17 +117,10 @@ export default function TokenList(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: Token) => (
-        <span>
-          <Link to={`/tokens/${text}`}>
-            <b>{text}</b>
-          </Link>
-          {record.isProvisioned ? (
-            <Tag color="default" style={{ marginLeft: 8 }}>
-              Provisioned
-            </Tag>
-          ) : null}
-        </span>
+      render: (text: string) => (
+        <Link to={`/tokens/${text}`}>
+          <b>{text}</b>
+        </Link>
       ),
     },
     {
@@ -173,6 +166,12 @@ export default function TokenList(props: Readonly<Props>) {
       key: "ipAllowlist",
       render: (ips?: string[]) =>
         ips && ips.length > 0 ? ips.join(", ") : "—",
+    },
+    {
+      title: "Provisioned",
+      key: "provisioned",
+      render: (_: unknown, record: Token) =>
+        record.isProvisioned ? <Tag color="default">Provisioned</Tag> : null,
     },
     {
       title: "Actions",

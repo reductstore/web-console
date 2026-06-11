@@ -57,12 +57,10 @@ describe("Replications", () => {
     expect(rows.length).toEqual(2);
 
     expect(rows[0].querySelector("a")!.textContent).toEqual("Replication1");
-    expect(rows[0].textContent).toContain("Target Reachable");
-    expect(rows[0].textContent).toContain("Enabled");
+    expect(rows[0].textContent).toContain("Running");
     expect(rows[0].textContent).not.toContain("Provisioned");
 
     expect(rows[1].querySelector("a")!.textContent).toEqual("Replication2");
-    expect(rows[1].textContent).toContain("Target Unreachable");
     expect(rows[1].textContent).toContain("Paused");
     expect(rows[1].textContent).toContain("Provisioned");
     expect(rows[1].textContent).toContain("50");

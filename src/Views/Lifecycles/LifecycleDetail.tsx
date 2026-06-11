@@ -14,9 +14,9 @@ import {
   Card,
   Descriptions,
   Modal,
-  Select,
   Space,
   Tag,
+  theme,
   Tooltip,
   Typography,
   message,
@@ -29,9 +29,10 @@ import {
 
 import LifecycleSettingsForm from "../../Components/Lifecycle/LifecycleSettingsForm";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
+import ModeDropdown from "../../Components/ModeDropdown";
 import {
-  MODE_SELECT_OPTIONS,
-  MODE_SELECT_STYLE,
+  MODE_DROPDOWN_OPTIONS,
+  getLifecycleStatus,
 } from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
@@ -42,6 +43,7 @@ interface Props {
 export default function LifecycleDetail(props: Readonly<Props>) {
   const { name } = useParams() as { name: string };
   const navigate = useNavigate();
+  const { token } = theme.useToken();
 
   const [lifecycle, setLifecycle] = useState<FullLifecycleInfo>();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
@@ -143,15 +145,17 @@ export default function LifecycleDetail(props: Readonly<Props>) {
       return null;
     }
 
-    if (lifecycle.info.mode === LifecycleMode.DISABLED) {
-      return <Badge status="default" text="Disabled" />;
-    }
-
-    if (lifecycle.info.isRunning) {
-      return <Badge color="#231b49" status="processing" text="Running" />;
-    }
-
-    return <Badge status="warning" text="Idle" />;
+    const { status, text, colorToken } = getLifecycleStatus(
+      lifecycle.info.mode,
+      lifecycle.info.isRunning,
+    );
+    return (
+      <Badge
+        color={colorToken ? token[colorToken] : undefined}
+        status={status}
+        text={text}
+      />
+    );
   };
 
   const formatWhenCondition = (when: unknown): string => {
@@ -236,12 +240,21 @@ export default function LifecycleDetail(props: Readonly<Props>) {
   const canChangeMode = !!props.permissions?.fullAccess;
 
   return (
-    <div style={{ padding: "2em", width: "100%" }}>
-      <Typography.Title level={3} style={{ marginBottom: "0.5em" }}>
-        Lifecycle Policy
-      </Typography.Title>
+    <div style={{ margin: "2em" }}>
       <Card
-        title={lifecycle.info.name}
+        title={
+          <span>
+            {lifecycle.info.name}
+            {lifecycle.info.isProvisioned ? (
+              <Tag
+                color="default"
+                style={{ marginLeft: 8, fontWeight: "normal" }}
+              >
+                Provisioned
+              </Tag>
+            ) : null}
+          </span>
+        }
         extra={getStatusTag()}
         actions={[
           <Tooltip title="Back" key="back">
@@ -250,28 +263,28 @@ export default function LifecycleDetail(props: Readonly<Props>) {
               onClick={() => navigate("/lifecycles")}
             />
           </Tooltip>,
-          readOnly ? (
-            <Tooltip
-              title={
-                lifecycle.info.isProvisioned
-                  ? "Cannot modify provisioned lifecycle"
-                  : "No permission to modify"
-              }
-              key="settings"
-            >
-              <SettingOutlined
-                aria-label="Settings"
-                style={{ color: "gray", cursor: "not-allowed" }}
-              />
-            </Tooltip>
-          ) : (
-            <Tooltip title="Settings" key="settings">
-              <SettingOutlined
-                aria-label="Settings"
-                onClick={() => setChangeSettings(true)}
-              />
-            </Tooltip>
-          ),
+          <span
+            key="mode"
+            aria-label="Change mode"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              verticalAlign: "-0.25em",
+            }}
+          >
+            <ModeDropdown
+              mode={lifecycle.info.mode}
+              options={MODE_DROPDOWN_OPTIONS}
+              onChange={onModeChange}
+              disabled={!canChangeMode || changingMode}
+            />
+          </span>,
+          <Tooltip title="Settings" key="settings">
+            <SettingOutlined
+              aria-label="Settings"
+              onClick={() => setChangeSettings(true)}
+            />
+          </Tooltip>,
           readOnly ? (
             <Tooltip
               title={
@@ -309,31 +322,11 @@ export default function LifecycleDetail(props: Readonly<Props>) {
                 {(lifecycle.settings.lifecycleType ?? "delete").toUpperCase()}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Provisioned">
-              {lifecycle.info.isProvisioned ? (
-                <Tag color="processing">Yes</Tag>
-              ) : (
-                <Tag color="orange">No</Tag>
-              )}
-            </Descriptions.Item>
             <Descriptions.Item label="Bucket">
               {lifecycle.settings.bucket}
             </Descriptions.Item>
-            <Descriptions.Item label="Max Age">
+            <Descriptions.Item label="Older Than">
               {lifecycle.settings.maxAge}
-            </Descriptions.Item>
-            <Descriptions.Item label="Mode">
-              <Select
-                style={MODE_SELECT_STYLE}
-                value={lifecycle.info.mode}
-                onChange={onModeChange}
-                loading={changingMode}
-                disabled={!canChangeMode}
-                status={modeError ? "error" : undefined}
-                data-testid="mode-select"
-                size="small"
-                options={MODE_SELECT_OPTIONS}
-              />
             </Descriptions.Item>
             <Descriptions.Item label="Interval">
               {lifecycle.settings.interval || "-"}

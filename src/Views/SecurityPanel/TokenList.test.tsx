@@ -41,7 +41,9 @@ describe("TokenList", () => {
       expect(screen.getByText("token-1")).toBeInTheDocument();
     });
     expect(screen.getByText("token-2")).toBeInTheDocument();
-    expect(screen.getByText("Provisioned")).toBeInTheDocument();
+    expect(
+      screen.getByText("Provisioned", { selector: ".ant-tag" }),
+    ).toBeInTheDocument();
   });
 
   it("should show status tags", async () => {

@@ -6,11 +6,11 @@
 
 /* --- Layout Containers --- */
 .entryDetail {
-  margin: 1.4em;
+  margin: 2em;
 }
 
 .entryDetail > .ant-typography {
-  margin-top: 0.5em;
+  margin-top: 0;
 }
 
 /* --- Time Range & Inputs --- */

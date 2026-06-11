@@ -19,7 +19,6 @@ import {
   Space,
   Tag,
   Tooltip,
-  Typography,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -268,13 +267,6 @@ export default function TokenDetail(props: Readonly<Props>) {
               <Tag color="orange">No</Tag>
             )}
           </Descriptions.Item>
-          <Descriptions.Item label="Provisioned">
-            {token.isProvisioned ? (
-              <Tag color="processing">Yes</Tag>
-            ) : (
-              <Tag color="orange">No</Tag>
-            )}
-          </Descriptions.Item>
           <Descriptions.Item label="Expires At">
             {token.expiresAt !== undefined
               ? dayjs(token.expiresAt).fromNow()
@@ -493,12 +485,23 @@ export default function TokenDetail(props: Readonly<Props>) {
   };
 
   return (
-    <div style={{ padding: "2em", width: "100%" }}>
-      <Typography.Title level={3} style={{ marginBottom: "0.5em" }}>
-        Access Token
-      </Typography.Title>
+    <div style={{ margin: "2em" }}>
       <Card
-        title={!isNew && token ? token.name : undefined}
+        title={
+          !isNew && token ? (
+            <span>
+              {token.name}
+              {token.isProvisioned ? (
+                <Tag
+                  color="default"
+                  style={{ marginLeft: 8, fontWeight: "normal" }}
+                >
+                  Provisioned
+                </Tag>
+              ) : null}
+            </span>
+          ) : undefined
+        }
         extra={
           !isNew && token ? (
             token.isExpired ? (
