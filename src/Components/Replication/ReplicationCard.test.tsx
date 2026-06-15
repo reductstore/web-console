@@ -107,7 +107,7 @@ describe("ReplicationCard", () => {
     );
 
     act(() => {
-      fireEvent.click(container.querySelector('[title="Settings"]')!);
+      fireEvent.click(container.querySelector(".anticon-setting")!);
     });
 
     // Modal renders in a portal; query on document
@@ -251,36 +251,28 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    // Open the Select dropdown
-    const selectEl = container.querySelector(
-      ".ant-select:not(.ant-select-disabled)",
-    );
-    expect(selectEl).toBeTruthy();
+    // Open the mode dropdown
+    const trigger = container
+      .querySelector("[data-testid='mode-select']")
+      ?.querySelector("span");
+    expect(trigger).toBeTruthy();
     await act(async () => {
-      fireEvent.mouseDown(selectEl!);
+      fireEvent.click(trigger!);
     });
 
-    // Click the "Paused" option (dropdown renders in portal)
-    // In antd 6 options may use different attributes
+    // Click the "Pause" menu item (dropdown renders in portal)
     await waitFor(() => {
-      const option =
-        document.querySelector(".ant-select-item[title='Paused']") ||
-        document.querySelector(
-          ".ant-select-item-option[data-value='paused']",
-        ) ||
-        Array.from(document.querySelectorAll(".ant-select-item-option")).find(
-          (el) => el.textContent?.includes("Paused"),
-        );
-      expect(option).toBeTruthy();
+      const item = Array.from(
+        document.querySelectorAll(".ant-dropdown-menu-item"),
+      ).find((el) => el.textContent?.includes("Pause"));
+      expect(item).toBeTruthy();
     });
 
-    const option =
-      document.querySelector(".ant-select-item[title='Paused']") ||
-      Array.from(document.querySelectorAll(".ant-select-item-option")).find(
-        (el) => el.textContent?.includes("Paused"),
-      );
+    const item = Array.from(
+      document.querySelectorAll(".ant-dropdown-menu-item"),
+    ).find((el) => el.textContent?.includes("Pause"));
     await act(async () => {
-      fireEvent.click(option!);
+      fireEvent.click(item!);
     });
 
     expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
@@ -313,32 +305,28 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    // Open the Select dropdown
-    const selectEl2 = container.querySelector(
-      ".ant-select:not(.ant-select-disabled)",
-    );
-    expect(selectEl2).toBeTruthy();
+    // Open the mode dropdown
+    const trigger = container
+      .querySelector("[data-testid='mode-select']")
+      ?.querySelector("span");
+    expect(trigger).toBeTruthy();
     await act(async () => {
-      fireEvent.mouseDown(selectEl2!);
+      fireEvent.click(trigger!);
     });
 
-    // Click the "Disabled" option (dropdown renders in portal)
+    // Click the "Disable" menu item (dropdown renders in portal)
     await waitFor(() => {
-      const option =
-        document.querySelector(".ant-select-item[title='Disabled']") ||
-        Array.from(document.querySelectorAll(".ant-select-item-option")).find(
-          (el) => el.textContent?.includes("Disabled"),
-        );
-      expect(option).toBeTruthy();
+      const item = Array.from(
+        document.querySelectorAll(".ant-dropdown-menu-item"),
+      ).find((el) => el.textContent?.includes("Disable"));
+      expect(item).toBeTruthy();
     });
 
-    const disabledOption =
-      document.querySelector(".ant-select-item[title='Disabled']") ||
-      Array.from(document.querySelectorAll(".ant-select-item-option")).find(
-        (el) => el.textContent?.includes("Disabled"),
-      );
+    const disableItem = Array.from(
+      document.querySelectorAll(".ant-dropdown-menu-item"),
+    ).find((el) => el.textContent?.includes("Disable"));
     await act(async () => {
-      fireEvent.click(disabledOption!);
+      fireEvent.click(disableItem!);
     });
 
     expect(clientMock.setReplicationMode).toHaveBeenCalledWith(
@@ -371,8 +359,10 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    const selectEl = container.querySelector("[data-testid='mode-select']");
-    expect(selectEl?.classList.contains("ant-select-disabled")).toBe(false);
+    const trigger = container
+      .querySelector("[data-testid='mode-select']")
+      ?.querySelector("span") as HTMLElement;
+    expect(trigger.style.cursor).toBe("pointer");
   });
 
   it("disables mode selector when user does not have fullAccess", () => {
@@ -390,11 +380,13 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    const selectEl = container.querySelector("[data-testid='mode-select']");
-    expect(selectEl?.classList.contains("ant-select-disabled")).toBe(true);
+    const trigger = container
+      .querySelector("[data-testid='mode-select']")
+      ?.querySelector("span") as HTMLElement;
+    expect(trigger.style.cursor).toBe("not-allowed");
   });
 
-  it("shows status tags when showPanel is false", () => {
+  it("shows Running status when active", () => {
     const { container } = render(
       <ReplicationCard
         replication={replicationMock}
@@ -409,10 +401,10 @@ describe("ReplicationCard", () => {
     );
 
     expect(container.querySelector("[data-testid='mode-select']")).toBeFalsy();
-    expect(container.textContent).toContain("Target Reachable");
+    expect(container.textContent).toContain("Running");
   });
 
-  it("does not show target status tag when mode is disabled", () => {
+  it("shows Disabled status when mode is disabled", () => {
     const disabledReplicationMock: FullReplicationInfo = {
       ...replicationMock,
       info: {
@@ -434,11 +426,11 @@ describe("ReplicationCard", () => {
       />,
     );
 
-    expect(container.textContent).not.toContain("Target Reachable");
-    expect(container.textContent).not.toContain("Target Unreachable");
+    expect(container.textContent).toContain("Disabled");
+    expect(container.textContent).not.toContain("Running");
   });
 
-  it("shows Target Unreachable status tag when not active", () => {
+  it("shows Target Unreachable status when enabled but not active", () => {
     const inactiveReplicationMock: FullReplicationInfo = {
       ...replicationMock,
       info: {
@@ -461,5 +453,30 @@ describe("ReplicationCard", () => {
     );
 
     expect(container.textContent).toContain("Target Unreachable");
+  });
+
+  it("shows Paused status when mode is paused", () => {
+    const pausedReplicationMock: FullReplicationInfo = {
+      ...replicationMock,
+      info: {
+        ...replicationMock.info,
+        mode: ReplicationMode.PAUSED,
+      },
+    };
+
+    const { container } = render(
+      <ReplicationCard
+        replication={pausedReplicationMock}
+        client={clientMock}
+        index={0}
+        sourceBuckets={["sourceBucket1", "sourceBucket2"]}
+        showPanel={false}
+        onRemove={onRemoveMock}
+        onShow={onShowMock}
+        permissions={{ fullAccess: true }}
+      />,
+    );
+
+    expect(container.textContent).toContain("Paused");
   });
 });

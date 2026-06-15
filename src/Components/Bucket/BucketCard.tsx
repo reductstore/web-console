@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Col, message, Modal, Row, Space, Statistic, Tag } from "antd";
+import { Card, Col, message, Modal, Row, Statistic, Tag, Tooltip } from "antd";
 import humanizeDuration from "humanize-duration";
 import {
   APIError,
@@ -13,6 +13,7 @@ import {
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
 import {
+  ArrowLeftOutlined,
   DeleteOutlined,
   SettingOutlined,
   UploadOutlined,
@@ -30,6 +31,7 @@ interface Props {
   client: Client;
   index: number;
   showPanel?: boolean;
+  onBack?: () => void;
   onRemoved: (name: string) => void;
   onShow: (name: string) => void;
   permissions?: TokenPermissions;
@@ -90,6 +92,13 @@ export default function BucketCard(props: Readonly<Props>) {
   const actions = [];
   const readOnly = !props.permissions?.fullAccess || bucketInfo.isProvisioned;
   if (props.showPanel) {
+    if (props.onBack) {
+      actions.push(
+        <Tooltip title="Back" key="back">
+          <ArrowLeftOutlined onClick={props.onBack} />
+        </Tooltip>,
+      );
+    }
     if (props.hasWritePermission) {
       actions.push(
         <ActionIcon
@@ -136,19 +145,24 @@ export default function BucketCard(props: Readonly<Props>) {
       className="BucketCard"
       key={index}
       id={bucketInfo.name}
-      title={bucketInfo.name}
+      title={
+        <span>
+          {bucketInfo.name}
+          {bucketInfo.isProvisioned ? (
+            <Tag
+              color="default"
+              style={{ marginLeft: 8, fontWeight: "normal" }}
+            >
+              Provisioned
+            </Tag>
+          ) : null}
+        </span>
+      }
       extra={
-        bucketInfo.isProvisioned || isDeleting ? (
-          <Space size="small">
-            {bucketInfo.isProvisioned ? (
-              <Tag color="default">Provisioned</Tag>
-            ) : null}
-            {isDeleting ? (
-              <Tag color="processing" icon={<LoadingOutlined spin />}>
-                Deleting
-              </Tag>
-            ) : null}
-          </Space>
+        isDeleting ? (
+          <Tag color="processing" icon={<LoadingOutlined spin />}>
+            Deleting
+          </Tag>
         ) : null
       }
       hoverable={props.showPanel != true && !isDeleting}

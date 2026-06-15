@@ -213,11 +213,6 @@ export default function BucketList(props: Readonly<Props>) {
                 Deleting
               </Tag>
             ) : null}
-            {record.provisioned && !isDeleting ? (
-              <Tag color="default" style={{ marginLeft: 8 }}>
-                Provisioned
-              </Tag>
-            ) : null}
           </span>
         );
       },
@@ -235,6 +230,17 @@ export default function BucketList(props: Readonly<Props>) {
       title: "Latest Record (UTC)",
       dataIndex: "latestRecord",
       key: "latestRecord",
+    },
+    {
+      title: "Provisioned",
+      key: "provisioned",
+      render: (
+        _: unknown,
+        record: { status?: Status; provisioned?: boolean },
+      ) =>
+        record.provisioned && record.status !== Status.DELETING ? (
+          <Tag color="default">Provisioned</Tag>
+        ) : null,
     },
     ...(props.permissions?.fullAccess
       ? [

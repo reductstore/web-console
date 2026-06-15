@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import {
+  Badge,
   Card,
   Col,
   message,
   Modal,
   Row,
-  Select,
+  Space,
   Statistic,
   Tag,
+  theme,
   Tooltip,
 } from "antd";
 import {
@@ -17,10 +19,18 @@ import {
   ReplicationMode,
   TokenPermissions,
 } from "reduct-js";
-import { DeleteOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  DeleteOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 
 import "./ReplicationCard.css";
-import { MODE_SELECT_OPTIONS, MODE_SELECT_STYLE } from "./ReplicationModeUtils";
+import {
+  MODE_DROPDOWN_OPTIONS,
+  getReplicationStatus,
+} from "./ReplicationModeUtils";
+import ModeDropdown from "../ModeDropdown";
 import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import { bigintToNumber } from "../../Helpers/NumberUtils";
@@ -31,6 +41,7 @@ interface Props {
   index: number;
   sourceBuckets: string[];
   showPanel?: boolean;
+  onBack?: () => void;
   onRemove: (name: string) => void;
   onShow: (name: string) => void;
   onModeChange?: (name: string, mode: ReplicationMode) => void;
@@ -41,8 +52,8 @@ export default function ReplicationCard(props: Readonly<Props>) {
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [changeSettings, setChangeSettings] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [modeError, setModeError] = useState<string | null>(null);
   const [changingMode, setChangingMode] = useState(false);
+  const { token } = theme.useToken();
   const { client, replication, index } = props;
   const { info, diagnostics } = replication;
 
@@ -61,7 +72,6 @@ export default function ReplicationCard(props: Readonly<Props>) {
 
   const onModeChange = async (newMode: ReplicationMode) => {
     setChangingMode(true);
-    setModeError(null);
     try {
       await client.setReplicationMode(info.name, newMode);
       props.onModeChange?.(info.name, newMode);
@@ -75,10 +85,8 @@ export default function ReplicationCard(props: Readonly<Props>) {
     } catch (err) {
       console.error(err);
       if (err instanceof APIError && err.message) {
-        setModeError(err.message);
         message.error(`Failed to change replication mode: ${err.message}`);
       } else {
-        setModeError("Failed to change replication mode.");
         message.error("Failed to change replication mode.");
       }
     } finally {
@@ -90,32 +98,36 @@ export default function ReplicationCard(props: Readonly<Props>) {
   const readOnly = !props.permissions?.fullAccess || info.isProvisioned;
   const canChangeMode = props.permissions?.fullAccess;
   if (props.showPanel) {
+    if (props.onBack) {
+      actions.push(
+        <Tooltip title="Back" key="back">
+          <ArrowLeftOutlined onClick={props.onBack} />
+        </Tooltip>,
+      );
+    }
     actions.push(
-      <div
+      <span
         key="mode"
-        onClick={(e) => e.stopPropagation()}
-        style={{ display: "inline-block" }}
+        aria-label="Change mode"
+        data-testid="mode-select"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          verticalAlign: "-0.25em",
+        }}
       >
-        <Select
-          style={MODE_SELECT_STYLE}
-          value={info.mode}
+        <ModeDropdown
+          mode={info.mode}
+          options={MODE_DROPDOWN_OPTIONS}
           onChange={onModeChange}
-          loading={changingMode}
-          disabled={!canChangeMode}
-          status={modeError ? "error" : undefined}
-          data-testid="mode-select"
-          size="small"
-          options={MODE_SELECT_OPTIONS}
+          disabled={!canChangeMode || changingMode}
         />
-      </div>,
+      </span>,
     );
-
     actions.push(
-      <SettingOutlined
-        title="Settings"
-        key="setting"
-        onClick={() => setChangeSettings(true)}
-      />,
+      <Tooltip title="Settings" key="setting">
+        <SettingOutlined onClick={() => setChangeSettings(true)} />
+      </Tooltip>,
     );
 
     if (readOnly) {
@@ -147,30 +159,17 @@ export default function ReplicationCard(props: Readonly<Props>) {
   }
 
   const getStatusTags = () => {
-    const tags = [];
-    if (info.isProvisioned) {
-      tags.push(
-        <Tag key="provisioned" color="default">
-          Provisioned
-        </Tag>,
-      );
-    }
-    if (info.mode !== ReplicationMode.DISABLED) {
-      if (info.isActive) {
-        tags.push(
-          <Tag key="reachable" color="success">
-            Target Reachable
-          </Tag>,
-        );
-      } else {
-        tags.push(
-          <Tag key="unreachable" color="error">
-            Target Unreachable
-          </Tag>,
-        );
-      }
-    }
-    return tags;
+    const { status, text, colorToken } = getReplicationStatus(
+      info.mode,
+      info.isActive,
+    );
+    return (
+      <Badge
+        color={colorToken ? token[colorToken] : undefined}
+        status={status}
+        text={text}
+      />
+    );
   };
 
   return (
@@ -178,8 +177,20 @@ export default function ReplicationCard(props: Readonly<Props>) {
       className="ReplicationCard"
       key={index}
       id={info.name}
-      title={info.name}
-      extra={<div className="ReplicationCard-status">{getStatusTags()}</div>}
+      title={
+        <span>
+          {info.name}
+          {info.isProvisioned ? (
+            <Tag
+              color="default"
+              style={{ marginLeft: 8, fontWeight: "normal" }}
+            >
+              Provisioned
+            </Tag>
+          ) : null}
+        </span>
+      }
+      extra={<Space size="small">{getStatusTags()}</Space>}
       hoverable={props.showPanel != true}
       onClick={() => props.onShow(info.name)}
       actions={actions}

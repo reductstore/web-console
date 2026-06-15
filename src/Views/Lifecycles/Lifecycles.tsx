@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   APIError,
-  ReplicationInfo,
-  ReplicationMode,
-  Client,
-  TokenPermissions,
   BucketInfo,
+  Client,
+  LifecycleInfo,
+  LifecycleMode,
+  LifecycleType,
+  TokenPermissions,
 } from "reduct-js";
 import {
   Badge,
@@ -19,7 +20,6 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -27,59 +27,57 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 
-import "../../App.css";
-import {
-  MODE_DROPDOWN_OPTIONS,
-  getReplicationStatus,
-} from "../../Components/Replication/ReplicationModeUtils";
+import type { ColumnsType } from "antd/es/table";
+import LifecycleSettingsForm from "../../Components/Lifecycle/LifecycleSettingsForm";
+import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
+import BulkRemoveConfirmationModal from "../../Components/BulkRemoveConfirmationModal";
+import BulkModeChangeModal from "../../Components/Lifecycle/BulkModeChangeModal";
+import ActionIcon from "../../Components/ActionIcon";
 import ModeDropdown from "../../Components/ModeDropdown";
-import { Link } from "react-router-dom";
-import ReplicationSettingsForm from "../../Components/Replication/ReplicationSettingsForm";
 import { useSelectionMode } from "../../hooks/useSelectionMode";
 import { useBulkDelete } from "../../hooks/useBulkDelete";
-import BulkRemoveConfirmationModal from "../../Components/BulkRemoveConfirmationModal";
-import BulkModeChangeModal from "../../Components/Replication/BulkModeChangeModal";
-import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
-import ActionIcon from "../../Components/ActionIcon";
+import {
+  MODE_DROPDOWN_OPTIONS,
+  getLifecycleStatus,
+  getLifecycleTypeColor,
+  getLifecycleTypeLabel,
+} from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
   client: Client;
   permissions?: TokenPermissions;
 }
 
-interface ReplicationRow {
+interface LifecycleRow {
   key: string;
   name: string;
-  isActive: boolean;
-  mode: ReplicationMode;
+  mode: LifecycleMode;
+  type: LifecycleType;
+  isRunning: boolean;
   isProvisioned: boolean;
-  pendingRecords: string;
 }
 
-/**
- * Replications View
- */
-export default function Replications(props: Readonly<Props>) {
+export default function Lifecycles(props: Readonly<Props>) {
   const { token } = theme.useToken();
-  const [replications, setReplications] = useState<ReplicationInfo[]>([]);
+  const [lifecycles, setLifecycles] = useState<LifecycleInfo[]>([]);
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
-  const [isLoadingReplications, setIsLoadingReplications] = useState(true);
+  const [isLoadingLifecycles, setIsLoadingLifecycles] = useState(true);
 
-  const [creatingReplication, setCreatingReplication] = useState(false);
+  const [creatingLifecycle, setCreatingLifecycle] = useState(false);
   const [changingMode, setChangingMode] = useState<string | null>(null);
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
-  const [isBulkModeChangeOpen, setIsBulkModeChangeOpen] = useState(false);
-  const [replicationToRemove, setReplicationToRemove] = useState<string>("");
+  const [lifecycleToEdit, setLifecycleToEdit] = useState<string>("");
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [lifecycleToRemove, setLifecycleToRemove] = useState<string>("");
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkModeChangeOpen, setIsBulkModeChangeOpen] = useState(false);
   const [bulkModeChanging, setBulkModeChanging] = useState(false);
   const [bulkModeProgress, setBulkModeProgress] = useState<{
     done: number;
     total: number;
   } | null>(null);
   const [bulkModeError, setBulkModeError] = useState<string | null>(null);
-  const [replicationToEdit, setReplicationToEdit] = useState<string>("");
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const { selectedKeys, clearSelection, rowSelection } = useSelectionMode();
 
@@ -90,18 +88,18 @@ export default function Replications(props: Readonly<Props>) {
     bulkError,
     setBulkError,
   } = useBulkDelete({
-    onDelete: (name) => props.client.deleteReplication(name),
+    onDelete: (name) => props.client.deleteLifecycle(name),
     onSuccess: () => {
       setIsBulkDeleteOpen(false);
       clearSelection();
-      getReplications();
+      getLifecycles();
     },
     onError: (failures) => {
-      message.error(`${failures.length} replication(s) failed to remove`);
+      message.error(`${failures.length} lifecycle(s) failed to remove`);
     },
   });
 
-  const handleBulkModeChange = async (mode: ReplicationMode) => {
+  const handleBulkModeChange = async (mode: LifecycleMode) => {
     setBulkModeChanging(true);
     setBulkModeError(null);
     const total = selectedKeys.length;
@@ -110,7 +108,7 @@ export default function Replications(props: Readonly<Props>) {
 
     for (const name of selectedKeys) {
       try {
-        await props.client.setReplicationMode(name, mode);
+        await props.client.setLifecycleMode(name, mode);
         done++;
         setBulkModeProgress({ done, total });
       } catch (err: any) {
@@ -127,80 +125,76 @@ export default function Replications(props: Readonly<Props>) {
     setBulkModeProgress(null);
 
     if (failures.length > 0) {
-      setBulkModeError(
-        `${failures.length} replication(s) failed to change mode`,
-      );
-      message.error(`${failures.length} replication(s) failed to change mode`);
+      setBulkModeError(`${failures.length} lifecycle(s) failed to change mode`);
+      message.error(`${failures.length} lifecycle(s) failed to change mode`);
     }
 
     setIsBulkModeChangeOpen(false);
     clearSelection();
-    getReplications();
+    getLifecycles();
   };
 
-  const onRemoveReplication = async () => {
+  const onRemoveLifecycle = async () => {
     try {
-      await props.client.deleteReplication(replicationToRemove);
+      await props.client.deleteLifecycle(lifecycleToRemove);
       setIsRemoveModalOpen(false);
       setRemoveError(null);
-      getReplications();
-    } catch (err: any) {
+      await getLifecycles();
+    } catch (err) {
       if (err instanceof APIError && err.message) setRemoveError(err.message);
-      else setRemoveError("Failed to remove replication.");
+      else setRemoveError("Failed to remove lifecycle.");
     }
   };
 
-  const onModeChange = async (name: string, newMode: ReplicationMode) => {
+  const onModeChange = async (name: string, newMode: LifecycleMode) => {
     setChangingMode(name);
     try {
-      await props.client.setReplicationMode(name, newMode);
-      await getReplications();
-      if (newMode === ReplicationMode.ENABLED) {
-        message.success(`Replication "${name}" enabled.`);
-      } else if (newMode === ReplicationMode.PAUSED) {
-        message.success(`Replication "${name}" paused.`);
-      } else if (newMode === ReplicationMode.DISABLED) {
-        message.success(`Replication "${name}" disabled.`);
+      await props.client.setLifecycleMode(name, newMode);
+      await getLifecycles();
+
+      if (newMode === LifecycleMode.ENABLED) {
+        message.success(`Lifecycle "${name}" enabled.`);
+      } else if (newMode === LifecycleMode.DRY_RUN) {
+        message.success(`Lifecycle "${name}" set to dry run.`);
+      } else if (newMode === LifecycleMode.DISABLED) {
+        message.success(`Lifecycle "${name}" disabled.`);
       }
     } catch (err) {
       console.error(err);
       if (err instanceof APIError && err.message) {
-        message.error(`Failed to change replication mode: ${err.message}`);
+        message.error(`Failed to change lifecycle mode: ${err.message}`);
       } else {
-        message.error("Failed to change replication mode.");
+        message.error("Failed to change lifecycle mode.");
       }
     } finally {
       setChangingMode(null);
     }
   };
 
-  const getReplications = async () => {
+  const getLifecycles = async () => {
     try {
-      setIsLoadingReplications(true);
-      const { client } = props;
-      setReplications(await client.getReplicationList());
+      setIsLoadingLifecycles(true);
+      setLifecycles(await props.client.getLifecycleList());
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoadingReplications(false);
+      setIsLoadingLifecycles(false);
     }
   };
 
   const getBuckets = async () => {
     try {
-      const { client } = props;
-      const bucketList: BucketInfo[] = await client.getBucketList();
-      setBuckets(bucketList);
+      setBuckets(await props.client.getBucketList());
     } catch (err) {
       console.error(err);
     }
   };
 
   useEffect(() => {
-    getReplications().then();
-    const interval = setInterval(() => getReplications(), 5000);
+    getLifecycles().then();
+    const interval = setInterval(() => getLifecycles(), 5000);
     return () => clearInterval(interval);
-  }, [creatingReplication]);
+  }, [creatingLifecycle]);
 
   useEffect(() => {
     getBuckets().then();
@@ -208,41 +202,50 @@ export default function Replications(props: Readonly<Props>) {
     return () => clearInterval(interval);
   }, []);
 
-  const data = replications.map((replication) => {
-    return {
-      key: replication.name,
-      name: replication.name,
-      isActive: replication.isActive,
-      mode: replication.mode,
-      isProvisioned: replication.isProvisioned,
-      pendingRecords: replication.pendingRecords.toString(),
-    };
-  });
+  const data = lifecycles.map((lifecycle) => ({
+    key: lifecycle.name,
+    name: lifecycle.name,
+    mode: lifecycle.mode,
+    type: lifecycle.type,
+    isRunning: lifecycle.isRunning,
+    isProvisioned: lifecycle.isProvisioned,
+  }));
 
   const provisionedNames = new Set(
-    replications.filter((r) => r.isProvisioned).map((r) => r.name),
+    lifecycles.filter((l) => l.isProvisioned).map((l) => l.name),
   );
   const deletableKeys = selectedKeys.filter((k) => !provisionedNames.has(k));
   const provisionedSelectedCount = selectedKeys.length - deletableKeys.length;
 
-  const columns: ColumnsType<ReplicationRow> = [
+  const columns: ColumnsType<LifecycleRow> = [
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
       render: (text: string) => (
-        <Link to={`/replications/${text}`}>
-          <b>{text}</b>
-        </Link>
+        <span>{text}</span>
+        // <Link to={`/lifecycles/${text}`}>
+        //   <b>{text}</b>
+        // </Link>
+      ),
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      render: (type: LifecycleType) => (
+        <Tag color={getLifecycleTypeColor(type)}>
+          {getLifecycleTypeLabel(type)}
+        </Tag>
       ),
     },
     {
       title: "Status",
       key: "status",
-      render: (_, record) => {
-        const { status, text, colorToken } = getReplicationStatus(
+      render: (_: unknown, record: LifecycleRow) => {
+        const { status, text, colorToken } = getLifecycleStatus(
           record.mode,
-          record.isActive,
+          record.isRunning,
         );
         return (
           <Badge
@@ -254,20 +257,15 @@ export default function Replications(props: Readonly<Props>) {
       },
     },
     {
-      title: "Pending Records",
-      dataIndex: "pendingRecords",
-      key: "pendingRecords",
-    },
-    {
       title: "Provisioned",
       key: "provisioned",
-      render: (_, record) =>
+      render: (_: unknown, record: LifecycleRow) =>
         record.isProvisioned ? <Tag color="default">Provisioned</Tag> : null,
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => {
+      render: (_: unknown, record: LifecycleRow) => {
         if (!props.permissions?.fullAccess) {
           return null;
         }
@@ -283,7 +281,7 @@ export default function Replications(props: Readonly<Props>) {
             <ActionIcon
               icon={<SettingOutlined style={{ fontSize: "16px" }} />}
               onClick={() => {
-                setReplicationToEdit(record.name);
+                setLifecycleToEdit(record.name);
                 setIsSettingsModalOpen(true);
               }}
               tooltip="Settings"
@@ -293,7 +291,7 @@ export default function Replications(props: Readonly<Props>) {
               <ActionIcon
                 icon={<DeleteOutlined style={{ fontSize: "16px" }} />}
                 disabled
-                tooltip="Provisioned replications cannot be removed"
+                tooltip="Provisioned lifecycles cannot be removed"
                 showTooltipWhenEnabled
               />
             ) : (
@@ -304,11 +302,11 @@ export default function Replications(props: Readonly<Props>) {
                   />
                 }
                 onClick={() => {
-                  setReplicationToRemove(record.name);
+                  setLifecycleToRemove(record.name);
                   setRemoveError(null);
                   setIsRemoveModalOpen(true);
                 }}
-                tooltip="Delete replication"
+                tooltip="Delete lifecycle"
                 showTooltipWhenEnabled
               />
             )}
@@ -321,12 +319,12 @@ export default function Replications(props: Readonly<Props>) {
   return (
     <div style={{ margin: "2em" }}>
       <Typography.Title level={3}>
-        Replications
+        Lifecycles
         {props.permissions?.fullAccess ? (
           <Button
             style={{ float: "right" }}
             icon={<PlusOutlined />}
-            onClick={() => setCreatingReplication(true)}
+            onClick={() => setCreatingLifecycle(true)}
             title="Add"
           />
         ) : null}
@@ -337,8 +335,8 @@ export default function Replications(props: Readonly<Props>) {
                 selectedKeys.length > 0
                   ? deletableKeys.length > 0
                     ? `Delete ${deletableKeys.length} selected`
-                    : "All selected replications are provisioned"
-                  : "Select replications to delete"
+                    : "All selected lifecycles are provisioned"
+                  : "Select lifecycles to delete"
               }
               placement="bottomLeft"
             >
@@ -354,7 +352,7 @@ export default function Replications(props: Readonly<Props>) {
               title={
                 selectedKeys.length > 0
                   ? `Change mode for ${selectedKeys.length} selected`
-                  : "Select replications to change mode"
+                  : "Select lifecycles to change mode"
               }
               placement="bottomLeft"
             >
@@ -368,17 +366,17 @@ export default function Replications(props: Readonly<Props>) {
           </>
         ) : null}
         <Modal
-          title="Add a new replication"
-          open={creatingReplication}
-          footer={null}
+          title="Add a new lifecycle"
           centered
+          open={creatingLifecycle}
+          footer={null}
           destroyOnHidden
-          onCancel={() => setCreatingReplication(false)}
+          onCancel={() => setCreatingLifecycle(false)}
         >
-          <ReplicationSettingsForm
+          <LifecycleSettingsForm
             client={props.client}
             onCreated={async () => {
-              setCreatingReplication(false);
+              setCreatingLifecycle(false);
             }}
             sourceBuckets={buckets.map((bucket) => bucket.name)}
           />
@@ -387,12 +385,12 @@ export default function Replications(props: Readonly<Props>) {
       <Table
         columns={columns}
         dataSource={data}
-        loading={isLoadingReplications}
+        loading={isLoadingLifecycles}
         rowSelection={props.permissions?.fullAccess ? rowSelection : undefined}
       />
       <BulkRemoveConfirmationModal
         count={deletableKeys.length}
-        resourceType="replication"
+        resourceType="lifecycle"
         open={isBulkDeleteOpen}
         onConfirm={() => handleBulkDelete(deletableKeys)}
         onCancel={() => {
@@ -404,7 +402,7 @@ export default function Replications(props: Readonly<Props>) {
         errorMessage={bulkError}
         warningMessage={
           provisionedSelectedCount > 0
-            ? `${provisionedSelectedCount} provisioned replication(s) will be skipped.`
+            ? `${provisionedSelectedCount} provisioned lifecycle(s) will be skipped.`
             : null
         }
       />
@@ -420,17 +418,6 @@ export default function Replications(props: Readonly<Props>) {
         progress={bulkModeProgress ?? undefined}
         errorMessage={bulkModeError}
       />
-      <RemoveConfirmationModal
-        name={replicationToRemove}
-        onRemove={onRemoveReplication}
-        onCancel={() => {
-          setIsRemoveModalOpen(false);
-          setRemoveError(null);
-        }}
-        resourceType="replication"
-        open={isRemoveModalOpen}
-        errorMessage={removeError}
-      />
       <Modal
         title="Settings"
         open={isSettingsModalOpen}
@@ -438,21 +425,31 @@ export default function Replications(props: Readonly<Props>) {
         centered
         onCancel={() => setIsSettingsModalOpen(false)}
       >
-        <ReplicationSettingsForm
+        <LifecycleSettingsForm
           client={props.client}
-          key={replicationToEdit}
-          replicationName={replicationToEdit}
+          key={lifecycleToEdit}
+          lifecycleName={lifecycleToEdit}
           readOnly={
-            replications.find((r) => r.name === replicationToEdit)
-              ?.isProvisioned
+            lifecycles.find((l) => l.name === lifecycleToEdit)?.isProvisioned
           }
           onCreated={() => {
             setIsSettingsModalOpen(false);
-            getReplications();
+            getLifecycles();
           }}
           sourceBuckets={buckets.map((bucket) => bucket.name)}
         />
       </Modal>
+      <RemoveConfirmationModal
+        name={lifecycleToRemove}
+        onRemove={onRemoveLifecycle}
+        onCancel={() => {
+          setIsRemoveModalOpen(false);
+          setRemoveError(null);
+        }}
+        resourceType="lifecycle"
+        open={isRemoveModalOpen}
+        errorMessage={removeError}
+      />
     </div>
   );
 }

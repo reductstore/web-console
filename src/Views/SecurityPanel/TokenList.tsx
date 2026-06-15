@@ -3,6 +3,7 @@ import { Client, Token } from "reduct-js";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Alert,
+  Badge,
   Button,
   Flex,
   Input,
@@ -116,27 +117,21 @@ export default function TokenList(props: Readonly<Props>) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: Token) => (
-        <span>
-          <Link to={`/tokens/${text}`}>
-            <b>{text}</b>
-          </Link>
-          {record.isProvisioned ? (
-            <Tag color="default" style={{ marginLeft: 8 }}>
-              Provisioned
-            </Tag>
-          ) : null}
-        </span>
+      render: (text: string) => (
+        <Link to={`/tokens/${text}`}>
+          <b>{text}</b>
+        </Link>
       ),
     },
     {
       title: "Status",
       key: "status",
+      width: 150,
       render: (_: unknown, record: Token) => {
         if (record.isExpired) {
-          return <Tag color="error">Expired</Tag>;
+          return <Badge status="error" text="Expired" />;
         }
-        return <Tag color="success">Active</Tag>;
+        return <Badge status="success" text="Active" />;
       },
     },
     {
@@ -171,6 +166,12 @@ export default function TokenList(props: Readonly<Props>) {
       key: "ipAllowlist",
       render: (ips?: string[]) =>
         ips && ips.length > 0 ? ips.join(", ") : "—",
+    },
+    {
+      title: "Provisioned",
+      key: "provisioned",
+      render: (_: unknown, record: Token) =>
+        record.isProvisioned ? <Tag color="default">Provisioned</Tag> : null,
     },
     {
       title: "Actions",

@@ -13,7 +13,7 @@ interface Props {
 export default function QueryPanelPage(props: Readonly<Props>) {
   return (
     <div className="entryDetail">
-      <Typography.Title level={2}>Query</Typography.Title>
+      <Typography.Title level={3}>Query</Typography.Title>
       <QueryPanel
         client={props.client}
         apiUrl={props.apiUrl}

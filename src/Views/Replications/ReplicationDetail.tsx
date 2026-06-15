@@ -88,7 +88,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
   ];
 
   return (
-    <div style={{ margin: "1.4em" }}>
+    <div style={{ margin: "2em" }}>
       {replication && (
         <>
           <ReplicationCard
@@ -97,6 +97,7 @@ export default function ReplicationDetail(props: Readonly<Props>) {
             index={0}
             {...props}
             showPanel
+            onBack={() => navigate("/replications")}
             onRemove={() => navigate("/replications")}
             onShow={() => null}
             onModeChange={() => getReplication()}

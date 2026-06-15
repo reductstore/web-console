@@ -1,0 +1,25 @@
+.jsonEditor {
+  width: 100%;
+}
+
+.LifecycleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.LifecycleForm > .ant-form-item {
+  margin-bottom: 0;
+}
+
+.LifecycleForm .ant-col > .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.LifecycleForm .ant-col > .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.LifecycleForm > .ant-form-item:last-child {
+  margin-top: 8px;
+}

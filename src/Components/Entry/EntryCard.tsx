@@ -1,10 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Col, message, Row, Statistic, Tag } from "antd";
 import {
+  Card,
+  Col,
+  message,
+  Popover,
+  Row,
+  Segmented,
+  Statistic,
+  Tag,
+  Tooltip,
+  Tree,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
   DeleteOutlined,
   LoadingOutlined,
-  NodeCollapseOutlined,
-  NodeExpandOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import {
@@ -16,10 +27,12 @@ import {
 } from "reduct-js";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
+import { useNavigate } from "react-router-dom";
 import { getHistory } from "../Bucket/BucketCard";
 import RemoveConfirmationModal from "../RemoveConfirmationModal";
 import ActionIcon from "../ActionIcon";
-import EntryBreadcrumb from "./EntryBreadcrumb";
+import EntryBreadcrumb, { encodeEntryPath } from "./EntryBreadcrumb";
+import { getImmediateChildKeys, buildNavTree } from "./EntryNavTree";
 import EntryNavTree from "./EntryNavTree";
 import "./EntryCard.css";
 
@@ -29,6 +42,7 @@ interface Props {
   permissions?: TokenPermissions;
   showUnix?: boolean;
   client: Client;
+  onBack?: () => void;
   onRemoved?: (entryName: string) => void;
   onAddRecord?: () => void;
   hasWritePermission?: boolean;
@@ -44,7 +58,7 @@ export default function EntryCard(props: Readonly<Props>) {
   const deletionTooltip = "Deletion in progress. Action disabled.";
   const isDeleting = entryStatus === Status.DELETING;
   const isCardLoading = Boolean(props.loading);
-  const [showAggregated, setShowAggregated] = useState(true);
+  const [showAggregated, setShowAggregated] = useState(false);
 
   useEffect(() => {
     setEntryStatus(entryInfo.status);
@@ -122,30 +136,68 @@ export default function EntryCard(props: Readonly<Props>) {
     } as EntryInfo;
   }, [entryInfo, props.allEntries, showAggregated]);
 
+  const navigate = useNavigate();
+  const [forwardPopoverOpen, setForwardPopoverOpen] = useState(false);
+
+  const childKeys = useMemo(
+    () =>
+      getImmediateChildKeys(allNames, entryInfo.name).filter((k) =>
+        allNames.includes(k),
+      ),
+    [allNames, entryInfo.name],
+  );
+
+  const childTree = useMemo(() => {
+    if (childKeys.length <= 1) return [];
+    const prefix = entryInfo.name + "/";
+    return buildNavTree(allNames, prefix);
+  }, [allNames, entryInfo.name, childKeys.length]);
+
+  const navigateToEntry = (name: string) => {
+    setForwardPopoverOpen(false);
+    navigate(`/buckets/${bucketName}/entries/${encodeEntryPath(name)}`);
+  };
+
   const actions = [];
 
-  if (
-    props.allEntries?.some((e) => e.name.startsWith(`${entryInfo.name}/`)) ??
-    false
-  ) {
+  if (props.onBack) {
     actions.push(
-      <ActionIcon
-        key="toggle-aggregated"
-        icon={
-          showAggregated ? (
-            <NodeCollapseOutlined title="Entry Stats" />
-          ) : (
-            <NodeExpandOutlined title="Entry + Sub-entry Stats" />
-          )
+      <Tooltip title="Back" key="back">
+        <ArrowLeftOutlined onClick={props.onBack} />
+      </Tooltip>,
+    );
+  }
+
+  if (childKeys.length === 1) {
+    actions.push(
+      <Tooltip title="Go to child" key="forward">
+        <ArrowRightOutlined onClick={() => navigateToEntry(childKeys[0])} />
+      </Tooltip>,
+    );
+  } else if (childKeys.length > 1) {
+    actions.push(
+      <Popover
+        key="forward"
+        trigger="click"
+        open={forwardPopoverOpen}
+        onOpenChange={setForwardPopoverOpen}
+        content={
+          <Tree
+            treeData={childTree}
+            defaultExpandAll
+            onSelect={(keys) => {
+              if (keys.length > 0) {
+                navigateToEntry(keys[0] as string);
+              }
+            }}
+            style={{ maxHeight: 320, overflow: "auto", paddingRight: 35 }}
+          />
         }
-        tooltip={showAggregated ? "Entry Stats" : "Entry + Sub-entry Stats"}
-        showTooltipWhenEnabled
-        onClick={() => {
-          window.requestAnimationFrame(() => {
-            setShowAggregated((prev) => !prev);
-          });
-        }}
-      />,
+      >
+        <Tooltip title="Go to child">
+          <ArrowRightOutlined style={{ cursor: "pointer" }} />
+        </Tooltip>
+      </Popover>,
     );
   }
 
@@ -274,6 +326,21 @@ export default function EntryCard(props: Readonly<Props>) {
             />
           </Col>
         </Row>
+        {(props.allEntries?.some((e) =>
+          e.name.startsWith(`${entryInfo.name}/`),
+        ) ??
+          false) && (
+          <Segmented
+            size="small"
+            value={showAggregated ? "aggregated" : "single"}
+            options={[
+              { label: "This entry", value: "single" },
+              { label: "Include sub-entries", value: "aggregated" },
+            ]}
+            onChange={(val) => setShowAggregated(val === "aggregated")}
+            style={{ marginTop: 16 }}
+          />
+        )}
       </Card>
       <RemoveConfirmationModal
         key={entryToRemove}

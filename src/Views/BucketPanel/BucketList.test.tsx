@@ -52,7 +52,7 @@ describe("BucketList", () => {
     const rows = container.querySelectorAll(".ant-table-row");
     expect(rows.length).toEqual(2);
     expect(rows[0].textContent).toEqual(
-      "BucketWithDataProvisioned210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010Z",
+      "BucketWithData210 KB0 seconds1970-01-01T00:00:00.000Z1970-01-01T00:00:00.010ZProvisioned",
     );
     expect(rows[1].textContent).toEqual("EmptyBucket00 B\u2014\u2014\u2014");
   });
