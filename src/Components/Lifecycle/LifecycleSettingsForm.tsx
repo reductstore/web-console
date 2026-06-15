@@ -13,6 +13,7 @@ import {
   Checkbox,
   Col,
   Form,
+  FormInstance,
   Input,
   Row,
   Select,
@@ -64,6 +65,8 @@ export default class LifecycleSettingsForm extends React.Component<
   Props,
   State
 > {
+  private readonly formRef = React.createRef<FormInstance<FormValues>>();
+
   state: State = {
     settings: undefined,
     formattedWhen: "{}\n",
@@ -126,24 +129,38 @@ export default class LifecycleSettingsForm extends React.Component<
         const lifecycle: FullLifecycleInfo =
           await client.getLifecycle(lifecycleName);
         const { settings } = lifecycle;
+        const lifecycleType = settings.lifecycleType ?? lifecycle.info.type;
 
         let whenString = convertWhenToString(settings.when);
         const formatResult = parseAndFormat(whenString);
         whenString = formatResult.error ? whenString : formatResult.formatted;
 
+        const formValues = {
+          name: lifecycleName,
+          lifecycleType,
+          bucket: settings.bucket,
+          olderThan: settings.olderThan,
+          interval: settings.interval,
+          entries: settings.entries || [],
+        };
+
         this.setState(
           {
-            settings,
+            settings: {
+              ...settings,
+              lifecycleType,
+            },
             formattedWhen: whenString,
             entries: settings.entries || [],
             selectedBucket: settings.bucket,
             selectedEntries: settings.entries || [],
-            selectedLifecycleType: settings.lifecycleType,
+            selectedLifecycleType: lifecycleType,
           },
           () => {
             if (settings.bucket) {
               this.handleBucketChange(settings.bucket);
             }
+            this.formRef.current?.setFieldsValue(formValues);
           },
         );
       } catch (err) {
@@ -197,7 +214,8 @@ export default class LifecycleSettingsForm extends React.Component<
   }
 
   getInitialFormValues = () => {
-    const { settings, formattedWhen, entries } = this.state;
+    const { settings, formattedWhen, entries, selectedLifecycleType } =
+      this.state;
     const { lifecycleName: name } = this.props;
 
     if (!settings) {
@@ -206,7 +224,7 @@ export default class LifecycleSettingsForm extends React.Component<
 
     return {
       name,
-      lifecycleType: settings.lifecycleType,
+      lifecycleType: selectedLifecycleType,
       bucket: settings.bucket,
       olderThan: settings.olderThan,
       interval: settings.interval,
@@ -237,6 +255,7 @@ export default class LifecycleSettingsForm extends React.Component<
     return (
       <>
         <Form
+          ref={this.formRef}
           name="lifecycleForm"
           className="LifecycleForm"
           onFinish={this.onFinish}

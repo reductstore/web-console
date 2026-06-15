@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react";
 
-import { Client, LifecycleMode } from "reduct-js";
+import { Client, LifecycleMode, LifecycleType } from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import Lifecycles from "./Lifecycles";
 
@@ -18,12 +18,14 @@ describe("Lifecycles", () => {
       {
         name: "Lifecycle1",
         mode: LifecycleMode.ENABLED,
+        type: LifecycleType.DELETE,
         isRunning: true,
         isProvisioned: false,
       },
       {
         name: "Lifecycle2",
         mode: LifecycleMode.DISABLED,
+        type: LifecycleType.COMPRESS,
         isRunning: false,
         isProvisioned: true,
       },
@@ -54,8 +56,10 @@ describe("Lifecycles", () => {
 
     const rows = container.querySelectorAll("tr.ant-table-row");
     expect(rows.length).toEqual(2);
-    expect(rows[0].querySelector("a")!.textContent).toEqual("Lifecycle1");
-    expect(rows[1].querySelector("a")!.textContent).toEqual("Lifecycle2");
+    expect(rows[0].textContent).toContain("Lifecycle1");
+    expect(rows[0].textContent).toContain("Delete");
+    expect(rows[1].textContent).toContain("Lifecycle2");
+    expect(rows[1].textContent).toContain("Compress");
   });
 
   it("opens create lifecycle modal", async () => {

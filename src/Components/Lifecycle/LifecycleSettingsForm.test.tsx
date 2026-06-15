@@ -22,6 +22,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
 
     const mockLifecycleInfo = LifecycleInfo.parse({
       name: "test-lifecycle",
+      type: "delete",
       mode: LifecycleMode.ENABLED,
       is_running: false,
       is_provisioned: false,
@@ -79,6 +80,12 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     ) as HTMLInputElement;
     expect(input.value).toEqual("test-lifecycle");
     expect(input.disabled).toBeTruthy();
+  });
+
+  it("shows the loaded lifecycle type in update mode", async () => {
+    await waitFor(() => {
+      expect(container.textContent).toContain("Delete");
+    });
   });
 
   it("calls createLifecycle on form submission", async () => {

@@ -5,6 +5,7 @@ import {
   Client,
   LifecycleInfo,
   LifecycleMode,
+  LifecycleType,
   TokenPermissions,
 } from "reduct-js";
 import {
@@ -27,7 +28,6 @@ import {
 } from "@ant-design/icons";
 
 import type { ColumnsType } from "antd/es/table";
-import { Link } from "react-router-dom";
 import LifecycleSettingsForm from "../../Components/Lifecycle/LifecycleSettingsForm";
 import RemoveConfirmationModal from "../../Components/RemoveConfirmationModal";
 import BulkRemoveConfirmationModal from "../../Components/BulkRemoveConfirmationModal";
@@ -39,6 +39,8 @@ import { useBulkDelete } from "../../hooks/useBulkDelete";
 import {
   MODE_DROPDOWN_OPTIONS,
   getLifecycleStatus,
+  getLifecycleTypeColor,
+  getLifecycleTypeLabel,
 } from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
@@ -50,6 +52,7 @@ interface LifecycleRow {
   key: string;
   name: string;
   mode: LifecycleMode;
+  type: LifecycleType;
   isRunning: boolean;
   isProvisioned: boolean;
 }
@@ -203,6 +206,7 @@ export default function Lifecycles(props: Readonly<Props>) {
     key: lifecycle.name,
     name: lifecycle.name,
     mode: lifecycle.mode,
+    type: lifecycle.type,
     isRunning: lifecycle.isRunning,
     isProvisioned: lifecycle.isProvisioned,
   }));
@@ -219,9 +223,20 @@ export default function Lifecycles(props: Readonly<Props>) {
       dataIndex: "name",
       key: "name",
       render: (text: string) => (
-        <Link to={`/lifecycles/${text}`}>
-          <b>{text}</b>
-        </Link>
+        <span>{text}</span>
+        // <Link to={`/lifecycles/${text}`}>
+        //   <b>{text}</b>
+        // </Link>
+      ),
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      render: (type: LifecycleType) => (
+        <Tag color={getLifecycleTypeColor(type)}>
+          {getLifecycleTypeLabel(type)}
+        </Tag>
       ),
     },
     {

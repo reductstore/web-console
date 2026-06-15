@@ -28,6 +28,7 @@ describe("LifecycleDetail", () => {
 
     const info = LifecycleInfo.parse({
       name: "TestLifecycle",
+      type: "delete",
       mode: LifecycleMode.ENABLED,
       is_running: true,
       is_provisioned: false,
@@ -75,7 +76,7 @@ describe("LifecycleDetail", () => {
   it("shows lifecycle card content", async () => {
     expect(screen.getByText("TestLifecycle")).toBeTruthy();
     expect(screen.queryByText("Provisioned")).toBeNull();
-    expect(screen.getByText("DELETE")).toBeTruthy();
+    expect(screen.getByText("Delete")).toBeTruthy();
     expect(screen.getByText("{}", { exact: false })).toBeTruthy();
     expect(screen.getByText("bucket1")).toBeTruthy();
     expect(screen.getByText("1h")).toBeTruthy();

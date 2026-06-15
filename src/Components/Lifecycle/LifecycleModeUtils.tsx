@@ -22,6 +22,13 @@ export const getLifecycleTypeColor = (type?: LifecycleType): string => {
   }
 };
 
+export const getLifecycleTypeLabel = (type?: LifecycleType): string => {
+  return (
+    LIFECYCLE_TYPE_OPTIONS.find((option) => option.value === type)?.label ??
+    "Unknown"
+  );
+};
+
 export const getModeIcon = (mode: LifecycleMode): React.ReactNode => {
   switch (mode) {
     case LifecycleMode.ENABLED:

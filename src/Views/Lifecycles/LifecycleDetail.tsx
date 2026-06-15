@@ -34,6 +34,7 @@ import {
   MODE_DROPDOWN_OPTIONS,
   getLifecycleStatus,
   getLifecycleTypeColor,
+  getLifecycleTypeLabel,
 } from "../../Components/Lifecycle/LifecycleModeUtils";
 
 interface Props {
@@ -239,6 +240,7 @@ export default function LifecycleDetail(props: Readonly<Props>) {
   const readOnly =
     !props.permissions?.fullAccess || lifecycle.info.isProvisioned;
   const canChangeMode = !!props.permissions?.fullAccess;
+  const lifecycleType = lifecycle.settings.lifecycleType ?? lifecycle.info.type;
 
   return (
     <div style={{ margin: "2em" }}>
@@ -319,10 +321,8 @@ export default function LifecycleDetail(props: Readonly<Props>) {
             layout={isSmallScreen ? "vertical" : "horizontal"}
           >
             <Descriptions.Item label="Type">
-              <Tag
-                color={getLifecycleTypeColor(lifecycle.settings.lifecycleType)}
-              >
-                {(lifecycle.settings.lifecycleType ?? "delete").toUpperCase()}
+              <Tag color={getLifecycleTypeColor(lifecycleType)}>
+                {getLifecycleTypeLabel(lifecycleType)}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Bucket">

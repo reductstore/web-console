@@ -12,7 +12,7 @@ import { TokenPermissions } from "reduct-js";
 import Replications from "../Views/Replications/Replications";
 import ReplicationDetail from "../Views/Replications/ReplicationDetail";
 import Lifecycles from "../Views/Lifecycles/Lifecycles";
-import LifecycleDetail from "../Views/Lifecycles/LifecycleDetail";
+// import LifecycleDetail from "../Views/Lifecycles/LifecycleDetail";
 import EntryDetail from "../Views/BucketPanel/EntryDetail";
 import QueryPanelPage from "../Views/QueryPanel/QueryPanelPage";
 
@@ -140,14 +140,14 @@ export function AppRoutes(props: Props): React.ReactElement {
         }
       />
 
-      <Route
+      {/* <Route
         path="/lifecycles/:name"
         element={
           <PrivateRoute authorized={authorized} loading={loading}>
             <LifecycleDetail client={props.backendApi.client} {...props} />
           </PrivateRoute>
         }
-      />
+      /> */}
 
       <Route
         path="/tokens"
