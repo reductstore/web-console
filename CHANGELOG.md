@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.15.0 - 2026-06-16
+
 ### Added
 
 - Add lifecycle management UI pages with list and detail views, [PR-206](https://github.com/reductstore/web-console/pull/206)
@@ -350,35 +352,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Release
 
-[Unreleased]: https://github.com/reduct-storage/web-console/compare/v1.12.0...HEAD
-[1.12.0]: https://github.com/reduct-storage/web-console/compare/v1.12.0...v1.11.2
-[1.11.2]: https://github.com/reduct-storage/web-console/compare/v1.11.2...v1.11.1
-[1.11.1]: https://github.com/reduct-storage/web-console/compare/v1.11.1...v1.11.0
-[1.11.0]: https://github.com/reduct-storage/web-console/compare/v1.11.0...v1.10.1
-[1.10.1]: https://github.com/reduct-storage/web-console/compare/v1.10.1...v1.10.0
-[1.10.0]: https://github.com/reduct-storage/web-console/compare/v1.10.0...v1.9.2
-[1.9.2]: https://github.com/reduct-storage/web-console/compare/v1.9.2...v1.9.1
-[1.9.1]: https://github.com/reduct-storage/web-console/compare/v1.9.1...v1.9.0
-[1.9.0]: https://github.com/reduct-storage/web-console/compare/v1.9.0...v1.8.1
-[1.8.1]: https://github.com/reduct-storage/web-console/compare/v1.8.1...v1.8.0
-[1.8.0]: https://github.com/reduct-storage/web-console/compare/v1.8.0...v1.7.0
-[1.7.0]: https://github.com/reduct-storage/web-console/compare/v1.7.0...v1.6.1
-[1.6.1]: https://github.com/reduct-storage/web-console/compare/v1.6.1...v1.6.0
-[1.6.0]: https://github.com/reduct-storage/web-console/compare/v1.6.0...v1.5.0
-[1.5.0]: https://github.com/reduct-storage/web-console/compare/v1.5.0...v1.4.1
-[1.4.1]: https://github.com/reduct-storage/web-console/compare/v1.4.1...v1.4.0
-[1.4.0]: https://github.com/reduct-storage/web-console/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/reduct-storage/web-console/compare/v1.2.2...v1.3.0
-[1.2.2]: https://github.com/reduct-storage/web-console/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/reduct-storage/web-console/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/reduct-storage/web-console/compare/v1.1.1...v1.2.0
-[1.1.1]: https://github.com/reduct-storage/web-console/compare/v1.1.0...v1.1.1
-[1.1.0]: https://github.com/reduct-storage/web-console/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/reduct-storage/web-console/compare/v0.5.0...v1.0.0
-[0.5.0]: https://github.com/reduct-storage/web-console/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/reduct-storage/web-console/compare/v0.3.1...v0.4.0
-[0.3.1]: https://github.com/reduct-storage/web-console/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/reduct-storage/web-console/compare/v0.2.1...v0.3.0
-[0.2.1]: https://github.com/reduct-storage/web-console/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/reduct-storage/web-console/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/reduct-storage/web-console/releases/tag/v0.1.0
+[Unreleased]: https://github.com/reductstore/web-console/compare/v1.15.0...HEAD
+[1.15.0]: https://github.com/reductstore/web-console/compare/v1.14.2...v1.15.0
+[1.14.2]: https://github.com/reductstore/web-console/compare/v1.14.1...v1.14.2
+[1.14.1]: https://github.com/reductstore/web-console/compare/v1.14.0...v1.14.1
+[1.14.0]: https://github.com/reductstore/web-console/compare/v1.13.0...v1.14.0
+[1.13.0]: https://github.com/reductstore/web-console/compare/v1.12.1...v1.13.0
+[1.12.1]: https://github.com/reductstore/web-console/compare/v1.12.0...v1.12.1
+[1.12.0]: https://github.com/reductstore/web-console/compare/v1.11.2...v1.12.0
+[1.11.2]: https://github.com/reductstore/web-console/compare/v1.11.1...v1.11.2
+[1.11.1]: https://github.com/reductstore/web-console/compare/v1.11.0...v1.11.1
+[1.11.0]: https://github.com/reductstore/web-console/compare/v1.10.1...v1.11.0
+[1.10.1]: https://github.com/reductstore/web-console/compare/v1.10.0...v1.10.1
+[1.10.0]: https://github.com/reductstore/web-console/compare/v1.9.2...v1.10.0
+[1.9.2]: https://github.com/reductstore/web-console/compare/v1.9.1...v1.9.2
+[1.9.1]: https://github.com/reductstore/web-console/compare/v1.9.0...v1.9.1
+[1.9.0]: https://github.com/reductstore/web-console/compare/v1.8.1...v1.9.0
+[1.8.1]: https://github.com/reductstore/web-console/compare/v1.8.0...v1.8.1
+[1.8.0]: https://github.com/reductstore/web-console/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/reductstore/web-console/compare/v1.6.1...v1.7.0
+[1.6.1]: https://github.com/reductstore/web-console/compare/v1.6.0...v1.6.1
+[1.6.0]: https://github.com/reductstore/web-console/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/reductstore/web-console/compare/v1.4.1...v1.5.0
+[1.4.1]: https://github.com/reductstore/web-console/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/reductstore/web-console/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/reductstore/web-console/compare/v1.2.2...v1.3.0
+[1.2.2]: https://github.com/reductstore/web-console/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/reductstore/web-console/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/reductstore/web-console/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/reductstore/web-console/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/reductstore/web-console/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/reductstore/web-console/compare/v0.5.0...v1.0.0
+[0.5.0]: https://github.com/reductstore/web-console/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/reductstore/web-console/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/reductstore/web-console/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/reductstore/web-console/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/reductstore/web-console/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/reductstore/web-console/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/reductstore/web-console/releases/tag/v0.1.0
