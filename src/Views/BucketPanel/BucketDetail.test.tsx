@@ -16,9 +16,9 @@ vi.mock("react-router-dom", async () => ({
 }));
 
 globalThis.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() { }
+  unobserve() { }
+  disconnect() { }
 };
 
 describe("BucketDetail", () => {
