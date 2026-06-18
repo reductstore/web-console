@@ -1,7 +1,7 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { Bucket, BucketInfo, Client, EntryInfo } from "reduct-js";
+import { Bucket, BucketInfo, Client, EntryInfo, Status } from "reduct-js";
 import BucketDetail from "./BucketDetail";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react";
@@ -135,5 +135,32 @@ describe("BucketDetail", () => {
 
     // The table should still render (filtered)
     expect(container.querySelector(".entriesTable")).not.toBeNull();
+  });
+
+  it("should show deleting badge for entries with DELETING status", async () => {
+    bucket.getEntryList = vi.fn().mockResolvedValue([
+      {
+        name: "deleting-entry",
+        blockCount: 1n,
+        recordCount: 1n,
+        size: 512n,
+        oldestRecord: 0n,
+        latestRecord: 10000n,
+        status: Status.DELETING,
+      } as EntryInfo,
+    ]);
+
+    const { container } = render(
+      <MemoryRouter>
+        <BucketDetail client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".entriesTable")).not.toBeNull();
+    });
+
+    const row = container.querySelector(".ant-table-row");
+    expect(row?.textContent).toContain("Deleting");
   });
 });
