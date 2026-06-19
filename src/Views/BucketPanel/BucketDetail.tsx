@@ -16,6 +16,7 @@ import {
   Divider,
   Flex,
   Input,
+  Tag,
   Tooltip,
   Typography,
   message,
@@ -30,6 +31,7 @@ import {
   EditOutlined,
   ExpandAltOutlined,
   LineChartOutlined,
+  LoadingOutlined,
   NodeCollapseOutlined,
   NodeExpandOutlined,
   PartitionOutlined,
@@ -316,33 +318,19 @@ export default function BucketDetail(props: Readonly<Props>) {
   } = useBulkDelete({
     onDelete: async (entryName) => {
       if (!info) throw new Error("No bucket info");
-      const prefix = `${entryName}/`;
+      const bucket: Bucket = await props.client.getBucket(info.name);
+      await bucket.removeEntry(entryName);
+    },
+    onStart: (keys) => {
       setEntries((prev) =>
         prev.map((entry) =>
-          entry.name === entryName || entry.name.startsWith(prefix)
+          keys.some(
+            (key) => entry.name === key || entry.name.startsWith(`${key}/`),
+          )
             ? { ...entry, status: Status.DELETING }
             : entry,
         ),
       );
-      try {
-        const bucket: Bucket = await props.client.getBucket(info.name);
-        await bucket.removeEntry(entryName);
-        setEntries((prev) =>
-          prev.filter(
-            (entry) =>
-              entry.name !== entryName && !entry.name.startsWith(prefix),
-          ),
-        );
-      } catch (err) {
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.name === entryName || entry.name.startsWith(prefix)
-              ? { ...entry, status: Status.READY }
-              : entry,
-          ),
-        );
-        throw err;
-      }
     },
     onSuccess: () => {
       setIsBulkDeleteOpen(false);
@@ -462,7 +450,20 @@ export default function BucketDetail(props: Readonly<Props>) {
                   {row.name}
                 </Typography.Link>
               ) : (
-                <Typography.Text>{row.name}</Typography.Text>
+                <Typography.Text
+                  style={isDeleting ? { color: "#bfbfbf" } : undefined}
+                >
+                  {row.name}
+                </Typography.Text>
+              )}
+              {isDeleting && (
+                <Tag
+                  color="processing"
+                  icon={<LoadingOutlined spin />}
+                  style={{ marginLeft: 4 }}
+                >
+                  Deleting
+                </Tag>
               )}
               {!row.ownEntryName &&
                 row.children &&
