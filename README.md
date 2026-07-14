@@ -24,12 +24,16 @@ The API token is `reductstore`.
 
 The documentation is available as a set of guides on [www.reduct.store](https://www.reduct.store/docs/guides).
 
+## Contributing
+
+If you want to report a bug, discuss an idea, or work on an issue, read the [contributing guide](CONTRIBUTING.md) first.
+
 ## Running Locally
 
 To run the project locally, you need to specify the URL of the ReductStore instance in the `.env` file:
 
 ```bash
-REACT_APP_STORAGE_URL=https://play.reduct.store
+VITE_STORAGE_URL=https://play.reduct.store
 ```
 
 Then you can run the project with:
