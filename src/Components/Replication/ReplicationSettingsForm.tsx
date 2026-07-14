@@ -48,6 +48,7 @@ interface FormValues {
   dstHost: string;
   dstToken: string;
   entries: string[];
+  compression?: string;
   recordSettings: Array<{
     action: FilterType;
     key: string;
@@ -83,7 +84,7 @@ export default class ReplicationSettingsForm extends React.Component<
    */
   onFinish = async (values: FormValues) => {
     const { replicationName, client, onCreated } = this.props;
-    const { srcBucket, dstBucket, dstHost, dstToken, entries, eachN, eachS } =
+    const { srcBucket, dstBucket, dstHost, dstToken, entries, eachN, eachS, compression } =
       values;
     const include: Record<string, string> = {};
     const exclude: Record<string, string> = {};
@@ -125,6 +126,7 @@ export default class ReplicationSettingsForm extends React.Component<
           eachS == undefined || eachS.toString().length == 0
             ? undefined
             : Number(eachS),
+        compression: compression || "none",
       };
       if (replicationName) {
         await client.updateReplication(replicationName, replicationSettings);
@@ -250,6 +252,7 @@ export default class ReplicationSettingsForm extends React.Component<
       when: formattedWhen,
       eachN: settings.eachN,
       eachS: settings.eachS,
+      compression: settings.compression || "none",
     };
   };
 
@@ -416,6 +419,24 @@ export default class ReplicationSettingsForm extends React.Component<
                 name="dstToken"
               >
                 <Input disabled={readOnly} />
+              </Form.Item>
+              <Form.Item
+                label={
+                  <span>
+                    Compression&nbsp;
+                    <Tooltip title="Select wire compression for replication batch payload transfer.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="compression"
+                initialValue="none"
+              >
+                <Select disabled={readOnly}>
+                  <Select.Option value="none">None</Select.Option>
+                  <Select.Option value="zstd">Zstandard (zstd)</Select.Option>
+                  <Select.Option value="gzip">Gzip</Select.Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
