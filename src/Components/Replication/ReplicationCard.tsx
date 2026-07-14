@@ -216,6 +216,11 @@ export default function ReplicationCard(props: Readonly<Props>) {
           />
         </Col>
       </Row>
+      {replication.settings?.compression && replication.settings.compression !== "none" && (
+        <div style={{ marginTop: 12 }}>
+          <Tag color="blue">Compression: {replication.settings.compression.toUpperCase()}</Tag>
+        </div>
+      )}
       <RemoveConfirmationModal
         name={info.name}
         onRemove={onRemove}
