@@ -394,6 +394,22 @@ export default class ReplicationSettingsForm extends React.Component<
               >
                 <Input disabled={readOnly} />
               </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    Prefix&nbsp;
+                    <Tooltip title="Prepended only to destination entry names, for example robot-1/camera/front.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="dstPrefix"
+                className="ReplicationField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+
               <Form.Item
                 label={
                   <span>
@@ -410,21 +426,6 @@ export default class ReplicationSettingsForm extends React.Component<
                     message: "Please input the destination host URL.",
                   },
                 ]}
-                className="ReplicationField"
-              >
-                <Input disabled={readOnly} />
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span>
-                    Prefix&nbsp;
-                    <Tooltip title="Prepended only to destination entry names, for example robot-1/camera/front.">
-                      <InfoCircleOutlined />
-                    </Tooltip>
-                  </span>
-                }
-                name="dstPrefix"
                 className="ReplicationField"
               >
                 <Input disabled={readOnly} />
