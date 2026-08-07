@@ -399,7 +399,7 @@ export default class ReplicationSettingsForm extends React.Component<
                 label={
                   <span>
                     Prefix&nbsp;
-                    <Tooltip title="Prepended only to destination entry names, for example robot-1/camera/front.">
+                    <Tooltip title="Prepended to destination entry names.">
                       <InfoCircleOutlined />
                     </Tooltip>
                   </span>
