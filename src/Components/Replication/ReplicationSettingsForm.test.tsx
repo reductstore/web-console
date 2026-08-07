@@ -28,10 +28,10 @@ describe("Replication::ReplicationSettingsForm", () => {
       src_bucket: "Bucket1",
       dst_bucket: "destinationBucket",
       dst_host: "destinationHost",
-      dst_token: null,
+      dst_token: "destinationToken",
       dst_prefix: "robot-1/camera",
       entries: ["entry1", "entry2"],
-    } as any);
+    });
 
     const mockDiagnostics = Diagnostics.parse({
       hourly: {
@@ -132,36 +132,6 @@ describe("Replication::ReplicationSettingsForm", () => {
       "#replicationForm_dstHost",
     ) as HTMLInputElement;
     expect(input.value).toEqual("destinationHost");
-  });
-
-  it("omits a masked destination token from initial form values", async () => {
-    cleanup();
-    const formValues = React.createRef<ReplicationSettingsForm>();
-
-    const { container: tokenContainer } = render(
-      <MemoryRouter>
-        <ReplicationSettingsForm
-          ref={formValues}
-          client={client}
-          onCreated={() => null}
-          sourceBuckets={["Bucket1", "Bucket2"]}
-          replicationName={"TestReplication"}
-          readOnly={false}
-        />
-      </MemoryRouter>,
-    );
-
-    await waitFor(() =>
-      expect(tokenContainer.querySelector("form")).toBeTruthy(),
-    );
-    expect(formValues.current?.getInitialFormValues().dstToken).toBeUndefined();
-    expect(
-      (
-        tokenContainer.querySelector(
-          "#replicationForm_dstToken",
-        ) as HTMLInputElement
-      ).placeholder,
-    ).toEqual("Enter a token to replace the configured token");
   });
 
   it("shows the destination prefix if it is provided", async () => {

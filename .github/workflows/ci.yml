@@ -46,8 +46,6 @@ jobs:
     name: "End-to-end tests"
     runs-on: ubuntu-latest
     needs: format
-    env:
-      RS_API_TOKEN: e2e-token
     services:
       reductstore:
         image: reduct/store:main
@@ -55,7 +53,6 @@ jobs:
           - 8383:8383
         env:
           RS_CORS_ALLOW_ORIGIN: "*"
-          RS_API_TOKEN: e2e-token
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -67,7 +64,7 @@ jobs:
       - name: Wait for ReductStore API
         run: |
           for i in $(seq 1 30); do
-            if curl -fsS -H "Authorization: Bearer ${RS_API_TOKEN}" http://127.0.0.1:8383/api/v1/info >/dev/null; then
+            if curl -fsS http://127.0.0.1:8383/api/v1/info >/dev/null; then
               exit 0
             fi
             sleep 2

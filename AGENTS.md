@@ -8,3 +8,7 @@
 ## Formatting
 
 - Format code: `npm run fmt`.
+
+## Git Workflow
+
+- Do not push changes yourself. Create commits only when a loaded repository skill explicitly requires them.

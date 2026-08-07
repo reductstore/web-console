@@ -46,7 +46,7 @@ interface FormValues {
   srcBucket: string;
   dstBucket: string;
   dstHost: string;
-  dstToken?: string;
+  dstToken: string;
   dstPrefix?: string;
   entries: string[];
   recordSettings: Array<{
@@ -254,8 +254,7 @@ export default class ReplicationSettingsForm extends React.Component<
       srcBucket: settings.srcBucket,
       dstBucket: settings.dstBucket,
       dstHost: settings.dstHost,
-      // ReductStore masks a configured destination token as null on reads.
-      dstToken: settings.dstToken ?? undefined,
+      dstToken: settings.dstToken,
       dstPrefix: settings.dstPrefix,
       entries: settings.entries || entries,
       recordSettings,
@@ -443,14 +442,7 @@ export default class ReplicationSettingsForm extends React.Component<
                 }
                 name="dstToken"
               >
-                <Input
-                  disabled={readOnly}
-                  placeholder={
-                    this.state.settings?.dstToken === null
-                      ? "Enter a token to replace the configured token"
-                      : undefined
-                  }
-                />
+                <Input disabled={readOnly} />
               </Form.Item>
             </Col>
           </Row>
