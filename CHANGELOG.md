@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Support destination entry prefixes for replications, [PR-XXX](https://github.com/reductstore/web-console/pull/XXX)
+
 ## 1.15.1 - 2026-06-19
 
 ### Fixed

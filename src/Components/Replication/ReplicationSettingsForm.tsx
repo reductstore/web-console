@@ -47,6 +47,7 @@ interface FormValues {
   dstBucket: string;
   dstHost: string;
   dstToken: string;
+  dstPrefix?: string;
   entries: string[];
   recordSettings: Array<{
     action: FilterType;
@@ -83,8 +84,16 @@ export default class ReplicationSettingsForm extends React.Component<
    */
   onFinish = async (values: FormValues) => {
     const { replicationName, client, onCreated } = this.props;
-    const { srcBucket, dstBucket, dstHost, dstToken, entries, eachN, eachS } =
-      values;
+    const {
+      srcBucket,
+      dstBucket,
+      dstHost,
+      dstToken,
+      dstPrefix,
+      entries,
+      eachN,
+      eachS,
+    } = values;
     const include: Record<string, string> = {};
     const exclude: Record<string, string> = {};
     if (values.recordSettings) {
@@ -113,6 +122,7 @@ export default class ReplicationSettingsForm extends React.Component<
         dstBucket,
         dstHost,
         dstToken,
+        dstPrefix,
         entries,
         include,
         exclude,
@@ -245,6 +255,7 @@ export default class ReplicationSettingsForm extends React.Component<
       dstBucket: settings.dstBucket,
       dstHost: settings.dstHost,
       dstToken: settings.dstToken,
+      dstPrefix: settings.dstPrefix,
       entries: settings.entries || entries,
       recordSettings,
       when: formattedWhen,
@@ -399,6 +410,21 @@ export default class ReplicationSettingsForm extends React.Component<
                     message: "Please input the destination host URL.",
                   },
                 ]}
+                className="ReplicationField"
+              >
+                <Input disabled={readOnly} />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    Prefix&nbsp;
+                    <Tooltip title="Prepended only to destination entry names, for example robot-1/camera/front.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="dstPrefix"
                 className="ReplicationField"
               >
                 <Input disabled={readOnly} />

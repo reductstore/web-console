@@ -1,5 +1,5 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
 
@@ -29,6 +29,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dst_bucket: "destinationBucket",
       dst_host: "destinationHost",
       dst_token: "destinationToken",
+      dst_prefix: "robot-1/camera",
       entries: ["entry1", "entry2"],
     });
 
@@ -86,6 +87,7 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(container.querySelector("#replicationForm_dstBucket")).toBeTruthy();
     expect(container.querySelector("#replicationForm_dstHost")).toBeTruthy();
     expect(container.querySelector("#replicationForm_dstToken")).toBeTruthy();
+    expect(container.querySelector("#replicationForm_dstPrefix")).toBeTruthy();
     expect(container.querySelector("#replicationForm_entries")).toBeTruthy();
   });
 
@@ -132,6 +134,18 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(input.value).toEqual("destinationHost");
   });
 
+  it("shows the destination prefix if it is provided", async () => {
+    await waitFor(() =>
+      expect(
+        container.querySelector("#replicationForm_dstPrefix"),
+      ).toBeTruthy(),
+    );
+    const input = container.querySelector(
+      "#replicationForm_dstPrefix",
+    ) as HTMLInputElement;
+    expect(input.value).toEqual("robot-1/camera");
+  });
+
   it("shows the selected entries if they are provided", async () => {
     await waitFor(() =>
       expect(container.querySelector("#replicationForm_entries")).toBeTruthy(),
@@ -148,6 +162,7 @@ describe("Replication::ReplicationSettingsForm", () => {
   });
 
   it("disables record settings inputs and radios in read-only mode", async () => {
+    cleanup();
     const { container: readOnlyContainer } = render(
       <MemoryRouter>
         <ReplicationSettingsForm
@@ -162,7 +177,9 @@ describe("Replication::ReplicationSettingsForm", () => {
 
     // Wait for the component to finish rendering
     await waitFor(() =>
-      expect(readOnlyContainer.querySelector("form")).toBeTruthy(),
+      expect(
+        readOnlyContainer.querySelector("#replicationForm_dstPrefix"),
+      ).toBeTruthy(),
     );
 
     // Check that each Radio.Group is disabled
@@ -189,6 +206,11 @@ describe("Replication::ReplicationSettingsForm", () => {
     );
     expect(updateButton).toBeTruthy();
     expect((updateButton as HTMLButtonElement).disabled).toBe(true);
+
+    const prefixInput = readOnlyContainer.querySelector(
+      "#replicationForm_dstPrefix",
+    ) as HTMLInputElement;
+    expect(prefixInput.disabled).toBe(true);
   });
 
   it("verifies Monaco editor is non-editable in read-only mode", async () => {
@@ -286,6 +308,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dstBucket: "destinationBucket",
       dstHost: "destinationHost",
       dstToken: "destinationToken",
+      dstPrefix: "robot-1/camera",
       eachN: 10n,
       eachS: 0.5,
       entries: ["entry1", "entry2"],
@@ -301,6 +324,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dstBucket: "destinationBucket",
       dstHost: "destinationHost",
       dstToken: "destinationToken",
+      dstPrefix: "robot-1/camera",
       entries: ["entry1", "entry2"],
       eachN: 10n,
       eachS: 0.5,
@@ -373,6 +397,34 @@ describe("Replication::ReplicationSettingsForm", () => {
         "TestReplication",
         expected_settings,
       );
+    });
+
+    it("submits an omitted destination prefix unchanged", async () => {
+      const ref = React.createRef<ReplicationSettingsForm>();
+
+      render(
+        <MemoryRouter>
+          <ReplicationSettingsForm
+            ref={ref}
+            client={client}
+            onCreated={() => null}
+            sourceBuckets={["Bucket1", "Bucket2"]}
+            readOnly={false}
+          />
+        </MemoryRouter>,
+      );
+
+      const component = ref.current!;
+      const settingsWithoutPrefix = { ...form_settings, dstPrefix: undefined };
+
+      await act(async () => {
+        await component.onFinish(settingsWithoutPrefix as any);
+      });
+
+      expect(client.createReplication).toBeCalledWith("NewReplication", {
+        ...expected_settings,
+        dstPrefix: undefined,
+      });
     });
   });
 });
