@@ -29,3 +29,9 @@ yarn-error.log*
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Kilo project skills are shared configuration.
+!.kilo/
+.kilo/*
+!.kilo/skills/
+!.kilo/skills/**

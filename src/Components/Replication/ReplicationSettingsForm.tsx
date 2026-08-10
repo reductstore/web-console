@@ -1,5 +1,10 @@
 import React from "react";
-import { APIError, Client, FullReplicationInfo } from "reduct-js"; // Adjust import paths as necessary
+import {
+  APIError,
+  Client,
+  FullReplicationInfo,
+  ReplicationCompression,
+} from "reduct-js"; // Adjust import paths as necessary
 import {
   Button,
   Col,
@@ -48,6 +53,7 @@ interface FormValues {
   dstHost: string;
   dstToken: string;
   dstPrefix?: string;
+  compression?: ReplicationCompression;
   entries: string[];
   recordSettings: Array<{
     action: FilterType;
@@ -90,6 +96,7 @@ export default class ReplicationSettingsForm extends React.Component<
       dstHost,
       dstToken,
       dstPrefix,
+      compression,
       entries,
       eachN,
       eachS,
@@ -123,6 +130,7 @@ export default class ReplicationSettingsForm extends React.Component<
         dstHost,
         dstToken,
         dstPrefix,
+        compression: compression ?? ReplicationCompression.NONE,
         entries,
         include,
         exclude,
@@ -230,7 +238,7 @@ export default class ReplicationSettingsForm extends React.Component<
     const { replicationName: name } = this.props;
 
     if (!settings) {
-      return { name };
+      return { name, compression: ReplicationCompression.NONE };
     }
 
     const include = settings.include || {};
@@ -256,6 +264,7 @@ export default class ReplicationSettingsForm extends React.Component<
       dstHost: settings.dstHost,
       dstToken: settings.dstToken,
       dstPrefix: settings.dstPrefix,
+      compression: settings.compression ?? ReplicationCompression.NONE,
       entries: settings.entries || entries,
       recordSettings,
       when: formattedWhen,
@@ -368,6 +377,33 @@ export default class ReplicationSettingsForm extends React.Component<
                     value: entry,
                     label: entry,
                   }))}
+                />
+              </Form.Item>
+              <Form.Item
+                label={
+                  <span>
+                    Compression&nbsp;
+                    <Tooltip title="Compress replication data while it is sent to the destination.">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }
+                name="compression"
+                className="ReplicationField"
+              >
+                <Select
+                  disabled={readOnly}
+                  options={[
+                    { value: ReplicationCompression.NONE, label: "None" },
+                    {
+                      value: ReplicationCompression.ZSTD,
+                      label: "Zstandard (zstd)",
+                    },
+                    {
+                      value: ReplicationCompression.GZIP,
+                      label: "Gzip (gzip)",
+                    },
+                  ]}
                 />
               </Form.Item>
             </Col>

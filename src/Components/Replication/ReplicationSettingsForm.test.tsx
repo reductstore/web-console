@@ -3,7 +3,12 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
 
-import { Client, ReplicationInfo, ReplicationSettings } from "reduct-js";
+import {
+  Client,
+  ReplicationCompression,
+  ReplicationInfo,
+  ReplicationSettings,
+} from "reduct-js";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import ReplicationSettingsForm from "./ReplicationSettingsForm";
 import { Diagnostics } from "reduct-js/lib/cjs/messages/Diagnostics";
@@ -30,6 +35,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dst_host: "destinationHost",
       dst_token: "destinationToken",
       dst_prefix: "robot-1/camera",
+      compression: ReplicationCompression.ZSTD,
       entries: ["entry1", "entry2"],
     });
 
@@ -88,6 +94,9 @@ describe("Replication::ReplicationSettingsForm", () => {
     expect(container.querySelector("#replicationForm_dstHost")).toBeTruthy();
     expect(container.querySelector("#replicationForm_dstToken")).toBeTruthy();
     expect(container.querySelector("#replicationForm_dstPrefix")).toBeTruthy();
+    expect(
+      container.querySelector("#replicationForm_compression"),
+    ).toBeTruthy();
     expect(container.querySelector("#replicationForm_entries")).toBeTruthy();
   });
 
@@ -144,6 +153,49 @@ describe("Replication::ReplicationSettingsForm", () => {
       "#replicationForm_dstPrefix",
     ) as HTMLInputElement;
     expect(input.value).toEqual("robot-1/camera");
+  });
+
+  it("shows configured compression", () => {
+    const selectContent = container
+      .querySelector("#replicationForm_compression")
+      ?.closest(".ant-select")
+      ?.querySelector(".ant-select-content");
+    expect(selectContent?.textContent).toContain("Zstandard (zstd)");
+  });
+
+  it("defaults missing compression to none", async () => {
+    cleanup();
+    client.getReplication = vi.fn().mockResolvedValue({
+      settings: ReplicationSettings.parse({
+        src_bucket: "Bucket1",
+        dst_bucket: "destinationBucket",
+        dst_host: "destinationHost",
+        dst_token: "destinationToken",
+        entries: ["entry1", "entry2"],
+      }),
+    });
+
+    const { container: legacyContainer } = render(
+      <MemoryRouter>
+        <ReplicationSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          replicationName="TestReplication"
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(
+        legacyContainer.querySelector("#replicationForm_compression"),
+      ).toBeTruthy(),
+    );
+    const selectContent = legacyContainer
+      .querySelector("#replicationForm_compression")
+      ?.closest(".ant-select")
+      ?.querySelector(".ant-select-content");
+    expect(selectContent?.textContent).toContain("None");
   });
 
   it("shows the selected entries if they are provided", async () => {
@@ -211,6 +263,11 @@ describe("Replication::ReplicationSettingsForm", () => {
       "#replicationForm_dstPrefix",
     ) as HTMLInputElement;
     expect(prefixInput.disabled).toBe(true);
+
+    const compressionSelect = readOnlyContainer
+      .querySelector("#replicationForm_compression")
+      ?.closest(".ant-select");
+    expect(compressionSelect?.classList).toContain("ant-select-disabled");
   });
 
   it("verifies Monaco editor is non-editable in read-only mode", async () => {
@@ -309,6 +366,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dstHost: "destinationHost",
       dstToken: "destinationToken",
       dstPrefix: "robot-1/camera",
+      compression: ReplicationCompression.GZIP,
       eachN: 10n,
       eachS: 0.5,
       entries: ["entry1", "entry2"],
@@ -325,6 +383,7 @@ describe("Replication::ReplicationSettingsForm", () => {
       dstHost: "destinationHost",
       dstToken: "destinationToken",
       dstPrefix: "robot-1/camera",
+      compression: ReplicationCompression.GZIP,
       entries: ["entry1", "entry2"],
       eachN: 10n,
       eachS: 0.5,
@@ -424,6 +483,34 @@ describe("Replication::ReplicationSettingsForm", () => {
       expect(client.createReplication).toBeCalledWith("NewReplication", {
         ...expected_settings,
         dstPrefix: undefined,
+      });
+    });
+
+    it("submits omitted compression as none", async () => {
+      const ref = React.createRef<ReplicationSettingsForm>();
+
+      render(
+        <MemoryRouter>
+          <ReplicationSettingsForm
+            ref={ref}
+            client={client}
+            onCreated={() => null}
+            sourceBuckets={["Bucket1", "Bucket2"]}
+            readOnly={false}
+          />
+        </MemoryRouter>,
+      );
+
+      await act(async () => {
+        await ref.current!.onFinish({
+          ...form_settings,
+          compression: undefined,
+        } as any);
+      });
+
+      expect(client.createReplication).toBeCalledWith("NewReplication", {
+        ...expected_settings,
+        compression: ReplicationCompression.NONE,
       });
     });
   });
