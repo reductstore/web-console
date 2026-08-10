@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support destination entry prefixes for replications, [PR-225](https://github.com/reductstore/web-console/pull/225)
+- Support wire compression settings for replications, [#220](https://github.com/reductstore/web-console/issues/220)
 
 ## 1.15.1 - 2026-06-19
 
