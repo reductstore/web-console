@@ -1,5 +1,5 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
 
@@ -34,6 +34,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
       entries: ["entry1", "entry2"],
       older_than: "1h",
       interval: "10m",
+      processing_interval: "12h",
       when: {},
       mode: "enabled",
     });
@@ -72,6 +73,46 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     expect(container.querySelector("#lifecycleForm_name")).toBeTruthy();
     expect(container.querySelector("#lifecycleForm_bucket")).toBeTruthy();
     expect(container.querySelector("#lifecycleForm_olderThan")).toBeTruthy();
+    expect(
+      container.querySelector("#lifecycleForm_processingInterval"),
+    ).toBeTruthy();
+  });
+
+  it("shows the loaded processing interval", () => {
+    const input = container.querySelector(
+      "#lifecycleForm_processingInterval",
+    ) as HTMLInputElement;
+    expect(input.value).toEqual("12h");
+  });
+
+  it("disables the processing interval in read-only mode", async () => {
+    cleanup();
+
+    const { container: readOnlyContainer } = render(
+      <MemoryRouter>
+        <LifecycleSettingsForm
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          lifecycleName="test-lifecycle"
+          readOnly
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(
+        readOnlyContainer.querySelector("#lifecycleForm_processingInterval"),
+      ).toBeTruthy(),
+    );
+
+    expect(
+      (
+        readOnlyContainer.querySelector(
+          "#lifecycleForm_processingInterval",
+        ) as HTMLInputElement
+      ).disabled,
+    ).toBeTruthy();
   });
 
   it("shows lifecycle name and disables it for update mode", () => {
@@ -113,6 +154,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         bucket: "Bucket1",
         olderThan: "1h",
         interval: "10m",
+        processingInterval: "6h",
         entries: ["entry1"],
       });
     });
@@ -126,6 +168,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         bucket: "Bucket1",
         olderThan: "1h",
         interval: "10m",
+        processingInterval: "6h",
         entries: ["entry1"],
       }),
     );
@@ -152,6 +195,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         lifecycleType: "delete",
         bucket: "Bucket1",
         olderThan: "1h",
+        processingInterval: undefined,
         entries: [],
         dryRun: true,
       });
@@ -160,6 +204,37 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
     expect(client.createLifecycle).toHaveBeenCalledWith(
       "new-lifecycle",
       expect.objectContaining({ mode: LifecycleMode.DRY_RUN }),
+    );
+  });
+
+  it("omits processing interval when it is not provided", async () => {
+    const ref = React.createRef<LifecycleSettingsForm>();
+
+    render(
+      <MemoryRouter>
+        <LifecycleSettingsForm
+          ref={ref}
+          client={client}
+          onCreated={() => null}
+          sourceBuckets={["Bucket1", "Bucket2"]}
+          readOnly={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await ref.current!.onFinish({
+        name: "new-lifecycle",
+        lifecycleType: "delete",
+        bucket: "Bucket1",
+        olderThan: "1h",
+        entries: [],
+      });
+    });
+
+    expect(client.createLifecycle).toHaveBeenCalledWith(
+      "new-lifecycle",
+      expect.objectContaining({ processingInterval: undefined }),
     );
   });
 
@@ -193,6 +268,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         bucket: "Bucket2",
         olderThan: "2h",
         interval: "15m",
+        processingInterval: "1d",
         entries: ["entry2"],
       });
     });
@@ -206,6 +282,7 @@ describe("Lifecycle::LifecycleSettingsForm", () => {
         bucket: "Bucket2",
         olderThan: "2h",
         interval: "15m",
+        processingInterval: "1d",
         entries: ["entry2"],
       }),
     );

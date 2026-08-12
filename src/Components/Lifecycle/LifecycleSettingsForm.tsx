@@ -53,6 +53,7 @@ interface FormValues {
   bucket: string;
   olderThan: string;
   interval?: string;
+  processingInterval?: string;
   entries: string[];
   dryRun?: boolean;
 }
@@ -106,6 +107,7 @@ export default class LifecycleSettingsForm extends React.Component<
         entries: values.entries || [],
         olderThan: values.olderThan,
         interval: values.interval || undefined,
+        processingInterval: values.processingInterval || undefined,
         when: supportsWhen ? (parsedWhen ?? {}) : undefined,
         mode,
       };
@@ -141,6 +143,7 @@ export default class LifecycleSettingsForm extends React.Component<
           bucket: settings.bucket,
           olderThan: settings.olderThan,
           interval: settings.interval,
+          processingInterval: settings.processingInterval,
           entries: settings.entries || [],
         };
 
@@ -228,6 +231,7 @@ export default class LifecycleSettingsForm extends React.Component<
       bucket: settings.bucket,
       olderThan: settings.olderThan,
       interval: settings.interval,
+      processingInterval: settings.processingInterval,
       entries: settings.entries || entries,
       when: formattedWhen,
     };
@@ -389,6 +393,21 @@ export default class LifecycleSettingsForm extends React.Component<
                       </span>
                     }
                     name="interval"
+                    className="LifecycleField"
+                  >
+                    <Input disabled={readOnly} />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span>
+                        Processing Interval&nbsp;
+                        <Tooltip title="Limits the span of data time processed per run, e.g. 6h, 12h, or 1d. Defaults to 24 * interval when blank.">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="processingInterval"
                     className="LifecycleField"
                   >
                     <Input disabled={readOnly} />
