@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support destination entry prefixes for replications, [PR-225](https://github.com/reductstore/web-console/pull/225)
 - Support wire compression settings for replications, [PR-226](https://github.com/reductstore/web-console/pull/226)
 - Support lifecycle processing intervals, [PR-227](https://github.com/reductstore/web-console/pull/227)
-- Add previous and next controls for shifting query time ranges, [Issue-196](https://github.com/reductstore/web-console/issues/196)
+- Add previous and next controls for shifting query time ranges, [PR-228](https://github.com/reductstore/web-console/pull/228)
 
 ## 1.15.1 - 2026-06-19
 
