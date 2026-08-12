@@ -18,7 +18,11 @@ describe("TimeRangeDropdown", () => {
 
   const openMenuAndClick = async (label: string) => {
     await act(async () => {
-      fireEvent.click(screen.getByRole("button"));
+      fireEvent.click(
+        screen
+          .getAllByRole("button")
+          .find((button) => !button.hasAttribute("aria-label"))!,
+      );
     });
     await act(async () => {
       fireEvent.click(screen.getByText(label));
@@ -27,7 +31,9 @@ describe("TimeRangeDropdown", () => {
 
   it("renders the dropdown button", () => {
     render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
-    expect(screen.getByRole("button").textContent).toContain("Custom range");
+    expect(
+      screen.getByRole("button", { name: /custom range/i }).textContent,
+    ).toContain("Custom range");
   });
 
   it("triggers onSelectRange for 'Last 1 hour'", async () => {
@@ -188,7 +194,9 @@ describe("TimeRangeDropdown", () => {
         currentRange={last7Range}
       />,
     );
-    expect(screen.getByRole("button").textContent).toContain("Last 7 days");
+    expect(
+      screen.getByRole("button", { name: /last 7 days/i }).textContent,
+    ).toContain("Last 7 days");
   });
 
   it("displays 'Custom range' for unmatched currentRange", () => {
@@ -202,6 +210,94 @@ describe("TimeRangeDropdown", () => {
         currentRange={customRange}
       />,
     );
-    expect(screen.getByRole("button").textContent).toContain("Custom range");
+    expect(
+      screen.getByRole("button", { name: /custom range/i }).textContent,
+    ).toContain("Custom range");
+  });
+
+  it("shifts a range by its exact duration in both directions", () => {
+    const onShiftRange = vi.fn();
+    const range = { start: 1_000n, end: 3_500n };
+    const { rerender } = render(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        onShiftRange={onShiftRange}
+        currentRange={range}
+      />,
+    );
+
+    const controls = screen.getByRole("group", {
+      name: "Time range shift controls",
+    });
+    expect(controls.children).toHaveLength(3);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Previous time range" }),
+    );
+    expect(onShiftRange).toHaveBeenLastCalledWith(-1_500n, 1_000n);
+
+    rerender(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        onShiftRange={onShiftRange}
+        currentRange={{ start: -1_500n, end: 1_000n }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Next time range" }));
+    expect(onShiftRange).toHaveBeenLastCalledWith(1_000n, 3_500n);
+  });
+
+  it("disables shifts for undefined or invalid ranges", () => {
+    const { rerender } = render(
+      <TimeRangeDropdown onSelectRange={mockOnSelectRange} />,
+    );
+    const expectDisabled = () => {
+      expect(
+        screen.getByRole("button", { name: "Previous time range" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Next time range" }),
+      ).toBeDisabled();
+    };
+
+    expectDisabled();
+    rerender(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={{ start: 1n, end: 1n }}
+      />,
+    );
+    expectDisabled();
+    rerender(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={{ start: 2n, end: 1n }}
+      />,
+    );
+    expectDisabled();
+  });
+
+  it("displays a shifted relative range as custom", () => {
+    const relativeRange = getTimeRangeFromKey("last1");
+    const duration = relativeRange.end - relativeRange.start;
+    const { rerender } = render(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={relativeRange}
+      />,
+    );
+
+    rerender(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={{
+          start: relativeRange.start - duration,
+          end: relativeRange.end - duration,
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /custom range/i }).textContent,
+    ).toContain("Custom range");
   });
 });
