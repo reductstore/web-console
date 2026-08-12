@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { act } from "react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
@@ -959,6 +959,105 @@ describe("EntryDetail", () => {
         head: true,
         strict: true,
       });
+    });
+
+    it("shifts the time range and fetches the adjacent window", async () => {
+      (bucket.query as Mock).mockClear();
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Next time range" }),
+        );
+        vi.runOnlyPendingTimers();
+      });
+
+      expect(
+        container.querySelector('input[placeholder="Start time (optional)"]'),
+      ).toHaveValue("1970-01-01T01:00:00.000Z");
+      expect(
+        container.querySelector('input[placeholder="Stop time (optional)"]'),
+      ).toHaveValue("1970-01-01T02:00:00.000Z");
+      expect(bucket.query).toHaveBeenCalledWith(
+        "testEntry",
+        3_600_000_000n,
+        7_200_000_000n,
+        expect.objectContaining({
+          head: true,
+          strict: true,
+          when: expect.objectContaining({ $each_t: "30s" }),
+        }),
+      );
+    });
+
+    it("keeps the latest shifted query active when an earlier query completes", async () => {
+      let resolveFirstQuery!: () => void;
+      let resolveSecondQuery!: () => void;
+      const firstQuery = new Promise<void>((resolve) => {
+        resolveFirstQuery = resolve;
+      });
+      const secondQuery = new Promise<void>((resolve) => {
+        resolveSecondQuery = resolve;
+      });
+      let queryNumber = 0;
+      bucket.query = vi.fn().mockImplementation(() => {
+        const currentQuery = ++queryNumber;
+        return {
+          async *[Symbol.asyncIterator]() {
+            await (currentQuery === 1 ? firstQuery : secondQuery);
+            yield {
+              ...mockRecords[0],
+              key: `query-${currentQuery}`,
+              labels: { query: `${currentQuery}` },
+            };
+          },
+        };
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Next time range" }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Next time range" }),
+        );
+      });
+
+      expect(bucket.query).toHaveBeenLastCalledWith(
+        "testEntry",
+        7_200_000_000n,
+        10_800_000_000n,
+        expect.anything(),
+      );
+
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(container.querySelector(".fetchButton button")!.textContent).toBe(
+        "Stop",
+      );
+
+      await act(async () => {
+        resolveFirstQuery();
+        await Promise.resolve();
+      });
+      expect(container.querySelector(".fetchButton button")!.textContent).toBe(
+        "Stop",
+      );
+
+      await act(async () => {
+        resolveSecondQuery();
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(container.querySelectorAll(".ant-table-row")).toHaveLength(1);
+      });
+      expect(container.textContent).toContain("query: 2");
+      expect(container.textContent).not.toContain("query: 1");
+      expect(container.querySelector(".fetchButton button")!.textContent).toBe(
+        "Fetch Records",
+      );
     });
   });
 

@@ -456,22 +456,25 @@ export default function QueryPanel({
         return;
       }
 
-      if (fetchCtrlRef.current) {
-        fetchCtrlRef.current.abort();
-      }
-
-      fetchCtrlRef.current = new AbortController();
-      const abortSignal = fetchCtrlRef.current.signal;
+      fetchCtrlRef.current?.abort();
+      const controller = new AbortController();
+      const abortSignal = controller.signal;
+      fetchCtrlRef.current = controller;
+      const isCurrentRequest = () => fetchCtrlRef.current === controller;
 
       setIsLoading(true);
       setShowCancel(false);
       if (cancelDelayRef.current) clearTimeout(cancelDelayRef.current);
-      cancelDelayRef.current = setTimeout(() => setShowCancel(true), 500);
+      const cancelDelay = setTimeout(() => {
+        if (isCurrentRequest()) setShowCancel(true);
+      }, 500);
+      cancelDelayRef.current = cancelDelay;
       setFetchError("");
       setRecords([]);
 
       try {
         const bucketInstance = await client.getBucket(bucketName);
+        if (!isCurrentRequest()) return;
         setBucket(bucketInstance);
 
         const options = new QueryOptions();
@@ -521,13 +524,9 @@ export default function QueryPanel({
           end,
           options,
         )) {
-          if (abortSignal.aborted) {
-            if (batch.length) {
-              setRecords((prev) => [...prev, ...batch]);
-            }
-            progress.cancel();
-            return;
-          }
+          if (!isCurrentRequest()) return;
+          if (abortSignal.aborted) break;
+
           batch.push({
             record,
             tableIndex: count,
@@ -546,17 +545,18 @@ export default function QueryPanel({
           }
         }
 
+        if (!isCurrentRequest()) return;
         if (batch.length) {
-          if (abortSignal.aborted) {
-            setRecords((prev) => [...prev, ...batch]);
-            progress.cancel();
-            return;
-          }
           setRecords((prev) => [...prev, ...batch]);
         }
 
-        progress.done();
+        if (abortSignal.aborted) {
+          progress.cancel();
+        } else {
+          progress.done();
+        }
       } catch (err) {
+        if (!isCurrentRequest()) return;
         if (abortSignal.aborted) {
           progress.cancel();
           return;
@@ -571,13 +571,15 @@ export default function QueryPanel({
           setFetchError("Failed to fetch records.");
         }
       } finally {
-        if (cancelDelayRef.current) {
-          clearTimeout(cancelDelayRef.current);
-          cancelDelayRef.current = null;
+        clearTimeout(cancelDelay);
+        if (isCurrentRequest()) {
+          if (cancelDelayRef.current === cancelDelay) {
+            cancelDelayRef.current = null;
+          }
+          setShowCancel(false);
+          setIsLoading(false);
+          fetchCtrlRef.current = null;
         }
-        setShowCancel(false);
-        setIsLoading(false);
-        fetchCtrlRef.current = null;
       }
     },
     [
@@ -1165,6 +1167,12 @@ export default function QueryPanel({
                       setTimeRange(start, end);
                       setStartError(false);
                       setStopError(false);
+                    }}
+                    onShiftRange={(start, end) => {
+                      setTimeRange(start, end);
+                      setStartError(false);
+                      setStopError(false);
+                      if (hasValidSelection) getRecords(start, end).then();
                     }}
                     initialRangeKey={DEFAULT_RANGE_KEY}
                     currentRange={{

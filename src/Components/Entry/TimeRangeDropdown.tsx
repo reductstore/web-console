@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button, DatePicker, Space, Grid, Dropdown } from "antd";
+import { Button, DatePicker, Space, Grid, Dropdown, Tooltip } from "antd";
 import type { MenuProps } from "antd";
-import { DownOutlined } from "@ant-design/icons";
+import { DownOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "../../Helpers/dayjsConfig";
 import {
   getTimeRangeFromKey,
@@ -15,12 +15,14 @@ type RangeValue = Parameters<
 
 interface Props {
   onSelectRange: (start: bigint, end: bigint) => void;
+  onShiftRange?: (start: bigint, end: bigint) => void;
   initialRangeKey?: string;
   currentRange?: { start: bigint | undefined; end: bigint | undefined };
 }
 
 export default function TimeRangeDropdown({
   onSelectRange,
+  onShiftRange,
   initialRangeKey,
   currentRange,
 }: Props) {
@@ -86,6 +88,19 @@ export default function TimeRangeDropdown({
   };
 
   const displayLabel = rangeLabel || "Select time range";
+  const canShift =
+    currentRange?.start !== undefined &&
+    currentRange.end !== undefined &&
+    currentRange.end > currentRange.start;
+
+  const shiftRange = (direction: -1n | 1n) => {
+    if (!canShift || !currentRange) return;
+    const duration = currentRange.end! - currentRange.start!;
+    onShiftRange?.(
+      currentRange.start! + direction * duration,
+      currentRange.end! + direction * duration,
+    );
+  };
 
   const menuItems: MenuProps["items"] = presets.map((p) => ({
     key: p.key,
@@ -93,99 +108,123 @@ export default function TimeRangeDropdown({
   }));
 
   return (
-    <div style={{ display: "inline-block", position: "relative" }}>
-      {isSmall ? (
-        <Dropdown
-          open={menuOpen}
-          onOpenChange={(open) => setMenuOpen(open)}
-          menu={{
-            items: menuItems,
-            onClick: ({ key }) => {
-              handlePresetPick(String(key));
-              setMenuOpen(false);
-            },
-          }}
-          placement="bottomLeft"
-          trigger={["click"]}
-        >
-          <Button onClick={() => setMenuOpen(true)}>
-            {displayLabel}
-            <DownOutlined />
-          </Button>
-        </Dropdown>
-      ) : (
-        <>
-          <Button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setPickerOpen((prev) => {
-                if (prev) {
-                  suppressNextOpen.current = true;
-                  return false;
-                }
-                return true;
-              });
+    <div
+      role="group"
+      aria-label="Time range shift controls"
+      style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+    >
+      <Tooltip title="Previous time range">
+        <Button
+          type="text"
+          icon={<LeftOutlined />}
+          aria-label="Previous time range"
+          disabled={!canShift}
+          onClick={() => shiftRange(-1n)}
+        />
+      </Tooltip>
+      <div style={{ display: "inline-block", position: "relative" }}>
+        {isSmall ? (
+          <Dropdown
+            open={menuOpen}
+            onOpenChange={(open) => setMenuOpen(open)}
+            menu={{
+              items: menuItems,
+              onClick: ({ key }) => {
+                handlePresetPick(String(key));
+                setMenuOpen(false);
+              },
             }}
+            placement="bottomLeft"
+            trigger={["click"]}
           >
-            {displayLabel}
-            <DownOutlined />
-          </Button>
-          <Space
-            orientation="vertical"
-            size={12}
-            style={{
-              position: "absolute",
-              insetInlineStart: 0,
-              top: 0,
-              width: 1,
-              height: 1,
-              padding: 0,
-              margin: 0,
-              border: 0,
-              opacity: 0,
-              pointerEvents: "none",
-              overflow: "hidden",
-            }}
-          >
-            <DatePicker.RangePicker
-              open={pickerOpen}
-              onOpenChange={(open) => {
-                if (!isMounted.current) return;
-                if (open && suppressNextOpen.current) {
-                  suppressNextOpen.current = false;
-                  return;
-                }
-                setPickerOpen(open);
-                if (!open) setTempDates(null);
+            <Button onClick={() => setMenuOpen(true)}>
+              {displayLabel}
+              <DownOutlined />
+            </Button>
+          </Dropdown>
+        ) : (
+          <>
+            <Button
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPickerOpen((prev) => {
+                  if (prev) {
+                    suppressNextOpen.current = true;
+                    return false;
+                  }
+                  return true;
+                });
               }}
-              value={tempDates}
-              onCalendarChange={(vals) => {
-                if (!isMounted.current) return;
-                const v = vals as RangeValue;
-                setTempDates(v);
+            >
+              {displayLabel}
+              <DownOutlined />
+            </Button>
+            <Space
+              orientation="vertical"
+              size={12}
+              style={{
+                position: "absolute",
+                insetInlineStart: 0,
+                top: 0,
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: 0,
+                border: 0,
+                opacity: 0,
+                pointerEvents: "none",
+                overflow: "hidden",
               }}
-              onChange={(dates) => {
-                if (!isMounted.current) return;
-                const from = dates?.[0] as Dayjs | null;
-                const to = dates?.[1] as Dayjs | null;
-                if (from && to) {
-                  applyRange(from, to);
-                  const key = detectRangeKey(
-                    BigInt(from.valueOf() * 1000),
-                    BigInt(to.valueOf() * 1000),
-                  );
-                  setRangeLabel(RANGE_MAP[key]);
-                }
-                setPickerOpen(false);
-              }}
-              presets={presets.map(({ label, value }) => ({ label, value }))}
-              allowClear={false}
-              showTime={false}
-            />
-          </Space>
-        </>
-      )}
+            >
+              <DatePicker.RangePicker
+                open={pickerOpen}
+                onOpenChange={(open) => {
+                  if (!isMounted.current) return;
+                  if (open && suppressNextOpen.current) {
+                    suppressNextOpen.current = false;
+                    return;
+                  }
+                  setPickerOpen(open);
+                  if (!open) setTempDates(null);
+                }}
+                value={tempDates}
+                onCalendarChange={(vals) => {
+                  if (!isMounted.current) return;
+                  const v = vals as RangeValue;
+                  setTempDates(v);
+                }}
+                onChange={(dates) => {
+                  if (!isMounted.current) return;
+                  const from = dates?.[0] as Dayjs | null;
+                  const to = dates?.[1] as Dayjs | null;
+                  if (from && to) {
+                    applyRange(from, to);
+                    const key = detectRangeKey(
+                      BigInt(from.valueOf() * 1000),
+                      BigInt(to.valueOf() * 1000),
+                    );
+                    setRangeLabel(RANGE_MAP[key]);
+                  }
+                  setPickerOpen(false);
+                }}
+                presets={presets.map(({ label, value }) => ({ label, value }))}
+                allowClear={false}
+                showTime={false}
+              />
+            </Space>
+          </>
+        )}
+      </div>
+      <Tooltip title="Next time range">
+        <Button
+          type="text"
+          icon={<RightOutlined />}
+          aria-label="Next time range"
+          disabled={!canShift}
+          onClick={() => shiftRange(1n)}
+        />
+      </Tooltip>
     </div>
   );
 }
