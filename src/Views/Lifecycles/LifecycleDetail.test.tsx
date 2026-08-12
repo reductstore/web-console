@@ -40,6 +40,7 @@ describe("LifecycleDetail", () => {
       entries: ["entry1", "entry2"],
       older_than: "1h",
       interval: "10m",
+      processing_interval: "12h",
       when: {},
       mode: "enabled",
     });
@@ -80,6 +81,7 @@ describe("LifecycleDetail", () => {
     expect(screen.getByText("{}", { exact: false })).toBeTruthy();
     expect(screen.getByText("bucket1")).toBeTruthy();
     expect(screen.getByText("1h")).toBeTruthy();
+    expect(screen.getByText("12h")).toBeTruthy();
   });
 
   it("renders mode control and action buttons", async () => {

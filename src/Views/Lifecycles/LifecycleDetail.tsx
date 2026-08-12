@@ -334,6 +334,9 @@ export default function LifecycleDetail(props: Readonly<Props>) {
             <Descriptions.Item label="Interval">
               {lifecycle.settings.interval || "-"}
             </Descriptions.Item>
+            <Descriptions.Item label="Processing Interval">
+              {lifecycle.settings.processingInterval || "-"}
+            </Descriptions.Item>
             <Descriptions.Item label="Entries" span="filled">
               <Typography.Paragraph
                 style={{

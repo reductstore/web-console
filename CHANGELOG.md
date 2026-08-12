@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support destination entry prefixes for replications, [PR-225](https://github.com/reductstore/web-console/pull/225)
 - Support wire compression settings for replications, [PR-226](https://github.com/reductstore/web-console/pull/226)
+- Support lifecycle processing intervals, [#224](https://github.com/reductstore/web-console/issues/224)
 
 ## 1.15.1 - 2026-06-19
 
