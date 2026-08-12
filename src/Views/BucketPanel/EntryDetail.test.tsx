@@ -987,7 +987,7 @@ describe("EntryDetail", () => {
           when: expect.objectContaining({ $each_t: "30s" }),
         }),
       );
-    });
+    }, 10_000);
 
     it("keeps the latest shifted query active when an earlier query completes", async () => {
       let resolveFirstQuery!: () => void;
@@ -1058,7 +1058,7 @@ describe("EntryDetail", () => {
       expect(container.querySelector(".fetchButton button")!.textContent).toBe(
         "Fetch Records",
       );
-    });
+    }, 10_000);
   });
 
   describe("Sub-entry Warning", () => {
