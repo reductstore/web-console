@@ -62,6 +62,10 @@ function serializeGroup(group: ConditionGroup): Record<string, unknown> {
       const serializedChild = serializeNode(group.children[0]);
       return { [group.operator]: serializedChild };
     }
+    // $not only accepts a single expression, so 2+ children are wrapped
+    // in an implicit $and. This wrapper is not unwrapped on parse back,
+    // so a $not with several direct children becomes a $not with one
+    // nested $and child after a JSON round trip.
     const serializedChildren = group.children.map((child) =>
       serializeNode(child),
     );
@@ -71,6 +75,9 @@ function serializeGroup(group: ConditionGroup): Record<string, unknown> {
   return {};
 }
 
+/**
+ * Convert a builder tree into its Conditional Query JSON shape
+ */
 export function serializeBuilderTree(
   tree: BuilderTree,
 ): Record<string, unknown> {
@@ -97,6 +104,9 @@ const LABEL_OPERATORS: LabelOperator[] = [
   "$nin",
 ];
 
+/**
+ * Check whether a string is a valid label comparison operator
+ */
 export function isLabelOperator(value: string): value is LabelOperator {
   return LABEL_OPERATORS.includes(value as LabelOperator);
 }
@@ -139,6 +149,9 @@ function parseLabelCondition(json: unknown): LabelCondition | null {
   const value = (innerValue as Record<string, unknown>)[operatorKey];
   const isStringArray =
     Array.isArray(value) && value.every((item) => typeof item === "string");
+  // Numbers/booleans are intentionally rejected: the builder only edits
+  // text values today, so a numeric/boolean comparison is treated as
+  // "not representable in the builder" rather than silently truncated.
   if (typeof value !== "string" && !isStringArray) {
     return null;
   }
@@ -206,6 +219,9 @@ function parseConditionGroup(json: unknown): ConditionGroup | null {
 
 const LOGICAL_OPERATORS: LogicalOperator[] = ["$and", "$or", "$not"];
 
+/**
+ * Check whether a string is a valid logical group operator
+ */
 export function isLogicalOperator(value: string): value is LogicalOperator {
   return LOGICAL_OPERATORS.includes(value as LogicalOperator);
 }
@@ -216,6 +232,9 @@ export interface ParseBuilderTreeResult {
   error?: string;
 }
 
+/**
+ * Parse Conditional Query JSON into a builder tree, if representable
+ */
 export function parseBuilderTree(json: unknown): ParseBuilderTreeResult {
   if (
     typeof json === "object" &&
@@ -263,6 +282,9 @@ function updateNode(
   };
 }
 
+/**
+ * Return a new tree with the given condition's fields updated
+ */
 export function updateCondition(
   tree: BuilderTree,
   id: string,
@@ -287,6 +309,9 @@ function removeFromChildren(
     );
 }
 
+/**
+ * Return a new tree with the given condition or group removed
+ */
 export function removeNode(tree: BuilderTree, id: string): BuilderTree {
   if (!tree) {
     return tree;
@@ -314,6 +339,9 @@ function addChildToGroup(
   };
 }
 
+/**
+ * Return a new tree with an empty condition added to the given group
+ */
 export function addCondition(
   tree: BuilderTree,
   groupId: string | null,
@@ -339,6 +367,9 @@ export function addCondition(
   return addChildToGroup(tree, groupId, newCondition) as ConditionGroup;
 }
 
+/**
+ * Return a new tree with an empty group added to the given group
+ */
 export function addGroup(
   tree: BuilderTree,
   groupId: string | null,
@@ -382,6 +413,9 @@ function updateGroupOperatorNode(
   };
 }
 
+/**
+ * Return a new tree with the given group's operator changed
+ */
 export function updateGroupOperator(
   tree: BuilderTree,
   groupId: string,
