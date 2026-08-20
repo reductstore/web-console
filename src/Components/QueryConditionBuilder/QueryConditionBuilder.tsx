@@ -1,5 +1,5 @@
 import { useState, ComponentProps, ReactNode } from "react";
-import { Segmented, Typography } from "antd";
+import { Switch, Typography } from "antd";
 import { JsonQueryEditor } from "../JsonEditor";
 import ConditionGroupEditor from "./ConditionGroupEditor";
 import {
@@ -60,9 +60,8 @@ export default function QueryConditionBuilder({
 }: QueryConditionBuilderProps) {
   const [mode, setMode] = useState<"builder" | "json">("builder");
   const [tree, setTree] = useState<BuilderTree>(
-    () => jsonTextToTree(value) ?? null,
+    () => jsonTextToTree(value) ?? addCondition(null, null),
   );
-  const canSwitchToBuilder = jsonTextToTree(value) !== undefined;
 
   const applyTree = (nextTree: BuilderTree) => {
     setTree(nextTree);
@@ -81,24 +80,21 @@ export default function QueryConditionBuilder({
   };
 
   const modeSwitch = (
-    <Segmented
-      value={mode}
-      onChange={(v) => handleModeChange(v as "builder" | "json")}
-      options={[
-        {
-          label: "Builder",
-          value: "builder",
-          disabled: mode === "json" && !canSwitchToBuilder,
-        },
-        { label: "JSON", value: "json" },
-      ]}
-    />
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Typography.Text>JSON</Typography.Text>
+      <Switch
+        checked={mode === "json"}
+        onChange={(checked) => handleModeChange(checked ? "json" : "builder")}
+      />
+    </div>
   );
 
   if (mode === "json") {
     return (
-      <div>
-        {modeSwitch}
+      <div style={{ padding: 12 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          {modeSwitch}
+        </div>
         <JsonQueryEditor
           value={value}
           onChange={onChange}
@@ -118,11 +114,19 @@ export default function QueryConditionBuilder({
     <div
       style={{ padding: 12, display: "flex", flexDirection: "column", gap: 12 }}
     >
-      {modeSwitch}
       <div className="querySection">
-        <Typography.Text strong className="querySectionLabel">
-          Where labels
-        </Typography.Text>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography.Text strong className="querySectionLabel">
+            Where labels
+          </Typography.Text>
+          {modeSwitch}
+        </div>
         <ConditionGroupEditor
           group={tree ?? EMPTY_ROOT}
           isRoot

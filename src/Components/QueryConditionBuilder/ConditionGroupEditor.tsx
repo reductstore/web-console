@@ -24,6 +24,7 @@ interface ConditionGroupEditorProps {
   onAddCondition: (groupId: string) => void;
   onAddGroup: (groupId: string) => void;
   isRoot?: boolean;
+  removable?: boolean;
 }
 
 export default function ConditionGroupEditor({
@@ -34,69 +35,74 @@ export default function ConditionGroupEditor({
   onAddCondition,
   onAddGroup,
   isRoot = false,
+  removable = true,
 }: ConditionGroupEditorProps) {
+  const connectorIndex = 1;
   return (
     <div
       style={{
         border: isRoot ? "none" : "1px solid #d9d9d9",
         borderRadius: 4,
-        padding: isRoot ? 0 : 8,
+        padding: isRoot ? 0 : 28,
         position: "relative",
       }}
     >
-      {!isRoot && (
+      {!isRoot && removable && (
         <Button
+          aria-label="Remove group"
           type="text"
           size="small"
           icon={<CloseOutlined />}
           onClick={() => onRemoveNode(group.id)}
-          style={{ position: "absolute", top: 0, right: 0 }}
+          style={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}
         />
       )}
+      {group.children.map((child, index) => {
+        const canRemoveThisChild = !(isRoot && index === 0);
+        return (
+          <div
+            key={child.id}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              marginBottom: 8,
+              marginTop: child.kind === "group" ? 8 : 0,
+            }}
+          >
+            {group.children.length > 1 && index === connectorIndex && (
+              <Select
+                size="small"
+                popupMatchSelectWidth={false}
+                value={group.operator}
+                options={GROUP_OPERATOR_OPTIONS}
+                onChange={(value) => onChangeGroupOperator(group.id, value)}
+                style={{ width: 70 }}
+              />
+            )}
+            {child.kind === "condition" ? (
+              <LabelConditionEditor
+                condition={child}
+                onChange={onChangeCondition}
+                onRemove={onRemoveNode}
+                removable={canRemoveThisChild}
+              />
+            ) : (
+              <ConditionGroupEditor
+                group={child}
+                onChangeCondition={onChangeCondition}
+                onChangeGroupOperator={onChangeGroupOperator}
+                onRemoveNode={onRemoveNode}
+                onAddCondition={onAddCondition}
+                onAddGroup={onAddGroup}
+                removable={canRemoveThisChild}
+              />
+            )}
+          </div>
+        );
+      })}
 
-      {group.children.map((child, index) => (
-        <div
-          key={child.id}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          {index === 0 ? (
-            <div style={{ width: 48 }} />
-          ) : (
-            <Select
-              size="small"
-              variant="borderless"
-              popupMatchSelectWidth={false}
-              value={group.operator}
-              options={GROUP_OPERATOR_OPTIONS}
-              onChange={(value) => onChangeGroupOperator(group.id, value)}
-              style={{ width: 48 }}
-            />
-          )}
-          {child.kind === "condition" ? (
-            <LabelConditionEditor
-              condition={child}
-              onChange={onChangeCondition}
-              onRemove={onRemoveNode}
-            />
-          ) : (
-            <ConditionGroupEditor
-              group={child}
-              onChangeCondition={onChangeCondition}
-              onChangeGroupOperator={onChangeGroupOperator}
-              onRemoveNode={onRemoveNode}
-              onAddCondition={onAddCondition}
-              onAddGroup={onAddGroup}
-            />
-          )}
-        </div>
-      ))}
-
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <Button size="small" onClick={() => onAddCondition(group.id)}>
           + Condition
         </Button>
