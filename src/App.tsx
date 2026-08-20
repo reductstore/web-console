@@ -106,7 +106,7 @@ export default function App(props: Readonly<Props>) {
         {
           key: "query",
           icon: <LineChartOutlined />,
-          label: "Query",
+          label: "Data Explorer",
           onClick: () => navigate("/query"),
         },
         {
