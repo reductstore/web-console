@@ -236,13 +236,17 @@ export interface ParseBuilderTreeResult {
  * Parse Conditional Query JSON into a builder tree, if representable
  */
 export function parseBuilderTree(json: unknown): ParseBuilderTreeResult {
-  if (
-    typeof json === "object" &&
-    json !== null &&
-    !Array.isArray(json) &&
-    Object.keys(json).length === 0
-  ) {
-    return { success: true, tree: null };
+  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
+    const keys = Object.keys(json);
+    if (keys.length === 0) {
+      return { success: true, tree: null };
+    }
+    // $each_t is a sampling directive outside the builder's scope (see #232);
+    // treat "only $each_t" like an empty tree so the default query, which
+    // always includes it, stays representable in Builder mode.
+    if (keys.length === 1 && keys[0] === "$each_t") {
+      return { success: true, tree: null };
+    }
   }
 
   const node = parseConditionNode(json);
