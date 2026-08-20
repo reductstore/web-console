@@ -230,6 +230,7 @@ describe("EntryDetail", () => {
     });
 
     it("should show the Monaco editor with default JSON", () => {
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -720,6 +721,7 @@ describe("EntryDetail", () => {
       });
 
       // Check the Monaco editor component value
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -746,6 +748,7 @@ describe("EntryDetail", () => {
       });
 
       // After render, the condition should contain the default macro
+      fireEvent.click(screen.getByRole("switch"));
       const updatedMonacoEditor = container.querySelector(
         ".monaco-editor-mock",
       );
@@ -770,6 +773,7 @@ describe("EntryDetail", () => {
         "&label": { $eq: "test" },
       };
 
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       const textArea = monacoEditor!.querySelector(
         "textarea",
