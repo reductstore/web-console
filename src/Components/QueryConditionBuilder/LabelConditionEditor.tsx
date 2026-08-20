@@ -1,4 +1,4 @@
-import { Input, Select, Button } from "antd";
+import { Input, Select, Button, AutoComplete } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import {
   LabelCondition,
@@ -27,6 +27,7 @@ interface LabelConditionEditorProps {
   ) => void;
   onRemove: (id: string) => void;
   removable?: boolean;
+  labelOptions?: string[];
 }
 
 export default function LabelConditionEditor({
@@ -34,15 +35,19 @@ export default function LabelConditionEditor({
   onChange,
   onRemove,
   removable = true,
+  labelOptions = [],
 }: LabelConditionEditorProps) {
   return (
     <div style={{ display: "flex", gap: 8 }}>
-      <Input
+      <AutoComplete
         placeholder="label"
         value={condition.label}
-        onChange={(e) =>
-          onChange(condition.id, { label: e.target.value.replace(/^&/, "") })
+        options={labelOptions.map((option) => ({ value: option }))}
+        onChange={(value) =>
+          onChange(condition.id, { label: value.replace(/^&/, "") })
         }
+        style={{ minWidth: 130 }}
+        popupMatchSelectWidth={false}
       />
       <Select
         value={condition.operator}

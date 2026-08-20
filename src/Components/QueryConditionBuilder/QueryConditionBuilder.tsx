@@ -1,4 +1,4 @@
-import { useState, ComponentProps, ReactNode } from "react";
+import { useEffect, useState, ComponentProps, ReactNode } from "react";
 import { Switch, Typography } from "antd";
 import { JsonQueryEditor } from "../JsonEditor";
 import ConditionGroupEditor from "./ConditionGroupEditor";
@@ -14,6 +14,7 @@ import {
   updateGroupOperator,
 } from "../../Helpers/conditionalQueryBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
+import { QueryOptions } from "reduct-js";
 
 type ValidationContext = ComponentProps<
   typeof JsonQueryEditor
@@ -62,6 +63,56 @@ export default function QueryConditionBuilder({
   const [tree, setTree] = useState<BuilderTree>(
     () => jsonTextToTree(value) ?? addCondition(null, null),
   );
+
+  const [labelOptions, setLabelOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLabelOptions() {
+      if (!validationContext?.client || !validationContext?.bucket) {
+        return;
+      }
+      const entry = validationContext.entries?.[0] ?? validationContext.entry;
+      if (!entry) {
+        return;
+      }
+
+      const bucketInstance = await validationContext.client.getBucket(
+        validationContext.bucket,
+      );
+      const options = new QueryOptions();
+      options.head = true;
+      options.when = { $limit: 20 };
+
+      const foundLabels = new Set<string>();
+      for await (const record of bucketInstance.query(
+        entry,
+        undefined,
+        undefined,
+        options,
+      )) {
+        Object.keys(record.labels ?? {}).forEach((label) =>
+          foundLabels.add(label),
+        );
+      }
+
+      if (!cancelled) {
+        setLabelOptions(Array.from(foundLabels).sort());
+      }
+    }
+
+    loadLabelOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    validationContext?.client,
+    validationContext?.bucket,
+    validationContext?.entry,
+    validationContext?.entries,
+  ]);
 
   const applyTree = (nextTree: BuilderTree) => {
     setTree(nextTree);
@@ -130,6 +181,7 @@ export default function QueryConditionBuilder({
         <ConditionGroupEditor
           group={tree ?? EMPTY_ROOT}
           isRoot
+          labelOptions={labelOptions}
           onChangeCondition={(id, changes) =>
             applyTree(updateCondition(tree, id, changes))
           }
