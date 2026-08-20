@@ -123,10 +123,10 @@ describe("QueryConditionBuilder", () => {
     expect(screen.queryByText("Where labels")).toBeNull();
 
     // Simulate the parent forwarding a manually-typed, non-representable
-    // value (a numeric comparison) back down as the new `value` prop.
+    // value (a boolean comparison) back down as the new `value` prop.
     rerender(
       <QueryConditionBuilder
-        value={'{"&count": {"$gt": 10}}'}
+        value={'{"&flag": {"$eq": true}}'}
         onChange={() => {}}
       />,
     );

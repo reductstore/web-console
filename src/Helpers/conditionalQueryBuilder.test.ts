@@ -86,6 +86,29 @@ describe("conditionalQueryBuilder", () => {
       });
     });
 
+    it("sends a numeric-looking value as a real JSON number", () => {
+      // A $gt/$lt comparison against a numeric label silently matches
+      // nothing if the value is sent as a JSON string instead of a
+      // number, so a value like "100" must be coerced to 100.
+      const tree = makeGroup({
+        children: [
+          makeCondition({ label: "gps_z", operator: "$gt", value: "100" }),
+        ],
+      });
+      expect(serializeBuilderTree(tree)).toEqual({
+        "&gps_z": { $gt: 100 },
+      });
+    });
+
+    it("keeps a non-numeric value as text", () => {
+      const tree = makeGroup({
+        children: [makeCondition({ label: "status", value: "active" })],
+      });
+      expect(serializeBuilderTree(tree)).toEqual({
+        "&status": { $eq: "active" },
+      });
+    });
+
     it("wraps multiple root conditions in $and", () => {
       const tree = makeGroup({
         children: [
@@ -99,7 +122,7 @@ describe("conditionalQueryBuilder", () => {
         ],
       });
       expect(serializeBuilderTree(tree)).toEqual({
-        $and: [{ "&status": { $eq: "active" } }, { "&count": { $gt: "10" } }],
+        $and: [{ "&status": { $eq: "active" } }, { "&count": { $gt: 10 } }],
       });
     });
 
@@ -141,7 +164,7 @@ describe("conditionalQueryBuilder", () => {
       });
       expect(serializeBuilderTree(tree)).toEqual({
         $not: {
-          $and: [{ "&status": { $eq: "active" } }, { "&count": { $gt: "10" } }],
+          $and: [{ "&status": { $eq: "active" } }, { "&count": { $gt: 10 } }],
         },
       });
     });
@@ -223,8 +246,20 @@ describe("conditionalQueryBuilder", () => {
       );
     });
 
-    it("rejects a numeric comparison value", () => {
-      expect(parseBuilderTree({ "&count": { $gt: 10 } }).success).toBe(false);
+    it("accepts a numeric comparison value and normalizes it to text", () => {
+      const result = parseBuilderTree({ "&count": { $gt: 10 } });
+      expect(result.success).toBe(true);
+      expect(result.tree?.children).toEqual([
+        expect.objectContaining({
+          label: "count",
+          operator: "$gt",
+          value: "10",
+        }),
+      ]);
+    });
+
+    it("rejects a boolean comparison value", () => {
+      expect(parseBuilderTree({ "&flag": { $eq: true } }).success).toBe(false);
     });
 
     it("rejects a computed label", () => {

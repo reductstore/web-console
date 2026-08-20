@@ -32,10 +32,24 @@ export interface ConditionGroup {
 
 export type BuilderTree = ConditionGroup | null;
 
+// Values are always typed as text in the builder's UI, but comparisons
+// like $gt/$lt against a numeric label silently match nothing if the
+// value is sent as a JSON string instead of a JSON number. A value that
+// looks like a number is therefore sent as a real number.
+function coerceValue(value: string): string | number {
+  if (value.trim() !== "" && !Number.isNaN(Number(value))) {
+    return Number(value);
+  }
+  return value;
+}
+
 function serializeCondition(
   condition: LabelCondition,
 ): Record<string, unknown> {
-  const inner = { [condition.operator]: condition.value };
+  const coercedValue = Array.isArray(condition.value)
+    ? condition.value.map(coerceValue)
+    : coerceValue(condition.value);
+  const inner = { [condition.operator]: coercedValue };
   const outer = { ["&" + condition.label]: inner };
   return outer;
 }
@@ -147,21 +161,29 @@ function parseLabelCondition(json: unknown): LabelCondition | null {
   }
 
   const value = (innerValue as Record<string, unknown>)[operatorKey];
-  const isStringArray =
-    Array.isArray(value) && value.every((item) => typeof item === "string");
-  // Numbers/booleans are intentionally rejected: the builder only edits
-  // text values today, so a numeric/boolean comparison is treated as
-  // "not representable in the builder" rather than silently truncated.
-  if (typeof value !== "string" && !isStringArray) {
+  const isValidItem = (item: unknown) =>
+    typeof item === "string" || typeof item === "number";
+  const isValidArray = Array.isArray(value) && value.every(isValidItem);
+  // Booleans and other JSON types are intentionally rejected: the builder
+  // only edits text/number values today, so anything else is treated as
+  // "not representable in the builder" rather than silently dropped.
+  if (!isValidItem(value) && !isValidArray) {
     return null;
   }
+
+  // The value is always stored as text internally (the value field is a
+  // plain text input); serializeCondition converts it back to a JSON
+  // number automatically when it looks like one.
+  const normalizedValue = Array.isArray(value)
+    ? value.map((item) => String(item))
+    : String(value);
 
   return {
     kind: "condition",
     id: crypto.randomUUID(),
     label,
     operator: operatorKey,
-    value: value as string | string[],
+    value: normalizedValue,
   };
 }
 
