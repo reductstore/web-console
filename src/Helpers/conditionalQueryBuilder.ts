@@ -382,7 +382,15 @@ export function addGroup(
     kind: "group",
     id: crypto.randomUUID(),
     operator: "$and",
-    children: [],
+    children: [
+      {
+        kind: "condition",
+        id: crypto.randomUUID(),
+        label: "",
+        operator: "$eq",
+        value: "",
+      },
+    ],
   };
   if (!tree) {
     return {
