@@ -31,7 +31,7 @@ import {
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { JsonQueryEditor } from "../JsonEditor";
+import QueryConditionBuilder from "../QueryConditionBuilder";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -1234,7 +1234,7 @@ export default function QueryPanel({
                   Conditional Query
                 </Typography.Text>
                 <div className="queryConditionalContent">
-                  <JsonQueryEditor
+                  <QueryConditionBuilder
                     value={whenCondition}
                     onChange={(value: string) => {
                       setWhenCondition(value);
