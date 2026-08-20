@@ -25,6 +25,7 @@ interface ConditionGroupEditorProps {
   onAddGroup: (groupId: string) => void;
   isRoot?: boolean;
   removable?: boolean;
+  labelOptions?: string[];
 }
 
 export default function ConditionGroupEditor({
@@ -36,6 +37,7 @@ export default function ConditionGroupEditor({
   onAddGroup,
   isRoot = false,
   removable = true,
+  labelOptions,
 }: ConditionGroupEditorProps) {
   const connectorIndex = 1;
   return (
@@ -86,6 +88,7 @@ export default function ConditionGroupEditor({
                 onChange={onChangeCondition}
                 onRemove={onRemoveNode}
                 removable={canRemoveThisChild}
+                labelOptions={labelOptions}
               />
             ) : (
               <ConditionGroupEditor
@@ -96,6 +99,7 @@ export default function ConditionGroupEditor({
                 onAddCondition={onAddCondition}
                 onAddGroup={onAddGroup}
                 removable={canRemoveThisChild}
+                labelOptions={labelOptions}
               />
             )}
           </div>
