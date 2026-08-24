@@ -112,7 +112,49 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByTitle("method")).toBeTruthy();
   });
 
-  it("blocks switching back to Builder when the JSON is not representable", () => {
+  it("reparses losslessly when returning to Builder without touching the JSON", () => {
+    render(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "active"}}'}
+        onChange={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("switch"));
+    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByPlaceholderText("value")).toHaveValue("active");
+  });
+
+  it("resets the builder when the JSON was edited in JSON mode", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "active"}}'}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.change(screen.getByTestId("monaco-editor"), {
+      target: { value: '{"&status": {"$eq": "inactive"}}' },
+    });
+    expect(onChange).toHaveBeenCalledWith('{"&status": {"$eq": "inactive"}}');
+    // A real parent (like QueryPanel) re-renders with the updated value once
+    // its own onChange handler runs.
+    rerender(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "inactive"}}'}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("switch"));
+    // Back in Builder mode (never blocked), but the edit wiped the condition
+    // rather than being partially reparsed into it.
+    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByPlaceholderText("value")).toHaveValue("");
+  });
+
+  it("resets the builder when the JSON changes from outside while in JSON mode", () => {
     const { rerender } = render(
       <QueryConditionBuilder
         value={'{"&status": {"$eq": "active"}}'}
@@ -120,19 +162,31 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     fireEvent.click(screen.getByRole("switch"));
-    expect(screen.queryByText("Where labels")).toBeNull();
 
-    // Simulate the parent forwarding a manually-typed, non-representable
-    // value (a boolean comparison) back down as the new `value` prop.
+    // Simulate a saved query being loaded while in JSON mode: the parent
+    // forwards a new `value` without going through this component's onChange.
     rerender(
       <QueryConditionBuilder
-        value={'{"&flag": {"$eq": true}}'}
+        value={'{"&method": {"$eq": "GET"}}'}
         onChange={() => {}}
       />,
     );
 
     fireEvent.click(screen.getByRole("switch"));
-    // Still in JSON mode: the transition to Builder was refused.
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByPlaceholderText("value")).toHaveValue("");
+  });
+
+  it("shows the Save button and toolbar extras in Builder mode", () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={() => {}}
+        onSave={() => {}}
+        toolbarExtra={<button>Load query</button>}
+      />,
+    );
+    expect(screen.getByLabelText("Save query")).toBeTruthy();
+    expect(screen.getByText("Load query")).toBeTruthy();
   });
 });

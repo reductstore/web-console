@@ -1,5 +1,6 @@
 import { useEffect, useState, ComponentProps, ReactNode } from "react";
-import { Switch, Typography } from "antd";
+import { Button, Switch, Tooltip, Typography } from "antd";
+import { SaveOutlined } from "@ant-design/icons";
 import { JsonQueryEditor } from "../JsonEditor";
 import ConditionGroupEditor from "./ConditionGroupEditor";
 import {
@@ -63,6 +64,13 @@ export default function QueryConditionBuilder({
   const [tree, setTree] = useState<BuilderTree>(
     () => jsonTextToTree(value) ?? addCondition(null, null),
   );
+  // Snapshot of `value` taken when switching into JSON mode. Returning to
+  // Builder mode reparses losslessly only if `value` still matches it; any
+  // change (typed, formatted, or loaded from a saved query) instead resets
+  // the builder entirely rather than attempting a partial reparse.
+  const [jsonEntrySnapshot, setJsonEntrySnapshot] = useState<string | null>(
+    null,
+  );
 
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
 
@@ -120,14 +128,15 @@ export default function QueryConditionBuilder({
   };
 
   const handleModeChange = (nextMode: "builder" | "json") => {
-    if (nextMode === "builder") {
-      const parsedTree = jsonTextToTree(value);
-      if (parsedTree === undefined) {
-        return;
-      }
-      setTree(parsedTree);
+    if (nextMode === "json") {
+      setJsonEntrySnapshot(value);
+      setMode("json");
+      return;
     }
-    setMode(nextMode);
+    if (value !== jsonEntrySnapshot) {
+      applyTree(addCondition(null, null));
+    }
+    setMode("builder");
   };
 
   const modeSwitch = (
@@ -138,6 +147,27 @@ export default function QueryConditionBuilder({
         onChange={(checked) => handleModeChange(checked ? "json" : "builder")}
       />
     </div>
+  );
+
+  const saveButton = onSave && (
+    <Tooltip
+      title={
+        readOnly
+          ? "No write permission"
+          : saveDisabled
+            ? "Query unchanged"
+            : "Save query to browser"
+      }
+    >
+      <Button
+        aria-label="Save query"
+        type="text"
+        size="small"
+        icon={<SaveOutlined />}
+        onClick={onSave}
+        disabled={readOnly || saveDisabled}
+      />
+    </Tooltip>
   );
 
   if (mode === "json") {
@@ -176,7 +206,11 @@ export default function QueryConditionBuilder({
           <Typography.Text strong className="querySectionLabel">
             Where labels
           </Typography.Text>
-          {modeSwitch}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {saveButton}
+            {toolbarExtra}
+            {modeSwitch}
+          </div>
         </div>
         <ConditionGroupEditor
           group={tree ?? EMPTY_ROOT}
