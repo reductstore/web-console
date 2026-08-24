@@ -112,4 +112,75 @@ describe("LabelConditionEditor", () => {
     fireEvent.click(screen.getByTitle("$gt"));
     expect(onChange).toHaveBeenCalledWith("cond-1", { operator: "$gt" });
   });
+
+  it("renders a tags input showing each value for $in/$nin", () => {
+    render(
+      <LabelConditionEditor
+        condition={{
+          ...condition,
+          operator: "$in",
+          value: ["active", "inactive"],
+        }}
+        onChange={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+    expect(screen.getByText("active")).toBeTruthy();
+    expect(screen.getByText("inactive")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("value")).toBeNull();
+  });
+
+  it("reports an array of values typed into the $in tags input", () => {
+    const onChange = vi.fn();
+    render(
+      <LabelConditionEditor
+        condition={{ ...condition, operator: "$in", value: [] }}
+        onChange={onChange}
+        onRemove={() => {}}
+      />,
+    );
+    const [, , valueInput] = screen.getAllByRole("combobox");
+    fireEvent.change(valueInput, { target: { value: "POST," } });
+    expect(onChange).toHaveBeenCalledWith("cond-1", { value: ["POST"] });
+  });
+
+  it("converts the value to an array when switching to $in", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <LabelConditionEditor
+        condition={condition}
+        onChange={onChange}
+        onRemove={() => {}}
+      />,
+    );
+    const operatorSelect = container.querySelector(
+      ".ant-select:not(.ant-select-auto-complete)",
+    ) as HTMLElement;
+    fireEvent.mouseDown(operatorSelect);
+    fireEvent.click(screen.getByTitle("$in"));
+    expect(onChange).toHaveBeenCalledWith("cond-1", {
+      operator: "$in",
+      value: ["active"],
+    });
+  });
+
+  it("converts the value back to a single string when switching away from $in", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <LabelConditionEditor
+        condition={{ ...condition, operator: "$in", value: ["POST", "DELETE"] }}
+        onChange={onChange}
+        onRemove={() => {}}
+      />,
+    );
+    const operatorSelect = container.querySelector(
+      ".ant-select:not(.ant-select-auto-complete)",
+    ) as HTMLElement;
+    fireEvent.mouseDown(operatorSelect);
+    fireEvent.click(screen.getByTitle("$eq"));
+    expect(onChange).toHaveBeenCalledWith("cond-1", {
+      operator: "$eq",
+      value: "POST",
+    });
+  });
 });

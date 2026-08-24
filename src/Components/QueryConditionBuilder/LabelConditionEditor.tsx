@@ -30,6 +30,8 @@ interface LabelConditionEditorProps {
   labelOptions?: string[];
 }
 
+const MULTI_VALUE_OPERATORS: LabelOperator[] = ["$in", "$nin"];
+
 export default function LabelConditionEditor({
   condition,
   onChange,
@@ -37,6 +39,24 @@ export default function LabelConditionEditor({
   removable = true,
   labelOptions = [],
 }: LabelConditionEditorProps) {
+  const isMultiValue = MULTI_VALUE_OPERATORS.includes(condition.operator);
+
+  const handleOperatorChange = (operator: LabelOperator) => {
+    const wasMulti = MULTI_VALUE_OPERATORS.includes(condition.operator);
+    const willBeMulti = MULTI_VALUE_OPERATORS.includes(operator);
+    if (willBeMulti === wasMulti) {
+      onChange(condition.id, { operator });
+      return;
+    }
+    if (willBeMulti) {
+      const value = condition.value as string;
+      onChange(condition.id, { operator, value: value ? [value] : [] });
+      return;
+    }
+    const [value] = condition.value as string[];
+    onChange(condition.id, { operator, value: value ?? "" });
+  };
+
   return (
     <div style={{ display: "flex", gap: 8 }}>
       <AutoComplete
@@ -52,15 +72,27 @@ export default function LabelConditionEditor({
       <Select
         value={condition.operator}
         options={OPERATOR_OPTIONS}
-        onChange={(value) => onChange(condition.id, { operator: value })}
+        onChange={handleOperatorChange}
         style={{ minWidth: 130 }}
         popupMatchSelectWidth={false}
       />
-      <Input
-        placeholder="value"
-        value={condition.value as string}
-        onChange={(e) => onChange(condition.id, { value: e.target.value })}
-      />
+      {isMultiValue ? (
+        <Select
+          mode="tags"
+          placeholder="values"
+          tokenSeparators={[","]}
+          value={condition.value as string[]}
+          onChange={(value) => onChange(condition.id, { value })}
+          style={{ flex: 1, minWidth: 130 }}
+          popupMatchSelectWidth={false}
+        />
+      ) : (
+        <Input
+          placeholder="value"
+          value={condition.value as string}
+          onChange={(e) => onChange(condition.id, { value: e.target.value })}
+        />
+      )}
       {removable && (
         <Button
           aria-label="Remove condition"
