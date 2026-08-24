@@ -86,27 +86,33 @@ export default function QueryConditionBuilder({
         return;
       }
 
-      const bucketInstance = await validationContext.client.getBucket(
-        validationContext.bucket,
-      );
-      const options = new QueryOptions();
-      options.head = true;
-      options.when = { $limit: 20 };
-
-      const foundLabels = new Set<string>();
-      for await (const record of bucketInstance.query(
-        entry,
-        undefined,
-        undefined,
-        options,
-      )) {
-        Object.keys(record.labels ?? {}).forEach((label) =>
-          foundLabels.add(label),
+      try {
+        const bucketInstance = await validationContext.client.getBucket(
+          validationContext.bucket,
         );
-      }
+        const options = new QueryOptions();
+        options.head = true;
+        options.when = { $limit: 20 };
 
-      if (!cancelled) {
-        setLabelOptions(Array.from(foundLabels).sort());
+        const foundLabels = new Set<string>();
+        for await (const record of bucketInstance.query(
+          entry,
+          undefined,
+          undefined,
+          options,
+        )) {
+          Object.keys(record.labels ?? {}).forEach((label) =>
+            foundLabels.add(label),
+          );
+        }
+
+        if (!cancelled) {
+          setLabelOptions(Array.from(foundLabels).sort());
+        }
+      } catch {
+        // Label suggestions are a convenience; a failed sample query (bucket
+        // unreachable, permission error, etc.) just leaves the list empty
+        // instead of surfacing an error for a non-essential feature.
       }
     }
 

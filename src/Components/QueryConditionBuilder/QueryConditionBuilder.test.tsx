@@ -112,6 +112,29 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByTitle("method")).toBeTruthy();
   });
 
+  it("does not throw when the label suggestion query fails", async () => {
+    const client = {
+      getBucket: vi.fn().mockRejectedValue(new Error("bucket unreachable")),
+    } as unknown as Client;
+
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={() => {}}
+        validationContext={{
+          client,
+          bucket: "testBucket",
+          entry: "testEntry",
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(client.getBucket).toHaveBeenCalledWith("testBucket"),
+    );
+    expect(screen.getByText("Where labels")).toBeTruthy();
+  });
+
   it("reparses losslessly when returning to Builder without touching the JSON", () => {
     render(
       <QueryConditionBuilder
