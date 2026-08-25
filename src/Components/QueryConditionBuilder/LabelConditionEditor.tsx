@@ -66,6 +66,7 @@ export default function LabelConditionEditor({
         onChange={(value) =>
           onChange(condition.id, { label: value.replace(/^&/, "") })
         }
+        size="small"
         style={{ minWidth: 130 }}
         popupMatchSelectWidth={false}
       />
@@ -73,6 +74,7 @@ export default function LabelConditionEditor({
         value={condition.operator}
         options={OPERATOR_OPTIONS}
         onChange={handleOperatorChange}
+        size="small"
         style={{ minWidth: 130 }}
         popupMatchSelectWidth={false}
       />
@@ -83,6 +85,7 @@ export default function LabelConditionEditor({
           tokenSeparators={[","]}
           value={condition.value as string[]}
           onChange={(value) => onChange(condition.id, { value })}
+          size="small"
           style={{ flex: 1, minWidth: 130 }}
           popupMatchSelectWidth={false}
         />
@@ -91,6 +94,7 @@ export default function LabelConditionEditor({
           placeholder="value"
           value={condition.value as string}
           onChange={(e) => onChange(condition.id, { value: e.target.value })}
+          size="small"
           style={{ flex: 1 }}
         />
       )}

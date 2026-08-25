@@ -20,6 +20,8 @@ import {
   Select,
   Modal,
   Space,
+  Switch,
+  Tooltip,
   message,
   theme,
 } from "antd";
@@ -56,7 +58,9 @@ import {
   extractIntervalFromCondition,
   formatAsStrictJSON,
   processWhenCondition,
+  safeParseJSON5,
 } from "../../Helpers/json5Utils";
+import { parseBuilderList } from "../../Helpers/conditionalQueryBuilder";
 import EditRecordLabels from "../EditRecordLabels";
 import RecordPreview from "../RecordPreview";
 import SaveQueryModal from "../SavedQueries/SaveQueryModal";
@@ -125,6 +129,11 @@ const entrySelectionToQueryArg = (
 
 const defaultQuery = formatAsStrictJSON({ $each_t: "$__interval" });
 
+const isRepresentableInBuilder = (text: string): boolean => {
+  const parsed = safeParseJSON5(text);
+  return parsed.success && parseBuilderList(parsed.value).success;
+};
+
 export default function QueryPanel({
   client,
   apiUrl,
@@ -158,6 +167,22 @@ export default function QueryPanel({
   const [showCancel, setShowCancel] = useState(false);
   const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [whenCondition, setWhenCondition] = useState<string>(defaultQuery);
+  // If the initial query isn't representable in the builder (e.g. a
+  // hand-written query with real nested grouping), land in JSON mode
+  // instead of silently showing an empty builder next to the real query.
+  const [conditionMode, setConditionMode] = useState<"builder" | "json">(() =>
+    isRepresentableInBuilder(defaultQuery) ? "builder" : "json",
+  );
+  // Snapshot of `whenCondition` taken when switching into JSON mode.
+  // Returning to Builder mode reparses losslessly only if it still matches;
+  // any change instead resets the builder entirely (see confirmConditionReset).
+  const [jsonEntrySnapshot, setJsonEntrySnapshot] = useState<string | null>(
+    null,
+  );
+  // True while the confirmation to discard the JSON edits and reset the
+  // builder is pending; the switch to Builder mode is deferred until the
+  // user confirms.
+  const [pendingConditionReset, setPendingConditionReset] = useState(false);
   const [fetchError, setFetchError] = useState<string>("");
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -998,6 +1023,62 @@ export default function QueryPanel({
     );
   })();
 
+  // Saving persists the bucket and entry selection alongside the query, so
+  // the button lives with the Query header rather than inside the Where
+  // labels section.
+  const saveButton = (
+    <Tooltip
+      title={isSaveDisabled ? "Query unchanged" : "Save query to browser"}
+    >
+      <Button
+        aria-label="Save query"
+        size="small"
+        onClick={handleSaveQuery}
+        disabled={isSaveDisabled}
+      >
+        Save
+      </Button>
+    </Tooltip>
+  );
+
+  const handleConditionModeChange = (nextMode: "builder" | "json") => {
+    if (nextMode === "json") {
+      setJsonEntrySnapshot(whenCondition);
+      setConditionMode("json");
+      return;
+    }
+    if (whenCondition !== jsonEntrySnapshot) {
+      setPendingConditionReset(true);
+      return;
+    }
+    setConditionMode("builder");
+  };
+
+  const confirmConditionReset = () => {
+    setWhenCondition(formatAsStrictJSON({}));
+    setConditionMode("builder");
+    setPendingConditionReset(false);
+  };
+
+  const conditionModeSwitch = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexShrink: 0,
+      }}
+    >
+      <Typography.Text style={{ whiteSpace: "nowrap" }}>JSON</Typography.Text>
+      <Switch
+        checked={conditionMode === "json"}
+        onChange={(checked) =>
+          handleConditionModeChange(checked ? "json" : "builder")
+        }
+      />
+    </div>
+  );
+
   const entryValidationSelection = useMemo(
     () => normalizeEntrySelection(selectedEntries),
     [selectedEntries],
@@ -1070,293 +1151,88 @@ export default function QueryPanel({
         )}
       </Modal>
 
-      {title ? <Typography.Title level={3}>{title}</Typography.Title> : null}
-      {warning}
-      <div className="detailControls">
-        <div className="jsonFilterSection">
-          <div className="jsonFilterPanel">
-            <div className="jsonFilterHeader queryHeaderBar">
-              {showSelectionControls && (
-                <div className="querySection">
-                  <Typography.Text strong className="querySectionLabel">
-                    Data Source
-                  </Typography.Text>
-                  <div className="querySourceRow">
-                    <div className="queryFieldGroup">
-                      <Typography.Text
-                        type="secondary"
-                        className="queryFieldLabel"
-                      >
-                        Bucket
-                      </Typography.Text>
-                      <Select
-                        className="queryBucketSelect"
-                        showSearch
-                        placeholder="Select bucket"
-                        value={bucketName || undefined}
-                        loading={isBucketLoading}
-                        popupMatchSelectWidth={false}
-                        onChange={(value) => {
-                          setBucketName(value);
-                          setSelectedEntries([]);
-                          setRecords([]);
-                          setQueryContext(null);
-                          setFetchError("");
-                        }}
-                        data-testid="bucket-query-select"
-                        style={{ width: "100%" }}
-                        options={visibleBuckets.map((name) => ({
-                          value: name,
-                          label: name,
-                        }))}
-                      />
-                    </div>
-                    <div className="queryFieldGroup queryFieldGroupEntries">
-                      <Typography.Text
-                        type="secondary"
-                        className="queryFieldLabel"
-                      >
-                        Entries
-                      </Typography.Text>
-                      <Select<string[]>
-                        className="queryEntrySelect"
-                        mode="tags"
-                        placeholder="Select entries or type a pattern (e.g. sensor-*)"
-                        value={selectedEntries}
-                        popupMatchSelectWidth={false}
-                        onChange={(values) => {
-                          setSelectedEntries(normalizeEntrySelection(values));
-                          setQueryContext(null);
-                          setRecords([]);
-                          setFetchError("");
-                        }}
-                        disabled={!bucketName}
-                        showSearch={{ optionFilterProp: "label" }}
-                        data-testid="entry-query-select"
-                        style={{ width: "100%" }}
-                        maxTagCount={4}
-                        maxTagTextLength={30}
-                        maxTagPlaceholder={(omittedValues) =>
-                          `+${omittedValues.length} more`
-                        }
-                        options={entryOptions}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="querySection">
-                <Typography.Text strong className="querySectionLabel">
-                  Time Range
-                </Typography.Text>
-                <div className="queryTimeRow">
-                  <Select
-                    data-testid="format-select"
-                    value={showUnix ? "Unix" : "UTC"}
-                    onChange={handleFormatChange}
-                    popupMatchSelectWidth={false}
-                    style={{ width: 90 }}
-                    options={[
-                      { value: "UTC", label: "UTC" },
-                      { value: "Unix", label: "Unix" },
-                    ]}
-                  />
-                  <TimeRangeDropdown
-                    onSelectRange={(start, end) => {
-                      setTimeRange(start, end);
-                      setStartError(false);
-                      setStopError(false);
-                    }}
-                    onShiftRange={(start, end) => {
-                      setTimeRange(start, end);
-                      setStartError(false);
-                      setStopError(false);
-                      if (hasValidSelection) getRecords(start, end).then();
-                    }}
-                    initialRangeKey={DEFAULT_RANGE_KEY}
-                    currentRange={{
-                      start: timeRange.start,
-                      end: timeRange.end,
-                    }}
-                  />
-                  <Space.Compact style={{ width: 300, flexShrink: 0 }}>
-                    <Input
-                      style={{
-                        width: 70,
-                        flexShrink: 0,
-                        pointerEvents: "none",
-                        backgroundColor: "#fafafa",
-                        textAlign: "center",
-                      }}
-                      value="Start"
-                      readOnly
-                      tabIndex={-1}
-                    />
-                    <Input
-                      placeholder="Start time (optional)"
-                      value={timeRange.startText}
-                      onChange={(e) => {
-                        updateTimeRangeText("startText", e.target.value);
-                        parseInput(e.target.value, "start", setStartError);
-                      }}
-                      status={startError ? "error" : undefined}
-                    />
-                  </Space.Compact>
-                  <Space.Compact style={{ width: 300, flexShrink: 0 }}>
-                    <Input
-                      style={{
-                        width: 70,
-                        flexShrink: 0,
-                        pointerEvents: "none",
-                        backgroundColor: "#fafafa",
-                        textAlign: "center",
-                      }}
-                      value="Stop"
-                      readOnly
-                      tabIndex={-1}
-                    />
-                    <Input
-                      placeholder="Stop time (optional)"
-                      value={timeRange.stopText}
-                      onChange={(e) => {
-                        updateTimeRangeText("stopText", e.target.value);
-                        parseInput(e.target.value, "end", setStopError);
-                      }}
-                      status={stopError ? "error" : undefined}
-                    />
-                  </Space.Compact>
-                </div>
-              </div>
-
-              <div className="querySection">
-                <Typography.Text strong className="querySectionLabel">
-                  Conditional Query
-                </Typography.Text>
-                <div className="queryConditionalContent">
-                  <QueryConditionBuilder
-                    value={whenCondition}
-                    onChange={(value: string) => {
-                      setWhenCondition(value);
-                      if (fetchError) {
-                        setFetchError("");
-                      }
-                    }}
-                    height={Math.min(
-                      400,
-                      Math.max(
-                        100,
-                        (whenCondition + "\n").split("\n").length * 18 + 45,
-                      ),
-                    )}
-                    error={fetchError}
-                    readOnly={false}
-                    validationContext={{
-                      client,
-                      bucket: bucketName,
-                      entry: entryValidationSelection[0],
-                      entries: entryValidationSelection,
-                      requireEntrySelection: showSelectionControls,
-                      start: timeRange.start,
-                      end: timeRange.end,
-                      intervalValue: validationIntervalValue,
-                    }}
-                    onSave={handleSaveQuery}
-                    saveDisabled={isSaveDisabled}
-                    toolbarExtra={
-                      <QuerySelector
-                        bucketName={bucketName}
-                        entryName={selectedEntries}
-                        onLoadQuery={handleLoadQuery}
-                        editable={hasWritePermission}
-                        showAllQueries={showSelectionControls}
-                      />
-                    }
-                  />
-                </div>
-                <Typography.Text type="secondary" className="jsonExample">
-                  Example: <code>{'{"&anomaly": { "$eq": 1 }}'}</code>
-                  Use <code>&label</code> for standard labels and{" "}
-                  <code>@label</code> for computed labels. Combine with
-                  operators like <code>$eq</code>, <code>$gt</code>,{" "}
-                  <code>$lt</code>, <code>$and</code>, etc. You can also use
-                  aggregation operators:
-                  <code>$each_n</code> (every N-th record) and{" "}
-                  <code>$each_t</code> (every N seconds) to control replication
-                  frequency.
-                  <br />
-                  <strong>Macros:</strong> Use <code>$__interval</code> to
-                  automatically use the chart's time interval. Example:{" "}
-                  <code>{'{"$each_t": "$__interval"}'}</code>.
-                  <br />
-                  <strong>
-                    <a
-                      href="https://www.reduct.store/docs/conditional-query"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View Conditional Query Reference →
-                    </a>
-                  </strong>
-                </Typography.Text>
-              </div>
-              <div className="fetchButton">
-                <Button
-                  onClick={() => {
-                    if (showCancel && fetchCtrlRef.current) {
-                      fetchCtrlRef.current.abort();
-                    } else {
-                      getRecords(timeRange.start, timeRange.end).then();
-                    }
-                  }}
-                  type={showCancel ? "default" : "primary"}
-                  disabled={!hasValidSelection}
-                  style={{
-                    width: 130,
-                    whiteSpace: "nowrap",
-                    textAlign: "center",
-                    ...(showCancel
-                      ? {
-                          borderColor: token.colorPrimary,
-                          color: token.colorPrimary,
-                        }
-                      : {}),
-                  }}
-                >
-                  {showCancel ? "Stop" : "Fetch Records"}
-                </Button>
-                <QueryStatusLabel
-                  status={progress.status}
-                  recordCount={records.length}
-                  elapsed={progress.elapsed}
-                  eta={progress.eta}
-                />
-              </div>
-              <QueryProgressBar
-                status={progress.status}
-                percent={progress.percent}
-              />
-            </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "nowrap",
+          gap: 12,
+        }}
+      >
+        {title && (
+          <Typography.Title
+            level={3}
+            style={{ margin: 0, flexShrink: 0, whiteSpace: "nowrap" }}
+          >
+            {title}
+          </Typography.Title>
+        )}
+        <div
+          className="timeRangeBlock"
+          style={{ marginLeft: "auto", minWidth: 0 }}
+        >
+          <div className="queryTimeRow">
+            <Select
+              data-testid="format-select"
+              size="small"
+              value={showUnix ? "Unix" : "UTC"}
+              onChange={handleFormatChange}
+              popupMatchSelectWidth={false}
+              style={{ width: 90, flexShrink: 0 }}
+              options={[
+                { value: "UTC", label: "UTC" },
+                { value: "Unix", label: "Unix" },
+              ]}
+            />
+            <TimeRangeDropdown
+              onSelectRange={(start, end) => {
+                setTimeRange(start, end);
+                setStartError(false);
+                setStopError(false);
+              }}
+              onShiftRange={(start, end) => {
+                setTimeRange(start, end);
+                setStartError(false);
+                setStopError(false);
+                if (hasValidSelection) getRecords(start, end).then();
+              }}
+              initialRangeKey={DEFAULT_RANGE_KEY}
+              currentRange={{
+                start: timeRange.start,
+                end: timeRange.end,
+              }}
+            />
+            <Input
+              placeholder="Start time (optional)"
+              style={{ width: 200, flexShrink: 0 }}
+              value={timeRange.startText}
+              onChange={(e) => {
+                updateTimeRangeText("startText", e.target.value);
+                parseInput(e.target.value, "start", setStartError);
+              }}
+              status={startError ? "error" : undefined}
+            />
+            <Input
+              placeholder="Stop time (optional)"
+              style={{ width: 200, flexShrink: 0 }}
+              value={timeRange.stopText}
+              onChange={(e) => {
+                updateTimeRangeText("stopText", e.target.value);
+                parseInput(e.target.value, "end", setStopError);
+              }}
+              status={stopError ? "error" : undefined}
+            />
           </div>
         </div>
-        {records.length > 0 &&
-          (progress.status === "done" || progress.status === "stopped") && (
-            <div className="chartContainer">
-              <DataVolumeChart
-                records={records.map((r) => r.record)}
-                setTimeRange={(start, end) => {
-                  setTimeRange(start, end);
-                  getRecords(start, end).then();
-                }}
-                isLoading={isLoading}
-                showUnix={showUnix}
-                interval={timeRange.interval}
-              />
-            </div>
-          )}
       </div>
-
-      {(progress.status === "done" || progress.status === "stopped") && (
+      <div className="resultsBlock">
+        <Typography.Text
+          strong
+          className="querySectionLabel"
+          style={{ display: "block", marginBottom: 8 }}
+        >
+          Table
+        </Typography.Text>
         <ScrollableTable
           scroll={{ x: "max-content" }}
           size="small"
@@ -1399,7 +1275,201 @@ export default function QueryPanel({
             ),
           }}
         />
-      )}
+      </div>
+      {warning}
+      <div className="detailControls">
+        <div className="jsonFilterSection">
+          <div className="jsonFilterPanel">
+            <div className="jsonFilterHeader queryHeaderBar">
+              <div className="querySection">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Typography.Text
+                    strong
+                    className="querySectionLabel"
+                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                  >
+                    Query
+                  </Typography.Text>
+                  {showSelectionControls && (
+                    <>
+                      <Select
+                        className="queryBucketSelect"
+                        size="small"
+                        showSearch
+                        placeholder="Select bucket"
+                        value={bucketName || undefined}
+                        loading={isBucketLoading}
+                        popupMatchSelectWidth={false}
+                        onChange={(value) => {
+                          setBucketName(value);
+                          setSelectedEntries([]);
+                          setRecords([]);
+                          setQueryContext(null);
+                          setFetchError("");
+                        }}
+                        data-testid="bucket-query-select"
+                        style={{ width: 160, flexShrink: 0 }}
+                        options={visibleBuckets.map((name) => ({
+                          value: name,
+                          label: name,
+                        }))}
+                      />
+                      <Select<string[]>
+                        className="queryEntrySelect"
+                        size="small"
+                        mode="tags"
+                        placeholder="Select entries or type a pattern (e.g. sensor-*)"
+                        value={selectedEntries}
+                        popupMatchSelectWidth={false}
+                        onChange={(values) => {
+                          setSelectedEntries(normalizeEntrySelection(values));
+                          setQueryContext(null);
+                          setRecords([]);
+                          setFetchError("");
+                        }}
+                        disabled={!bucketName}
+                        showSearch={{ optionFilterProp: "label" }}
+                        data-testid="entry-query-select"
+                        style={{
+                          flex: "1 1 200px",
+                          minWidth: 0,
+                          maxWidth: 400,
+                        }}
+                        maxTagCount={4}
+                        maxTagTextLength={30}
+                        maxTagPlaceholder={(omittedValues) =>
+                          `+${omittedValues.length} more`
+                        }
+                        options={entryOptions}
+                      />
+                    </>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginLeft: "auto",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {conditionModeSwitch}
+                    <QuerySelector
+                      bucketName={bucketName}
+                      entryName={selectedEntries}
+                      onLoadQuery={handleLoadQuery}
+                      editable={hasWritePermission}
+                      showAllQueries={showSelectionControls}
+                    />
+                    {saveButton}
+                  </div>
+                </div>
+                <div className="queryConditionalContent">
+                  <QueryConditionBuilder
+                    value={whenCondition}
+                    onChange={(value: string) => {
+                      setWhenCondition(value);
+                      if (fetchError) {
+                        setFetchError("");
+                      }
+                    }}
+                    mode={conditionMode}
+                    onUnrepresentable={() => setConditionMode("json")}
+                    height={Math.min(
+                      400,
+                      Math.max(
+                        100,
+                        (whenCondition + "\n").split("\n").length * 18 + 45,
+                      ),
+                    )}
+                    error={fetchError}
+                    readOnly={false}
+                    validationContext={{
+                      client,
+                      bucket: bucketName,
+                      entry: entryValidationSelection[0],
+                      entries: entryValidationSelection,
+                      requireEntrySelection: showSelectionControls,
+                      start: timeRange.start,
+                      end: timeRange.end,
+                      intervalValue: validationIntervalValue,
+                    }}
+                  />
+                </div>
+                <Modal
+                  open={pendingConditionReset}
+                  title="Reset builder?"
+                  onOk={confirmConditionReset}
+                  onCancel={() => setPendingConditionReset(false)}
+                  okText="Continue"
+                  cancelText="Cancel"
+                >
+                  This will completely reset the builder, discarding the
+                  conditions it held before switching to JSON. Continue?
+                </Modal>
+              </div>
+              <div className="fetchButton">
+                <Button
+                  onClick={() => {
+                    if (showCancel && fetchCtrlRef.current) {
+                      fetchCtrlRef.current.abort();
+                    } else {
+                      getRecords(timeRange.start, timeRange.end).then();
+                    }
+                  }}
+                  type={showCancel ? "default" : "primary"}
+                  disabled={!hasValidSelection}
+                  style={{
+                    width: 130,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    ...(showCancel
+                      ? {
+                          borderColor: token.colorPrimary,
+                          color: token.colorPrimary,
+                        }
+                      : {}),
+                  }}
+                >
+                  {showCancel ? "Stop" : "Run Query"}
+                </Button>
+                <QueryStatusLabel
+                  status={progress.status}
+                  recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
+                />
+              </div>
+              <QueryProgressBar
+                status={progress.status}
+                percent={progress.percent}
+              />
+            </div>
+          </div>
+        </div>
+        {records.length > 0 &&
+          (progress.status === "done" || progress.status === "stopped") && (
+            <div className="chartContainer">
+              <DataVolumeChart
+                records={records.map((r) => r.record)}
+                setTimeRange={(start, end) => {
+                  setTimeRange(start, end);
+                  getRecords(start, end).then();
+                }}
+                isLoading={isLoading}
+                showUnix={showUnix}
+                interval={timeRange.interval}
+              />
+            </div>
+          )}
+      </div>
 
       <SaveQueryModal
         open={isSaveQueryModalVisible}

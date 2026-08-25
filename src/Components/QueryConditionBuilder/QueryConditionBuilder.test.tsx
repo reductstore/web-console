@@ -28,28 +28,56 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
 
 beforeEach(() => mockJSDOM());
 
+const noop = () => {};
+
 describe("QueryConditionBuilder", () => {
-  it("starts in Builder mode with one empty condition for an empty value", () => {
-    render(<QueryConditionBuilder value="" onChange={() => {}} />);
+  it("shows Where labels with one empty condition for an empty value in builder mode", () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
+    );
     expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("resyncs conditions when value changes from outside while already in Builder mode", () => {
+  it("shows the JSON editor with the current value in json mode", () => {
+    render(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "active"}}'}
+        onChange={noop}
+        mode="json"
+        onUnrepresentable={noop}
+      />,
+    );
+    expect(screen.getByTestId("monaco-editor")).toHaveValue(
+      '{"&status": {"$eq": "active"}}',
+    );
+    expect(screen.queryByText("Where labels")).toBeNull();
+  });
+
+  it("resyncs conditions when value changes from outside while already in builder mode", () => {
     const { rerender } = render(
       <QueryConditionBuilder
         value={'{"&status": {"$eq": "active"}}'}
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
       />,
     );
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
 
     // Simulate a saved query being loaded while already in Builder mode
-    // (toolbarExtra's QuerySelector calls the parent's setter directly).
+    // (the QuerySelector calls the parent's setter directly).
     rerender(
       <QueryConditionBuilder
         value={'{"&method": {"$eq": "GET"}}'}
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
       />,
     );
 
@@ -58,20 +86,27 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toHaveValue("GET");
   });
 
-  it("switches to JSON mode when an externally-loaded value isn't representable", () => {
+  it("calls onUnrepresentable when a value loaded in builder mode can't be flattened", () => {
+    const onUnrepresentable = vi.fn();
     const { rerender } = render(
-      <QueryConditionBuilder value="" onChange={() => {}} />,
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={onUnrepresentable}
+      />,
     );
     rerender(
       <QueryConditionBuilder
         value={
           '{"$and": [{"&a": {"$eq": "1"}}, {"$or": [{"&b": {"$eq": "2"}}, {"&c": {"$eq": "3"}}]}]}'
         }
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={onUnrepresentable}
       />,
     );
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.getByTestId("monaco-editor")).toBeTruthy();
+    expect(onUnrepresentable).toHaveBeenCalled();
   });
 
   it("preserves $each_t across an edit instead of silently dropping it", () => {
@@ -80,6 +115,8 @@ describe("QueryConditionBuilder", () => {
       <QueryConditionBuilder
         value={'{"$each_t": "$__interval"}'}
         onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
@@ -91,24 +128,13 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  it("starts in JSON mode when the initial value isn't representable", () => {
-    render(
-      <QueryConditionBuilder
-        value={
-          '{"$and": [{"&a": {"$eq": "1"}}, {"$or": [{"&b": {"$eq": "2"}}, {"&c": {"$eq": "3"}}]}]}'
-        }
-        onChange={() => {}}
-      />,
-    );
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.getByTestId("monaco-editor")).toBeTruthy();
-  });
-
   it("parses an existing condition into the builder", () => {
     render(
       <QueryConditionBuilder
         value={'{"&status": {"$eq": "active"}}'}
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
@@ -118,26 +144,19 @@ describe("QueryConditionBuilder", () => {
 
   it("reports the serialized JSON when a condition is edited", () => {
     const onChange = vi.fn();
-    render(<QueryConditionBuilder value="" onChange={onChange} />);
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
+    );
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     expect(onChange).toHaveBeenCalled();
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({ "&status": { $eq: "" } });
-  });
-
-  it("switches to the JSON editor and shows the current value", () => {
-    render(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "active"}}'}
-        onChange={() => {}}
-      />,
-    );
-    fireEvent.click(screen.getByRole("switch"));
-    expect(screen.getByTestId("monaco-editor")).toHaveValue(
-      '{"&status": {"$eq": "active"}}',
-    );
-    expect(screen.queryByText("Where labels")).toBeNull();
   });
 
   it("fetches label suggestions from a sample of records", async () => {
@@ -156,7 +175,9 @@ describe("QueryConditionBuilder", () => {
     render(
       <QueryConditionBuilder
         value=""
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
         validationContext={{
           client,
           bucket: "testBucket",
@@ -189,7 +210,9 @@ describe("QueryConditionBuilder", () => {
     render(
       <QueryConditionBuilder
         value=""
-        onChange={() => {}}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
         validationContext={{
           client,
           bucket: "testBucket",
@@ -204,117 +227,16 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByText("Where labels")).toBeTruthy();
   });
 
-  it("reparses losslessly when returning to Builder without touching the JSON", () => {
-    render(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "active"}}'}
-        onChange={() => {}}
-      />,
-    );
-    fireEvent.click(screen.getByRole("switch"));
-    fireEvent.click(screen.getByRole("switch"));
-    expect(screen.getByText("Where labels")).toBeTruthy();
-    expect(screen.getByPlaceholderText("value")).toHaveValue("active");
-  });
-
-  it("asks for confirmation and resets the builder once confirmed", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "active"}}'}
-        onChange={onChange}
-      />,
-    );
-    fireEvent.click(screen.getByRole("switch"));
-    fireEvent.change(screen.getByTestId("monaco-editor"), {
-      target: { value: '{"&status": {"$eq": "inactive"}}' },
-    });
-    expect(onChange).toHaveBeenCalledWith('{"&status": {"$eq": "inactive"}}');
-    // A real parent (like QueryPanel) re-renders with the updated value once
-    // its own onChange handler runs.
-    rerender(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "inactive"}}'}
-        onChange={onChange}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("switch"));
-    // Still in JSON mode: the switch is deferred behind the confirmation.
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    // The reset emits an actually-empty query, not the empty row's own
-    // placeholder JSON (which would be `{"&": {"$eq": ""}}`).
-    const [lastCall] = onChange.mock.calls.at(-1) as [string];
-    expect(JSON.parse(lastCall)).toEqual({});
-    // A real parent re-renders with that value once its onChange runs; only
-    // then does the component see its own reset reflected in `value` too.
-    rerender(<QueryConditionBuilder value={lastCall} onChange={onChange} />);
-    // Now in Builder mode, wiped rather than partially reparsed.
-    expect(screen.getByText("Where labels")).toBeTruthy();
-    expect(screen.getByPlaceholderText("value")).toHaveValue("");
-  });
-
-  it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "active"}}'}
-        onChange={onChange}
-      />,
-    );
-    fireEvent.click(screen.getByRole("switch"));
-    fireEvent.change(screen.getByTestId("monaco-editor"), {
-      target: { value: '{"&status": {"$eq": "inactive"}}' },
-    });
-    rerender(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "inactive"}}'}
-        onChange={onChange}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("switch"));
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.getByTestId("monaco-editor")).toHaveValue(
-      '{"&status": {"$eq": "inactive"}}',
-    );
-  });
-
-  it("resets the builder when the JSON changes from outside while in JSON mode", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <QueryConditionBuilder
-        value={'{"&status": {"$eq": "active"}}'}
-        onChange={onChange}
-      />,
-    );
-    fireEvent.click(screen.getByRole("switch"));
-
-    // Simulate a saved query being loaded while in JSON mode: the parent
-    // forwards a new `value` without going through this component's onChange.
-    rerender(
-      <QueryConditionBuilder
-        value={'{"&method": {"$eq": "GET"}}'}
-        onChange={onChange}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("switch"));
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    const [lastCall] = onChange.mock.calls.at(-1) as [string];
-    rerender(<QueryConditionBuilder value={lastCall} onChange={onChange} />);
-    expect(screen.getByText("Where labels")).toBeTruthy();
-    expect(screen.getByPlaceholderText("value")).toHaveValue("");
-  });
-
   it("adds a chained condition with a connector when + is clicked", () => {
     const onChange = vi.fn();
-    render(<QueryConditionBuilder value="" onChange={onChange} />);
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
+    );
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
 
@@ -335,7 +257,12 @@ describe("QueryConditionBuilder", () => {
     // reachable once a 2nd row exists.
     const onChange = vi.fn();
     const { container } = render(
-      <QueryConditionBuilder value="" onChange={onChange} />,
+      <QueryConditionBuilder
+        value=""
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
     );
     fireEvent.click(screen.getByLabelText("Add condition"));
 
@@ -354,21 +281,15 @@ describe("QueryConditionBuilder", () => {
   });
 
   it("never shows a connector or NOT control on the first row", () => {
-    render(<QueryConditionBuilder value="" onChange={() => {}} />);
-    expect(screen.queryByText("and")).toBeNull();
-    expect(screen.queryByText("not")).toBeNull();
-  });
-
-  it("shows the Save button and toolbar extras in Builder mode", () => {
     render(
       <QueryConditionBuilder
         value=""
-        onChange={() => {}}
-        onSave={() => {}}
-        toolbarExtra={<button>Load query</button>}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
       />,
     );
-    expect(screen.getByLabelText("Save query")).toBeTruthy();
-    expect(screen.getByText("Load query")).toBeTruthy();
+    expect(screen.queryByText("and")).toBeNull();
+    expect(screen.queryByText("not")).toBeNull();
   });
 });

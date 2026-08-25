@@ -221,7 +221,7 @@ describe("EntryDetail", () => {
         ".fetchButton button",
       ) as HTMLElement;
       expect(fetchButton).not.toBeNull();
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
     });
 
     it("should not show a separate limit input", () => {
@@ -239,10 +239,6 @@ describe("EntryDetail", () => {
       ) as HTMLTextAreaElement;
       expect(textArea).not.toBeNull();
       expect(textArea.value).toBe('{\n  "$each_t": "$__interval"\n}\n');
-
-      const exampleText = container.querySelector(".jsonExample");
-      expect(exampleText).not.toBeNull();
-      expect(exampleText!.textContent).toContain("Example:");
     });
 
     it("should call bucket.query with default $each_t when condition", async () => {
@@ -268,6 +264,66 @@ describe("EntryDetail", () => {
           }),
         }),
       );
+    });
+  });
+
+  describe("Builder/JSON toggle", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".ant-select")).not.toBeNull();
+      });
+    });
+
+    const editJsonTo = (value: string) => {
+      fireEvent.click(screen.getByRole("switch"));
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      fireEvent.change(textArea, { target: { value } });
+      return textArea;
+    };
+
+    it("starts in Builder mode showing Where labels", () => {
+      expect(screen.getByText("Where labels")).toBeTruthy();
+    });
+
+    it("reparses losslessly when returning to Builder without touching the JSON", () => {
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("switch"));
+      expect(screen.getByText("Where labels")).toBeTruthy();
+    });
+
+    it("shows a confirmation before resetting the builder after a manual JSON edit", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      // Still in JSON mode: the switch is deferred behind the confirmation.
+      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
+    });
+
+    it("resets the builder once the confirmation is accepted", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+      expect(screen.getByText("Where labels")).toBeTruthy();
+      expect(screen.getByPlaceholderText("value")).toHaveValue("");
+    });
+
+    it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
+      const textArea = editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
     });
   });
 
@@ -297,7 +353,7 @@ describe("EntryDetail", () => {
       let fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
 
       await act(async () => {
         fireEvent.click(fetchButton);
@@ -306,7 +362,7 @@ describe("EntryDetail", () => {
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
 
       // Advance past the 500ms delay
       await act(async () => {
@@ -373,7 +429,7 @@ describe("EntryDetail", () => {
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
     });
   });
 
@@ -1060,7 +1116,7 @@ describe("EntryDetail", () => {
       expect(container.textContent).toContain("query: 2");
       expect(container.textContent).not.toContain("query: 1");
       expect(container.querySelector(".fetchButton button")!.textContent).toBe(
-        "Fetch Records",
+        "Run Query",
       );
     }, 10_000);
   });

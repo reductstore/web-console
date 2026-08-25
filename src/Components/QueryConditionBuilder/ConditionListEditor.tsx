@@ -1,4 +1,5 @@
 import { Button, Select } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition } from "../../Helpers/conditionalQueryBuilder";
 
@@ -56,9 +57,9 @@ export default function ConditionListEditor({
           key={condition.id}
           style={{
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             gap: 8,
-            marginBottom: 8,
+            marginBottom: 6,
           }}
         >
           {index > 0 && (
@@ -81,9 +82,12 @@ export default function ConditionListEditor({
         </div>
       ))}
 
-      <Button aria-label="Add condition" size="small" onClick={onAddCondition}>
-        +
-      </Button>
+      <Button
+        aria-label="Add condition"
+        size="small"
+        icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+        onClick={onAddCondition}
+      />
     </div>
   );
 }

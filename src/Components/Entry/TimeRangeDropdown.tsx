@@ -117,7 +117,6 @@ export default function TimeRangeDropdown({
     >
       <Tooltip title="Previous time range">
         <Button
-          type="text"
           icon={<LeftOutlined />}
           aria-label="Previous time range"
           disabled={!canShift}
@@ -224,7 +223,6 @@ export default function TimeRangeDropdown({
       </div>
       <Tooltip title="Next time range">
         <Button
-          type="text"
           icon={<RightOutlined />}
           aria-label="Next time range"
           disabled={!canShift}
