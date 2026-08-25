@@ -50,7 +50,12 @@ export default function QueryConditionBuilder({
   saveDisabled,
   toolbarExtra,
 }: QueryConditionBuilderProps) {
-  const [mode, setMode] = useState<"builder" | "json">("builder");
+  // If the initial value isn't representable in the builder (e.g. a
+  // hand-written query with real nested grouping), land in JSON mode
+  // instead of silently showing an empty builder next to the real query.
+  const [mode, setMode] = useState<"builder" | "json">(() =>
+    jsonTextToList(value) !== undefined ? "builder" : "json",
+  );
   const [conditions, setConditions] = useState<FlatCondition[]>(() => {
     const parsed = jsonTextToList(value);
     return parsed && parsed.length > 0 ? parsed : addCondition([]);

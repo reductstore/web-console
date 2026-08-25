@@ -35,6 +35,19 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
+  it("starts in JSON mode when the initial value isn't representable", () => {
+    render(
+      <QueryConditionBuilder
+        value={
+          '{"$and": [{"&a": {"$eq": "1"}}, {"$or": [{"&b": {"$eq": "2"}}, {"&c": {"$eq": "3"}}]}]}'
+        }
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.getByTestId("monaco-editor")).toBeTruthy();
+  });
+
   it("parses an existing condition into the builder", () => {
     render(
       <QueryConditionBuilder
