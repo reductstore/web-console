@@ -25,6 +25,6 @@ test("shows entry stats", async ({ page }) => {
 });
 
 test("fetches records", async ({ page }) => {
-  await page.getByRole("button", { name: "Fetch Records" }).click();
+  await page.getByRole("button", { name: "Run Query" }).click();
   await expect(page.getByText("Timestamp")).toBeVisible({ timeout: 10_000 });
 });
