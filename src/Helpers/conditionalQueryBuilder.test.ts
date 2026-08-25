@@ -132,10 +132,11 @@ describe("conditionalQueryBuilder", () => {
       expect(parseBuilderList({})).toEqual({ success: true, list: [] });
     });
 
-    it("treats a lone $each_t as an empty list", () => {
+    it("treats a lone $each_t as an empty list and surfaces its value", () => {
       expect(parseBuilderList({ $each_t: "$__interval" })).toEqual({
         success: true,
         list: [],
+        eachT: "$__interval",
       });
     });
 

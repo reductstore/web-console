@@ -35,6 +35,62 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
+  it("resyncs conditions when value changes from outside while already in Builder mode", () => {
+    const { rerender } = render(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "active"}}'}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByPlaceholderText("value")).toHaveValue("active");
+
+    // Simulate a saved query being loaded while already in Builder mode
+    // (toolbarExtra's QuerySelector calls the parent's setter directly).
+    rerender(
+      <QueryConditionBuilder
+        value={'{"&method": {"$eq": "GET"}}'}
+        onChange={() => {}}
+      />,
+    );
+
+    const [labelInput] = screen.getAllByRole("combobox");
+    expect(labelInput).toHaveValue("method");
+    expect(screen.getByPlaceholderText("value")).toHaveValue("GET");
+  });
+
+  it("switches to JSON mode when an externally-loaded value isn't representable", () => {
+    const { rerender } = render(
+      <QueryConditionBuilder value="" onChange={() => {}} />,
+    );
+    rerender(
+      <QueryConditionBuilder
+        value={
+          '{"$and": [{"&a": {"$eq": "1"}}, {"$or": [{"&b": {"$eq": "2"}}, {"&c": {"$eq": "3"}}]}]}'
+        }
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.getByTestId("monaco-editor")).toBeTruthy();
+  });
+
+  it("preserves $each_t across an edit instead of silently dropping it", () => {
+    const onChange = vi.fn();
+    render(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={onChange}
+      />,
+    );
+    const [labelInput] = screen.getAllByRole("combobox");
+    fireEvent.change(labelInput, { target: { value: "status" } });
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
+    expect(JSON.parse(lastCall)).toEqual({
+      "&status": { $eq: "" },
+      $each_t: "$__interval",
+    });
+  });
+
   it("starts in JSON mode when the initial value isn't representable", () => {
     render(
       <QueryConditionBuilder
@@ -189,13 +245,16 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    // Now in Builder mode, wiped rather than partially reparsed.
-    expect(screen.getByText("Where labels")).toBeTruthy();
-    expect(screen.getByPlaceholderText("value")).toHaveValue("");
     // The reset emits an actually-empty query, not the empty row's own
     // placeholder JSON (which would be `{"&": {"$eq": ""}}`).
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({});
+    // A real parent re-renders with that value once its onChange runs; only
+    // then does the component see its own reset reflected in `value` too.
+    rerender(<QueryConditionBuilder value={lastCall} onChange={onChange} />);
+    // Now in Builder mode, wiped rather than partially reparsed.
+    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByPlaceholderText("value")).toHaveValue("");
   });
 
   it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
@@ -227,10 +286,11 @@ describe("QueryConditionBuilder", () => {
   });
 
   it("resets the builder when the JSON changes from outside while in JSON mode", () => {
+    const onChange = vi.fn();
     const { rerender } = render(
       <QueryConditionBuilder
         value={'{"&status": {"$eq": "active"}}'}
-        onChange={() => {}}
+        onChange={onChange}
       />,
     );
     fireEvent.click(screen.getByRole("switch"));
@@ -240,12 +300,14 @@ describe("QueryConditionBuilder", () => {
     rerender(
       <QueryConditionBuilder
         value={'{"&method": {"$eq": "GET"}}'}
-        onChange={() => {}}
+        onChange={onChange}
       />,
     );
 
     fireEvent.click(screen.getByRole("switch"));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
+    rerender(<QueryConditionBuilder value={lastCall} onChange={onChange} />);
     expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toHaveValue("");
   });

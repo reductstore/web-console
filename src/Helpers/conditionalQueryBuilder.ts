@@ -239,6 +239,12 @@ function parseChain(json: unknown): FlatCondition[] | null {
 export interface ParseBuilderListResult {
   success: boolean;
   list?: FlatCondition[];
+  // Present when the input carried a top-level $each_t directive alongside
+  // (or instead of) conditions. $each_t is a sampling directive outside the
+  // builder's scope (see #232) - its value is surfaced here rather than
+  // dropped, so a caller can carry it through instead of silently losing it
+  // the next time it re-serializes the conditions.
+  eachT?: unknown;
   error?: string;
 }
 
@@ -251,11 +257,14 @@ export function parseBuilderList(json: unknown): ParseBuilderListResult {
     if (keys.length === 0) {
       return { success: true, list: [] };
     }
-    // $each_t is a sampling directive outside the builder's scope (see #232);
-    // treat "only $each_t" like an empty list so the default query, which
-    // always includes it, stays representable in Builder mode.
+    // Treat "only $each_t" like an empty list of conditions so the default
+    // query, which always includes it, stays representable in Builder mode.
     if (keys.length === 1 && keys[0] === "$each_t") {
-      return { success: true, list: [] };
+      return {
+        success: true,
+        list: [],
+        eachT: (json as Record<string, unknown>)["$each_t"],
+      };
     }
   }
 

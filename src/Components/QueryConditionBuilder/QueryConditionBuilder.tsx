@@ -1,4 +1,4 @@
-import { useEffect, useState, ComponentProps, ReactNode } from "react";
+import { useEffect, useRef, useState, ComponentProps, ReactNode } from "react";
 import { Button, Modal, Switch, Tooltip, Typography } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 import { JsonQueryEditor } from "../JsonEditor";
@@ -30,13 +30,20 @@ interface QueryConditionBuilderProps {
   toolbarExtra?: ReactNode;
 }
 
-function jsonTextToList(text: string): FlatCondition[] | undefined {
+interface ParsedValue {
+  list: FlatCondition[];
+  eachT?: unknown;
+}
+
+function parseValue(text: string): ParsedValue | undefined {
   const parsed = safeParseJSON5(text);
   if (!parsed.success) {
     return undefined;
   }
   const result = parseBuilderList(parsed.value);
-  return result.success ? result.list : undefined;
+  return result.success
+    ? { list: result.list ?? [], eachT: result.eachT }
+    : undefined;
 }
 
 export default function QueryConditionBuilder({
@@ -54,12 +61,21 @@ export default function QueryConditionBuilder({
   // hand-written query with real nested grouping), land in JSON mode
   // instead of silently showing an empty builder next to the real query.
   const [mode, setMode] = useState<"builder" | "json">(() =>
-    jsonTextToList(value) !== undefined ? "builder" : "json",
+    parseValue(value) !== undefined ? "builder" : "json",
   );
   const [conditions, setConditions] = useState<FlatCondition[]>(() => {
-    const parsed = jsonTextToList(value);
-    return parsed && parsed.length > 0 ? parsed : addCondition([]);
+    const parsed = parseValue(value);
+    return parsed && parsed.list.length > 0 ? parsed.list : addCondition([]);
   });
+  // The value of a top-level $each_t directive (a sampling macro outside the
+  // builder's scope, see #232), carried through re-serializations instead of
+  // being silently dropped the next time a condition is edited.
+  const [eachT, setEachT] = useState<unknown>(() => parseValue(value)?.eachT);
+  // The most recent `value` this component itself produced via onChange, so
+  // an external change to `value` (e.g. loading a saved query while already
+  // in Builder mode) can be told apart from an update the component made to
+  // its own props.
+  const lastEmittedValueRef = useRef(value);
   // Snapshot of `value` taken when switching into JSON mode. Returning to
   // Builder mode reparses losslessly only if `value` still matches it; any
   // change (typed, formatted, or loaded from a saved query) instead resets
@@ -128,9 +144,34 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
+  // If `value` changes while already in Builder mode from something other
+  // than this component's own onChange - e.g. loading a saved query via
+  // toolbarExtra, which sets it directly - `conditions` would otherwise stay
+  // stale and the next edit would silently overwrite the newly loaded query.
+  useEffect(() => {
+    if (mode !== "builder" || value === lastEmittedValueRef.current) {
+      return;
+    }
+    lastEmittedValueRef.current = value;
+    const parsed = parseValue(value);
+    if (parsed === undefined) {
+      setMode("json");
+      return;
+    }
+    setConditions(parsed.list.length > 0 ? parsed.list : addCondition([]));
+    setEachT(parsed.eachT);
+  }, [value, mode]);
+
+  const emit = (nextValue: Record<string, unknown>) => {
+    const formatted = formatAsStrictJSON(nextValue);
+    lastEmittedValueRef.current = formatted;
+    onChange(formatted);
+  };
+
   const applyList = (nextConditions: FlatCondition[]) => {
     setConditions(nextConditions);
-    onChange(formatAsStrictJSON(serializeBuilderList(nextConditions)));
+    const serialized = serializeBuilderList(nextConditions);
+    emit(eachT !== undefined ? { ...serialized, $each_t: eachT } : serialized);
   };
 
   const handleModeChange = (nextMode: "builder" | "json") => {
@@ -150,9 +191,12 @@ export default function QueryConditionBuilder({
     // Seed the UI with one editable row (consistent with mount), but emit
     // an actually-empty query rather than the row's own placeholder JSON
     // (`{"&": {"$eq": ""}}`) - that's not a meaningful query and shouldn't
-    // become the active one before the user has typed a label.
+    // become the active one before the user has typed a label. A full reset
+    // also drops any carried-over $each_t, matching the confirmation's own
+    // "completely reset" wording.
     setConditions(addCondition([]));
-    onChange(formatAsStrictJSON({}));
+    setEachT(undefined);
+    emit({});
     setMode("builder");
     setPendingReset(false);
   };
