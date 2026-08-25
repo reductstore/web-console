@@ -147,7 +147,12 @@ export default function QueryConditionBuilder({
   };
 
   const confirmReset = () => {
-    applyList(addCondition([]));
+    // Seed the UI with one editable row (consistent with mount), but emit
+    // an actually-empty query rather than the row's own placeholder JSON
+    // (`{"&": {"$eq": ""}}`) - that's not a meaningful query and shouldn't
+    // become the active one before the user has typed a label.
+    setConditions(addCondition([]));
+    onChange(formatAsStrictJSON({}));
     setMode("builder");
     setPendingReset(false);
   };

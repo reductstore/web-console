@@ -192,6 +192,10 @@ describe("QueryConditionBuilder", () => {
     // Now in Builder mode, wiped rather than partially reparsed.
     expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toHaveValue("");
+    // The reset emits an actually-empty query, not the empty row's own
+    // placeholder JSON (which would be `{"&": {"$eq": ""}}`).
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
+    expect(JSON.parse(lastCall)).toEqual({});
   });
 
   it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
