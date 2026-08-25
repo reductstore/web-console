@@ -58,7 +58,7 @@ export default function LabelConditionEditor({
   };
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div style={{ display: "flex", gap: 8, flex: 1 }}>
       <AutoComplete
         placeholder="label"
         value={condition.label}
@@ -91,6 +91,7 @@ export default function LabelConditionEditor({
           placeholder="value"
           value={condition.value as string}
           onChange={(e) => onChange(condition.id, { value: e.target.value })}
+          style={{ flex: 1 }}
         />
       )}
       {removable && (
