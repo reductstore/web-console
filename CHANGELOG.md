@@ -15,11 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support wire compression settings for replications, [PR-226](https://github.com/reductstore/web-console/pull/226)
 - Support lifecycle processing intervals, [PR-227](https://github.com/reductstore/web-console/pull/227)
 - Add previous and next controls for shifting query time ranges, [PR-228](https://github.com/reductstore/web-console/pull/228)
-<<<<<<< HEAD
 - Add short query range presets and vertically resizable JSON query editors, [PR-241](https://github.com/reductstore/web-console/pull/241)
-=======
-- Add builder mode with label filters to the Data Explorer's Conditional Query panel, [PR-XXX](https://github.com/reductstore/web-console/pull/XXX)
->>>>>>> 50d5d02 (Add changelog entry for the builder mode with label filters)
+- Add builder mode with label filters to the Data Explorer's Conditional Query panel, [PR-240](https://github.com/reductstore/web-console/pull/240)
 
 ## 1.15.1 - 2026-06-19
 
