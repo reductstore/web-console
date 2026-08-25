@@ -1,0 +1,14 @@
+.timeRangePresetMenu .ant-dropdown-menu {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
+.timeRangePickerPopup .ant-picker-presets {
+  max-height: min(60vh, 420px);
+  overflow: hidden;
+}
+
+.timeRangePickerPopup .ant-picker-presets ul {
+  max-height: inherit;
+  overflow-y: auto;
+}

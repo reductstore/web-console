@@ -12,6 +12,50 @@
   height: 100%;
 }
 
+.jsonQueryEditorContainer.isResizable .jsonQueryEditorToolbar {
+  border-radius: 0;
+}
+
+.jsonQueryEditorResizeHandle {
+  position: relative;
+  flex: 0 0 10px;
+  border-radius: 0 0 6px 6px;
+  background: #fafafa;
+  cursor: row-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.jsonQueryEditorResizeHandle span {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: #bfbfbf;
+  transform: translateX(-50%);
+  transition:
+    width 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.jsonQueryEditorResizeHandle:hover span,
+.jsonQueryEditorResizeHandle:focus-visible span {
+  width: 44px;
+  background: var(--input-focus);
+}
+
+.jsonQueryEditorResizeHandle:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--input-focus);
+}
+
+.jsonQueryEditorContainer.isResizing,
+.jsonQueryEditorContainer.isResizing * {
+  cursor: row-resize !important;
+  user-select: none;
+}
+
 .jsonQueryEditorToolbar {
   display: flex;
   align-items: center;
@@ -119,4 +163,14 @@
 
 .jsonQueryEditor .monaco-editor .suggest-widget {
   z-index: 1000;
+}
+
+@media (max-width: 480px) {
+  .jsonQueryEditorResizeHandle {
+    flex-basis: 12px;
+  }
+
+  .jsonQueryEditorResizeHandle span {
+    top: 4px;
+  }
 }

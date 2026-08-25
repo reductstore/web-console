@@ -2,7 +2,8 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import TimeRangeDropdown from "./TimeRangeDropdown";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import dayjs from "dayjs";
-import { getTimeRangeFromKey } from "../../Helpers/timeRangeUtils";
+import { Grid } from "antd";
+import { getTimeRangeFromKey, RANGE_MAP } from "../../Helpers/timeRangeUtils";
 
 describe("TimeRangeDropdown", () => {
   beforeEach(() => {
@@ -12,6 +13,10 @@ describe("TimeRangeDropdown", () => {
       unobserve() {}
       disconnect() {}
     };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   const mockOnSelectRange = vi.fn();
@@ -34,6 +39,71 @@ describe("TimeRangeDropdown", () => {
     expect(
       screen.getByRole("button", { name: /custom range/i }).textContent,
     ).toContain("Custom range");
+  });
+
+  it("renders Last 1 hour as the configured initial range", () => {
+    render(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        initialRangeKey="last1"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /last 1 hour/i }).textContent,
+    ).toContain("Last 1 hour");
+  });
+
+  it.each([
+    ["Last 5 minutes", 5n],
+    ["Last 15 minutes", 15n],
+    ["Last 30 minutes", 30n],
+  ])("selects %s with its exact duration", async (label, minutes) => {
+    mockOnSelectRange.mockClear();
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+
+    await openMenuAndClick(label);
+
+    const [start, end] = mockOnSelectRange.mock.calls[0] || [];
+    expect(end - start).toBe(minutes * 60n * 1_000_000n);
+  });
+
+  it("shows presets in map order and applies the mobile scroll hook", async () => {
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+
+    await act(async () => {
+      fireEvent.click(
+        screen
+          .getAllByRole("button")
+          .find((button) => !button.hasAttribute("aria-label"))!,
+      );
+    });
+
+    const menu = document.querySelector(".timeRangePresetMenu");
+    expect(menu).not.toBeNull();
+    const labels = Array.from(
+      menu!.querySelectorAll(".ant-dropdown-menu-title-content"),
+    ).map((item) => item.textContent);
+    expect(labels).toEqual(
+      Object.entries(RANGE_MAP)
+        .filter(([key]) => key !== "custom")
+        .map(([, label]) => label),
+    );
+  });
+
+  it("applies the desktop picker scroll hook", async () => {
+    vi.spyOn(Grid, "useBreakpoint").mockReturnValue({ md: true });
+    render(<TimeRangeDropdown onSelectRange={mockOnSelectRange} />);
+
+    await act(async () => {
+      fireEvent.mouseDown(
+        screen
+          .getAllByRole("button")
+          .find((button) => !button.hasAttribute("aria-label"))!,
+      );
+    });
+
+    expect(document.querySelector(".timeRangePickerPopup")).not.toBeNull();
   });
 
   it("triggers onSelectRange for 'Last 1 hour'", async () => {
@@ -197,6 +267,20 @@ describe("TimeRangeDropdown", () => {
     expect(
       screen.getByRole("button", { name: /last 7 days/i }).textContent,
     ).toContain("Last 7 days");
+  });
+
+  it("detects a short preset label from currentRange", () => {
+    const last15Range = getTimeRangeFromKey("last15m");
+    render(
+      <TimeRangeDropdown
+        onSelectRange={mockOnSelectRange}
+        currentRange={last15Range}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /last 15 minutes/i }).textContent,
+    ).toContain("Last 15 minutes");
   });
 
   it("displays 'Custom range' for unmatched currentRange", () => {
