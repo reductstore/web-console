@@ -6,17 +6,17 @@ import {
 } from "../../Helpers/conditionalQueryBuilder";
 
 const OPERATOR_OPTIONS: { value: LabelOperator; label: string }[] = [
-  { value: "$eq", label: "$eq" },
-  { value: "$ne", label: "$ne" },
-  { value: "$gt", label: "$gt" },
-  { value: "$gte", label: "$gte" },
-  { value: "$lt", label: "$lt" },
-  { value: "$lte", label: "$lte" },
-  { value: "$contains", label: "$contains" },
-  { value: "$starts_with", label: "$starts_with" },
-  { value: "$ends_with", label: "$ends_with" },
-  { value: "$in", label: "$in" },
-  { value: "$nin", label: "$nin" },
+  { value: "$eq", label: "=" },
+  { value: "$ne", label: "≠" },
+  { value: "$gt", label: ">" },
+  { value: "$gte", label: "≥" },
+  { value: "$lt", label: "<" },
+  { value: "$lte", label: "≤" },
+  { value: "$contains", label: "contains" },
+  { value: "$starts_with", label: "starts with" },
+  { value: "$ends_with", label: "ends with" },
+  { value: "$in", label: "in" },
+  { value: "$nin", label: "not in" },
 ];
 
 interface LabelConditionEditorProps {

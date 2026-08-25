@@ -110,7 +110,7 @@ describe("LabelConditionEditor", () => {
       ".ant-select:not(.ant-select-auto-complete)",
     ) as HTMLElement;
     fireEvent.mouseDown(operatorSelect);
-    fireEvent.click(screen.getByTitle("$gt"));
+    fireEvent.click(screen.getByTitle(">"));
     expect(onChange).toHaveBeenCalledWith("cond-1", { operator: "$gt" });
   });
 
@@ -158,7 +158,7 @@ describe("LabelConditionEditor", () => {
       ".ant-select:not(.ant-select-auto-complete)",
     ) as HTMLElement;
     fireEvent.mouseDown(operatorSelect);
-    fireEvent.click(screen.getByTitle("$in"));
+    fireEvent.click(screen.getByTitle("in"));
     expect(onChange).toHaveBeenCalledWith("cond-1", {
       operator: "$in",
       value: ["active"],
@@ -178,7 +178,7 @@ describe("LabelConditionEditor", () => {
       ".ant-select:not(.ant-select-auto-complete)",
     ) as HTMLElement;
     fireEvent.mouseDown(operatorSelect);
-    fireEvent.click(screen.getByTitle("$eq"));
+    fireEvent.click(screen.getByTitle("="));
     expect(onChange).toHaveBeenCalledWith("cond-1", {
       operator: "$eq",
       value: "POST",
