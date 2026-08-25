@@ -22,6 +22,10 @@ enum ValidationStatus {
   Invalid = "invalid",
 }
 
+const MIN_INLINE_EDITOR_HEIGHT = 100;
+const MAX_INLINE_EDITOR_VIEWPORT_RATIO = 0.8;
+const KEYBOARD_RESIZE_STEP = 16;
+
 interface ValidationContext {
   client: Client;
   bucket?: string;
@@ -76,7 +80,11 @@ export function JsonQueryEditor({
   toolbarExtra,
 }: JsonQueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const inlineContainerRef = useRef<HTMLDivElement | null>(null);
+  const stopPointerResizeRef = useRef<(() => void) | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [manualHeight, setManualHeight] = useState<number | undefined>();
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>(
     ValidationStatus.Idle,
   );
@@ -163,7 +171,108 @@ export function JsonQueryEditor({
     setIsExpanded((prev) => !prev);
   };
 
-  const containerHeight = typeof height === "number" ? `${height}px` : height;
+  const getMaximumEditorHeight = () =>
+    Math.max(
+      MIN_INLINE_EDITOR_HEIGHT,
+      Math.floor(window.innerHeight * MAX_INLINE_EDITOR_VIEWPORT_RATIO),
+    );
+
+  const clampEditorHeight = (nextHeight: number) =>
+    Math.min(
+      getMaximumEditorHeight(),
+      Math.max(MIN_INLINE_EDITOR_HEIGHT, Math.round(nextHeight)),
+    );
+
+  const getRenderedInlineHeight = () => {
+    const container = inlineContainerRef.current;
+    const renderedHeight = container?.getBoundingClientRect().height ?? 0;
+    if (renderedHeight > 0) return renderedHeight;
+    if (container && container.offsetHeight > 0) return container.offsetHeight;
+    if (manualHeight !== undefined) return manualHeight;
+    if (typeof height === "number") return height;
+    if (height.endsWith("px")) return Number.parseFloat(height);
+    return MIN_INLINE_EDITOR_HEIGHT;
+  };
+
+  const handleResizePointerDown = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    stopPointerResizeRef.current?.();
+
+    const { currentTarget: handle, pointerId, clientY: startY } = event;
+    const startHeight = clampEditorHeight(getRenderedInlineHeight());
+    setManualHeight(startHeight);
+    setIsResizing(true);
+
+    try {
+      handle.setPointerCapture?.(pointerId);
+    } catch {
+      // Pointer capture is optional in older browsers and test environments.
+    }
+
+    const handlePointerMove = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== pointerId) return;
+      setManualHeight(
+        clampEditorHeight(startHeight + pointerEvent.clientY - startY),
+      );
+    };
+
+    const stopPointerResize = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+      try {
+        if (handle.hasPointerCapture?.(pointerId)) {
+          handle.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // The handle may have been removed while a drag was active.
+      }
+      stopPointerResizeRef.current = null;
+    };
+
+    const handlePointerEnd = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== pointerId) return;
+      stopPointerResize();
+      setIsResizing(false);
+    };
+
+    stopPointerResizeRef.current = stopPointerResize;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+  };
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowUp" ? -1 : 1;
+    setManualHeight((currentHeight) =>
+      clampEditorHeight(
+        (currentHeight ?? getRenderedInlineHeight()) +
+          direction * KEYBOARD_RESIZE_STEP,
+      ),
+    );
+  };
+
+  const effectiveHeight = manualHeight ?? height;
+  const containerHeight =
+    typeof effectiveHeight === "number"
+      ? `${effectiveHeight}px`
+      : effectiveHeight;
+  const currentHeight = Math.round(
+    manualHeight ??
+      (typeof height === "number" ? height : MIN_INLINE_EDITOR_HEIGHT),
+  );
+
+  useEffect(
+    () => () => {
+      stopPointerResizeRef.current?.();
+    },
+    [],
+  );
 
   useEffect(() => {
     const parsed = processWhenCondition(value, validationIntervalValue);
@@ -387,8 +496,15 @@ export function JsonQueryEditor({
     return null;
   };
 
-  const renderEditorShell = (style?: React.CSSProperties) => (
-    <div className="jsonQueryEditorContainer" style={style}>
+  const renderEditorShell = (
+    style?: React.CSSProperties,
+    resizable = false,
+  ) => (
+    <div
+      ref={resizable ? inlineContainerRef : undefined}
+      className={`jsonQueryEditorContainer${resizable ? " isResizable" : ""}${isResizing ? " isResizing" : ""}`}
+      style={style}
+    >
       <div className="jsonQueryEditorBody">
         <Editor
           height="100%"
@@ -465,6 +581,22 @@ export function JsonQueryEditor({
           </Tooltip>
         </div>
       </div>
+      {resizable && (
+        <div
+          className="jsonQueryEditorResizeHandle"
+          role="separator"
+          aria-label="Resize JSON editor"
+          aria-orientation="horizontal"
+          aria-valuemin={MIN_INLINE_EDITOR_HEIGHT}
+          aria-valuemax={getMaximumEditorHeight()}
+          aria-valuenow={currentHeight}
+          tabIndex={0}
+          onPointerDown={handleResizePointerDown}
+          onKeyDown={handleResizeKeyDown}
+        >
+          <span aria-hidden="true" />
+        </div>
+      )}
     </div>
   );
 
@@ -478,7 +610,7 @@ export function JsonQueryEditor({
           Editing in expanded JSON editor
         </div>
       ) : (
-        renderEditorShell({ height: containerHeight })
+        renderEditorShell({ height: containerHeight }, true)
       )}
       {isExpanded && (
         <Modal

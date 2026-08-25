@@ -6,6 +6,9 @@ export interface TimeRange {
 }
 
 export const RANGE_MAP: Record<string, string> = {
+  last5m: "Last 5 minutes",
+  last15m: "Last 15 minutes",
+  last30m: "Last 30 minutes",
   last1: "Last 1 hour",
   last6: "Last 6 hours",
   last24: "Last 24 hours",
@@ -39,6 +42,21 @@ export function getTimeRangeFromKey(
     BigInt(date.valueOf() * 1000);
 
   switch (key) {
+    case "last5m":
+      return {
+        start: convertToMicroseconds(now.subtract(5, "minute")),
+        end: convertToMicroseconds(now),
+      };
+    case "last15m":
+      return {
+        start: convertToMicroseconds(now.subtract(15, "minute")),
+        end: convertToMicroseconds(now),
+      };
+    case "last30m":
+      return {
+        start: convertToMicroseconds(now.subtract(30, "minute")),
+        end: convertToMicroseconds(now),
+      };
     case "last1":
       return {
         start: convertToMicroseconds(now.subtract(1, "hour")),
@@ -140,6 +158,8 @@ export function detectRangeKey(
   }
   const marginMicroseconds = BigInt(marginMinutes * 60 * 1000 * 1000);
   const presetKeys = Object.keys(RANGE_MAP).filter((key) => key !== "custom");
+  let closestMatch: { key: string; delta: bigint } | undefined;
+  let hasClosestMatchTie = false;
 
   for (const key of presetKeys) {
     try {
@@ -155,12 +175,18 @@ export function detectRangeKey(
           : expectedRange.end - end;
 
       if (startDiff <= marginMicroseconds && endDiff <= marginMicroseconds) {
-        return key;
+        const delta = startDiff + endDiff;
+        if (!closestMatch || delta < closestMatch.delta) {
+          closestMatch = { key, delta };
+          hasClosestMatchTie = false;
+        } else if (delta === closestMatch.delta) {
+          hasClosestMatchTie = true;
+        }
       }
     } catch {
       continue;
     }
   }
 
-  return "custom";
+  return closestMatch && !hasClosestMatchTie ? closestMatch.key : "custom";
 }

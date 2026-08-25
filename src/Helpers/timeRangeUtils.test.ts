@@ -11,6 +11,19 @@ describe("timeRangeUtils", () => {
   const mockNow = dayjs("2023-10-15T12:00:00Z");
 
   describe("getTimeRangeFromKey", () => {
+    it.each([
+      ["last5m", 5],
+      ["last15m", 15],
+      ["last30m", 30],
+    ])("should calculate %s in minutes correctly", (key, minutes) => {
+      const result = getTimeRangeFromKey(key, mockNow);
+
+      expect(result.start).toBe(
+        BigInt(mockNow.subtract(minutes, "minute").valueOf() * 1000),
+      );
+      expect(result.end).toBe(BigInt(mockNow.valueOf() * 1000));
+    });
+
     it("should calculate last1 range correctly", () => {
       const result = getTimeRangeFromKey("last1", mockNow);
       const expectedStart = BigInt(
@@ -88,6 +101,9 @@ describe("timeRangeUtils", () => {
   describe("RANGE_MAP", () => {
     it("should contain all expected range keys", () => {
       const expectedKeys = [
+        "last5m",
+        "last15m",
+        "last30m",
         "last1",
         "last6",
         "last24",
@@ -102,14 +118,20 @@ describe("timeRangeUtils", () => {
         "custom",
       ];
 
-      expectedKeys.forEach((key) => {
-        expect(RANGE_MAP[key]).toBeDefined();
-        expect(typeof RANGE_MAP[key]).toBe("string");
-      });
+      expect(Object.keys(RANGE_MAP)).toEqual(expectedKeys);
     });
   });
 
   describe("detectRangeKey", () => {
+    it.each(["last5m", "last15m", "last30m"])(
+      "should detect an exact %s range",
+      (key) => {
+        const range = getTimeRangeFromKey(key, mockNow);
+
+        expect(detectRangeKey(range.start, range.end, 10, mockNow)).toBe(key);
+      },
+    );
+
     it("should detect exact matches for preset ranges", () => {
       const last24Range = getTimeRangeFromKey("last24", mockNow);
       const detectedKey = detectRangeKey(
@@ -132,6 +154,22 @@ describe("timeRangeUtils", () => {
         mockNow,
       );
       expect(detectedKey).toBe("last1");
+    });
+
+    it("should select the nearest preset within the margin", () => {
+      const last15Range = getTimeRangeFromKey("last15m", mockNow);
+      const adjustedStart = last15Range.start + 4n * 60n * 1_000_000n;
+
+      expect(detectRangeKey(adjustedStart, last15Range.end, 10, mockNow)).toBe(
+        "last15m",
+      );
+    });
+
+    it("should return 'custom' for equally close preset matches", () => {
+      const end = BigInt(mockNow.valueOf() * 1000);
+      const start = BigInt(mockNow.subtract(10, "minute").valueOf() * 1000);
+
+      expect(detectRangeKey(start, end, 10, mockNow)).toBe("custom");
     });
 
     it("should return 'custom' for ranges outside margin of error", () => {

@@ -8,6 +8,7 @@ import {
   RANGE_MAP,
   detectRangeKey,
 } from "../../Helpers/timeRangeUtils";
+import "./TimeRangeDropdown.css";
 
 type RangeValue = Parameters<
   NonNullable<React.ComponentProps<typeof DatePicker.RangePicker>["onChange"]>
@@ -29,7 +30,7 @@ export default function TimeRangeDropdown({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [rangeLabel, setRangeLabel] = useState<string | undefined>(
-    initialRangeKey ? RANGE_MAP[initialRangeKey] : undefined,
+    RANGE_MAP[initialRangeKey ?? "custom"],
   );
   const [tempDates, setTempDates] = useState<RangeValue>(null);
 
@@ -47,6 +48,7 @@ export default function TimeRangeDropdown({
   }, []);
 
   useEffect(() => {
+    if (!currentRange) return;
     const detectedKey = detectRangeKey(currentRange?.start, currentRange?.end);
     setRangeLabel(RANGE_MAP[detectedKey]);
   }, [currentRange]);
@@ -127,6 +129,7 @@ export default function TimeRangeDropdown({
           <Dropdown
             open={menuOpen}
             onOpenChange={(open) => setMenuOpen(open)}
+            classNames={{ root: "timeRangePresetMenu" }}
             menu={{
               items: menuItems,
               onClick: ({ key }) => {
@@ -179,6 +182,9 @@ export default function TimeRangeDropdown({
             >
               <DatePicker.RangePicker
                 open={pickerOpen}
+                classNames={{
+                  popup: { root: "timeRangePickerPopup" },
+                }}
                 onOpenChange={(open) => {
                   if (!isMounted.current) return;
                   if (open && suppressNextOpen.current) {

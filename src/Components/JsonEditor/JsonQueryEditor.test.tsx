@@ -110,6 +110,134 @@ describe("JsonQueryEditor", () => {
     ).toBeInTheDocument();
   });
 
+  it("resizes with the keyboard and clamps to its bounds", () => {
+    render(<JsonQueryEditor value="{}" onChange={() => {}} height={140} />);
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor",
+    });
+    const container = handle.parentElement!;
+
+    expect(container).toHaveStyle({ height: "140px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "140");
+
+    fireEvent.keyDown(handle, { key: "ArrowDown" });
+    expect(container).toHaveStyle({ height: "156px" });
+
+    for (let i = 0; i < 10; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowUp" });
+    }
+    expect(container).toHaveStyle({ height: "100px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "100");
+
+    for (let i = 0; i < 100; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowDown" });
+    }
+    const maximum = handle.getAttribute("aria-valuemax");
+    expect(container).toHaveStyle({ height: `${maximum}px` });
+    expect(handle).toHaveAttribute("aria-valuenow", maximum);
+  });
+
+  it("resizes by pointer drag and removes listeners on completion", () => {
+    render(<JsonQueryEditor value="{}" onChange={() => {}} height={140} />);
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor",
+    });
+    const container = handle.parentElement!;
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 0,
+      bottom: 140,
+      left: 0,
+      width: 0,
+      height: 140,
+      toJSON: () => ({}),
+    });
+    const removeListener = vi.spyOn(window, "removeEventListener");
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      pointerId: 1,
+      clientY: 100,
+    });
+    fireEvent.pointerMove(window, { pointerId: 1, clientY: 180 });
+    expect(container).toHaveStyle({ height: "220px" });
+
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(removeListener).toHaveBeenCalledWith(
+      "pointermove",
+      expect.any(Function),
+    );
+  });
+
+  it("keeps following height props until a manual resize", () => {
+    const { rerender } = render(
+      <JsonQueryEditor value="{}" onChange={() => {}} height={120} />,
+    );
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor",
+    });
+
+    rerender(<JsonQueryEditor value="{}" onChange={() => {}} height={180} />);
+    expect(handle.parentElement).toHaveStyle({ height: "180px" });
+
+    fireEvent.keyDown(handle, { key: "ArrowDown" });
+    expect(handle.parentElement).toHaveStyle({ height: "196px" });
+
+    rerender(
+      <JsonQueryEditor
+        value={'{\n  "changed": true\n}'}
+        onChange={() => {}}
+        height={300}
+      />,
+    );
+    expect(handle.parentElement).toHaveStyle({ height: "196px" });
+  });
+
+  it("keeps the expanded editor full-height without a resize handle", () => {
+    render(<JsonQueryEditor value="{}" onChange={() => {}} height={120} />);
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor",
+    });
+    fireEvent.keyDown(handle, { key: "ArrowDown" });
+
+    fireEvent.click(screen.getByLabelText("Expand editor"));
+
+    expect(
+      screen.queryByRole("separator", { name: "Resize JSON editor" }),
+    ).not.toBeInTheDocument();
+    expect(
+      document.querySelector(
+        ".jsonQueryEditorModalContent .jsonQueryEditorContainer",
+      ),
+    ).toHaveStyle({ height: "100%" });
+
+    fireEvent.click(screen.getByLabelText("Collapse editor"));
+    expect(
+      screen.getByRole("separator", { name: "Resize JSON editor" })
+        .parentElement,
+    ).toHaveStyle({ height: "136px" });
+  });
+
+  it("starts from the supplied height after remounting", () => {
+    const first = render(
+      <JsonQueryEditor value="{}" onChange={() => {}} height={120} />,
+    );
+    fireEvent.keyDown(
+      screen.getByRole("separator", { name: "Resize JSON editor" }),
+      { key: "ArrowDown" },
+    );
+    first.unmount();
+
+    render(<JsonQueryEditor value="{}" onChange={() => {}} height={220} />);
+
+    expect(
+      screen.getByRole("separator", { name: "Resize JSON editor" })
+        .parentElement,
+    ).toHaveStyle({ height: "220px" });
+  });
+
   it("passes start/stop into the validation query", async () => {
     const queryNext = vi.fn().mockResolvedValue({ done: true });
     const query = vi.fn().mockReturnValue({ next: queryNext });
