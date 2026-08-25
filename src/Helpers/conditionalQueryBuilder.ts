@@ -11,26 +11,17 @@ export type LabelOperator =
   | "$in"
   | "$nin";
 
-export type LogicalOperator = "$and" | "$or" | "$not";
+export type LogicalConnector = "$and" | "$or";
 
-export interface LabelCondition {
-  kind: "condition";
+export interface FlatCondition {
   id: string;
   label: string;
   operator: LabelOperator;
   value: string | string[];
+  negated: boolean;
+  // Connector to the previous item in the list. Ignored for the first item.
+  connector: LogicalConnector;
 }
-
-export type ConditionNode = LabelCondition | ConditionGroup;
-
-export interface ConditionGroup {
-  kind: "group";
-  id: string;
-  operator: LogicalOperator;
-  children: ConditionNode[];
-}
-
-export type BuilderTree = ConditionGroup | null;
 
 // Values are always typed as text in the builder's UI, but comparisons
 // like $gt/$lt against a numeric label silently match nothing if the
@@ -43,65 +34,36 @@ function coerceValue(value: string): string | number {
   return value;
 }
 
-function serializeCondition(
-  condition: LabelCondition,
-): Record<string, unknown> {
+function serializeLeaf(condition: FlatCondition): Record<string, unknown> {
   const coercedValue = Array.isArray(condition.value)
     ? condition.value.map(coerceValue)
     : coerceValue(condition.value);
   const inner = { [condition.operator]: coercedValue };
-  const outer = { ["&" + condition.label]: inner };
-  return outer;
+  return { ["&" + condition.label]: inner };
 }
 
-function serializeNode(node: ConditionNode): Record<string, unknown> {
-  if (node.kind === "condition") {
-    return serializeCondition(node);
-  }
-  return serializeGroup(node);
-}
-
-function serializeGroup(group: ConditionGroup): Record<string, unknown> {
-  if (group.children.length === 0) {
-    return {};
-  }
-  if (group.operator === "$and" || group.operator === "$or") {
-    const serializedChildren = group.children.map((child) =>
-      serializeNode(child),
-    );
-    return { [group.operator]: serializedChildren };
-  }
-  if (group.operator === "$not") {
-    if (group.children.length === 1) {
-      const serializedChild = serializeNode(group.children[0]);
-      return { [group.operator]: serializedChild };
-    }
-    // $not only accepts a single expression, so 2+ children are wrapped
-    // in an implicit $and. This wrapper is not unwrapped on parse back,
-    // so a $not with several direct children becomes a $not with one
-    // nested $and child after a JSON round trip.
-    const serializedChildren = group.children.map((child) =>
-      serializeNode(child),
-    );
-    const andWrapper = { $and: serializedChildren };
-    return { [group.operator]: andWrapper };
-  }
-  return {};
+function serializeItem(condition: FlatCondition): Record<string, unknown> {
+  const leaf = serializeLeaf(condition);
+  return condition.negated ? { $not: leaf } : leaf;
 }
 
 /**
- * Convert a builder tree into its Conditional Query JSON shape
+ * Convert a flat list of conditions into its Conditional Query JSON shape.
+ * Items are folded left to right: `[A, B(or), C(and)]` becomes
+ * `{"$and": [{"$or": [A, B]}, C]}`, matching the order the user built them in.
  */
-export function serializeBuilderTree(
-  tree: BuilderTree,
+export function serializeBuilderList(
+  list: FlatCondition[],
 ): Record<string, unknown> {
-  if (!tree) {
+  if (list.length === 0) {
     return {};
   }
-  if (tree.operator === "$and" && tree.children.length === 1) {
-    return serializeNode(tree.children[0]);
+  let acc = serializeItem(list[0]);
+  for (let index = 1; index < list.length; index++) {
+    const item = list[index];
+    acc = { [item.connector]: [acc, serializeItem(item)] };
   }
-  return serializeGroup(tree);
+  return acc;
 }
 
 const LABEL_OPERATORS: LabelOperator[] = [
@@ -125,7 +87,13 @@ export function isLabelOperator(value: string): value is LabelOperator {
   return LABEL_OPERATORS.includes(value as LabelOperator);
 }
 
-function parseLabelCondition(json: unknown): LabelCondition | null {
+interface ParsedLeaf {
+  label: string;
+  operator: LabelOperator;
+  value: string | string[];
+}
+
+function parseLeaf(json: unknown): ParsedLeaf | null {
   if (typeof json !== "object" || json === null || Array.isArray(json)) {
     return null;
   }
@@ -172,291 +140,171 @@ function parseLabelCondition(json: unknown): LabelCondition | null {
   }
 
   // The value is always stored as text internally (the value field is a
-  // plain text input); serializeCondition converts it back to a JSON
+  // plain text input); serializeBuilderList converts it back to a JSON
   // number automatically when it looks like one.
   const normalizedValue = Array.isArray(value)
     ? value.map((item) => String(item))
     : String(value);
 
+  return { label, operator: operatorKey, value: normalizedValue };
+}
+
+interface ParsedItem {
+  leaf: ParsedLeaf;
+  negated: boolean;
+}
+
+// A single row of the builder: either a bare condition, or one wrapped in
+// $not (the only shape the "NOT" toggle can produce). Anything else - in
+// particular $not wrapping more than one condition - isn't representable.
+function parseSingleItem(json: unknown): ParsedItem | null {
+  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
+    const keys = Object.keys(json);
+    if (keys.length === 1 && keys[0] === "$not") {
+      const leaf = parseLeaf((json as Record<string, unknown>)["$not"]);
+      return leaf ? { leaf, negated: true } : null;
+    }
+  }
+  const leaf = parseLeaf(json);
+  return leaf ? { leaf, negated: false } : null;
+}
+
+function toFlatCondition(
+  item: ParsedItem,
+  connector: LogicalConnector,
+): FlatCondition {
   return {
-    kind: "condition",
     id: crypto.randomUUID(),
-    label,
-    operator: operatorKey,
-    value: normalizedValue,
+    label: item.leaf.label,
+    operator: item.leaf.operator,
+    value: item.leaf.value,
+    negated: item.negated,
+    connector,
   };
 }
 
-function parseConditionNode(json: unknown): ConditionNode | null {
-  const condition = parseLabelCondition(json);
-  if (condition) {
-    return condition;
-  }
-  return parseConditionGroup(json);
+function isLogicalConnector(value: string): value is LogicalConnector {
+  return value === "$and" || value === "$or";
 }
 
-function parseConditionGroup(json: unknown): ConditionGroup | null {
+// Recognizes exactly the shapes this file's own serializer can produce for
+// a chain of 1+ items, plus the natural flat array form (`{"$and":[a,b,c]}`,
+// all one operator) that a hand-typed query is likely to use instead. Any
+// deeper/mixed nesting - real grouping - isn't representable and falls back
+// to JSON mode by design.
+function parseChain(json: unknown): FlatCondition[] | null {
+  const single = parseSingleItem(json);
+  if (single) {
+    return [toFlatCondition(single, "$and")];
+  }
+
   if (typeof json !== "object" || json === null || Array.isArray(json)) {
     return null;
   }
-
   const keys = Object.keys(json);
   if (keys.length !== 1) {
     return null;
   }
-
   const [operatorKey] = keys;
-  if (!isLogicalOperator(operatorKey)) {
+  if (!isLogicalConnector(operatorKey)) {
     return null;
   }
-
   const rawValue = (json as Record<string, unknown>)[operatorKey];
-  if (operatorKey === "$and" || operatorKey === "$or") {
-    if (!Array.isArray(rawValue)) {
-      return null;
-    }
-    const parsedChildren = rawValue.map((item) => parseConditionNode(item));
-    if (parsedChildren.some((child) => child === null)) {
-      return null;
-    }
-    return {
-      kind: "group",
-      id: crypto.randomUUID(),
-      operator: operatorKey,
-      children: parsedChildren as ConditionNode[],
-    };
-  }
-
-  const child = parseConditionNode(rawValue);
-  if (!child) {
+  if (!Array.isArray(rawValue) || rawValue.length < 2) {
     return null;
   }
-  return {
-    kind: "group",
-    id: crypto.randomUUID(),
-    operator: operatorKey,
-    children: [child],
-  };
+
+  const simpleItems = rawValue.map((item) => parseSingleItem(item));
+  if (simpleItems.every((item): item is ParsedItem => item !== null)) {
+    return simpleItems.map((item) => toFlatCondition(item, operatorKey));
+  }
+
+  // Otherwise this can only be the strict left-associative binary pair
+  // `[left, right]` this file's serializer produces for mixed connectors.
+  if (rawValue.length !== 2) {
+    return null;
+  }
+  const [left, right] = rawValue;
+  const rightItem = parseSingleItem(right);
+  if (!rightItem) {
+    return null;
+  }
+  const leftChain = parseChain(left);
+  if (!leftChain) {
+    return null;
+  }
+  return [...leftChain, toFlatCondition(rightItem, operatorKey)];
 }
 
-const LOGICAL_OPERATORS: LogicalOperator[] = ["$and", "$or", "$not"];
-
-/**
- * Check whether a string is a valid logical group operator
- */
-export function isLogicalOperator(value: string): value is LogicalOperator {
-  return LOGICAL_OPERATORS.includes(value as LogicalOperator);
-}
-
-export interface ParseBuilderTreeResult {
+export interface ParseBuilderListResult {
   success: boolean;
-  tree?: BuilderTree;
+  list?: FlatCondition[];
   error?: string;
 }
 
 /**
- * Parse Conditional Query JSON into a builder tree, if representable
+ * Parse Conditional Query JSON into a flat list of conditions, if representable
  */
-export function parseBuilderTree(json: unknown): ParseBuilderTreeResult {
+export function parseBuilderList(json: unknown): ParseBuilderListResult {
   if (typeof json === "object" && json !== null && !Array.isArray(json)) {
     const keys = Object.keys(json);
     if (keys.length === 0) {
-      return { success: true, tree: null };
+      return { success: true, list: [] };
     }
     // $each_t is a sampling directive outside the builder's scope (see #232);
-    // treat "only $each_t" like an empty tree so the default query, which
+    // treat "only $each_t" like an empty list so the default query, which
     // always includes it, stays representable in Builder mode.
     if (keys.length === 1 && keys[0] === "$each_t") {
-      return { success: true, tree: null };
+      return { success: true, list: [] };
     }
   }
 
-  const node = parseConditionNode(json);
-  if (!node) {
-    return { success: false, error: "Failed to parse condition node" };
+  const list = parseChain(json);
+  if (!list) {
+    return { success: false, error: "Failed to parse condition" };
   }
-
-  if (node.kind === "group") {
-    return { success: true, tree: node };
-  }
-
-  return {
-    success: true,
-    tree: {
-      kind: "group",
-      id: crypto.randomUUID(),
-      operator: "$and",
-      children: [node],
-    },
-  };
-}
-
-function updateNode(
-  node: ConditionNode,
-  id: string,
-  changes: Partial<Pick<LabelCondition, "label" | "operator" | "value">>,
-): ConditionNode {
-  if (node.kind === "condition") {
-    if (node.id !== id) {
-      return node;
-    }
-    return { ...node, ...changes };
-  }
-  return {
-    ...node,
-    children: node.children.map((child) => updateNode(child, id, changes)),
-  };
+  return { success: true, list };
 }
 
 /**
- * Return a new tree with the given condition's fields updated
+ * Return a new list with the given condition's fields updated
  */
 export function updateCondition(
-  tree: BuilderTree,
+  list: FlatCondition[],
   id: string,
-  changes: Partial<Pick<LabelCondition, "label" | "operator" | "value">>,
-): BuilderTree {
-  if (!tree) {
-    return null;
-  }
-  return updateNode(tree, id, changes) as ConditionGroup;
+  changes: Partial<
+    Pick<
+      FlatCondition,
+      "label" | "operator" | "value" | "negated" | "connector"
+    >
+  >,
+): FlatCondition[] {
+  return list.map((item) => (item.id === id ? { ...item, ...changes } : item));
 }
 
-function removeFromChildren(
-  children: ConditionNode[],
+/**
+ * Return a new list with the given condition removed
+ */
+export function removeCondition(
+  list: FlatCondition[],
   id: string,
-): ConditionNode[] {
-  return children
-    .filter((child) => child.id !== id)
-    .map((child) =>
-      child.kind === "group"
-        ? { ...child, children: removeFromChildren(child.children, id) }
-        : child,
-    );
+): FlatCondition[] {
+  return list.filter((item) => item.id !== id);
 }
 
 /**
- * Return a new tree with the given condition or group removed
+ * Return a new list with an empty condition appended
  */
-export function removeNode(tree: BuilderTree, id: string): BuilderTree {
-  if (!tree) {
-    return tree;
-  }
-  if (tree.id === id) {
-    return null;
-  }
-  return { ...tree, children: removeFromChildren(tree.children, id) };
-}
-
-function addChildToGroup(
-  node: ConditionNode,
-  groupId: string,
-  child: ConditionNode,
-): ConditionNode {
-  if (node.kind !== "group") {
-    return node;
-  }
-  if (node.id === groupId) {
-    return { ...node, children: [...node.children, child] };
-  }
-  return {
-    ...node,
-    children: node.children.map((c) => addChildToGroup(c, groupId, child)),
-  };
-}
-
-/**
- * Return a new tree with an empty condition added to the given group
- */
-export function addCondition(
-  tree: BuilderTree,
-  groupId: string | null,
-): BuilderTree {
-  const newCondition: LabelCondition = {
-    kind: "condition",
-    id: crypto.randomUUID(),
-    label: "",
-    operator: "$eq",
-    value: "",
-  };
-  if (!tree) {
-    return {
-      kind: "group",
+export function addCondition(list: FlatCondition[]): FlatCondition[] {
+  return [
+    ...list,
+    {
       id: crypto.randomUUID(),
-      operator: "$and",
-      children: [newCondition],
-    };
-  }
-  if (groupId === null || groupId === tree.id) {
-    return { ...tree, children: [...tree.children, newCondition] };
-  }
-  return addChildToGroup(tree, groupId, newCondition) as ConditionGroup;
-}
-
-/**
- * Return a new tree with an empty group added to the given group
- */
-export function addGroup(
-  tree: BuilderTree,
-  groupId: string | null,
-): BuilderTree {
-  const newGroup: ConditionGroup = {
-    kind: "group",
-    id: crypto.randomUUID(),
-    operator: "$and",
-    children: [
-      {
-        kind: "condition",
-        id: crypto.randomUUID(),
-        label: "",
-        operator: "$eq",
-        value: "",
-      },
-    ],
-  };
-  if (!tree) {
-    return {
-      kind: "group",
-      id: crypto.randomUUID(),
-      operator: "$and",
-      children: [newGroup],
-    };
-  }
-  if (groupId === null || groupId === tree.id) {
-    return { ...tree, children: [...tree.children, newGroup] };
-  }
-  return addChildToGroup(tree, groupId, newGroup) as ConditionGroup;
-}
-
-function updateGroupOperatorNode(
-  node: ConditionNode,
-  groupId: string,
-  operator: LogicalOperator,
-): ConditionNode {
-  if (node.kind !== "group") {
-    return node;
-  }
-  if (node.id === groupId) {
-    return { ...node, operator };
-  }
-  return {
-    ...node,
-    children: node.children.map((child) =>
-      updateGroupOperatorNode(child, groupId, operator),
-    ),
-  };
-}
-
-/**
- * Return a new tree with the given group's operator changed
- */
-export function updateGroupOperator(
-  tree: BuilderTree,
-  groupId: string,
-  operator: LogicalOperator,
-): BuilderTree {
-  if (!tree) {
-    return tree;
-  }
-  return updateGroupOperatorNode(tree, groupId, operator) as ConditionGroup;
+      label: "",
+      operator: "$eq",
+      value: "",
+      negated: false,
+      connector: "$and",
+    },
+  ];
 }

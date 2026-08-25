@@ -1,18 +1,15 @@
 import { useEffect, useState, ComponentProps, ReactNode } from "react";
-import { Button, Switch, Tooltip, Typography } from "antd";
+import { Button, Modal, Switch, Tooltip, Typography } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 import { JsonQueryEditor } from "../JsonEditor";
-import ConditionGroupEditor from "./ConditionGroupEditor";
+import ConditionListEditor from "./ConditionListEditor";
 import {
-  BuilderTree,
-  ConditionGroup,
+  FlatCondition,
   addCondition,
-  addGroup,
-  parseBuilderTree,
-  removeNode,
-  serializeBuilderTree,
+  parseBuilderList,
+  removeCondition,
+  serializeBuilderList,
   updateCondition,
-  updateGroupOperator,
 } from "../../Helpers/conditionalQueryBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
@@ -33,21 +30,14 @@ interface QueryConditionBuilderProps {
   toolbarExtra?: ReactNode;
 }
 
-function jsonTextToTree(text: string): BuilderTree | undefined {
+function jsonTextToList(text: string): FlatCondition[] | undefined {
   const parsed = safeParseJSON5(text);
   if (!parsed.success) {
     return undefined;
   }
-  const result = parseBuilderTree(parsed.value);
-  return result.success ? (result.tree ?? null) : undefined;
+  const result = parseBuilderList(parsed.value);
+  return result.success ? result.list : undefined;
 }
-
-const EMPTY_ROOT: ConditionGroup = {
-  kind: "group",
-  id: "empty-root",
-  operator: "$and",
-  children: [],
-};
 
 export default function QueryConditionBuilder({
   value,
@@ -61,9 +51,10 @@ export default function QueryConditionBuilder({
   toolbarExtra,
 }: QueryConditionBuilderProps) {
   const [mode, setMode] = useState<"builder" | "json">("builder");
-  const [tree, setTree] = useState<BuilderTree>(
-    () => jsonTextToTree(value) ?? addCondition(null, null),
-  );
+  const [conditions, setConditions] = useState<FlatCondition[]>(() => {
+    const parsed = jsonTextToList(value);
+    return parsed && parsed.length > 0 ? parsed : addCondition([]);
+  });
   // Snapshot of `value` taken when switching into JSON mode. Returning to
   // Builder mode reparses losslessly only if `value` still matches it; any
   // change (typed, formatted, or loaded from a saved query) instead resets
@@ -71,6 +62,10 @@ export default function QueryConditionBuilder({
   const [jsonEntrySnapshot, setJsonEntrySnapshot] = useState<string | null>(
     null,
   );
+  // True while the confirmation to discard the JSON edits and reset the
+  // builder is pending; the switch to Builder mode is deferred until the
+  // user confirms.
+  const [pendingReset, setPendingReset] = useState(false);
 
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
 
@@ -128,9 +123,9 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
-  const applyTree = (nextTree: BuilderTree) => {
-    setTree(nextTree);
-    onChange(formatAsStrictJSON(serializeBuilderTree(nextTree)));
+  const applyList = (nextConditions: FlatCondition[]) => {
+    setConditions(nextConditions);
+    onChange(formatAsStrictJSON(serializeBuilderList(nextConditions)));
   };
 
   const handleModeChange = (nextMode: "builder" | "json") => {
@@ -140,9 +135,16 @@ export default function QueryConditionBuilder({
       return;
     }
     if (value !== jsonEntrySnapshot) {
-      applyTree(addCondition(null, null));
+      setPendingReset(true);
+      return;
     }
     setMode("builder");
+  };
+
+  const confirmReset = () => {
+    applyList(addCondition([]));
+    setMode("builder");
+    setPendingReset(false);
   };
 
   const modeSwitch = (
@@ -193,6 +195,17 @@ export default function QueryConditionBuilder({
           saveDisabled={saveDisabled}
           toolbarExtra={toolbarExtra}
         />
+        <Modal
+          open={pendingReset}
+          title="Reset builder?"
+          onOk={confirmReset}
+          onCancel={() => setPendingReset(false)}
+          okText="Continue"
+          cancelText="Cancel"
+        >
+          This will completely reset the builder, discarding the conditions it
+          held before switching to JSON. Continue?
+        </Modal>
       </div>
     );
   }
@@ -218,19 +231,14 @@ export default function QueryConditionBuilder({
             {modeSwitch}
           </div>
         </div>
-        <ConditionGroupEditor
-          group={tree ?? EMPTY_ROOT}
-          isRoot
+        <ConditionListEditor
+          conditions={conditions}
           labelOptions={labelOptions}
           onChangeCondition={(id, changes) =>
-            applyTree(updateCondition(tree, id, changes))
+            applyList(updateCondition(conditions, id, changes))
           }
-          onChangeGroupOperator={(groupId, operator) =>
-            applyTree(updateGroupOperator(tree, groupId, operator))
-          }
-          onRemoveNode={(id) => applyTree(removeNode(tree, id))}
-          onAddCondition={(groupId) => applyTree(addCondition(tree, groupId))}
-          onAddGroup={(groupId) => applyTree(addGroup(tree, groupId))}
+          onRemoveCondition={(id) => applyList(removeCondition(conditions, id))}
+          onAddCondition={() => applyList(addCondition(conditions))}
         />
       </div>
     </div>

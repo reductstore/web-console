@@ -148,7 +148,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
   });
 
-  it("resets the builder when the JSON was edited in JSON mode", () => {
+  it("asks for confirmation and resets the builder once confirmed", () => {
     const onChange = vi.fn();
     const { rerender } = render(
       <QueryConditionBuilder
@@ -171,10 +171,42 @@ describe("QueryConditionBuilder", () => {
     );
 
     fireEvent.click(screen.getByRole("switch"));
-    // Back in Builder mode (never blocked), but the edit wiped the condition
-    // rather than being partially reparsed into it.
+    // Still in JSON mode: the switch is deferred behind the confirmation.
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    // Now in Builder mode, wiped rather than partially reparsed.
     expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toHaveValue("");
+  });
+
+  it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "active"}}'}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.change(screen.getByTestId("monaco-editor"), {
+      target: { value: '{"&status": {"$eq": "inactive"}}' },
+    });
+    rerender(
+      <QueryConditionBuilder
+        value={'{"&status": {"$eq": "inactive"}}'}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.getByTestId("monaco-editor")).toHaveValue(
+      '{"&status": {"$eq": "inactive"}}',
+    );
   });
 
   it("resets the builder when the JSON changes from outside while in JSON mode", () => {
@@ -196,8 +228,56 @@ describe("QueryConditionBuilder", () => {
     );
 
     fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toHaveValue("");
+  });
+
+  it("adds a chained condition with a connector when + is clicked", () => {
+    const onChange = vi.fn();
+    render(<QueryConditionBuilder value="" onChange={onChange} />);
+    const [labelInput] = screen.getAllByRole("combobox");
+    fireEvent.change(labelInput, { target: { value: "status" } });
+
+    fireEvent.click(screen.getByLabelText("Add condition"));
+    // Comboboxes now: [0] row1 label, [1] row1 operator, [2] connector,
+    // [3] row2 label, [4] row2 operator.
+    const combos = screen.getAllByRole("combobox");
+    fireEvent.change(combos[3], { target: { value: "method" } });
+
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
+    expect(JSON.parse(lastCall)).toEqual({
+      $and: [{ "&status": { $eq: "" } }, { "&method": { $eq: "" } }],
+    });
+  });
+
+  it("negates a chained condition by picking not from the connector dropdown", () => {
+    // The first row never has a connector/NOT control, so negation is only
+    // reachable once a 2nd row exists.
+    const onChange = vi.fn();
+    const { container } = render(
+      <QueryConditionBuilder value="" onChange={onChange} />,
+    );
+    fireEvent.click(screen.getByLabelText("Add condition"));
+
+    // Non-autocomplete selects in DOM order: row1 operator, row2 connector,
+    // row2 operator.
+    const [, connectorSelect] = container.querySelectorAll(
+      ".ant-select:not(.ant-select-auto-complete)",
+    );
+    fireEvent.mouseDown(connectorSelect as HTMLElement);
+    fireEvent.click(screen.getByTitle("not"));
+
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
+    expect(JSON.parse(lastCall)).toEqual({
+      $and: [{ "&": { $eq: "" } }, { $not: { "&": { $eq: "" } } }],
+    });
+  });
+
+  it("never shows a connector or NOT control on the first row", () => {
+    render(<QueryConditionBuilder value="" onChange={() => {}} />);
+    expect(screen.queryByText("and")).toBeNull();
+    expect(screen.queryByText("not")).toBeNull();
   });
 
   it("shows the Save button and toolbar extras in Builder mode", () => {

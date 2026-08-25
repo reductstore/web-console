@@ -1,7 +1,7 @@
 import { Input, Select, Button, AutoComplete } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import {
-  LabelCondition,
+  FlatCondition,
   LabelOperator,
 } from "../../Helpers/conditionalQueryBuilder";
 
@@ -20,10 +20,10 @@ const OPERATOR_OPTIONS: { value: LabelOperator; label: string }[] = [
 ];
 
 interface LabelConditionEditorProps {
-  condition: LabelCondition;
+  condition: FlatCondition;
   onChange: (
     id: string,
-    changes: Partial<Pick<LabelCondition, "label" | "operator" | "value">>,
+    changes: Partial<Pick<FlatCondition, "label" | "operator" | "value">>,
   ) => void;
   onRemove: (id: string) => void;
   removable?: boolean;

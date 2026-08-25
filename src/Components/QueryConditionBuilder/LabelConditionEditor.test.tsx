@@ -1,17 +1,18 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import LabelConditionEditor from "./LabelConditionEditor";
-import { LabelCondition } from "../../Helpers/conditionalQueryBuilder";
+import { FlatCondition } from "../../Helpers/conditionalQueryBuilder";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 beforeEach(() => mockJSDOM());
 
-const condition: LabelCondition = {
-  kind: "condition",
+const condition: FlatCondition = {
   id: "cond-1",
   label: "status",
   operator: "$eq",
   value: "active",
+  negated: false,
+  connector: "$and",
 };
 
 describe("LabelConditionEditor", () => {
