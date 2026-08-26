@@ -141,6 +141,14 @@ export default function QueryConditionBuilder({
     onChange(formatted);
   };
 
+  // A condition can't be built against no data source: require a bucket
+  // and at least one entry (or the single fixed entry of an entry-scoped
+  // page) before any row becomes editable.
+  const sourceReady =
+    !!validationContext?.bucket &&
+    ((validationContext?.entries?.length ?? 0) > 0 ||
+      !!validationContext?.entry);
+
   if (mode === "json") {
     return (
       <JsonQueryEditor
@@ -164,6 +172,7 @@ export default function QueryConditionBuilder({
       <ConditionListEditor
         conditions={conditions}
         labelOptions={labelOptions}
+        sourceReady={sourceReady}
         onChangeCondition={(id, changes) =>
           applyList(updateCondition(conditions, id, changes))
         }

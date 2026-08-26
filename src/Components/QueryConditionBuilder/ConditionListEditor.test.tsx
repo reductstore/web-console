@@ -48,7 +48,21 @@ describe("ConditionListEditor", () => {
     expect(screen.getAllByPlaceholderText("value")).toHaveLength(3);
   });
 
-  it("calls onAddCondition when + is clicked", () => {
+  it("calls onAddCondition when + is clicked and the last row is complete", () => {
+    const onAddCondition = vi.fn();
+    render(
+      <ConditionListEditor
+        conditions={[condition("a", { label: "status", value: "active" })]}
+        onChangeCondition={noop}
+        onRemoveCondition={noop}
+        onAddCondition={onAddCondition}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Add condition"));
+    expect(onAddCondition).toHaveBeenCalled();
+  });
+
+  it("disables + until the last row has both a label and a value", () => {
     const onAddCondition = vi.fn();
     render(
       <ConditionListEditor
@@ -59,7 +73,40 @@ describe("ConditionListEditor", () => {
       />,
     );
     fireEvent.click(screen.getByLabelText("Add condition"));
-    expect(onAddCondition).toHaveBeenCalled();
+    expect(onAddCondition).not.toHaveBeenCalled();
+  });
+
+  it("disables every field until a data source is selected", () => {
+    render(
+      <ConditionListEditor
+        conditions={[condition("a")]}
+        onChangeCondition={noop}
+        onRemoveCondition={noop}
+        onAddCondition={noop}
+        sourceReady={false}
+      />,
+    );
+    expect(screen.getByPlaceholderText("value")).toBeDisabled();
+    expect(screen.getByLabelText("Add condition")).toBeDisabled();
+  });
+
+  it("disables the connector select of an existing 2nd row when the data source is cleared", () => {
+    const { container } = render(
+      <ConditionListEditor
+        conditions={[condition("a"), condition("b")]}
+        onChangeCondition={noop}
+        onRemoveCondition={noop}
+        onAddCondition={noop}
+        sourceReady={false}
+      />,
+    );
+    // The connector select is the first plain (non-autocomplete) select in
+    // the row for the 2nd condition, after the 1st condition's own operator
+    // select.
+    const [, connectorSelect] = container.querySelectorAll(
+      ".ant-select:not(.ant-select-auto-complete)",
+    );
+    expect(connectorSelect).toHaveClass("ant-select-disabled");
   });
 
   it("hides every remove button when only one condition remains", () => {

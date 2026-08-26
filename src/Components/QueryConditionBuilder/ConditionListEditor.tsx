@@ -1,7 +1,7 @@
 import { Button, Select } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
-import { FlatCondition } from "../../Helpers/conditionalQueryBuilder";
+import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
 
 // The dropdown shown before every condition but the first. "not" isn't a
 // real connector - selecting it means "and, but negate this condition" -
@@ -33,6 +33,9 @@ interface ConditionListEditorProps {
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
   labelOptions?: string[];
+  // False until a bucket and at least one entry are selected - nothing in
+  // the list is editable before then.
+  sourceReady?: boolean;
 }
 
 export default function ConditionListEditor({
@@ -41,7 +44,20 @@ export default function ConditionListEditor({
   onRemoveCondition,
   onAddCondition,
   labelOptions,
+  sourceReady = true,
 }: ConditionListEditorProps) {
+  const sourceHint = "Select a bucket and entries first";
+  const lastCondition = conditions[conditions.length - 1];
+  const canAddCondition =
+    sourceReady &&
+    !!lastCondition &&
+    lastCondition.label.trim() !== "" &&
+    hasValue(lastCondition.value);
+  const addConditionHint = !sourceReady
+    ? sourceHint
+    : !canAddCondition
+      ? "Fill in the label and value first"
+      : undefined;
   const handleConnectorChange = (id: string, choice: ConnectorChoice) => {
     if (choice === "not") {
       onChangeCondition(id, { connector: "$and", negated: true });
@@ -70,6 +86,8 @@ export default function ConditionListEditor({
               options={CONNECTOR_OPTIONS}
               onChange={(value) => handleConnectorChange(condition.id, value)}
               style={{ width: 70 }}
+              disabled={!sourceReady}
+              title={!sourceReady ? sourceHint : undefined}
             />
           )}
           <LabelConditionEditor
@@ -78,13 +96,15 @@ export default function ConditionListEditor({
             onRemove={onRemoveCondition}
             removable={conditions.length > 1}
             labelOptions={labelOptions}
+            disabled={!sourceReady}
           />
         </div>
       ))}
 
       <Button
         aria-label="Add condition"
-        size="small"
+        title={addConditionHint}
+        disabled={!canAddCondition}
         icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
         onClick={onAddCondition}
       />

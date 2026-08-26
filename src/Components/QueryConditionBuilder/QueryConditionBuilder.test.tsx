@@ -121,9 +121,12 @@ describe("QueryConditionBuilder", () => {
     );
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
+    fireEvent.change(screen.getByPlaceholderText("value"), {
+      target: { value: "active" },
+    });
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({
-      "&status": { $eq: "" },
+      "&status": { $eq: "active" },
       $each_t: "$__interval",
     });
   });
@@ -154,9 +157,12 @@ describe("QueryConditionBuilder", () => {
     );
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
+    fireEvent.change(screen.getByPlaceholderText("value"), {
+      target: { value: "active" },
+    });
     expect(onChange).toHaveBeenCalled();
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
-    expect(JSON.parse(lastCall)).toEqual({ "&status": { $eq: "" } });
+    expect(JSON.parse(lastCall)).toEqual({ "&status": { $eq: "active" } });
   });
 
   it("fetches label suggestions from a sample of records", async () => {
@@ -235,20 +241,32 @@ describe("QueryConditionBuilder", () => {
         onChange={onChange}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={{
+          client: {} as Client,
+          bucket: "testBucket",
+          entry: "testEntry",
+        }}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
+    // The "+" button stays disabled until the row it would chain off of has
+    // both a label and a value.
+    fireEvent.change(screen.getByPlaceholderText("value"), {
+      target: { value: "active" },
+    });
 
     fireEvent.click(screen.getByLabelText("Add condition"));
     // Comboboxes now: [0] row1 label, [1] row1 operator, [2] connector,
     // [3] row2 label, [4] row2 operator.
     const combos = screen.getAllByRole("combobox");
     fireEvent.change(combos[3], { target: { value: "method" } });
+    const [, row2Value] = screen.getAllByPlaceholderText("value");
+    fireEvent.change(row2Value, { target: { value: "GET" } });
 
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({
-      $and: [{ "&status": { $eq: "" } }, { "&method": { $eq: "" } }],
+      $and: [{ "&status": { $eq: "active" } }, { "&method": { $eq: "GET" } }],
     });
   });
 
@@ -262,9 +280,30 @@ describe("QueryConditionBuilder", () => {
         onChange={onChange}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={{
+          client: {} as Client,
+          bucket: "testBucket",
+          entry: "testEntry",
+        }}
       />,
     );
+    // The "+" button stays disabled until row 1 has both a label and a
+    // value.
+    const [labelInput] = screen.getAllByRole("combobox");
+    fireEvent.change(labelInput, { target: { value: "status" } });
+    fireEvent.change(screen.getByPlaceholderText("value"), {
+      target: { value: "active" },
+    });
     fireEvent.click(screen.getByLabelText("Add condition"));
+
+    // A blank row is omitted from the serialized query, so fill row 2 in
+    // too before checking how it negates.
+    // Comboboxes: [0] row1 label, [1] row1 operator, [2] connector,
+    // [3] row2 label, [4] row2 operator.
+    const combos = screen.getAllByRole("combobox");
+    fireEvent.change(combos[3], { target: { value: "flag" } });
+    const [, row2Value] = screen.getAllByPlaceholderText("value");
+    fireEvent.change(row2Value, { target: { value: "true" } });
 
     // Non-autocomplete selects in DOM order: row1 operator, row2 connector,
     // row2 operator.
@@ -276,7 +315,10 @@ describe("QueryConditionBuilder", () => {
 
     const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({
-      $and: [{ "&": { $eq: "" } }, { $not: { "&": { $eq: "" } } }],
+      $and: [
+        { "&status": { $eq: "active" } },
+        { $not: { "&flag": { $eq: "true" } } },
+      ],
     });
   });
 

@@ -97,6 +97,32 @@ describe("LabelConditionEditor", () => {
     expect(screen.queryByLabelText("Remove condition")).toBeNull();
   });
 
+  it("disables the label field, but not until then, when disabled is set", () => {
+    render(
+      <LabelConditionEditor
+        condition={condition}
+        onChange={() => {}}
+        onRemove={() => {}}
+        disabled
+      />,
+    );
+    const [labelInput] = screen.getAllByRole("combobox");
+    expect(labelInput).toBeDisabled();
+  });
+
+  it("disables the operator and value fields until the label is filled in", () => {
+    render(
+      <LabelConditionEditor
+        condition={{ ...condition, label: "" }}
+        onChange={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+    const [, operatorSelect] = screen.getAllByRole("combobox");
+    expect(operatorSelect).toBeDisabled();
+    expect(screen.getByPlaceholderText("value")).toBeDisabled();
+  });
+
   it("changes the operator through the select dropdown", () => {
     const onChange = vi.fn();
     const { container } = render(
