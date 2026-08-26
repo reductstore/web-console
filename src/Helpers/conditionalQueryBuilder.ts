@@ -50,6 +50,17 @@ function serializeItem(condition: FlatCondition): Record<string, unknown> {
 }
 
 /**
+ * Check whether a condition's value field has actually been filled in
+ * (a single string, or at least one non-blank entry for multi-value
+ * operators like $in/$nin).
+ */
+export function hasValue(value: string | string[]): boolean {
+  return Array.isArray(value)
+    ? value.some((item) => item.trim() !== "")
+    : value.trim() !== "";
+}
+
+/**
  * Convert a flat list of conditions into its Conditional Query JSON shape.
  * Items are folded left to right: `[A, B(or), C(and)]` becomes
  * `{"$and": [{"$or": [A, B]}, C]}`, matching the order the user built them in.
@@ -57,12 +68,18 @@ function serializeItem(condition: FlatCondition): Record<string, unknown> {
 export function serializeBuilderList(
   list: FlatCondition[],
 ): Record<string, unknown> {
-  if (list.length === 0) {
+  // A row without a label or value isn't a real condition yet - only ever a
+  // leftover blank placeholder or one the user hasn't finished typing into -
+  // and shouldn't show up in the serialized query.
+  const complete = list.filter(
+    (item) => item.label.trim() !== "" && hasValue(item.value),
+  );
+  if (complete.length === 0) {
     return {};
   }
-  let acc = serializeItem(list[0]);
-  for (let index = 1; index < list.length; index++) {
-    const item = list[index];
+  let acc = serializeItem(complete[0]);
+  for (let index = 1; index < complete.length; index++) {
+    const item = complete[index];
     acc = { [item.connector]: [acc, serializeItem(item)] };
   }
   return acc;

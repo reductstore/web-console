@@ -49,6 +49,40 @@ describe("conditionalQueryBuilder", () => {
       expect(serializeBuilderList([])).toEqual({});
     });
 
+    it("omits a blank placeholder row with no label", () => {
+      expect(
+        serializeBuilderList([makeCondition({ label: "", value: "" })]),
+      ).toEqual({});
+    });
+
+    it("omits a row with a label but no value yet", () => {
+      expect(
+        serializeBuilderList([makeCondition({ label: "gps_z", value: "" })]),
+      ).toEqual({});
+    });
+
+    it("omits a multi-value row whose values are all blank", () => {
+      expect(
+        serializeBuilderList([
+          makeCondition({ label: "method", operator: "$in", value: [""] }),
+        ]),
+      ).toEqual({});
+    });
+
+    it("omits a blank row but keeps the rest of the chain", () => {
+      expect(
+        serializeBuilderList([
+          makeCondition({ label: "status", value: "active" }),
+          makeCondition({
+            label: "",
+            value: "",
+            connector: "$or",
+            id: "cond-2",
+          }),
+        ]),
+      ).toEqual({ "&status": { $eq: "active" } });
+    });
+
     it("serializes a single condition without wrapping", () => {
       expect(serializeBuilderList([makeCondition()])).toEqual({
         "&status": { $eq: "active" },
