@@ -18,7 +18,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--entry-detail-block-spacing);
-  margin-top: var(--entry-detail-block-spacing);
   margin-bottom: var(--entry-detail-block-spacing);
 }
 
@@ -75,7 +74,7 @@
 
 .queryEntrySelect .ant-select-selector {
   align-items: center;
-  min-height: 24px !important;
+  min-height: 32px !important;
 }
 
 .queryEntrySelect .ant-select-content-item {
@@ -104,35 +103,22 @@
   min-width: 0 !important;
 }
 
-.timeRangeBlock {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
 .queryTimeRow {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--entry-detail-inner-spacing);
   align-items: center;
 }
 
-/* Reserved for the results table once a query runs - blank until then. */
-.resultsBlock {
-  border-radius: 6px;
-  background: #ffffff;
-  padding: 12px;
-  margin-top: var(--entry-detail-block-spacing);
-  margin-bottom: var(--entry-detail-block-spacing);
-}
-
-/* Match the "small" control height used everywhere else on the page (Query
-   row selects, Where labels row) - Select/Button/Input render at slightly
-   different heights by default even at the same antd "size". */
+/* Select and Button render at slightly different heights by default even
+   at the same antd size, so pin every control here to the same height as
+   the plain default Select (e.g. the UTC/Unix format select). */
 .queryTimeRow .ant-select-selector,
 .queryTimeRow .ant-btn,
 .queryTimeRow .ant-input,
-.queryTimeRow .ant-input-group-addon {
-  height: 24px;
+.queryTimeRow .ant-input-group-addon,
+.querySourceRow .ant-select-selector {
+  height: 32px;
 }
 
 /* INPUT focus styles */
