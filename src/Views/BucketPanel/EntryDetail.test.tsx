@@ -7,6 +7,7 @@ import { Bucket, Client, EntryInfo, Status } from "reduct-js";
 import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import { message } from "antd";
+import { useQueryStore } from "../../stores/queryStore";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
 type MockedRemoveRecord = RemoveRecordFn & {
@@ -316,6 +317,22 @@ describe("EntryDetail", () => {
       expect(screen.getByPlaceholderText("value")).toHaveValue("");
     });
 
+    it("resets to the default $each_t query, not a bare {}, so a later JSON view still shows it", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+      // Back in Builder mode after the reset; switch to JSON again without
+      // touching the builder.
+      fireEvent.click(screen.getByRole("switch"));
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      expect(textArea.value).toBe('{\n  "$each_t": "$__interval"\n}\n');
+    });
+
     it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
       const textArea = editJsonTo('{"&status": {"$eq": "active"}}');
 
@@ -324,6 +341,94 @@ describe("EntryDetail", () => {
 
       expect(screen.queryByText("Where labels")).toBeNull();
       expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
+    });
+
+    describe("Saved query mode", () => {
+      beforeEach(() => {
+        useQueryStore.getState().clearQueries();
+      });
+
+      // The query store is a persisted, module-level singleton - clear it
+      // afterwards too, or a query saved/loaded here leaks into unrelated
+      // tests that render EntryDetail later in this file.
+      afterEach(() => {
+        useQueryStore.getState().clearQueries();
+      });
+
+      const loadSavedQuery = async (name: string) => {
+        const selector = container.querySelector(
+          '[data-testid="query-selector"] .ant-select-selector, [data-testid="query-selector"] .ant-select-content',
+        ) as HTMLElement;
+        expect(selector).not.toBeNull();
+
+        await act(async () => {
+          fireEvent.mouseDown(selector);
+        });
+        await waitFor(() => {
+          expect(
+            document.querySelectorAll(".ant-select-item-option").length,
+          ).toBeGreaterThan(0);
+        });
+        const option = Array.from(
+          document.querySelectorAll(".ant-select-item-option"),
+        ).find((el) => el.textContent === name);
+        expect(option).toBeDefined();
+
+        await act(async () => {
+          fireEvent.click(option!);
+        });
+      };
+
+      it("restores JSON mode and its content when loading a query saved from JSON mode, even if representable", async () => {
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "json-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            mode: "json",
+          });
+        });
+
+        await loadSavedQuery("json-saved");
+
+        expect(screen.queryByText("Where labels")).toBeNull();
+        const monacoEditor = container.querySelector(".monaco-editor-mock");
+        const textArea = monacoEditor!.querySelector(
+          "textarea",
+        ) as HTMLTextAreaElement;
+        expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
+      });
+
+      it("restores builder mode and repopulates its fields when loading a query saved from Builder mode", async () => {
+        // Start from JSON mode so ending up in Builder mode proves the
+        // saved mode was applied, not just left as-is.
+        fireEvent.click(screen.getByRole("switch"));
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "builder-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            mode: "builder",
+          });
+        });
+
+        await loadSavedQuery("builder-saved");
+
+        expect(screen.getByText("Where labels")).toBeTruthy();
+        expect(screen.getByPlaceholderText("value")).toHaveValue("active");
+      });
+
+      it("falls back to the representability check for a query saved before mode was tracked", async () => {
+        fireEvent.click(screen.getByRole("switch"));
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "legacy-saved",
+            query: '{"&status": {"$eq": "active"}}',
+          });
+        });
+
+        await loadSavedQuery("legacy-saved");
+
+        expect(screen.getByText("Where labels")).toBeTruthy();
+      });
     });
   });
 

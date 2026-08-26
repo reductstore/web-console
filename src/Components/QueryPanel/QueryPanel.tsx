@@ -58,9 +58,8 @@ import {
   extractIntervalFromCondition,
   formatAsStrictJSON,
   processWhenCondition,
-  safeParseJSON5,
 } from "../../Helpers/json5Utils";
-import { parseBuilderList } from "../../Helpers/conditionalQueryBuilder";
+import { parseQueryValue } from "../../Helpers/conditionalQueryBuilder";
 import EditRecordLabels from "../EditRecordLabels";
 import RecordPreview from "../RecordPreview";
 import SaveQueryModal from "../SavedQueries/SaveQueryModal";
@@ -129,11 +128,6 @@ const entrySelectionToQueryArg = (
 
 const defaultQuery = formatAsStrictJSON({ $each_t: "$__interval" });
 
-const isRepresentableInBuilder = (text: string): boolean => {
-  const parsed = safeParseJSON5(text);
-  return parsed.success && parseBuilderList(parsed.value).success;
-};
-
 export default function QueryPanel({
   client,
   apiUrl,
@@ -171,11 +165,11 @@ export default function QueryPanel({
   // hand-written query with real nested grouping), land in JSON mode
   // instead of silently showing an empty builder next to the real query.
   const [conditionMode, setConditionMode] = useState<"builder" | "json">(() =>
-    isRepresentableInBuilder(defaultQuery) ? "builder" : "json",
+    parseQueryValue(defaultQuery) !== undefined ? "builder" : "json",
   );
   // Snapshot of `whenCondition` taken when switching into JSON mode.
-  // Returning to Builder mode reparses losslessly only if it still matches;
-  // any change instead resets the builder entirely (see confirmConditionReset).
+  // Returning to Builder mode is lossless only if it still matches; any
+  // change instead resets the builder entirely (see confirmConditionReset).
   const [jsonEntrySnapshot, setJsonEntrySnapshot] = useState<string | null>(
     null,
   );
@@ -947,6 +941,16 @@ export default function QueryPanel({
 
       setWhenCondition(saved.query);
       setFetchError("");
+      // Reopen in whichever mode the query was saved from, falling back to
+      // the representability check for queries saved before this was
+      // tracked.
+      const mode =
+        saved.mode ??
+        (parseQueryValue(saved.query) !== undefined ? "builder" : "json");
+      setConditionMode(mode);
+      if (mode === "json") {
+        setJsonEntrySnapshot(saved.query);
+      }
       const useUnix = saved.timeFormat ? saved.timeFormat === "Unix" : showUnix;
       if (saved.timeFormat) {
         setShowUnix(useUnix);
@@ -979,6 +983,7 @@ export default function QueryPanel({
   const currentQuerySnapshot = (): SavedQuery => ({
     name: getLoadedQueryName(bucketName, selectedEntries) ?? "",
     query: whenCondition,
+    mode: conditionMode,
     timeFormat: showUnix ? "Unix" : "UTC",
     rangeKey: detectRangeKey(timeRange.start, timeRange.end),
     rangeStart: timeRange.start?.toString(),
@@ -1015,6 +1020,7 @@ export default function QueryPanel({
     const snap = currentQuerySnapshot();
     return (
       loaded.query === snap.query &&
+      loaded.mode === snap.mode &&
       loaded.timeFormat === snap.timeFormat &&
       loaded.rangeKey === snap.rangeKey &&
       (snap.rangeKey !== "custom" ||
@@ -1055,7 +1061,7 @@ export default function QueryPanel({
   };
 
   const confirmConditionReset = () => {
-    setWhenCondition(formatAsStrictJSON({}));
+    setWhenCondition(defaultQuery);
     setConditionMode("builder");
     setPendingConditionReset(false);
   };
