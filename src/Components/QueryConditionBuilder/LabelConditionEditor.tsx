@@ -15,9 +15,6 @@ interface LabelConditionEditorProps {
   onRemove: (id: string) => void;
   removable?: boolean;
   labelOptions?: string[];
-  // False until a bucket and at least one entry are selected - the whole
-  // row (including the label field) stays locked before then.
-  disabled?: boolean;
 }
 
 const MULTI_VALUE_OPERATORS = LABEL_OPERATORS.filter(
@@ -30,17 +27,8 @@ export default function LabelConditionEditor({
   onRemove,
   removable = true,
   labelOptions = [],
-  disabled = false,
 }: LabelConditionEditorProps) {
   const isMultiValue = MULTI_VALUE_OPERATORS.includes(condition.operator);
-  const labelFilled = condition.label.trim() !== "";
-  const fieldsDisabled = disabled || !labelFilled;
-  const sourceHint = "Select a bucket and entries first";
-  const fieldsDisabledHint = disabled
-    ? sourceHint
-    : !labelFilled
-      ? "Enter a label first"
-      : "";
 
   const handleOperatorChange = (operator: LabelOperator) => {
     const wasMulti = MULTI_VALUE_OPERATORS.includes(condition.operator);
@@ -69,8 +57,6 @@ export default function LabelConditionEditor({
         }
         style={{ minWidth: 130 }}
         popupMatchSelectWidth={false}
-        disabled={disabled}
-        title={disabled ? sourceHint : undefined}
       />
       <Select
         value={condition.operator}
@@ -78,8 +64,6 @@ export default function LabelConditionEditor({
         onChange={handleOperatorChange}
         style={{ minWidth: 48 }}
         popupMatchSelectWidth={false}
-        disabled={fieldsDisabled}
-        title={fieldsDisabledHint || undefined}
       />
       {isMultiValue ? (
         <Select
@@ -90,8 +74,6 @@ export default function LabelConditionEditor({
           onChange={(value) => onChange(condition.id, { value })}
           style={{ flex: 1, minWidth: 130 }}
           popupMatchSelectWidth={false}
-          disabled={fieldsDisabled}
-          title={fieldsDisabledHint || undefined}
         />
       ) : (
         <Input
@@ -99,8 +81,6 @@ export default function LabelConditionEditor({
           value={condition.value as string}
           onChange={(e) => onChange(condition.id, { value: e.target.value })}
           style={{ flex: 1 }}
-          disabled={fieldsDisabled}
-          title={fieldsDisabledHint || undefined}
         />
       )}
       {removable && (

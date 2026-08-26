@@ -1,4 +1,4 @@
-import { Button, Select } from "antd";
+import { Button, Select, Tooltip } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
@@ -33,8 +33,8 @@ interface ConditionListEditorProps {
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
   labelOptions?: string[];
-  // False until a bucket and at least one entry are selected - nothing in
-  // the list is editable before then.
+  // False until a bucket and at least one entry are selected - the "+"
+  // button stays disabled before then.
   sourceReady?: boolean;
 }
 
@@ -46,7 +46,6 @@ export default function ConditionListEditor({
   labelOptions,
   sourceReady = true,
 }: ConditionListEditorProps) {
-  const sourceHint = "Select a bucket and entries first";
   const lastCondition = conditions[conditions.length - 1];
   const canAddCondition =
     sourceReady &&
@@ -54,10 +53,10 @@ export default function ConditionListEditor({
     lastCondition.label.trim() !== "" &&
     hasValue(lastCondition.value);
   const addConditionHint = !sourceReady
-    ? sourceHint
+    ? "Select a bucket and entries first"
     : !canAddCondition
       ? "Fill in the label and value first"
-      : undefined;
+      : "";
   const handleConnectorChange = (id: string, choice: ConnectorChoice) => {
     if (choice === "not") {
       onChangeCondition(id, { connector: "$and", negated: true });
@@ -68,46 +67,45 @@ export default function ConditionListEditor({
 
   return (
     <div>
-      {conditions.map((condition, index) => (
-        <div
-          key={condition.id}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 6,
-          }}
-        >
-          {index > 0 && (
-            <Select
-              size="small"
-              popupMatchSelectWidth={false}
-              value={connectorChoiceFor(condition)}
-              options={CONNECTOR_OPTIONS}
-              onChange={(value) => handleConnectorChange(condition.id, value)}
-              style={{ width: 70 }}
-              disabled={!sourceReady}
-              title={!sourceReady ? sourceHint : undefined}
+      {sourceReady &&
+        conditions.map((condition, index) => (
+          <div
+            key={condition.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 6,
+            }}
+          >
+            {index > 0 && (
+              <Select
+                size="small"
+                popupMatchSelectWidth={false}
+                value={connectorChoiceFor(condition)}
+                options={CONNECTOR_OPTIONS}
+                onChange={(value) => handleConnectorChange(condition.id, value)}
+                style={{ width: 70 }}
+              />
+            )}
+            <LabelConditionEditor
+              condition={condition}
+              onChange={onChangeCondition}
+              onRemove={onRemoveCondition}
+              removable={conditions.length > 1}
+              labelOptions={labelOptions}
             />
-          )}
-          <LabelConditionEditor
-            condition={condition}
-            onChange={onChangeCondition}
-            onRemove={onRemoveCondition}
-            removable={conditions.length > 1}
-            labelOptions={labelOptions}
-            disabled={!sourceReady}
-          />
-        </div>
-      ))}
+          </div>
+        ))}
 
-      <Button
-        aria-label="Add condition"
-        title={addConditionHint}
-        disabled={!canAddCondition}
-        icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-        onClick={onAddCondition}
-      />
+      <Tooltip title={addConditionHint}>
+        <Button
+          aria-label="Add condition"
+          disabled={!canAddCondition}
+          icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+          onClick={onAddCondition}
+        />
+      </Tooltip>
     </div>
   );
 }

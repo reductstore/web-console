@@ -1251,9 +1251,6 @@ export default function QueryPanel({
                           `+${omittedValues.length} more`
                         }
                         options={entryOptions}
-                        title={
-                          !bucketName ? "Select a bucket first" : undefined
-                        }
                       />
                     </div>
                   </div>

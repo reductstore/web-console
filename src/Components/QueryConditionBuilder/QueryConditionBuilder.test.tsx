@@ -30,8 +30,30 @@ beforeEach(() => mockJSDOM());
 
 const noop = () => {};
 
+// Rows are hidden until a bucket and entry are selected, so most tests need
+// this to exercise the builder at all.
+const readyValidationContext = {
+  client: {} as Client,
+  bucket: "testBucket",
+  entry: "testEntry",
+};
+
 describe("QueryConditionBuilder", () => {
   it("shows Where labels with one empty condition for an empty value in builder mode", () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByPlaceholderText("value")).toBeTruthy();
+  });
+
+  it("hides the condition row until a bucket and entry are selected", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -41,7 +63,8 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getByText("Where labels")).toBeTruthy();
-    expect(screen.getByPlaceholderText("value")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("value")).toBeNull();
+    expect(screen.getByLabelText("Add condition")).toBeDisabled();
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
@@ -66,6 +89,7 @@ describe("QueryConditionBuilder", () => {
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
@@ -78,6 +102,7 @@ describe("QueryConditionBuilder", () => {
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
 
@@ -117,6 +142,7 @@ describe("QueryConditionBuilder", () => {
         onChange={onChange}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
@@ -138,6 +164,7 @@ describe("QueryConditionBuilder", () => {
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
@@ -153,6 +180,7 @@ describe("QueryConditionBuilder", () => {
         onChange={onChange}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
     const [labelInput] = screen.getAllByRole("combobox");
