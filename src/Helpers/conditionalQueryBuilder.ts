@@ -1,3 +1,5 @@
+import { safeParseJSON5 } from "./json5Utils";
+
 export type LabelOperator =
   | "$eq"
   | "$ne"
@@ -66,25 +68,51 @@ export function serializeBuilderList(
   return acc;
 }
 
-const LABEL_OPERATORS: LabelOperator[] = [
-  "$eq",
-  "$ne",
-  "$gt",
-  "$gte",
-  "$lt",
-  "$lte",
-  "$contains",
-  "$starts_with",
-  "$ends_with",
-  "$in",
-  "$nin",
+export interface LabelOperatorInfo {
+  value: LabelOperator;
+  label: string;
+  multiValue?: boolean;
+}
+
+// Single source of truth for the supported label operators - both their
+// validity (isLabelOperator) and their builder-UI presentation (label,
+// multiValue) are derived from this list instead of being kept in sync by
+// hand across files.
+export const LABEL_OPERATORS: LabelOperatorInfo[] = [
+  { value: "$eq", label: "=" },
+  { value: "$ne", label: "≠" },
+  { value: "$gt", label: ">" },
+  { value: "$gte", label: "≥" },
+  { value: "$lt", label: "<" },
+  { value: "$lte", label: "≤" },
+  { value: "$contains", label: "contains" },
+  { value: "$starts_with", label: "starts with" },
+  { value: "$ends_with", label: "ends with" },
+  { value: "$in", label: "in", multiValue: true },
+  { value: "$nin", label: "not in", multiValue: true },
 ];
 
 /**
  * Check whether a string is a valid label comparison operator
  */
 export function isLabelOperator(value: string): value is LabelOperator {
-  return LABEL_OPERATORS.includes(value as LabelOperator);
+  return LABEL_OPERATORS.some((operator) => operator.value === value);
+}
+
+// Every shape this parser recognizes - a label leaf, a $not wrapper, a
+// $and/$or chain - is a plain object with exactly one key. Centralizing that
+// check here avoids repeating the same object/array/key-count guard in each
+// of the functions below.
+function singleKeyEntry(json: unknown): [string, unknown] | null {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    return null;
+  }
+  const keys = Object.keys(json);
+  if (keys.length !== 1) {
+    return null;
+  }
+  const [key] = keys;
+  return [key, (json as Record<string, unknown>)[key]];
 }
 
 interface ParsedLeaf {
@@ -94,41 +122,25 @@ interface ParsedLeaf {
 }
 
 function parseLeaf(json: unknown): ParsedLeaf | null {
-  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+  const labelEntry = singleKeyEntry(json);
+  if (!labelEntry) {
     return null;
   }
-
-  const keys = Object.keys(json);
-  if (keys.length !== 1) {
-    return null;
-  }
-
-  const [labelKey] = keys;
+  const [labelKey, innerValue] = labelEntry;
   if (!labelKey.startsWith("&")) {
     return null;
   }
-
   const label = labelKey.slice(1);
 
-  const innerValue = (json as Record<string, unknown>)[labelKey];
-  if (
-    typeof innerValue !== "object" ||
-    innerValue === null ||
-    Array.isArray(innerValue)
-  ) {
+  const operatorEntry = singleKeyEntry(innerValue);
+  if (!operatorEntry) {
     return null;
   }
-  const operatorKeys = Object.keys(innerValue);
-  if (operatorKeys.length !== 1) {
-    return null;
-  }
-
-  const [operatorKey] = operatorKeys;
+  const [operatorKey, value] = operatorEntry;
   if (!isLabelOperator(operatorKey)) {
     return null;
   }
 
-  const value = (innerValue as Record<string, unknown>)[operatorKey];
   const isValidItem = (item: unknown) =>
     typeof item === "string" || typeof item === "number";
   const isValidArray = Array.isArray(value) && value.every(isValidItem);
@@ -158,12 +170,10 @@ interface ParsedItem {
 // $not (the only shape the "NOT" toggle can produce). Anything else - in
 // particular $not wrapping more than one condition - isn't representable.
 function parseSingleItem(json: unknown): ParsedItem | null {
-  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    const keys = Object.keys(json);
-    if (keys.length === 1 && keys[0] === "$not") {
-      const leaf = parseLeaf((json as Record<string, unknown>)["$not"]);
-      return leaf ? { leaf, negated: true } : null;
-    }
+  const notEntry = singleKeyEntry(json);
+  if (notEntry && notEntry[0] === "$not") {
+    const leaf = parseLeaf(notEntry[1]);
+    return leaf ? { leaf, negated: true } : null;
   }
   const leaf = parseLeaf(json);
   return leaf ? { leaf, negated: false } : null;
@@ -273,6 +283,27 @@ export function parseBuilderList(json: unknown): ParseBuilderListResult {
     return { success: false, error: "Failed to parse condition" };
   }
   return { success: true, list };
+}
+
+export interface ParsedQueryValue {
+  list: FlatCondition[];
+  eachT?: unknown;
+}
+
+/**
+ * Parse Conditional Query JSON5 text, if representable as a flat list of
+ * conditions - the shared check behind both the builder's own resync and
+ * whether a JSON query can be shown in Builder mode at all.
+ */
+export function parseQueryValue(text: string): ParsedQueryValue | undefined {
+  const parsed = safeParseJSON5(text);
+  if (!parsed.success) {
+    return undefined;
+  }
+  const result = parseBuilderList(parsed.value);
+  return result.success
+    ? { list: result.list ?? [], eachT: result.eachT }
+    : undefined;
 }
 
 /**

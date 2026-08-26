@@ -5,12 +5,12 @@ import ConditionListEditor from "./ConditionListEditor";
 import {
   FlatCondition,
   addCondition,
-  parseBuilderList,
+  parseQueryValue,
   removeCondition,
   serializeBuilderList,
   updateCondition,
 } from "../../Helpers/conditionalQueryBuilder";
-import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
+import { formatAsStrictJSON } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
 
 type ValidationContext = ComponentProps<
@@ -31,22 +31,6 @@ interface QueryConditionBuilderProps {
   validationContext?: ValidationContext;
 }
 
-interface ParsedValue {
-  list: FlatCondition[];
-  eachT?: unknown;
-}
-
-function parseValue(text: string): ParsedValue | undefined {
-  const parsed = safeParseJSON5(text);
-  if (!parsed.success) {
-    return undefined;
-  }
-  const result = parseBuilderList(parsed.value);
-  return result.success
-    ? { list: result.list ?? [], eachT: result.eachT }
-    : undefined;
-}
-
 export default function QueryConditionBuilder({
   value,
   onChange,
@@ -58,13 +42,15 @@ export default function QueryConditionBuilder({
   validationContext,
 }: QueryConditionBuilderProps) {
   const [conditions, setConditions] = useState<FlatCondition[]>(() => {
-    const parsed = parseValue(value);
+    const parsed = parseQueryValue(value);
     return parsed && parsed.list.length > 0 ? parsed.list : addCondition([]);
   });
   // The value of a top-level $each_t directive (a sampling macro outside the
   // builder's scope, see #232), carried through re-serializations instead of
   // being silently dropped the next time a condition is edited.
-  const [eachT, setEachT] = useState<unknown>(() => parseValue(value)?.eachT);
+  const [eachT, setEachT] = useState<unknown>(
+    () => parseQueryValue(value)?.eachT,
+  );
   // The most recent `value` this component itself produced via onChange, so
   // an external change to `value` (e.g. loading a saved query, or the parent
   // switching back from JSON mode) can be told apart from an update this
@@ -136,7 +122,7 @@ export default function QueryConditionBuilder({
       return;
     }
     lastEmittedValueRef.current = value;
-    const parsed = parseValue(value);
+    const parsed = parseQueryValue(value);
     if (parsed === undefined) {
       onUnrepresentable();
       return;

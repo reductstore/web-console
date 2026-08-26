@@ -3,21 +3,8 @@ import { CloseOutlined } from "@ant-design/icons";
 import {
   FlatCondition,
   LabelOperator,
+  LABEL_OPERATORS,
 } from "../../Helpers/conditionalQueryBuilder";
-
-const OPERATOR_OPTIONS: { value: LabelOperator; label: string }[] = [
-  { value: "$eq", label: "=" },
-  { value: "$ne", label: "≠" },
-  { value: "$gt", label: ">" },
-  { value: "$gte", label: "≥" },
-  { value: "$lt", label: "<" },
-  { value: "$lte", label: "≤" },
-  { value: "$contains", label: "contains" },
-  { value: "$starts_with", label: "starts with" },
-  { value: "$ends_with", label: "ends with" },
-  { value: "$in", label: "in" },
-  { value: "$nin", label: "not in" },
-];
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;
@@ -30,7 +17,9 @@ interface LabelConditionEditorProps {
   labelOptions?: string[];
 }
 
-const MULTI_VALUE_OPERATORS: LabelOperator[] = ["$in", "$nin"];
+const MULTI_VALUE_OPERATORS = LABEL_OPERATORS.filter(
+  (operator) => operator.multiValue,
+).map((operator) => operator.value);
 
 export default function LabelConditionEditor({
   condition,
@@ -72,7 +61,7 @@ export default function LabelConditionEditor({
       />
       <Select
         value={condition.operator}
-        options={OPERATOR_OPTIONS}
+        options={LABEL_OPERATORS}
         onChange={handleOperatorChange}
         size="small"
         style={{ minWidth: 130 }}
@@ -103,7 +92,7 @@ export default function LabelConditionEditor({
           aria-label="Remove condition"
           type="text"
           size="small"
-          icon={<CloseOutlined />}
+          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
           onClick={() => onRemove(condition.id)}
         />
       )}
