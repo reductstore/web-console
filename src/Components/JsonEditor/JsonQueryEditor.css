@@ -153,6 +153,13 @@
   height: 100%;
 }
 
+/* The toolbar's own bottom padding is 0 because the inline editor's resize
+   handle sits right below it and provides the visual weight - the expanded
+   modal has no resize handle, so restore that breathing room here. */
+.jsonQueryEditorModal .jsonQueryEditorToolbar {
+  padding-bottom: 6px;
+}
+
 .jsonQueryEditor:focus-within {
   border-color: var(--input-focus);
 }
