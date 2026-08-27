@@ -110,6 +110,17 @@
   align-items: center;
 }
 
+/* Select and Button render at slightly different heights by default even
+   at the same antd size, so pin every control here to the same height as
+   the plain default Select (e.g. the UTC/Unix format select). */
+.queryTimeRow .ant-select-selector,
+.queryTimeRow .ant-btn,
+.queryTimeRow .ant-input,
+.queryTimeRow .ant-input-group-addon,
+.querySourceRow .ant-select-selector {
+  height: 32px;
+}
+
 /* INPUT focus styles */
 .queryTimeRow .ant-input-affix-wrapper:focus,
 .queryTimeRow .ant-input-affix-wrapper-focused,
@@ -164,6 +175,7 @@
 .queryConditionalContent {
   border: 1px solid #d9d9d9;
   border-radius: 6px;
+  background: #fff;
   overflow: visible;
 }
 
@@ -186,6 +198,7 @@
 /* --- Button --- */
 .fetchButton {
   display: flex;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: 10px;
   padding-top: 12px;

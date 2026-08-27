@@ -1,6 +1,5 @@
 import React from "react";
 import { Client, TokenPermissions } from "reduct-js";
-import { Typography } from "antd";
 import QueryPanel from "../../Components/QueryPanel/QueryPanel";
 import "../BucketPanel/EntryDetail.css";
 
@@ -13,13 +12,12 @@ interface Props {
 export default function QueryPanelPage(props: Readonly<Props>) {
   return (
     <div className="entryDetail">
-      <Typography.Title level={3}>Query</Typography.Title>
       <QueryPanel
         client={props.client}
         apiUrl={props.apiUrl}
         permissions={props.permissions}
         showSelectionControls
-        title={null}
+        title="Data Explorer"
       />
     </div>
   );

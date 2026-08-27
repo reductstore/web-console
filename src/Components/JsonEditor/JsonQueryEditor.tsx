@@ -9,7 +9,6 @@ import {
   CompressOutlined,
   ExpandOutlined,
   FormatPainterOutlined,
-  SaveOutlined,
 } from "@ant-design/icons";
 import { processWhenCondition } from "../../Helpers/json5Utils";
 import "./JsonQueryEditor.css";
@@ -44,9 +43,6 @@ interface JsonQueryEditorProps {
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
-  onSave?: () => void;
-  saveDisabled?: boolean;
-  toolbarExtra?: React.ReactNode;
 }
 
 // Global flag to track if completion provider has been registered
@@ -75,9 +71,6 @@ export function JsonQueryEditor({
   error,
   readOnly = false,
   validationContext,
-  onSave,
-  saveDisabled = false,
-  toolbarExtra,
 }: JsonQueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const inlineContainerRef = useRef<HTMLDivElement | null>(null);
@@ -537,27 +530,6 @@ export function JsonQueryEditor({
           {renderValidationStatus(readOnly)}
         </div>
         <div className="jsonQueryEditorToolbarActions">
-          {onSave && (
-            <Tooltip
-              title={
-                readOnly
-                  ? "No write permission"
-                  : saveDisabled
-                    ? "Query unchanged"
-                    : "Save query to browser"
-              }
-            >
-              <Button
-                aria-label="Save query"
-                type="text"
-                size="small"
-                icon={<SaveOutlined />}
-                onClick={onSave}
-                disabled={readOnly || saveDisabled}
-              />
-            </Tooltip>
-          )}
-          {toolbarExtra}
           <Tooltip
             title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
           >

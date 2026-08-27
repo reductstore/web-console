@@ -20,6 +20,8 @@ import {
   Select,
   Modal,
   Space,
+  Switch,
+  Tooltip,
   message,
   theme,
 } from "antd";
@@ -31,7 +33,7 @@ import {
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
-import { JsonQueryEditor } from "../JsonEditor";
+import QueryConditionBuilder from "../QueryConditionBuilder";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -57,6 +59,7 @@ import {
   formatAsStrictJSON,
   processWhenCondition,
 } from "../../Helpers/json5Utils";
+import { parseQueryValue } from "../../Helpers/conditionalQueryBuilder";
 import EditRecordLabels from "../EditRecordLabels";
 import RecordPreview from "../RecordPreview";
 import SaveQueryModal from "../SavedQueries/SaveQueryModal";
@@ -158,7 +161,28 @@ export default function QueryPanel({
   const [showCancel, setShowCancel] = useState(false);
   const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [whenCondition, setWhenCondition] = useState<string>(defaultQuery);
+  // If the initial query isn't representable in the builder (e.g. a
+  // hand-written query with real nested grouping), land in JSON mode
+  // instead of silently showing an empty builder next to the real query.
+  const [conditionMode, setConditionMode] = useState<"builder" | "json">(() =>
+    parseQueryValue(defaultQuery) !== undefined ? "builder" : "json",
+  );
+  // Snapshot of `whenCondition` taken when switching into JSON mode.
+  // Returning to Builder mode is lossless only if it still matches; any
+  // change instead resets the builder entirely (see confirmConditionReset).
+  const [jsonEntrySnapshot, setJsonEntrySnapshot] = useState<string | null>(
+    null,
+  );
+  // True while the confirmation to discard the JSON edits and reset the
+  // builder is pending; the switch to Builder mode is deferred until the
+  // user confirms.
+  const [pendingConditionReset, setPendingConditionReset] = useState(false);
   const [fetchError, setFetchError] = useState<string>("");
+  // Whether the builder currently has a row with only a label or only a
+  // value filled in - such a row is dropped from the query rather than
+  // causing a parse error, so Run Query needs its own check to warn about it.
+  const [hasIncompleteBuilderCondition, setHasIncompleteBuilderCondition] =
+    useState(false);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<RecordTableRow | null>(
@@ -456,6 +480,13 @@ export default function QueryPanel({
         return;
       }
 
+      if (conditionMode === "builder" && hasIncompleteBuilderCondition) {
+        setFetchError(
+          "Fill in or remove the incomplete condition row before running the query.",
+        );
+        return;
+      }
+
       fetchCtrlRef.current?.abort();
       const controller = new AbortController();
       const abortSignal = controller.signal;
@@ -586,6 +617,8 @@ export default function QueryPanel({
       bucketEntryInfo,
       bucketName,
       client,
+      conditionMode,
+      hasIncompleteBuilderCondition,
       selectedEntries,
       selectedEntryQuery,
       timeRange.end,
@@ -922,6 +955,16 @@ export default function QueryPanel({
 
       setWhenCondition(saved.query);
       setFetchError("");
+      // Reopen in whichever mode the query was saved from, falling back to
+      // the representability check for queries saved before this was
+      // tracked.
+      const mode =
+        saved.mode ??
+        (parseQueryValue(saved.query) !== undefined ? "builder" : "json");
+      setConditionMode(mode);
+      if (mode === "json") {
+        setJsonEntrySnapshot(saved.query);
+      }
       const useUnix = saved.timeFormat ? saved.timeFormat === "Unix" : showUnix;
       if (saved.timeFormat) {
         setShowUnix(useUnix);
@@ -954,6 +997,7 @@ export default function QueryPanel({
   const currentQuerySnapshot = (): SavedQuery => ({
     name: getLoadedQueryName(bucketName, selectedEntries) ?? "",
     query: whenCondition,
+    mode: conditionMode,
     timeFormat: showUnix ? "Unix" : "UTC",
     rangeKey: detectRangeKey(timeRange.start, timeRange.end),
     rangeStart: timeRange.start?.toString(),
@@ -988,8 +1032,15 @@ export default function QueryPanel({
     );
     if (!loaded) return false;
     const snap = currentQuerySnapshot();
+    // loaded.mode is absent for queries saved before mode was tracked -
+    // fall back to the same representability check handleLoadQuery uses,
+    // or a legacy save always looks "changed" and Save stays enabled.
+    const loadedMode =
+      loaded.mode ??
+      (parseQueryValue(loaded.query) !== undefined ? "builder" : "json");
     return (
       loaded.query === snap.query &&
+      loadedMode === snap.mode &&
       loaded.timeFormat === snap.timeFormat &&
       loaded.rangeKey === snap.rangeKey &&
       (snap.rangeKey !== "custom" ||
@@ -997,6 +1048,62 @@ export default function QueryPanel({
           loaded.rangeEnd === snap.rangeEnd))
     );
   })();
+
+  // Saving persists the bucket and entry selection alongside the query, so
+  // the button lives with the Query header rather than inside the Where
+  // labels section.
+  const saveButton = (
+    <Tooltip
+      title={isSaveDisabled ? "Query unchanged" : "Save query to browser"}
+    >
+      <Button
+        aria-label="Save query"
+        onClick={handleSaveQuery}
+        disabled={isSaveDisabled}
+      >
+        Save
+      </Button>
+    </Tooltip>
+  );
+
+  const handleConditionModeChange = (nextMode: "builder" | "json") => {
+    if (nextMode === "json") {
+      setJsonEntrySnapshot(whenCondition);
+      setConditionMode("json");
+      return;
+    }
+    if (whenCondition !== jsonEntrySnapshot) {
+      setPendingConditionReset(true);
+      return;
+    }
+    setConditionMode("builder");
+  };
+
+  const confirmConditionReset = () => {
+    setWhenCondition(defaultQuery);
+    setConditionMode("builder");
+    setPendingConditionReset(false);
+  };
+
+  const conditionModeSwitch = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexShrink: 0,
+      }}
+    >
+      <Typography.Text style={{ whiteSpace: "nowrap" }}>JSON</Typography.Text>
+      <Switch
+        aria-label="Switch between Builder and JSON mode"
+        checked={conditionMode === "json"}
+        onChange={(checked) =>
+          handleConditionModeChange(checked ? "json" : "builder")
+        }
+      />
+    </div>
+  );
 
   const entryValidationSelection = useMemo(
     () => normalizeEntrySelection(selectedEntries),
@@ -1078,9 +1185,34 @@ export default function QueryPanel({
             <div className="jsonFilterHeader queryHeaderBar">
               {showSelectionControls && (
                 <div className="querySection">
-                  <Typography.Text strong className="querySectionLabel">
-                    Data Source
-                  </Typography.Text>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Typography.Text strong className="querySectionLabel">
+                      Data Source
+                    </Typography.Text>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginLeft: "auto",
+                      }}
+                    >
+                      <QuerySelector
+                        bucketName={bucketName}
+                        entryName={selectedEntries}
+                        onLoadQuery={handleLoadQuery}
+                        editable={hasWritePermission}
+                        showAllQueries={showSelectionControls}
+                      />
+                      {saveButton}
+                    </div>
+                  </div>
                   <div className="querySourceRow">
                     <div className="queryFieldGroup">
                       <Typography.Text
@@ -1230,11 +1362,45 @@ export default function QueryPanel({
               </div>
 
               <div className="querySection">
-                <Typography.Text strong className="querySectionLabel">
-                  Conditional Query
-                </Typography.Text>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Typography.Text
+                    strong
+                    className="querySectionLabel"
+                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                  >
+                    Conditional Query
+                  </Typography.Text>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginLeft: "auto",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {conditionModeSwitch}
+                    {!showSelectionControls && (
+                      <QuerySelector
+                        bucketName={bucketName}
+                        entryName={selectedEntries}
+                        onLoadQuery={handleLoadQuery}
+                        editable={hasWritePermission}
+                        showAllQueries={showSelectionControls}
+                      />
+                    )}
+                    {!showSelectionControls && saveButton}
+                  </div>
+                </div>
                 <div className="queryConditionalContent">
-                  <JsonQueryEditor
+                  <QueryConditionBuilder
                     value={whenCondition}
                     onChange={(value: string) => {
                       setWhenCondition(value);
@@ -1242,6 +1408,11 @@ export default function QueryPanel({
                         setFetchError("");
                       }
                     }}
+                    mode={conditionMode}
+                    onUnrepresentable={() => setConditionMode("json")}
+                    onIncompleteConditionChange={
+                      setHasIncompleteBuilderCondition
+                    }
                     height={Math.min(
                       400,
                       Math.max(
@@ -1261,17 +1432,6 @@ export default function QueryPanel({
                       end: timeRange.end,
                       intervalValue: validationIntervalValue,
                     }}
-                    onSave={handleSaveQuery}
-                    saveDisabled={isSaveDisabled}
-                    toolbarExtra={
-                      <QuerySelector
-                        bucketName={bucketName}
-                        entryName={selectedEntries}
-                        onLoadQuery={handleLoadQuery}
-                        editable={hasWritePermission}
-                        showAllQueries={showSelectionControls}
-                      />
-                    }
                   />
                 </div>
                 <Typography.Text type="secondary" className="jsonExample">
@@ -1299,8 +1459,25 @@ export default function QueryPanel({
                     </a>
                   </strong>
                 </Typography.Text>
+                <Modal
+                  open={pendingConditionReset}
+                  title="Reset builder?"
+                  onOk={confirmConditionReset}
+                  onCancel={() => setPendingConditionReset(false)}
+                  okText="Continue"
+                  cancelText="Cancel"
+                >
+                  This will completely reset the builder, discarding the
+                  conditions it held before switching to JSON. Continue?
+                </Modal>
               </div>
               <div className="fetchButton">
+                <QueryStatusLabel
+                  status={progress.status}
+                  recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
+                />
                 <Button
                   onClick={() => {
                     if (showCancel && fetchCtrlRef.current) {
@@ -1311,6 +1488,11 @@ export default function QueryPanel({
                   }}
                   type={showCancel ? "default" : "primary"}
                   disabled={!hasValidSelection}
+                  title={
+                    !hasValidSelection
+                      ? "Select a bucket and entries first"
+                      : undefined
+                  }
                   style={{
                     width: 130,
                     whiteSpace: "nowrap",
@@ -1323,14 +1505,8 @@ export default function QueryPanel({
                       : {}),
                   }}
                 >
-                  {showCancel ? "Stop" : "Fetch Records"}
+                  {showCancel ? "Stop" : "Run Query"}
                 </Button>
-                <QueryStatusLabel
-                  status={progress.status}
-                  recordCount={records.length}
-                  elapsed={progress.elapsed}
-                  eta={progress.eta}
-                />
               </div>
               <QueryProgressBar
                 status={progress.status}
@@ -1407,6 +1583,7 @@ export default function QueryPanel({
         bucketName={bucketName}
         entryName={selectedEntries}
         queryText={whenCondition}
+        mode={conditionMode}
         timeFormat={showUnix ? "Unix" : "UTC"}
         rangeKey={detectRangeKey(timeRange.start, timeRange.end)}
         rangeStart={timeRange.start?.toString()}

@@ -18,7 +18,7 @@
 
 .jsonQueryEditorResizeHandle {
   position: relative;
-  flex: 0 0 10px;
+  flex: 0 0 6px;
   border-radius: 0 0 6px 6px;
   background: #fafafa;
   cursor: row-resize;
@@ -28,10 +28,10 @@
 
 .jsonQueryEditorResizeHandle span {
   position: absolute;
-  top: 3px;
+  top: 0;
   left: 50%;
   width: 32px;
-  height: 3px;
+  height: 2px;
   border-radius: 2px;
   background: #bfbfbf;
   transform: translateX(-50%);
@@ -61,7 +61,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 6px 8px 0;
   border-top: 1px solid var(--input-border);
   background: #fafafa;
   border-radius: 0 0 6px 6px;
@@ -153,6 +153,13 @@
   height: 100%;
 }
 
+/* The toolbar's own bottom padding is 0 because the inline editor's resize
+   handle sits right below it and provides the visual weight - the expanded
+   modal has no resize handle, so restore that breathing room here. */
+.jsonQueryEditorModal .jsonQueryEditorToolbar {
+  padding-bottom: 6px;
+}
+
 .jsonQueryEditor:focus-within {
   border-color: var(--input-focus);
 }
@@ -171,6 +178,6 @@
   }
 
   .jsonQueryEditorResizeHandle span {
-    top: 4px;
+    top: 0;
   }
 }

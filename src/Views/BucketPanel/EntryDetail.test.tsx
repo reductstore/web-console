@@ -7,6 +7,7 @@ import { Bucket, Client, EntryInfo, Status } from "reduct-js";
 import EntryDetail from "./EntryDetail";
 import { MemoryRouter } from "react-router-dom";
 import { message } from "antd";
+import { useQueryStore } from "../../stores/queryStore";
 
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
 type MockedRemoveRecord = RemoveRecordFn & {
@@ -221,7 +222,7 @@ describe("EntryDetail", () => {
         ".fetchButton button",
       ) as HTMLElement;
       expect(fetchButton).not.toBeNull();
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
     });
 
     it("should not show a separate limit input", () => {
@@ -230,6 +231,7 @@ describe("EntryDetail", () => {
     });
 
     it("should show the Monaco editor with default JSON", () => {
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -238,10 +240,6 @@ describe("EntryDetail", () => {
       ) as HTMLTextAreaElement;
       expect(textArea).not.toBeNull();
       expect(textArea.value).toBe('{\n  "$each_t": "$__interval"\n}\n');
-
-      const exampleText = container.querySelector(".jsonExample");
-      expect(exampleText).not.toBeNull();
-      expect(exampleText!.textContent).toContain("Example:");
     });
 
     it("should call bucket.query with default $each_t when condition", async () => {
@@ -267,6 +265,215 @@ describe("EntryDetail", () => {
           }),
         }),
       );
+    });
+  });
+
+  describe("Builder/JSON toggle", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+      await waitFor(() => {
+        expect(container.querySelector(".ant-select")).not.toBeNull();
+      });
+    });
+
+    const editJsonTo = (value: string) => {
+      fireEvent.click(screen.getByRole("switch"));
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      fireEvent.change(textArea, { target: { value } });
+      return textArea;
+    };
+
+    it("starts in Builder mode showing Where labels", () => {
+      expect(screen.getByText("Where labels")).toBeTruthy();
+    });
+
+    it("reparses losslessly when returning to Builder without touching the JSON", () => {
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("switch"));
+      expect(screen.getByText("Where labels")).toBeTruthy();
+    });
+
+    it("shows a confirmation before resetting the builder after a manual JSON edit", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      // Still in JSON mode: the switch is deferred behind the confirmation.
+      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
+    });
+
+    it("resets the builder once the confirmation is accepted", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+      expect(screen.getByText("Where labels")).toBeTruthy();
+      expect(screen.getByPlaceholderText("value")).toHaveValue("");
+    });
+
+    it("resets to the default $each_t query, not a bare {}, so a later JSON view still shows it", () => {
+      editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+      // Back in Builder mode after the reset; switch to JSON again without
+      // touching the builder.
+      fireEvent.click(screen.getByRole("switch"));
+      const monacoEditor = container.querySelector(".monaco-editor-mock");
+      const textArea = monacoEditor!.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+      expect(textArea.value).toBe('{\n  "$each_t": "$__interval"\n}\n');
+    });
+
+    it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
+      const textArea = editJsonTo('{"&status": {"$eq": "active"}}');
+
+      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
+    });
+
+    it("blocks Run Query and shows an error when a condition row is missing its value", async () => {
+      // The label field is an AutoComplete: antd renders its placeholder as
+      // a decorative overlay rather than a native `placeholder` attribute,
+      // so it has to be targeted by its distinguishing class instead.
+      const labelInput = container.querySelector(
+        ".ant-select-auto-complete input",
+      ) as HTMLElement;
+      expect(labelInput).not.toBeNull();
+      fireEvent.change(labelInput, { target: { value: "status" } });
+
+      (bucket.query as Mock).mockClear();
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+
+      await act(async () => {
+        fireEvent.click(fetchButton);
+        vi.runOnlyPendingTimers();
+      });
+
+      expect(bucket.query).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          "Fill in or remove the incomplete condition row before running the query.",
+        ),
+      ).toBeTruthy();
+    });
+
+    describe("Saved query mode", () => {
+      beforeEach(() => {
+        useQueryStore.getState().clearQueries();
+      });
+
+      // The query store is a persisted, module-level singleton - clear it
+      // afterwards too, or a query saved/loaded here leaks into unrelated
+      // tests that render EntryDetail later in this file.
+      afterEach(() => {
+        useQueryStore.getState().clearQueries();
+      });
+
+      const loadSavedQuery = async (name: string) => {
+        const selector = container.querySelector(
+          '[data-testid="query-selector"] .ant-select-selector, [data-testid="query-selector"] .ant-select-content',
+        ) as HTMLElement;
+        expect(selector).not.toBeNull();
+
+        await act(async () => {
+          fireEvent.mouseDown(selector);
+        });
+        await waitFor(() => {
+          expect(
+            document.querySelectorAll(".ant-select-item-option").length,
+          ).toBeGreaterThan(0);
+        });
+        const option = Array.from(
+          document.querySelectorAll(".ant-select-item-option"),
+        ).find((el) => el.textContent === name);
+        expect(option).toBeDefined();
+
+        await act(async () => {
+          fireEvent.click(option!);
+        });
+      };
+
+      it("restores JSON mode and its content when loading a query saved from JSON mode, even if representable", async () => {
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "json-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            mode: "json",
+          });
+        });
+
+        await loadSavedQuery("json-saved");
+
+        expect(screen.queryByText("Where labels")).toBeNull();
+        const monacoEditor = container.querySelector(".monaco-editor-mock");
+        const textArea = monacoEditor!.querySelector(
+          "textarea",
+        ) as HTMLTextAreaElement;
+        expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
+      });
+
+      it("restores builder mode and repopulates its fields when loading a query saved from Builder mode", async () => {
+        // Start from JSON mode so ending up in Builder mode proves the
+        // saved mode was applied, not just left as-is.
+        fireEvent.click(screen.getByRole("switch"));
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "builder-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            mode: "builder",
+          });
+        });
+
+        await loadSavedQuery("builder-saved");
+
+        expect(screen.getByText("Where labels")).toBeTruthy();
+        expect(screen.getByPlaceholderText("value")).toHaveValue("active");
+      });
+
+      it("falls back to the representability check for a query saved before mode was tracked", async () => {
+        fireEvent.click(screen.getByRole("switch"));
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "legacy-saved",
+            query: '{"&status": {"$eq": "active"}}',
+          });
+        });
+
+        await loadSavedQuery("legacy-saved");
+
+        expect(screen.getByText("Where labels")).toBeTruthy();
+      });
+
+      it("keeps Save disabled for an untouched query saved before mode was tracked", async () => {
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "legacy-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            timeFormat: "UTC",
+            rangeKey: "last7",
+          });
+        });
+
+        await loadSavedQuery("legacy-saved");
+
+        expect(
+          screen.getByRole("button", { name: "Save query" }),
+        ).toBeDisabled();
+      });
     });
   });
 
@@ -296,7 +503,7 @@ describe("EntryDetail", () => {
       let fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
 
       await act(async () => {
         fireEvent.click(fetchButton);
@@ -305,7 +512,7 @@ describe("EntryDetail", () => {
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
 
       // Advance past the 500ms delay
       await act(async () => {
@@ -372,7 +579,7 @@ describe("EntryDetail", () => {
       fetchButton = container.querySelector(
         ".fetchButton button",
       ) as HTMLElement;
-      expect(fetchButton.textContent).toBe("Fetch Records");
+      expect(fetchButton.textContent).toBe("Run Query");
     });
   });
 
@@ -720,6 +927,7 @@ describe("EntryDetail", () => {
       });
 
       // Check the Monaco editor component value
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -746,6 +954,7 @@ describe("EntryDetail", () => {
       });
 
       // After render, the condition should contain the default macro
+      fireEvent.click(screen.getByRole("switch"));
       const updatedMonacoEditor = container.querySelector(
         ".monaco-editor-mock",
       );
@@ -770,6 +979,7 @@ describe("EntryDetail", () => {
         "&label": { $eq: "test" },
       };
 
+      fireEvent.click(screen.getByRole("switch"));
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       const textArea = monacoEditor!.querySelector(
         "textarea",
@@ -1056,7 +1266,7 @@ describe("EntryDetail", () => {
       expect(container.textContent).toContain("query: 2");
       expect(container.textContent).not.toContain("query: 1");
       expect(container.querySelector(".fetchButton button")!.textContent).toBe(
-        "Fetch Records",
+        "Run Query",
       );
     }, 10_000);
   });

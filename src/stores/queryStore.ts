@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 export interface SavedQuery {
   name: string;
   query: string;
+  /** Absent for queries saved before this field existed. */
+  mode?: "builder" | "json";
   timeFormat?: "UTC" | "Unix";
   rangeKey?: string;
   /** Microsecond timestamps stored as strings (bigint doesn't serialize) */
