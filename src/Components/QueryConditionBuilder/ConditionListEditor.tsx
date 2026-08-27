@@ -3,10 +3,6 @@ import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
 
-// The dropdown shown before every condition but the first. "not" isn't a
-// real connector - selecting it means "and, but negate this condition" -
-// so it maps to connector "$and" with negated true, keeping NOT as a plain
-// dropdown choice instead of a separate control on each row.
 type ConnectorChoice = "$and" | "$or" | "not";
 
 const CONNECTOR_OPTIONS: { value: ConnectorChoice; label: string }[] = [
@@ -33,8 +29,6 @@ interface ConditionListEditorProps {
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
   labelOptions?: string[];
-  // False until a bucket and at least one entry are selected - the "+"
-  // button stays disabled before then.
   sourceReady?: boolean;
 }
 

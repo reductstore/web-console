@@ -22,17 +22,13 @@ interface QueryConditionBuilderProps {
   value: string;
   onChange: (value: string) => void;
   mode: "builder" | "json";
-  // Called whenever `value` can't be represented as a block chain while
-  // `mode` is (or becomes) "builder" - e.g. real nested grouping. The parent
-  // owns `mode`, so it decides what to do (typically switch to JSON mode).
+  // Called when value can't be flattened into rows (e.g. real nested
+  // grouping); the parent decides how to react, typically switching to JSON.
   onUnrepresentable: () => void;
   height?: number | string;
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
-  // Called whenever a row has only one of label/value filled in - such a
-  // row is dropped from the serialized query rather than causing a parse
-  // error, so the parent needs its own signal to warn about it.
   onIncompleteConditionChange?: (hasIncomplete: boolean) => void;
 }
 
@@ -51,16 +47,11 @@ export default function QueryConditionBuilder({
     const parsed = parseQueryValue(value);
     return parsed && parsed.list.length > 0 ? parsed.list : addCondition([]);
   });
-  // The value of a top-level $each_t directive (a sampling macro outside the
-  // builder's scope, see #232), carried through re-serializations instead of
-  // being silently dropped the next time a condition is edited.
+
   const [eachT, setEachT] = useState<unknown>(
     () => parseQueryValue(value)?.eachT,
   );
-  // The most recent `value` this component itself produced via onChange, so
-  // an external change to `value` (e.g. loading a saved query, or the parent
-  // switching back from JSON mode) can be told apart from an update this
-  // component made to its own props.
+
   const lastEmittedValueRef = useRef(value);
 
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
@@ -101,9 +92,8 @@ export default function QueryConditionBuilder({
           setLabelOptions(Array.from(foundLabels).sort());
         }
       } catch {
-        // Label suggestions are a convenience; a failed sample query (bucket
-        // unreachable, permission error, etc.) just leaves the list empty
-        // instead of surfacing an error for a non-essential feature.
+        // Label suggestions are best-effort; a failed sample query just
+        // leaves the list empty.
       }
     }
 
@@ -119,10 +109,8 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
-  // Resync conditions/eachT whenever we're in Builder mode and `value`
-  // doesn't match what this component last emitted itself - covers both an
-  // external change (e.g. loading a saved query) and the parent switching
-  // from JSON back to Builder mode.
+  // Resync whenever we're in Builder mode and `value` doesn't match what
+  // this component last emitted (a loaded query, or JSON->Builder switch).
   useEffect(() => {
     if (mode !== "builder" || value === lastEmittedValueRef.current) {
       return;
@@ -137,10 +125,6 @@ export default function QueryConditionBuilder({
     setEachT(parsed.eachT);
   }, [value, mode]);
 
-  // A row with only a label or only a value is silently dropped when the
-  // conditions are serialized (see serializeBuilderList), rather than
-  // producing a query the user would recognize as wrong - so the parent is
-  // told separately, to warn before running a query that's missing a filter.
   useEffect(() => {
     if (mode !== "builder") {
       onIncompleteConditionChange?.(false);
@@ -163,9 +147,6 @@ export default function QueryConditionBuilder({
     onChange(formatted);
   };
 
-  // A condition can't be built against no data source: require a bucket
-  // and at least one entry (or the single fixed entry of an entry-scoped
-  // page) before any row becomes editable.
   const sourceReady =
     !!validationContext?.bucket &&
     ((validationContext?.entries?.length ?? 0) > 0 ||
