@@ -305,6 +305,32 @@ describe("conditionalQueryBuilder", () => {
       expect(parseBuilderList({ "&flag": { $eq: true } }).success).toBe(false);
     });
 
+    it("rejects an array value for a single-value operator", () => {
+      expect(
+        parseBuilderList({ "&status": { $eq: ["active", "idle"] } }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a scalar value for a multi-value operator", () => {
+      expect(parseBuilderList({ "&status": { $in: "active" } }).success).toBe(
+        false,
+      );
+    });
+
+    it("accepts an array value for a multi-value operator", () => {
+      const result = parseBuilderList({
+        "&status": { $in: ["active", "idle"] },
+      });
+      expect(result.success).toBe(true);
+      expect(result.list).toEqual([
+        expect.objectContaining({
+          label: "status",
+          operator: "$in",
+          value: ["active", "idle"],
+        }),
+      ]);
+    });
+
     it("rejects a computed label", () => {
       expect(parseBuilderList({ "@computed": { $eq: "x" } }).success).toBe(
         false,

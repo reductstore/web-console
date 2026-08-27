@@ -4,6 +4,7 @@ import {
   FlatCondition,
   LabelOperator,
   LABEL_OPERATORS,
+  isMultiValueOperator,
 } from "../../Helpers/conditionalQueryBuilder";
 
 interface LabelConditionEditorProps {
@@ -17,10 +18,6 @@ interface LabelConditionEditorProps {
   labelOptions?: string[];
 }
 
-const MULTI_VALUE_OPERATORS = LABEL_OPERATORS.filter(
-  (operator) => operator.multiValue,
-).map((operator) => operator.value);
-
 export default function LabelConditionEditor({
   condition,
   onChange,
@@ -28,11 +25,11 @@ export default function LabelConditionEditor({
   removable = true,
   labelOptions = [],
 }: LabelConditionEditorProps) {
-  const isMultiValue = MULTI_VALUE_OPERATORS.includes(condition.operator);
+  const isMultiValue = isMultiValueOperator(condition.operator);
 
   const handleOperatorChange = (operator: LabelOperator) => {
-    const wasMulti = MULTI_VALUE_OPERATORS.includes(condition.operator);
-    const willBeMulti = MULTI_VALUE_OPERATORS.includes(operator);
+    const wasMulti = isMultiValueOperator(condition.operator);
+    const willBeMulti = isMultiValueOperator(operator);
     if (willBeMulti === wasMulti) {
       onChange(condition.id, { operator });
       return;
@@ -62,7 +59,7 @@ export default function LabelConditionEditor({
         value={condition.operator}
         options={LABEL_OPERATORS}
         onChange={handleOperatorChange}
-        style={{ minWidth: 48, flexShrink: 0 }}
+        style={{ width: "max-content", minWidth: 48, flexShrink: 0 }}
         popupMatchSelectWidth={false}
       />
       {isMultiValue ? (

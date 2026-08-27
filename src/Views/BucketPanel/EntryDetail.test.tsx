@@ -457,6 +457,23 @@ describe("EntryDetail", () => {
 
         expect(screen.getByText("Where labels")).toBeTruthy();
       });
+
+      it("keeps Save disabled for an untouched query saved before mode was tracked", async () => {
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "legacy-saved",
+            query: '{"&status": {"$eq": "active"}}',
+            timeFormat: "UTC",
+            rangeKey: "last7",
+          });
+        });
+
+        await loadSavedQuery("legacy-saved");
+
+        expect(
+          screen.getByRole("button", { name: "Save query" }),
+        ).toBeDisabled();
+      });
     });
   });
 

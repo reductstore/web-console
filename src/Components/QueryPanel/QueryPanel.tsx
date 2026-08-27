@@ -1032,9 +1032,15 @@ export default function QueryPanel({
     );
     if (!loaded) return false;
     const snap = currentQuerySnapshot();
+    // loaded.mode is absent for queries saved before mode was tracked -
+    // fall back to the same representability check handleLoadQuery uses,
+    // or a legacy save always looks "changed" and Save stays enabled.
+    const loadedMode =
+      loaded.mode ??
+      (parseQueryValue(loaded.query) !== undefined ? "builder" : "json");
     return (
       loaded.query === snap.query &&
-      loaded.mode === snap.mode &&
+      loadedMode === snap.mode &&
       loaded.timeFormat === snap.timeFormat &&
       loaded.rangeKey === snap.rangeKey &&
       (snap.rangeKey !== "custom" ||
@@ -1090,6 +1096,7 @@ export default function QueryPanel({
     >
       <Typography.Text style={{ whiteSpace: "nowrap" }}>JSON</Typography.Text>
       <Switch
+        aria-label="Switch between Builder and JSON mode"
         checked={conditionMode === "json"}
         onChange={(checked) =>
           handleConditionModeChange(checked ? "json" : "builder")

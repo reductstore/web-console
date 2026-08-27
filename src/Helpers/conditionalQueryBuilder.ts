@@ -116,6 +116,16 @@ export function isLabelOperator(value: string): value is LabelOperator {
   return LABEL_OPERATORS.some((operator) => operator.value === value);
 }
 
+/**
+ * Check whether an operator takes a list of values ($in/$nin) rather than
+ * a single scalar.
+ */
+export function isMultiValueOperator(operator: LabelOperator): boolean {
+  return LABEL_OPERATORS.some(
+    (info) => info.value === operator && info.multiValue === true,
+  );
+}
+
 // Every shape this parser recognizes - a label leaf, a $not wrapper, a
 // $and/$or chain - is a plain object with exactly one key. Centralizing that
 // check here avoids repeating the same object/array/key-count guard in each
@@ -160,11 +170,14 @@ function parseLeaf(json: unknown): ParsedLeaf | null {
 
   const isValidItem = (item: unknown) =>
     typeof item === "string" || typeof item === "number";
-  const isValidArray = Array.isArray(value) && value.every(isValidItem);
-  // Booleans and other JSON types are intentionally rejected: the builder
-  // only edits text/number values today, so anything else is treated as
-  // "not representable in the builder" rather than silently dropped.
-  if (!isValidItem(value) && !isValidArray) {
+  const isValid = isMultiValueOperator(operatorKey)
+    ? Array.isArray(value) && value.every(isValidItem)
+    : isValidItem(value);
+  // Booleans, other JSON types, and a shape that doesn't match the
+  // operator's arity (an array for $eq, a scalar for $in) are intentionally
+  // rejected: the builder can't represent them, so falling back to JSON
+  // mode is safer than producing a row the UI can't render correctly.
+  if (!isValid) {
     return null;
   }
 
