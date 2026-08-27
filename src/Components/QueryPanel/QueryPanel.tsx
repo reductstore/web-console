@@ -178,6 +178,11 @@ export default function QueryPanel({
   // user confirms.
   const [pendingConditionReset, setPendingConditionReset] = useState(false);
   const [fetchError, setFetchError] = useState<string>("");
+  // Whether the builder currently has a row with only a label or only a
+  // value filled in - such a row is dropped from the query rather than
+  // causing a parse error, so Run Query needs its own check to warn about it.
+  const [hasIncompleteBuilderCondition, setHasIncompleteBuilderCondition] =
+    useState(false);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<RecordTableRow | null>(
@@ -475,6 +480,13 @@ export default function QueryPanel({
         return;
       }
 
+      if (conditionMode === "builder" && hasIncompleteBuilderCondition) {
+        setFetchError(
+          "Fill in or remove the incomplete condition row before running the query.",
+        );
+        return;
+      }
+
       fetchCtrlRef.current?.abort();
       const controller = new AbortController();
       const abortSignal = controller.signal;
@@ -605,6 +617,8 @@ export default function QueryPanel({
       bucketEntryInfo,
       bucketName,
       client,
+      conditionMode,
+      hasIncompleteBuilderCondition,
       selectedEntries,
       selectedEntryQuery,
       timeRange.end,
@@ -1389,6 +1403,9 @@ export default function QueryPanel({
                     }}
                     mode={conditionMode}
                     onUnrepresentable={() => setConditionMode("json")}
+                    onIncompleteConditionChange={
+                      setHasIncompleteBuilderCondition
+                    }
                     height={Math.min(
                       400,
                       Math.max(

@@ -5,6 +5,7 @@ import ConditionListEditor from "./ConditionListEditor";
 import {
   FlatCondition,
   addCondition,
+  hasValue,
   parseQueryValue,
   removeCondition,
   serializeBuilderList,
@@ -29,6 +30,10 @@ interface QueryConditionBuilderProps {
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
+  // Called whenever a row has only one of label/value filled in - such a
+  // row is dropped from the serialized query rather than causing a parse
+  // error, so the parent needs its own signal to warn about it.
+  onIncompleteConditionChange?: (hasIncomplete: boolean) => void;
 }
 
 export default function QueryConditionBuilder({
@@ -40,6 +45,7 @@ export default function QueryConditionBuilder({
   error,
   readOnly = false,
   validationContext,
+  onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
   const [conditions, setConditions] = useState<FlatCondition[]>(() => {
     const parsed = parseQueryValue(value);
@@ -131,6 +137,22 @@ export default function QueryConditionBuilder({
     setEachT(parsed.eachT);
   }, [value, mode]);
 
+  // A row with only a label or only a value is silently dropped when the
+  // conditions are serialized (see serializeBuilderList), rather than
+  // producing a query the user would recognize as wrong - so the parent is
+  // told separately, to warn before running a query that's missing a filter.
+  useEffect(() => {
+    if (mode !== "builder") {
+      onIncompleteConditionChange?.(false);
+      return;
+    }
+    const hasIncomplete = conditions.some(
+      (condition) =>
+        (condition.label.trim() !== "") !== hasValue(condition.value),
+    );
+    onIncompleteConditionChange?.(hasIncomplete);
+  }, [conditions, mode]);
+
   const applyList = (nextConditions: FlatCondition[]) => {
     setConditions(nextConditions);
     const serialized = serializeBuilderList(nextConditions);
@@ -179,6 +201,12 @@ export default function QueryConditionBuilder({
         onRemoveCondition={(id) => applyList(removeCondition(conditions, id))}
         onAddCondition={() => applyList(addCondition(conditions))}
       />
+      {error && (
+        <div className="jsonQueryEditorValidation">
+          <span className="jsonQueryEditorValidationError">✗</span>
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 }

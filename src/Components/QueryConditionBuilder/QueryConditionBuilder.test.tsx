@@ -362,4 +362,60 @@ describe("QueryConditionBuilder", () => {
     expect(screen.queryByText("and")).toBeNull();
     expect(screen.queryByText("not")).toBeNull();
   });
+
+  it("shows the error message passed in while in builder mode", () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        error="Fill in or remove the incomplete condition row before running the query."
+        validationContext={readyValidationContext}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Fill in or remove the incomplete condition row before running the query.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("reports an incomplete condition once only the label is filled in", () => {
+    const onIncompleteConditionChange = vi.fn();
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+        onIncompleteConditionChange={onIncompleteConditionChange}
+      />,
+    );
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+    const [labelInput] = screen.getAllByRole("combobox");
+    fireEvent.change(labelInput, { target: { value: "status" } });
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.change(screen.getByPlaceholderText("value"), {
+      target: { value: "active" },
+    });
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("reports no incomplete condition while in json mode", () => {
+    const onIncompleteConditionChange = vi.fn();
+    render(
+      <QueryConditionBuilder
+        value={'{"&status'}
+        onChange={noop}
+        mode="json"
+        onUnrepresentable={noop}
+        onIncompleteConditionChange={onIncompleteConditionChange}
+      />,
+    );
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+  });
 });

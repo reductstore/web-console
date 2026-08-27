@@ -343,6 +343,34 @@ describe("EntryDetail", () => {
       expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
     });
 
+    it("blocks Run Query and shows an error when a condition row is missing its value", async () => {
+      // The label field is an AutoComplete: antd renders its placeholder as
+      // a decorative overlay rather than a native `placeholder` attribute,
+      // so it has to be targeted by its distinguishing class instead.
+      const labelInput = container.querySelector(
+        ".ant-select-auto-complete input",
+      ) as HTMLElement;
+      expect(labelInput).not.toBeNull();
+      fireEvent.change(labelInput, { target: { value: "status" } });
+
+      (bucket.query as Mock).mockClear();
+      const fetchButton = container.querySelector(
+        ".fetchButton button",
+      ) as HTMLElement;
+
+      await act(async () => {
+        fireEvent.click(fetchButton);
+        vi.runOnlyPendingTimers();
+      });
+
+      expect(bucket.query).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          "Fill in or remove the incomplete condition row before running the query.",
+        ),
+      ).toBeTruthy();
+    });
+
     describe("Saved query mode", () => {
       beforeEach(() => {
         useQueryStore.getState().clearQueries();
