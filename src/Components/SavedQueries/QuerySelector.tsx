@@ -104,7 +104,6 @@ export default function QuerySelector({
 
   return (
     <Select<string>
-      size="small"
       placeholder="Load saved query..."
       loading={false}
       value={loadedQueryName ?? undefined}

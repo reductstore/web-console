@@ -55,14 +55,14 @@ export default function LabelConditionEditor({
         onChange={(value) =>
           onChange(condition.id, { label: value.replace(/^&/, "") })
         }
-        style={{ minWidth: 130 }}
+        style={{ minWidth: 130, flexShrink: 0 }}
         popupMatchSelectWidth={false}
       />
       <Select
         value={condition.operator}
         options={LABEL_OPERATORS}
         onChange={handleOperatorChange}
-        style={{ minWidth: 48 }}
+        style={{ minWidth: 48, flexShrink: 0 }}
         popupMatchSelectWidth={false}
       />
       {isMultiValue ? (
@@ -87,7 +87,6 @@ export default function LabelConditionEditor({
         <Button
           aria-label="Remove condition"
           type="text"
-          size="small"
           icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
           onClick={() => onRemove(condition.id)}
         />

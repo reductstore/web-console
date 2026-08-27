@@ -80,7 +80,6 @@ export default function ConditionListEditor({
           >
             {index > 0 && (
               <Select
-                size="small"
                 popupMatchSelectWidth={false}
                 value={connectorChoiceFor(condition)}
                 options={CONNECTOR_OPTIONS}
