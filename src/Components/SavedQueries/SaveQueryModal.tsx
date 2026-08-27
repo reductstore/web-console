@@ -8,6 +8,7 @@ interface SaveQueryModalProps {
   bucketName: string;
   entryName: string | string[];
   queryText: string;
+  mode: "builder" | "json";
   timeFormat: "UTC" | "Unix";
   rangeKey: string;
   rangeStart?: string;
@@ -20,6 +21,7 @@ export default function SaveQueryModal({
   bucketName,
   entryName,
   queryText,
+  mode,
   timeFormat,
   rangeKey,
   rangeStart,
@@ -46,6 +48,7 @@ export default function SaveQueryModal({
     saveQuery(bucketName, entryName, {
       name: queryName,
       query: queryText,
+      mode,
       timeFormat,
       rangeKey,
       rangeStart,

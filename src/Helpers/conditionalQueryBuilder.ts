@@ -279,27 +279,29 @@ export interface ParseBuilderListResult {
  * Parse Conditional Query JSON into a flat list of conditions, if representable
  */
 export function parseBuilderList(json: unknown): ParseBuilderListResult {
-  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    const keys = Object.keys(json);
-    if (keys.length === 0) {
-      return { success: true, list: [] };
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    const list = parseChain(json);
+    if (!list) {
+      return { success: false, error: "Failed to parse condition" };
     }
-    // Treat "only $each_t" like an empty list of conditions so the default
-    // query, which always includes it, stays representable in Builder mode.
-    if (keys.length === 1 && keys[0] === "$each_t") {
-      return {
-        success: true,
-        list: [],
-        eachT: (json as Record<string, unknown>)["$each_t"],
-      };
-    }
+    return { success: true, list };
   }
 
-  const list = parseChain(json);
+  // $each_t is a sampling directive that sits alongside the conditions,
+  // not one of them - strip it out before matching the remaining shape so
+  // a query built with real conditions (which always carries $each_t once
+  // set) doesn't get rejected just because of it.
+  const { $each_t: eachT, ...rest } = json as Record<string, unknown>;
+
+  if (Object.keys(rest).length === 0) {
+    return { success: true, list: [], eachT };
+  }
+
+  const list = parseChain(rest);
   if (!list) {
     return { success: false, error: "Failed to parse condition" };
   }
-  return { success: true, list };
+  return { success: true, list, eachT };
 }
 
 export interface ParsedQueryValue {

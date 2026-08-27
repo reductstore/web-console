@@ -174,12 +174,36 @@ describe("conditionalQueryBuilder", () => {
       });
     });
 
-    it("rejects $each_t combined with a real condition", () => {
+    it("parses a real condition combined with $each_t, surfacing both", () => {
       const result = parseBuilderList({
         $each_t: "30s",
         "&status": { $eq: "active" },
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      expect(result.eachT).toBe("30s");
+      expect(result.list).toEqual([
+        expect.objectContaining({
+          label: "status",
+          operator: "$eq",
+          value: "active",
+        }),
+      ]);
+    });
+
+    it("parses a chain of conditions combined with $each_t, matching what the builder actually saves", () => {
+      // This is the exact shape QueryConditionBuilder's applyList produces:
+      // serializeBuilderList's output with $each_t spread alongside it.
+      const serialized = serializeBuilderList([
+        makeCondition({ id: "a", label: "status" }),
+        makeCondition({ id: "b", label: "count", connector: "$and" }),
+      ]);
+      const result = parseBuilderList({
+        ...serialized,
+        $each_t: "$__interval",
+      });
+      expect(result.success).toBe(true);
+      expect(result.eachT).toBe("$__interval");
+      expect(result.list?.map((c) => c.label)).toEqual(["status", "count"]);
     });
 
     it("parses a single bare condition", () => {

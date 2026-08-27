@@ -1559,6 +1559,7 @@ export default function QueryPanel({
         bucketName={bucketName}
         entryName={selectedEntries}
         queryText={whenCondition}
+        mode={conditionMode}
         timeFormat={showUnix ? "Unix" : "UTC"}
         rangeKey={detectRangeKey(timeRange.start, timeRange.end)}
         rangeStart={timeRange.start?.toString()}

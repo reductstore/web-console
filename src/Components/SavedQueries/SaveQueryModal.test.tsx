@@ -15,7 +15,11 @@ describe("SaveQueryModal", () => {
     message.success = vi.fn() as unknown as typeof message.success;
   });
 
-  const renderModal = (open = true, queryText = '{"$each_t": "1s"}') => {
+  const renderModal = (
+    open = true,
+    queryText = '{"$each_t": "1s"}',
+    mode: "builder" | "json" = "builder",
+  ) => {
     return render(
       <SaveQueryModal
         open={open}
@@ -23,6 +27,7 @@ describe("SaveQueryModal", () => {
         bucketName="test-bucket"
         entryName="test-entry"
         queryText={queryText}
+        mode={mode}
         timeFormat="UTC"
         rangeKey="last7"
       />,
@@ -57,11 +62,28 @@ describe("SaveQueryModal", () => {
       expect(queries[0]).toMatchObject({
         name: "my-query",
         query: '{"$each_t": "1s"}',
+        mode: "builder",
         timeFormat: "UTC",
         rangeKey: "last7",
       });
     });
     expect(message.success).toHaveBeenCalledWith('Query "my-query" saved');
+  });
+
+  it("saves the mode the query was in when the modal was opened", async () => {
+    renderModal(true, '{"$each_t": "1s"}', "json");
+
+    fireEvent.change(screen.getByTestId("query-name-input"), {
+      target: { value: "my-json-query" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const queries = useQueryStore
+        .getState()
+        .getQueries("test-bucket", "test-entry");
+      expect(queries[0]).toMatchObject({ mode: "json" });
+    });
   });
 
   it("shows overwrite confirmation for existing query name", async () => {
