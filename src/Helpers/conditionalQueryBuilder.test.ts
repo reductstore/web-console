@@ -276,6 +276,26 @@ describe("conditionalQueryBuilder", () => {
       expect(parseBuilderList({ $limit: "100" }).success).toBe(false);
     });
 
+    it("parses a null $each_n as a blank sample step instead of rejecting it", () => {
+      // This is exactly what serializeSteps emits for an $each_n step that
+      // was added but not filled in yet, so it must round-trip back into
+      // Builder mode rather than being treated as malformed.
+      const result = parseBuilderList({ $each_n: null });
+      expect(result.success).toBe(true);
+      expect(result.steps?.sample).toEqual({
+        kind: "$each_n",
+        everyNth: undefined,
+        duration: "",
+        useIntervalMacro: false,
+      });
+    });
+
+    it("parses a null $limit as a blank limit step instead of rejecting it", () => {
+      const result = parseBuilderList({ $limit: null });
+      expect(result.success).toBe(true);
+      expect(result.steps?.limit).toEqual({ count: undefined });
+    });
+
     it("parses a single bare condition", () => {
       const result = parseBuilderList({ "&status": { $eq: "active" } });
       expect(result.success).toBe(true);
@@ -678,6 +698,20 @@ describe("conditionalQueryBuilder", () => {
           kind: "$each_n",
         });
         expect(serializeSteps(steps)).toEqual({ $each_n: null });
+      });
+
+      it("round-trips an incomplete $each_n or $limit step back through parseBuilderList", () => {
+        // A step saved mid-edit (e.g. via the Save button, which isn't
+        // gated on completeness) must reopen in Builder mode, not be
+        // rejected as unrepresentable just because its value is still null.
+        const eachNSteps = updateSampleStep(addSampleStep({}), {
+          kind: "$each_n",
+        });
+        const eachNResult = parseBuilderList(serializeSteps(eachNSteps));
+        expect(eachNResult.success).toBe(true);
+
+        const limitResult = parseBuilderList(serializeSteps(addLimitStep({})));
+        expect(limitResult.success).toBe(true);
       });
 
       it("serializes a sample step and a limit step together", () => {

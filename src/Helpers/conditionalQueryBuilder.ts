@@ -340,12 +340,12 @@ function parseSteps(
 
   let sample: SampleStep | undefined;
   if (eachN !== undefined) {
-    if (typeof eachN !== "number") {
+    if (eachN !== null && typeof eachN !== "number") {
       return { success: false };
     }
     sample = {
       kind: "$each_n",
-      everyNth: eachN,
+      everyNth: eachN === null ? undefined : eachN,
       duration: "",
       useIntervalMacro: false,
     };
@@ -361,10 +361,12 @@ function parseSteps(
 
   let limitStep: LimitStep | undefined;
   if (limit !== undefined) {
-    if (typeof limit !== "number") {
+    // Same reasoning as $each_n above: null is a blank Limit step, not a
+    // malformed one.
+    if (limit !== null && typeof limit !== "number") {
       return { success: false };
     }
-    limitStep = { count: limit };
+    limitStep = { count: limit === null ? undefined : limit };
   }
 
   if (!sample && !limitStep) {
