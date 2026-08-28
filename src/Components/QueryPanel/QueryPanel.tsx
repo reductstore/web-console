@@ -482,7 +482,7 @@ export default function QueryPanel({
 
       if (conditionMode === "builder" && hasIncompleteBuilderCondition) {
         setFetchError(
-          "Fill in or remove the incomplete condition row before running the query.",
+          "Fill in or remove the incomplete row before running the query.",
         );
         return;
       }
@@ -1413,15 +1413,11 @@ export default function QueryPanel({
                     onIncompleteConditionChange={
                       setHasIncompleteBuilderCondition
                     }
-                    height={Math.min(
-                      400,
-                      Math.max(
-                        100,
-                        (whenCondition + "\n").split("\n").length * 18 + 45,
-                      ),
+                    height={Math.max(
+                      100,
+                      (whenCondition + "\n").split("\n").length * 18 + 45,
                     )}
                     error={fetchError}
-                    readOnly={false}
                     validationContext={{
                       client,
                       bucket: bucketName,

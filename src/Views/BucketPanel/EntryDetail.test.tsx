@@ -366,7 +366,7 @@ describe("EntryDetail", () => {
       expect(bucket.query).not.toHaveBeenCalled();
       expect(
         screen.getByText(
-          "Fill in or remove the incomplete condition row before running the query.",
+          "Fill in or remove the incomplete row before running the query.",
         ),
       ).toBeTruthy();
     });

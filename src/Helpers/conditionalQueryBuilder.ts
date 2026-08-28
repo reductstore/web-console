@@ -15,6 +15,24 @@ export type LabelOperator =
 
 export type LogicalConnector = "$and" | "$or";
 
+export type SampleKind = "$each_n" | "$each_t";
+
+export interface SampleStep {
+  kind: SampleKind;
+  everyNth?: number;
+  duration: string;
+  useIntervalMacro: boolean;
+}
+
+export interface LimitStep {
+  count?: number;
+}
+
+export interface QuerySteps {
+  sample?: SampleStep;
+  limit?: LimitStep;
+}
+
 export interface FlatCondition {
   id: string;
   label: string;
@@ -124,6 +142,41 @@ export function isMultiValueOperator(operator: LabelOperator): boolean {
   return LABEL_OPERATORS.some(
     (info) => info.value === operator && info.multiValue === true,
   );
+}
+
+export interface SampleKindInfo {
+  value: SampleKind;
+  label: string;
+}
+
+export const SAMPLE_KINDS: SampleKindInfo[] = [
+  { value: "$each_n", label: "Reduce by record count" },
+  { value: "$each_t", label: "Reduce by time interval" },
+];
+
+export function isDefaultSampleStep(sample: SampleStep): boolean {
+  return (
+    sample.kind === "$each_t" &&
+    sample.duration === "" &&
+    sample.useIntervalMacro === true
+  );
+}
+
+export function serializeSteps(steps: QuerySteps): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  const { sample } = steps;
+  if (sample?.kind === "$each_n") {
+    result.$each_n = sample.everyNth ?? null;
+  } else if (sample?.kind === "$each_t") {
+    result.$each_t = sample.useIntervalMacro ? "$__interval" : sample.duration;
+  }
+
+  if (steps.limit) {
+    result.$limit = steps.limit.count ?? null;
+  }
+
+  return result;
 }
 
 // Every shape this parser recognizes - a label leaf, a $not wrapper, a
@@ -276,15 +329,59 @@ function parseChain(json: unknown): FlatCondition[] | null {
   return [...leftChain, toFlatCondition(rightItem, operatorKey)];
 }
 
+function parseSteps(
+  eachN: unknown,
+  eachT: unknown,
+  limit: unknown,
+): { success: boolean; steps?: QuerySteps } {
+  if (eachN !== undefined && eachT !== undefined) {
+    return { success: false };
+  }
+
+  let sample: SampleStep | undefined;
+  if (eachN !== undefined) {
+    if (typeof eachN !== "number") {
+      return { success: false };
+    }
+    sample = {
+      kind: "$each_n",
+      everyNth: eachN,
+      duration: "",
+      useIntervalMacro: false,
+    };
+  } else if (eachT !== undefined) {
+    if (typeof eachT !== "string") {
+      return { success: false };
+    }
+    sample =
+      eachT === "$__interval"
+        ? { kind: "$each_t", duration: "", useIntervalMacro: true }
+        : { kind: "$each_t", duration: eachT, useIntervalMacro: false };
+  }
+
+  let limitStep: LimitStep | undefined;
+  if (limit !== undefined) {
+    if (typeof limit !== "number") {
+      return { success: false };
+    }
+    limitStep = { count: limit };
+  }
+
+  if (!sample && !limitStep) {
+    return { success: true, steps: undefined };
+  }
+  const steps: QuerySteps = {};
+  if (sample) steps.sample = sample;
+  if (limitStep) steps.limit = limitStep;
+  return { success: true, steps };
+}
+
 export interface ParseBuilderListResult {
   success: boolean;
   list?: FlatCondition[];
-  // Present when the input carried a top-level $each_t directive alongside
-  // (or instead of) conditions. $each_t is a sampling directive outside the
-  // builder's scope (see #232) - its value is surfaced here rather than
-  // dropped, so a caller can carry it through instead of silently losing it
-  // the next time it re-serializes the conditions.
-  eachT?: unknown;
+  // Present when the input carried $each_n/$each_t/$limit directives
+  // alongside (or instead of) conditions.
+  steps?: QuerySteps;
   error?: string;
 }
 
@@ -300,26 +397,37 @@ export function parseBuilderList(json: unknown): ParseBuilderListResult {
     return { success: true, list };
   }
 
-  // $each_t is a sampling directive that sits alongside the conditions,
-  // not one of them - strip it out before matching the remaining shape so
-  // a query built with real conditions (which always carries $each_t once
-  // set) doesn't get rejected just because of it.
-  const { $each_t: eachT, ...rest } = json as Record<string, unknown>;
+  // $each_n/$each_t/$limit are sampling/limit directives that sit alongside
+  // the conditions, not one of them - strip them out before matching the
+  // remaining shape so a query combining them with real conditions doesn't
+  // get rejected just because of it.
+  const {
+    $each_n: eachN,
+    $each_t: eachT,
+    $limit: limit,
+    ...rest
+  } = json as Record<string, unknown>;
+
+  const parsedSteps = parseSteps(eachN, eachT, limit);
+  if (!parsedSteps.success) {
+    return { success: false, error: "Failed to parse condition" };
+  }
+  const { steps } = parsedSteps;
 
   if (Object.keys(rest).length === 0) {
-    return { success: true, list: [], eachT };
+    return { success: true, list: [], steps };
   }
 
   const list = parseChain(rest);
   if (!list) {
     return { success: false, error: "Failed to parse condition" };
   }
-  return { success: true, list, eachT };
+  return { success: true, list, steps };
 }
 
 export interface ParsedQueryValue {
   list: FlatCondition[];
-  eachT?: unknown;
+  steps?: QuerySteps;
 }
 
 /**
@@ -334,7 +442,7 @@ export function parseQueryValue(text: string): ParsedQueryValue | undefined {
   }
   const result = parseBuilderList(parsed.value);
   return result.success
-    ? { list: result.list ?? [], eachT: result.eachT }
+    ? { list: result.list ?? [], steps: result.steps }
     : undefined;
 }
 
@@ -379,4 +487,59 @@ export function addCondition(list: FlatCondition[]): FlatCondition[] {
       connector: "$and",
     },
   ];
+}
+
+export function addSampleStep(steps: QuerySteps): QuerySteps {
+  return {
+    ...steps,
+    sample: { kind: "$each_t", duration: "", useIntervalMacro: false },
+  };
+}
+
+export function addLimitStep(steps: QuerySteps): QuerySteps {
+  return { ...steps, limit: { count: undefined } };
+}
+
+export function updateSampleStep(
+  steps: QuerySteps,
+  changes: Partial<SampleStep>,
+): QuerySteps {
+  if (!steps.sample) {
+    return steps;
+  }
+  return { ...steps, sample: { ...steps.sample, ...changes } };
+}
+
+export function updateLimitStep(
+  steps: QuerySteps,
+  changes: Partial<LimitStep>,
+): QuerySteps {
+  if (!steps.limit) {
+    return steps;
+  }
+  return { ...steps, limit: { ...steps.limit, ...changes } };
+}
+
+export function removeSampleStep(steps: QuerySteps): QuerySteps {
+  const rest = { ...steps };
+  delete rest.sample;
+  return rest;
+}
+
+export function removeLimitStep(steps: QuerySteps): QuerySteps {
+  const rest = { ...steps };
+  delete rest.limit;
+  return rest;
+}
+
+export function hasIncompleteSteps(steps: QuerySteps): boolean {
+  const { sample } = steps;
+  const sampleIncomplete =
+    !!sample &&
+    ((sample.kind === "$each_n" && sample.everyNth === undefined) ||
+      (sample.kind === "$each_t" &&
+        !sample.useIntervalMacro &&
+        sample.duration.trim() === ""));
+  const limitIncomplete = !!steps.limit && steps.limit.count === undefined;
+  return sampleIncomplete || limitIncomplete;
 }

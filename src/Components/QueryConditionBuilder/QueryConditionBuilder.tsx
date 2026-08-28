@@ -2,14 +2,26 @@ import { useEffect, useRef, useState, ComponentProps } from "react";
 import { Typography } from "antd";
 import { JsonQueryEditor } from "../JsonEditor";
 import ConditionListEditor from "./ConditionListEditor";
+import StepListEditor from "./StepListEditor";
 import {
   FlatCondition,
+  QuerySteps,
+  SampleStep,
   addCondition,
+  addLimitStep,
+  addSampleStep,
+  hasIncompleteSteps,
   hasValue,
+  isDefaultSampleStep,
   parseQueryValue,
   removeCondition,
+  removeLimitStep,
+  removeSampleStep,
   serializeBuilderList,
+  serializeSteps,
   updateCondition,
+  updateLimitStep,
+  updateSampleStep,
 } from "../../Helpers/conditionalQueryBuilder";
 import { formatAsStrictJSON } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
@@ -17,6 +29,20 @@ import { QueryOptions } from "reduct-js";
 type ValidationContext = ComponentProps<
   typeof JsonQueryEditor
 >["validationContext"];
+
+function splitSteps(parsed: QuerySteps | undefined): {
+  steps: QuerySteps;
+  implicitSample: SampleStep | undefined;
+} {
+  const sample = parsed?.sample;
+  if (sample && isDefaultSampleStep(sample)) {
+    return {
+      steps: { ...parsed, sample: undefined },
+      implicitSample: sample,
+    };
+  }
+  return { steps: parsed ?? {}, implicitSample: undefined };
+}
 
 interface QueryConditionBuilderProps {
   value: string;
@@ -27,7 +53,6 @@ interface QueryConditionBuilderProps {
   onUnrepresentable: () => void;
   height?: number | string;
   error?: string;
-  readOnly?: boolean;
   validationContext?: ValidationContext;
   onIncompleteConditionChange?: (hasIncomplete: boolean) => void;
 }
@@ -39,17 +64,28 @@ export default function QueryConditionBuilder({
   onUnrepresentable,
   height,
   error,
-  readOnly = false,
   validationContext,
   onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
-  const [conditions, setConditions] = useState<FlatCondition[]>(() => {
+  // Parsed once on mount and read by the three useState calls below, instead
+  // of each independently re-parsing `value`.
+  const [initial] = useState(() => {
     const parsed = parseQueryValue(value);
-    return parsed && parsed.list.length > 0 ? parsed.list : addCondition([]);
+    const split = splitSteps(parsed?.steps);
+    return {
+      conditions:
+        parsed && parsed.list.length > 0 ? parsed.list : addCondition([]),
+      steps: split.steps,
+      implicitSample: split.implicitSample,
+    };
   });
 
-  const [eachT, setEachT] = useState<unknown>(
-    () => parseQueryValue(value)?.eachT,
+  const [conditions, setConditions] = useState<FlatCondition[]>(
+    initial.conditions,
+  );
+  const [steps, setSteps] = useState<QuerySteps>(initial.steps);
+  const [implicitSample, setImplicitSample] = useState<SampleStep | undefined>(
+    initial.implicitSample,
   );
 
   const lastEmittedValueRef = useRef(value);
@@ -122,7 +158,9 @@ export default function QueryConditionBuilder({
       return;
     }
     setConditions(parsed.list.length > 0 ? parsed.list : addCondition([]));
-    setEachT(parsed.eachT);
+    const split = splitSteps(parsed.steps);
+    setSteps(split.steps);
+    setImplicitSample(split.implicitSample);
   }, [value, mode]);
 
   useEffect(() => {
@@ -130,18 +168,30 @@ export default function QueryConditionBuilder({
       onIncompleteConditionChange?.(false);
       return;
     }
-    const hasIncomplete = conditions.some(
-      (condition) =>
-        (condition.label.trim() !== "") !== hasValue(condition.value),
-    );
+    const hasIncomplete =
+      conditions.some(
+        (condition) =>
+          (condition.label.trim() !== "") !== hasValue(condition.value),
+      ) || hasIncompleteSteps(steps);
     onIncompleteConditionChange?.(hasIncomplete);
-  }, [conditions, mode]);
+  }, [conditions, steps, mode]);
 
-  const applyList = (nextConditions: FlatCondition[]) => {
+  const applyQuery = (
+    nextConditions: FlatCondition[],
+    nextSteps: QuerySteps,
+    nextImplicitSample: SampleStep | undefined,
+  ) => {
     setConditions(nextConditions);
-    const serialized = serializeBuilderList(nextConditions);
-    const nextValue =
-      eachT !== undefined ? { ...serialized, $each_t: eachT } : serialized;
+    setSteps(nextSteps);
+    setImplicitSample(nextImplicitSample);
+    const effectiveSteps = {
+      ...nextSteps,
+      sample: nextSteps.sample ?? nextImplicitSample,
+    };
+    const nextValue = {
+      ...serializeBuilderList(nextConditions),
+      ...serializeSteps(effectiveSteps),
+    };
     const formatted = formatAsStrictJSON(nextValue);
     lastEmittedValueRef.current = formatted;
     onChange(formatted);
@@ -159,7 +209,6 @@ export default function QueryConditionBuilder({
         onChange={onChange}
         height={height}
         error={error}
-        readOnly={readOnly}
         validationContext={validationContext}
       />
     );
@@ -177,10 +226,51 @@ export default function QueryConditionBuilder({
         labelOptions={labelOptions}
         sourceReady={sourceReady}
         onChangeCondition={(id, changes) =>
-          applyList(updateCondition(conditions, id, changes))
+          applyQuery(
+            updateCondition(conditions, id, changes),
+            steps,
+            implicitSample,
+          )
         }
-        onRemoveCondition={(id) => applyList(removeCondition(conditions, id))}
-        onAddCondition={() => applyList(addCondition(conditions))}
+        onRemoveCondition={(id) =>
+          applyQuery(removeCondition(conditions, id), steps, implicitSample)
+        }
+        onAddCondition={() =>
+          applyQuery(addCondition(conditions), steps, implicitSample)
+        }
+      />
+      <Typography.Text strong className="querySectionLabel">
+        Steps
+      </Typography.Text>
+      <StepListEditor
+        steps={steps}
+        sourceReady={sourceReady}
+        onChangeSample={(changes) =>
+          applyQuery(
+            conditions,
+            updateSampleStep(steps, changes),
+            implicitSample,
+          )
+        }
+        onChangeLimit={(changes) =>
+          applyQuery(
+            conditions,
+            updateLimitStep(steps, changes),
+            implicitSample,
+          )
+        }
+        onAddSample={() =>
+          applyQuery(conditions, addSampleStep(steps), undefined)
+        }
+        onAddLimit={() =>
+          applyQuery(conditions, addLimitStep(steps), implicitSample)
+        }
+        onRemoveSample={() =>
+          applyQuery(conditions, removeSampleStep(steps), undefined)
+        }
+        onRemoveLimit={() =>
+          applyQuery(conditions, removeLimitStep(steps), implicitSample)
+        }
       />
       {error && (
         <div className="jsonQueryEditorValidation">
