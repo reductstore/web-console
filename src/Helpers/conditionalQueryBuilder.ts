@@ -28,9 +28,37 @@ export interface LimitStep {
   count?: number;
 }
 
-export interface QuerySteps {
-  sample?: SampleStep;
-  limit?: LimitStep;
+export interface SampleStepEntry {
+  id: string;
+  type: "sample";
+  sample: SampleStep;
+}
+
+export interface LimitStepEntry {
+  id: string;
+  type: "limit";
+  limit: LimitStep;
+}
+
+export type Step = SampleStepEntry | LimitStepEntry;
+
+// Fixed id for the "Where labels" block in a QueryConditionBuilder's
+// blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
+// can't drift apart on what it's called.
+export const CONDITIONS_BLOCK_ID = "conditions";
+
+/**
+ * Return a new array with the item at fromIndex moved to toIndex.
+ */
+export function moveItem<T>(
+  list: T[],
+  fromIndex: number,
+  toIndex: number,
+): T[] {
+  const next = [...list];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
 }
 
 export interface FlatCondition {
@@ -150,8 +178,8 @@ export interface SampleKindInfo {
 }
 
 export const SAMPLE_KINDS: SampleKindInfo[] = [
-  { value: "$each_n", label: "Reduce by record count" },
-  { value: "$each_t", label: "Reduce by time interval" },
+  { value: "$each_n", label: "By record count" },
+  { value: "$each_t", label: "By time interval" },
 ];
 
 export function isDefaultSampleStep(sample: SampleStep): boolean {
@@ -162,18 +190,25 @@ export function isDefaultSampleStep(sample: SampleStep): boolean {
   );
 }
 
-export function serializeSteps(steps: QuerySteps): Record<string, unknown> {
+export function serializeSteps(steps: Step[]): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
-  const { sample } = steps;
-  if (sample?.kind === "$each_n") {
-    result.$each_n = sample.everyNth ?? null;
-  } else if (sample?.kind === "$each_t") {
-    result.$each_t = sample.useIntervalMacro ? "$__interval" : sample.duration;
+  const sampleEntry = steps.find(
+    (step): step is SampleStepEntry => step.type === "sample",
+  );
+  if (sampleEntry?.sample.kind === "$each_n") {
+    result.$each_n = sampleEntry.sample.everyNth ?? null;
+  } else if (sampleEntry?.sample.kind === "$each_t") {
+    result.$each_t = sampleEntry.sample.useIntervalMacro
+      ? "$__interval"
+      : sampleEntry.sample.duration;
   }
 
-  if (steps.limit) {
-    result.$limit = steps.limit.count ?? null;
+  const limitEntry = steps.find(
+    (step): step is LimitStepEntry => step.type === "limit",
+  );
+  if (limitEntry) {
+    result.$limit = limitEntry.limit.count ?? null;
   }
 
   return result;
@@ -333,7 +368,7 @@ function parseSteps(
   eachN: unknown,
   eachT: unknown,
   limit: unknown,
-): { success: boolean; steps?: QuerySteps } {
+): { success: boolean; steps?: Step[] } {
   if (eachN !== undefined && eachT !== undefined) {
     return { success: false };
   }
@@ -369,13 +404,14 @@ function parseSteps(
     limitStep = { count: limit === null ? undefined : limit };
   }
 
-  if (!sample && !limitStep) {
-    return { success: true, steps: undefined };
+  const steps: Step[] = [];
+  if (sample) {
+    steps.push({ id: crypto.randomUUID(), type: "sample", sample });
   }
-  const steps: QuerySteps = {};
-  if (sample) steps.sample = sample;
-  if (limitStep) steps.limit = limitStep;
-  return { success: true, steps };
+  if (limitStep) {
+    steps.push({ id: crypto.randomUUID(), type: "limit", limit: limitStep });
+  }
+  return { success: true, steps: steps.length > 0 ? steps : undefined };
 }
 
 export interface ParseBuilderListResult {
@@ -383,7 +419,7 @@ export interface ParseBuilderListResult {
   list?: FlatCondition[];
   // Present when the input carried $each_n/$each_t/$limit directives
   // alongside (or instead of) conditions.
-  steps?: QuerySteps;
+  steps?: Step[];
   error?: string;
 }
 
@@ -429,7 +465,7 @@ export function parseBuilderList(json: unknown): ParseBuilderListResult {
 
 export interface ParsedQueryValue {
   list: FlatCondition[];
-  steps?: QuerySteps;
+  steps?: Step[];
 }
 
 /**
@@ -491,57 +527,66 @@ export function addCondition(list: FlatCondition[]): FlatCondition[] {
   ];
 }
 
-export function addSampleStep(steps: QuerySteps): QuerySteps {
-  return {
+export function addSampleStep(steps: Step[]): Step[] {
+  return [
     ...steps,
-    sample: { kind: "$each_t", duration: "", useIntervalMacro: false },
-  };
+    {
+      id: crypto.randomUUID(),
+      type: "sample",
+      sample: { kind: "$each_t", duration: "", useIntervalMacro: false },
+    },
+  ];
 }
 
-export function addLimitStep(steps: QuerySteps): QuerySteps {
-  return { ...steps, limit: { count: undefined } };
+export function addLimitStep(steps: Step[]): Step[] {
+  return [
+    ...steps,
+    { id: crypto.randomUUID(), type: "limit", limit: { count: undefined } },
+  ];
 }
 
 export function updateSampleStep(
-  steps: QuerySteps,
+  steps: Step[],
+  id: string,
   changes: Partial<SampleStep>,
-): QuerySteps {
-  if (!steps.sample) {
-    return steps;
-  }
-  return { ...steps, sample: { ...steps.sample, ...changes } };
+): Step[] {
+  return steps.map((step) =>
+    step.id === id && step.type === "sample"
+      ? { ...step, sample: { ...step.sample, ...changes } }
+      : step,
+  );
 }
 
 export function updateLimitStep(
-  steps: QuerySteps,
+  steps: Step[],
+  id: string,
   changes: Partial<LimitStep>,
-): QuerySteps {
-  if (!steps.limit) {
-    return steps;
-  }
-  return { ...steps, limit: { ...steps.limit, ...changes } };
+): Step[] {
+  return steps.map((step) =>
+    step.id === id && step.type === "limit"
+      ? { ...step, limit: { ...step.limit, ...changes } }
+      : step,
+  );
 }
 
-export function removeSampleStep(steps: QuerySteps): QuerySteps {
-  const rest = { ...steps };
-  delete rest.sample;
-  return rest;
+export function removeStep(steps: Step[], id: string): Step[] {
+  return steps.filter((step) => step.id !== id);
 }
 
-export function removeLimitStep(steps: QuerySteps): QuerySteps {
-  const rest = { ...steps };
-  delete rest.limit;
-  return rest;
-}
-
-export function hasIncompleteSteps(steps: QuerySteps): boolean {
-  const { sample } = steps;
+export function hasIncompleteSteps(steps: Step[]): boolean {
+  const sampleEntry = steps.find(
+    (step): step is SampleStepEntry => step.type === "sample",
+  );
   const sampleIncomplete =
-    !!sample &&
-    ((sample.kind === "$each_n" && sample.everyNth === undefined) ||
-      (sample.kind === "$each_t" &&
-        !sample.useIntervalMacro &&
-        sample.duration.trim() === ""));
-  const limitIncomplete = !!steps.limit && steps.limit.count === undefined;
+    !!sampleEntry &&
+    ((sampleEntry.sample.kind === "$each_n" &&
+      sampleEntry.sample.everyNth === undefined) ||
+      (sampleEntry.sample.kind === "$each_t" &&
+        !sampleEntry.sample.useIntervalMacro &&
+        sampleEntry.sample.duration.trim() === ""));
+  const limitEntry = steps.find(
+    (step): step is LimitStepEntry => step.type === "limit",
+  );
+  const limitIncomplete = !!limitEntry && limitEntry.limit.count === undefined;
   return sampleIncomplete || limitIncomplete;
 }

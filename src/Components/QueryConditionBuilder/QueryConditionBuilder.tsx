@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState, ComponentProps } from "react";
 import { Typography } from "antd";
 import { JsonQueryEditor } from "../JsonEditor";
-import ConditionListEditor from "./ConditionListEditor";
-import StepListEditor from "./StepListEditor";
+import QueryBlockList from "./QueryBlockList";
 import {
+  CONDITIONS_BLOCK_ID,
   FlatCondition,
-  QuerySteps,
   SampleStep,
+  SampleStepEntry,
+  Step,
   addCondition,
   addLimitStep,
   addSampleStep,
   hasIncompleteSteps,
   hasValue,
   isDefaultSampleStep,
+  moveItem,
   parseQueryValue,
   removeCondition,
-  removeLimitStep,
-  removeSampleStep,
+  removeStep,
   serializeBuilderList,
   serializeSteps,
   updateCondition,
@@ -30,18 +31,31 @@ type ValidationContext = ComponentProps<
   typeof JsonQueryEditor
 >["validationContext"];
 
-function splitSteps(parsed: QuerySteps | undefined): {
-  steps: QuerySteps;
+function splitSteps(parsed: Step[] | undefined): {
+  steps: Step[];
   implicitSample: SampleStep | undefined;
 } {
-  const sample = parsed?.sample;
-  if (sample && isDefaultSampleStep(sample)) {
+  const list = parsed ?? [];
+  const sampleEntry = list.find(
+    (step): step is SampleStepEntry => step.type === "sample",
+  );
+  if (sampleEntry && isDefaultSampleStep(sampleEntry.sample)) {
     return {
-      steps: { ...parsed, sample: undefined },
-      implicitSample: sample,
+      steps: list.filter((step) => step.id !== sampleEntry.id),
+      implicitSample: sampleEntry.sample,
     };
   }
-  return { steps: parsed ?? {}, implicitSample: undefined };
+  return { steps: list, implicitSample: undefined };
+}
+
+function initialBlockOrder(
+  conditions: FlatCondition[],
+  steps: Step[],
+): string[] {
+  return [
+    ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
+    ...steps.map((step) => step.id),
+  ];
 }
 
 interface QueryConditionBuilderProps {
@@ -67,14 +81,13 @@ export default function QueryConditionBuilder({
   validationContext,
   onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
-  // Parsed once on mount and read by the three useState calls below, instead
+  // Parsed once on mount and read by the four useState calls below, instead
   // of each independently re-parsing `value`.
   const [initial] = useState(() => {
     const parsed = parseQueryValue(value);
     const split = splitSteps(parsed?.steps);
     return {
-      conditions:
-        parsed && parsed.list.length > 0 ? parsed.list : addCondition([]),
+      conditions: parsed?.list ?? [],
       steps: split.steps,
       implicitSample: split.implicitSample,
     };
@@ -83,9 +96,15 @@ export default function QueryConditionBuilder({
   const [conditions, setConditions] = useState<FlatCondition[]>(
     initial.conditions,
   );
-  const [steps, setSteps] = useState<QuerySteps>(initial.steps);
+  const [steps, setSteps] = useState<Step[]>(initial.steps);
   const [implicitSample, setImplicitSample] = useState<SampleStep | undefined>(
     initial.implicitSample,
+  );
+  // Order that "Where labels" (fixed id, present only if added) and each
+  // Sample/Limit step render in - a purely visual arrangement, independent
+  // of the serialized JSON (step order doesn't affect query semantics).
+  const [blockOrder, setBlockOrder] = useState<string[]>(() =>
+    initialBlockOrder(initial.conditions, initial.steps),
   );
 
   const lastEmittedValueRef = useRef(value);
@@ -157,10 +176,13 @@ export default function QueryConditionBuilder({
       onUnrepresentable();
       return;
     }
-    setConditions(parsed.list.length > 0 ? parsed.list : addCondition([]));
+    setConditions(parsed.list);
     const split = splitSteps(parsed.steps);
     setSteps(split.steps);
     setImplicitSample(split.implicitSample);
+    // A freshly loaded query has no prior UI arrangement to restore, so
+    // "Where labels" always leads again when present.
+    setBlockOrder(initialBlockOrder(parsed.list, split.steps));
   }, [value, mode]);
 
   useEffect(() => {
@@ -178,16 +200,24 @@ export default function QueryConditionBuilder({
 
   const applyQuery = (
     nextConditions: FlatCondition[],
-    nextSteps: QuerySteps,
+    nextSteps: Step[],
     nextImplicitSample: SampleStep | undefined,
   ) => {
     setConditions(nextConditions);
     setSteps(nextSteps);
     setImplicitSample(nextImplicitSample);
-    const effectiveSteps = {
-      ...nextSteps,
-      sample: nextSteps.sample ?? nextImplicitSample,
-    };
+    const hasSample = nextSteps.some((step) => step.type === "sample");
+    const effectiveSteps: Step[] =
+      !hasSample && nextImplicitSample
+        ? [
+            ...nextSteps,
+            {
+              id: "implicit-sample",
+              type: "sample",
+              sample: nextImplicitSample,
+            },
+          ]
+        : nextSteps;
     const nextValue = {
       ...serializeBuilderList(nextConditions),
       ...serializeSteps(effectiveSteps),
@@ -196,6 +226,10 @@ export default function QueryConditionBuilder({
     lastEmittedValueRef.current = formatted;
     onChange(formatted);
   };
+
+  const appendBlock = (id: string) => setBlockOrder((prev) => [...prev, id]);
+  const removeBlock = (id: string) =>
+    setBlockOrder((prev) => prev.filter((blockId) => blockId !== id));
 
   const sourceReady =
     !!validationContext?.bucket &&
@@ -219,12 +253,14 @@ export default function QueryConditionBuilder({
       style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
     >
       <Typography.Text strong className="querySectionLabel">
-        Where labels
+        Query
       </Typography.Text>
-      <ConditionListEditor
+      <QueryBlockList
+        blockOrder={blockOrder}
         conditions={conditions}
-        labelOptions={labelOptions}
+        steps={steps}
         sourceReady={sourceReady}
+        labelOptions={labelOptions}
         onChangeCondition={(id, changes) =>
           applyQuery(
             updateCondition(conditions, id, changes),
@@ -238,38 +274,49 @@ export default function QueryConditionBuilder({
         onAddCondition={() =>
           applyQuery(addCondition(conditions), steps, implicitSample)
         }
-      />
-      <Typography.Text strong className="querySectionLabel">
-        Steps
-      </Typography.Text>
-      <StepListEditor
-        steps={steps}
-        sourceReady={sourceReady}
-        onChangeSample={(changes) =>
+        onChangeSample={(id, changes) =>
           applyQuery(
             conditions,
-            updateSampleStep(steps, changes),
+            updateSampleStep(steps, id, changes),
             implicitSample,
           )
         }
-        onChangeLimit={(changes) =>
+        onChangeLimit={(id, changes) =>
           applyQuery(
             conditions,
-            updateLimitStep(steps, changes),
+            updateLimitStep(steps, id, changes),
             implicitSample,
           )
         }
-        onAddSample={() =>
-          applyQuery(conditions, addSampleStep(steps), undefined)
-        }
-        onAddLimit={() =>
-          applyQuery(conditions, addLimitStep(steps), implicitSample)
-        }
-        onRemoveSample={() =>
-          applyQuery(conditions, removeSampleStep(steps), undefined)
-        }
-        onRemoveLimit={() =>
-          applyQuery(conditions, removeLimitStep(steps), implicitSample)
+        onAddConditionsBlock={() => {
+          applyQuery(addCondition(conditions), steps, implicitSample);
+          appendBlock(CONDITIONS_BLOCK_ID);
+        }}
+        onRemoveConditionsBlock={() => {
+          applyQuery([], steps, implicitSample);
+          removeBlock(CONDITIONS_BLOCK_ID);
+        }}
+        onAddSample={() => {
+          const nextSteps = addSampleStep(steps);
+          applyQuery(conditions, nextSteps, undefined);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
+        }}
+        onAddLimit={() => {
+          const nextSteps = addLimitStep(steps);
+          applyQuery(conditions, nextSteps, implicitSample);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
+        }}
+        onRemoveStep={(id) => {
+          const removed = steps.find((step) => step.id === id);
+          applyQuery(
+            conditions,
+            removeStep(steps, id),
+            removed?.type === "sample" ? undefined : implicitSample,
+          );
+          removeBlock(id);
+        }}
+        onReorderBlock={(fromIndex, toIndex) =>
+          setBlockOrder(moveItem(blockOrder, fromIndex, toIndex))
         }
       />
       {error && (

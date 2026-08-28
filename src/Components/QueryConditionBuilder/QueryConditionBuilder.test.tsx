@@ -51,8 +51,19 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
+// Where labels is now a step like Sample/Limit - added on demand from the
+// "+ Add step" menu rather than shown by default.
+const addWhereLabels = async () => {
+  await act(async () => {
+    fireEvent.click(screen.getByLabelText("Add step"));
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByText("Where labels"));
+  });
+};
+
 describe("QueryConditionBuilder", () => {
-  it("shows Where labels with one empty condition for an empty value in builder mode", () => {
+  it("shows Query with no blocks for an empty value until one is added", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -62,11 +73,27 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByPlaceholderText("value")).toBeNull();
+  });
+
+  it("reveals one empty condition row once Where labels is added from the menu", async () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+    await addWhereLabels();
+    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("hides the condition row until a bucket and entry are selected", () => {
+  it("hides every block and disables Add step until a bucket and entry are selected", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -75,9 +102,9 @@ describe("QueryConditionBuilder", () => {
         onUnrepresentable={noop}
       />,
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add condition")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).toBeDisabled();
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
@@ -92,7 +119,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByTestId("monaco-editor")).toHaveValue(
       '{"&status": {"$eq": "active"}}',
     );
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByText("Query")).toBeNull();
   });
 
   it("resyncs conditions when value changes from outside while already in builder mode", () => {
@@ -147,7 +174,7 @@ describe("QueryConditionBuilder", () => {
     expect(onUnrepresentable).toHaveBeenCalled();
   });
 
-  it("preserves $each_t across an edit instead of silently dropping it", () => {
+  it("preserves $each_t across an edit instead of silently dropping it", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -158,6 +185,9 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
+    // This query has no conditions of its own yet - Where labels must be
+    // added before there's a row to edit.
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -185,7 +215,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
   });
 
-  it("reports the serialized JSON when a condition is edited", () => {
+  it("reports the serialized JSON when a condition is edited", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -196,6 +226,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -243,6 +274,7 @@ describe("QueryConditionBuilder", () => {
       expect.objectContaining({ head: true, when: { $limit: 20 } }),
     );
 
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(labelInput);
     expect(await screen.findByTitle("status")).toBeTruthy();
@@ -271,10 +303,10 @@ describe("QueryConditionBuilder", () => {
     await waitFor(() =>
       expect(client.getBucket).toHaveBeenCalledWith("testBucket"),
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
   });
 
-  it("adds a chained condition with a connector when + is clicked", () => {
+  it("adds a chained condition with a connector when + is clicked", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -289,6 +321,7 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     // The "+" button stays disabled until the row it would chain off of has
@@ -311,7 +344,7 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  it("negates a chained condition by picking not from the connector dropdown", () => {
+  it("negates a chained condition by picking not from the connector dropdown", async () => {
     // The first row never has a connector/NOT control, so negation is only
     // reachable once a 2nd row exists.
     const onChange = vi.fn();
@@ -328,6 +361,7 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
+    await addWhereLabels();
     // The "+" button stays disabled until row 1 has both a label and a
     // value.
     const [labelInput] = screen.getAllByRole("combobox");
@@ -363,15 +397,17 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  it("never shows a connector or NOT control on the first row", () => {
+  it("never shows a connector or NOT control on the first row", async () => {
     render(
       <QueryConditionBuilder
         value=""
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
+    await addWhereLabels();
     expect(screen.queryByText("and")).toBeNull();
     expect(screen.queryByText("not")).toBeNull();
   });
@@ -394,7 +430,7 @@ describe("QueryConditionBuilder", () => {
     ).toBeTruthy();
   });
 
-  it("reports an incomplete condition once only the label is filled in", () => {
+  it("reports an incomplete condition once only the label is filled in", async () => {
     const onIncompleteConditionChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -406,6 +442,11 @@ describe("QueryConditionBuilder", () => {
         onIncompleteConditionChange={onIncompleteConditionChange}
       />,
     );
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+    await addWhereLabels();
+    // A freshly revealed blank row isn't incomplete either - only a
+    // partially filled one is.
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
     const [labelInput] = screen.getAllByRole("combobox");
@@ -450,6 +491,10 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByText("Where labels"));
+      });
       const [labelInput] = screen.getAllByRole("combobox");
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -482,6 +527,10 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByText("Where labels"));
+      });
       const [labelInput] = screen.getAllByRole("combobox");
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -514,6 +563,10 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByText("Where labels"));
+      });
       const [labelInput] = screen.getAllByRole("combobox");
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -628,7 +681,7 @@ describe("QueryConditionBuilder", () => {
         expect(screen.getByLabelText("Add step")).not.toBeDisabled();
       });
 
-      it("preserves the hidden default sample step when a condition is edited", () => {
+      it("preserves the hidden default sample step when a condition is edited", async () => {
         const onChange = vi.fn();
         render(
           <QueryConditionBuilder
@@ -639,6 +692,12 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
+        // This query has no conditions of its own yet - Where labels must
+        // be added before there's a row to edit.
+        await openAddStepMenu();
+        await act(async () => {
+          fireEvent.click(screen.getByText("Where labels"));
+        });
         const [labelInput] = screen.getAllByRole("combobox");
         fireEvent.change(labelInput, { target: { value: "status" } });
         fireEvent.change(screen.getByPlaceholderText("value"), {

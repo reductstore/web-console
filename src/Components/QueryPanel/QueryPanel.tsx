@@ -1370,13 +1370,6 @@ export default function QueryPanel({
                     flexWrap: "nowrap",
                   }}
                 >
-                  <Typography.Text
-                    strong
-                    className="querySectionLabel"
-                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                  >
-                    Conditional Query
-                  </Typography.Text>
                   <div
                     style={{
                       display: "flex",

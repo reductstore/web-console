@@ -288,14 +288,37 @@ describe("EntryDetail", () => {
       return textArea;
     };
 
-    it("starts in Builder mode showing Where labels", () => {
-      expect(screen.getByText("Where labels")).toBeTruthy();
+    // The default query has no conditions of its own, so Where labels (a
+    // step like Sample/Limit) has to be added from the menu before there's
+    // a row to interact with.
+    const addWhereLabels = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add step"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Where labels"));
+      });
+    };
+
+    it("starts in Builder mode, ready to add a Where labels block", () => {
+      expect(screen.getByLabelText("Add step")).not.toBeDisabled();
     });
 
-    it("reparses losslessly when returning to Builder without touching the JSON", () => {
+    it("reparses losslessly when returning to Builder without touching the JSON", async () => {
+      await addWhereLabels();
+      const labelInput = container.querySelector(
+        ".ant-select-auto-complete input",
+      ) as HTMLElement;
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
       fireEvent.click(screen.getByRole("switch"));
       fireEvent.click(screen.getByRole("switch"));
+
       expect(screen.getByText("Where labels")).toBeTruthy();
+      expect(screen.getByPlaceholderText("value")).toHaveValue("active");
     });
 
     it("shows a confirmation before resetting the builder after a manual JSON edit", () => {
@@ -313,8 +336,10 @@ describe("EntryDetail", () => {
       fireEvent.click(screen.getByRole("switch"));
       fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-      expect(screen.getByText("Where labels")).toBeTruthy();
-      expect(screen.getByPlaceholderText("value")).toHaveValue("");
+      // The reset goes back to the app's zero-condition default, so Where
+      // labels (added just for the edited "&status" condition) is gone too.
+      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.queryByPlaceholderText("value")).toBeNull();
     });
 
     it("resets to the default $each_t query, not a bare {}, so a later JSON view still shows it", () => {
@@ -344,6 +369,7 @@ describe("EntryDetail", () => {
     });
 
     it("blocks Run Query and shows an error when a condition row is missing its value", async () => {
+      await addWhereLabels();
       // The label field is an AutoComplete: antd renders its placeholder as
       // a decorative overlay rather than a native `placeholder` attribute,
       // so it has to be targeted by its distinguishing class instead.

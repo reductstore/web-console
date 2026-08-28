@@ -1,4 +1,4 @@
-import { Input, InputNumber, Segmented, Button, Typography } from "antd";
+import { Input, InputNumber, Segmented, Button } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import {
   SampleStep,
@@ -10,12 +10,14 @@ interface SampleStepEditorProps {
   step: SampleStep;
   onChange: (changes: Partial<SampleStep>) => void;
   onRemove: () => void;
+  removable?: boolean;
 }
 
 export default function SampleStepEditor({
   step,
   onChange,
   onRemove,
+  removable = true,
 }: SampleStepEditorProps) {
   const handleKindChange = (kind: SampleKind) => {
     onChange({
@@ -27,10 +29,15 @@ export default function SampleStepEditor({
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <Typography.Text style={{ width: 50, flexShrink: 0 }}>
-        Sample
-      </Typography.Text>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
       <Segmented
         options={SAMPLE_KINDS}
         value={step.kind}
@@ -52,12 +59,14 @@ export default function SampleStepEditor({
           style={{ flex: 1 }}
         />
       )}
-      <Button
-        aria-label="Remove sample step"
-        type="text"
-        icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
-        onClick={onRemove}
-      />
+      {removable && (
+        <Button
+          aria-label="Remove sample step"
+          type="text"
+          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+          onClick={onRemove}
+        />
+      )}
     </div>
   );
 }

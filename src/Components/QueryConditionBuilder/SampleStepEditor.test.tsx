@@ -71,7 +71,7 @@ describe("SampleStepEditor", () => {
         onRemove={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByText("Reduce by record count"));
+    fireEvent.click(screen.getByText("By record count"));
     expect(onChange).toHaveBeenCalledWith({
       kind: "$each_n",
       everyNth: undefined,
@@ -89,7 +89,7 @@ describe("SampleStepEditor", () => {
         onRemove={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByText("Reduce by time interval"));
+    fireEvent.click(screen.getByText("By time interval"));
     expect(onChange).toHaveBeenCalledWith({
       kind: "$each_t",
       everyNth: undefined,

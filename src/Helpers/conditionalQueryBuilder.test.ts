@@ -5,13 +5,15 @@ import {
   FlatCondition,
   hasIncompleteSteps,
   isLabelOperator,
+  LimitStepEntry,
+  moveItem,
   parseBuilderList,
-  QuerySteps,
   removeCondition,
-  removeLimitStep,
-  removeSampleStep,
+  removeStep,
+  SampleStepEntry,
   serializeBuilderList,
   serializeSteps,
+  Step,
   updateCondition,
   updateLimitStep,
   updateSampleStep,
@@ -27,6 +29,11 @@ const makeCondition = (
   negated: overrides.negated ?? false,
   connector: overrides.connector ?? "$and",
 });
+
+const findSample = (steps?: Step[]) =>
+  steps?.find((step): step is SampleStepEntry => step.type === "sample");
+const findLimit = (steps?: Step[]) =>
+  steps?.find((step): step is LimitStepEntry => step.type === "limit");
 
 describe("conditionalQueryBuilder", () => {
   describe("isLabelOperator", () => {
@@ -50,6 +57,26 @@ describe("conditionalQueryBuilder", () => {
     it("rejects logical operators and unknown strings", () => {
       expect(isLabelOperator("$and")).toBe(false);
       expect(isLabelOperator("$foo")).toBe(false);
+    });
+  });
+
+  describe("moveItem", () => {
+    it("moves an item forward in the list", () => {
+      expect(moveItem(["a", "b", "c"], 0, 2)).toEqual(["b", "c", "a"]);
+    });
+
+    it("moves an item backward in the list", () => {
+      expect(moveItem(["a", "b", "c"], 2, 0)).toEqual(["c", "a", "b"]);
+    });
+
+    it("does not mutate the original list", () => {
+      const list = ["a", "b", "c"];
+      moveItem(list, 0, 2);
+      expect(list).toEqual(["a", "b", "c"]);
+    });
+
+    it("is a no-op when the index doesn't change", () => {
+      expect(moveItem(["a", "b", "c"], 1, 1)).toEqual(["a", "b", "c"]);
     });
   });
 
@@ -176,12 +203,13 @@ describe("conditionalQueryBuilder", () => {
     });
 
     it("treats a lone $each_t as an empty list and surfaces it as a sample step", () => {
-      expect(parseBuilderList({ $each_t: "$__interval" })).toEqual({
-        success: true,
-        list: [],
-        steps: {
-          sample: { kind: "$each_t", duration: "", useIntervalMacro: true },
-        },
+      const result = parseBuilderList({ $each_t: "$__interval" });
+      expect(result.success).toBe(true);
+      expect(result.list).toEqual([]);
+      expect(findSample(result.steps)?.sample).toEqual({
+        kind: "$each_t",
+        duration: "",
+        useIntervalMacro: true,
       });
     });
 
@@ -191,7 +219,7 @@ describe("conditionalQueryBuilder", () => {
         "&status": { $eq: "active" },
       });
       expect(result.success).toBe(true);
-      expect(result.steps?.sample).toEqual({
+      expect(findSample(result.steps)?.sample).toEqual({
         kind: "$each_t",
         duration: "30s",
         useIntervalMacro: false,
@@ -217,7 +245,7 @@ describe("conditionalQueryBuilder", () => {
         $each_t: "$__interval",
       });
       expect(result.success).toBe(true);
-      expect(result.steps?.sample).toEqual({
+      expect(findSample(result.steps)?.sample).toEqual({
         kind: "$each_t",
         duration: "",
         useIntervalMacro: true,
@@ -228,7 +256,7 @@ describe("conditionalQueryBuilder", () => {
     it("parses $each_n as a sample step", () => {
       const result = parseBuilderList({ $each_n: 5 });
       expect(result.success).toBe(true);
-      expect(result.steps?.sample).toEqual({
+      expect(findSample(result.steps)?.sample).toEqual({
         kind: "$each_n",
         everyNth: 5,
         duration: "",
@@ -239,7 +267,7 @@ describe("conditionalQueryBuilder", () => {
     it("parses $limit as a limit step", () => {
       const result = parseBuilderList({ $limit: 100 });
       expect(result.success).toBe(true);
-      expect(result.steps?.limit).toEqual({ count: 100 });
+      expect(findLimit(result.steps)?.limit).toEqual({ count: 100 });
     });
 
     it("parses filters combined with a sample step and a limit step", () => {
@@ -250,12 +278,12 @@ describe("conditionalQueryBuilder", () => {
       });
       expect(result.success).toBe(true);
       expect(result.list).toHaveLength(1);
-      expect(result.steps?.sample).toEqual({
+      expect(findSample(result.steps)?.sample).toEqual({
         kind: "$each_t",
         duration: "30s",
         useIntervalMacro: false,
       });
-      expect(result.steps?.limit).toEqual({ count: 50 });
+      expect(findLimit(result.steps)?.limit).toEqual({ count: 50 });
     });
 
     it("rejects $each_n and $each_t present together", () => {
@@ -282,7 +310,7 @@ describe("conditionalQueryBuilder", () => {
       // Builder mode rather than being treated as malformed.
       const result = parseBuilderList({ $each_n: null });
       expect(result.success).toBe(true);
-      expect(result.steps?.sample).toEqual({
+      expect(findSample(result.steps)?.sample).toEqual({
         kind: "$each_n",
         everyNth: undefined,
         duration: "",
@@ -293,7 +321,7 @@ describe("conditionalQueryBuilder", () => {
     it("parses a null $limit as a blank limit step instead of rejecting it", () => {
       const result = parseBuilderList({ $limit: null });
       expect(result.success).toBe(true);
-      expect(result.steps?.limit).toEqual({ count: undefined });
+      expect(findLimit(result.steps)?.limit).toEqual({ count: undefined });
     });
 
     it("parses a single bare condition", () => {
@@ -557,8 +585,8 @@ describe("conditionalQueryBuilder", () => {
 
   describe("query steps", () => {
     it("adds a blank sample step requiring an explicit value", () => {
-      const result = addSampleStep({});
-      expect(result.sample).toEqual({
+      const result = addSampleStep([]);
+      expect(findSample(result)?.sample).toEqual({
         kind: "$each_t",
         duration: "",
         useIntervalMacro: false,
@@ -566,30 +594,32 @@ describe("conditionalQueryBuilder", () => {
     });
 
     it("adds a blank limit step", () => {
-      const result = addLimitStep({});
-      expect(result.limit).toEqual({ count: undefined });
+      const result = addLimitStep([]);
+      expect(findLimit(result)?.limit).toEqual({ count: undefined });
     });
 
     it("keeps the other step untouched when adding one", () => {
-      const steps: QuerySteps = { limit: { count: 10 } };
+      const steps: Step[] = [
+        { id: "limit-1", type: "limit", limit: { count: 10 } },
+      ];
       const result = addSampleStep(steps);
-      expect(result.limit).toEqual({ count: 10 });
-      expect(result.sample).toBeDefined();
+      expect(findLimit(result)?.limit).toEqual({ count: 10 });
+      expect(findSample(result)).toBeDefined();
     });
 
-    it("does not mutate the original steps object when adding", () => {
-      const steps: QuerySteps = {};
+    it("does not mutate the original steps array when adding", () => {
+      const steps: Step[] = [];
       addSampleStep(steps);
-      expect(steps).toEqual({});
+      expect(steps).toEqual([]);
     });
 
     it("updates the sample step's fields", () => {
-      const steps = addSampleStep({});
-      const result = updateSampleStep(steps, {
+      const steps = addSampleStep([]);
+      const result = updateSampleStep(steps, findSample(steps)!.id, {
         kind: "$each_n",
         everyNth: 5,
       });
-      expect(result.sample).toEqual({
+      expect(findSample(result)?.sample).toEqual({
         kind: "$each_n",
         everyNth: 5,
         duration: "",
@@ -597,129 +627,148 @@ describe("conditionalQueryBuilder", () => {
       });
     });
 
-    it("does nothing when updating a sample step that isn't there", () => {
-      const steps: QuerySteps = {};
-      expect(updateSampleStep(steps, { everyNth: 5 })).toBe(steps);
+    it("returns the array unchanged when updating a sample step that isn't there", () => {
+      const steps: Step[] = [];
+      expect(updateSampleStep(steps, "missing", { everyNth: 5 })).toEqual(
+        steps,
+      );
     });
 
     it("updates the limit step's count", () => {
-      const steps = addLimitStep({});
-      const result = updateLimitStep(steps, { count: 100 });
-      expect(result.limit).toEqual({ count: 100 });
+      const steps = addLimitStep([]);
+      const result = updateLimitStep(steps, findLimit(steps)!.id, {
+        count: 100,
+      });
+      expect(findLimit(result)?.limit).toEqual({ count: 100 });
     });
 
     it("removes the sample step and keeps the limit step", () => {
-      const steps = addLimitStep(addSampleStep({}));
-      const result = removeSampleStep(steps);
-      expect(result.sample).toBeUndefined();
-      expect(result.limit).toEqual({ count: undefined });
+      const steps = addLimitStep(addSampleStep([]));
+      const result = removeStep(steps, findSample(steps)!.id);
+      expect(findSample(result)).toBeUndefined();
+      expect(findLimit(result)?.limit).toEqual({ count: undefined });
     });
 
     it("removes the limit step and keeps the sample step", () => {
-      const steps = addLimitStep(addSampleStep({}));
-      const result = removeLimitStep(steps);
-      expect(result.limit).toBeUndefined();
-      expect(result.sample).toBeDefined();
+      const steps = addLimitStep(addSampleStep([]));
+      const result = removeStep(steps, findLimit(steps)!.id);
+      expect(findLimit(result)).toBeUndefined();
+      expect(findSample(result)).toBeDefined();
     });
 
     describe("hasIncompleteSteps", () => {
       it("is false when there are no steps", () => {
-        expect(hasIncompleteSteps({})).toBe(false);
+        expect(hasIncompleteSteps([])).toBe(false);
       });
 
       it("is false for a sample step using the interval macro", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           useIntervalMacro: true,
         });
-        expect(hasIncompleteSteps(steps)).toBe(false);
+        expect(hasIncompleteSteps(result)).toBe(false);
       });
 
       it("is true for an $each_n sample step with no count typed", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           kind: "$each_n",
         });
-        expect(hasIncompleteSteps(steps)).toBe(true);
+        expect(hasIncompleteSteps(result)).toBe(true);
       });
 
       it("is true for an $each_t sample step with no duration and no macro", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           useIntervalMacro: false,
         });
-        expect(hasIncompleteSteps(steps)).toBe(true);
+        expect(hasIncompleteSteps(result)).toBe(true);
       });
 
       it("is true for a limit step with no count typed", () => {
-        expect(hasIncompleteSteps(addLimitStep({}))).toBe(true);
+        expect(hasIncompleteSteps(addLimitStep([]))).toBe(true);
       });
 
       it("is false once the limit step has a count", () => {
-        const steps = updateLimitStep(addLimitStep({}), { count: 50 });
-        expect(hasIncompleteSteps(steps)).toBe(false);
+        const steps = addLimitStep([]);
+        const result = updateLimitStep(steps, findLimit(steps)!.id, {
+          count: 50,
+        });
+        expect(hasIncompleteSteps(result)).toBe(false);
       });
     });
 
     describe("serializeSteps", () => {
       it("returns an empty object when there are no steps", () => {
-        expect(serializeSteps({})).toEqual({});
+        expect(serializeSteps([])).toEqual({});
       });
 
       it("serializes an $each_n sample step", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           kind: "$each_n",
           everyNth: 5,
         });
-        expect(serializeSteps(steps)).toEqual({ $each_n: 5 });
+        expect(serializeSteps(result)).toEqual({ $each_n: 5 });
       });
 
       it("serializes an $each_t sample step using the interval macro", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           useIntervalMacro: true,
         });
-        expect(serializeSteps(steps)).toEqual({
+        expect(serializeSteps(result)).toEqual({
           $each_t: "$__interval",
         });
       });
 
       it("serializes an $each_t sample step with a literal duration", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           useIntervalMacro: false,
           duration: "30s",
         });
-        expect(serializeSteps(steps)).toEqual({ $each_t: "30s" });
+        expect(serializeSteps(result)).toEqual({ $each_t: "30s" });
       });
 
       it("shows an incomplete sample or limit step with an empty value instead of omitting it", () => {
-        expect(serializeSteps(addSampleStep({}))).toEqual({ $each_t: "" });
-        expect(serializeSteps(addLimitStep({}))).toEqual({ $limit: null });
+        expect(serializeSteps(addSampleStep([]))).toEqual({ $each_t: "" });
+        expect(serializeSteps(addLimitStep([]))).toEqual({ $limit: null });
       });
 
       it("shows an incomplete $each_n sample step with a null value", () => {
-        const steps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const result = updateSampleStep(steps, findSample(steps)!.id, {
           kind: "$each_n",
         });
-        expect(serializeSteps(steps)).toEqual({ $each_n: null });
+        expect(serializeSteps(result)).toEqual({ $each_n: null });
       });
 
       it("round-trips an incomplete $each_n or $limit step back through parseBuilderList", () => {
         // A step saved mid-edit (e.g. via the Save button, which isn't
         // gated on completeness) must reopen in Builder mode, not be
         // rejected as unrepresentable just because its value is still null.
-        const eachNSteps = updateSampleStep(addSampleStep({}), {
+        const steps = addSampleStep([]);
+        const eachNSteps = updateSampleStep(steps, findSample(steps)!.id, {
           kind: "$each_n",
         });
         const eachNResult = parseBuilderList(serializeSteps(eachNSteps));
         expect(eachNResult.success).toBe(true);
 
-        const limitResult = parseBuilderList(serializeSteps(addLimitStep({})));
+        const limitResult = parseBuilderList(serializeSteps(addLimitStep([])));
         expect(limitResult.success).toBe(true);
       });
 
       it("serializes a sample step and a limit step together", () => {
-        const steps = addLimitStep(
-          updateSampleStep(addSampleStep({}), { useIntervalMacro: true }),
-        );
-        const withLimit = updateLimitStep(steps, { count: 100 });
-        expect(serializeSteps(withLimit)).toEqual({
+        const sampled = addSampleStep([]);
+        const withMacro = updateSampleStep(sampled, findSample(sampled)!.id, {
+          useIntervalMacro: true,
+        });
+        const withLimit = addLimitStep(withMacro);
+        const result = updateLimitStep(withLimit, findLimit(withLimit)!.id, {
+          count: 100,
+        });
+        expect(serializeSteps(result)).toEqual({
           $each_t: "$__interval",
           $limit: 100,
         });

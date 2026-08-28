@@ -97,6 +97,7 @@ export default function ConditionListEditor({
           disabled={!canAddCondition}
           icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
           onClick={onAddCondition}
+          style={{ marginTop: 8 }}
         />
       </Tooltip>
     </div>

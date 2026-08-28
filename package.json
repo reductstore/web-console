@@ -52,6 +52,9 @@
     "e2e:headed:debug": "playwright test --headed --project=chromium --debug"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@reductstore/reduct-query-monaco": "^1.0.1",
     "ajv": "^8.18.0",
