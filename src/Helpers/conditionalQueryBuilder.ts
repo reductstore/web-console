@@ -15,23 +15,43 @@ export type LabelOperator =
 
 export type LogicalConnector = "$and" | "$or";
 
-export type SampleKind = "$each_n" | "$each_t";
-
-export interface SampleStep {
-  kind: SampleKind;
+export interface EachNStep {
   everyNth?: number;
+}
+
+export interface EachTStep {
   duration: string;
   useIntervalMacro: boolean;
+}
+
+// ReductStore's duration literal grammar: one or more <number><unit>
+// parts (decimals allowed, e.g. "1.5s"), combinable with whitespace (e.g.
+// "1d 2h"). Two-letter units are listed before their one-letter prefixes
+// (us/ms before s/m) so e.g. "500ms" isn't matched as "500m" + a stray "s".
+const EACH_T_DURATION_PATTERN = /^(\d+(\.\d+)?(us|ms|s|m|h|d)\s*)+$/;
+
+/**
+ * Check whether a string is a valid $each_t duration - see
+ * https://www.reduct.store/docs/conditional-query for the full grammar.
+ */
+export function isValidEachTDuration(duration: string): boolean {
+  return EACH_T_DURATION_PATTERN.test(duration.trim());
 }
 
 export interface LimitStep {
   count?: number;
 }
 
-export interface SampleStepEntry {
+export interface EachNStepEntry {
   id: string;
-  type: "sample";
-  sample: SampleStep;
+  type: "each_n";
+  eachN: EachNStep;
+}
+
+export interface EachTStepEntry {
+  id: string;
+  type: "each_t";
+  eachT: EachTStep;
 }
 
 export interface LimitStepEntry {
@@ -40,7 +60,25 @@ export interface LimitStepEntry {
   limit: LimitStep;
 }
 
-export type Step = SampleStepEntry | LimitStepEntry;
+// $each_n and $each_t are independent directives - a query can combine
+// both (e.g. thin to every 20th record, then also throttle to at most one
+// per second) - so each gets its own step, exactly like $limit. They're
+// still presented in the builder as one grouped "Sample" card with a
+// kind switch though: a fresh Sample step is one or the other, and adding
+// a second Sample step fills in whichever kind isn't taken yet.
+export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
+
+export type SampleKind = "each_n" | "each_t";
+
+export interface SampleKindInfo {
+  value: SampleKind;
+  label: string;
+}
+
+export const SAMPLE_KINDS: SampleKindInfo[] = [
+  { value: "each_n", label: "By record count" },
+  { value: "each_t", label: "By time interval" },
+];
 
 // Fixed id for the "Where labels" block in a QueryConditionBuilder's
 // blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
@@ -172,36 +210,23 @@ export function isMultiValueOperator(operator: LabelOperator): boolean {
   );
 }
 
-export interface SampleKindInfo {
-  value: SampleKind;
-  label: string;
-}
-
-export const SAMPLE_KINDS: SampleKindInfo[] = [
-  { value: "$each_n", label: "By record count" },
-  { value: "$each_t", label: "By time interval" },
-];
-
-export function isDefaultSampleStep(sample: SampleStep): boolean {
-  return (
-    sample.kind === "$each_t" &&
-    sample.duration === "" &&
-    sample.useIntervalMacro === true
-  );
-}
-
 export function serializeSteps(steps: Step[]): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
-  const sampleEntry = steps.find(
-    (step): step is SampleStepEntry => step.type === "sample",
+  const eachNEntry = steps.find(
+    (step): step is EachNStepEntry => step.type === "each_n",
   );
-  if (sampleEntry?.sample.kind === "$each_n") {
-    result.$each_n = sampleEntry.sample.everyNth ?? null;
-  } else if (sampleEntry?.sample.kind === "$each_t") {
-    result.$each_t = sampleEntry.sample.useIntervalMacro
+  if (eachNEntry) {
+    result.$each_n = eachNEntry.eachN.everyNth ?? null;
+  }
+
+  const eachTEntry = steps.find(
+    (step): step is EachTStepEntry => step.type === "each_t",
+  );
+  if (eachTEntry) {
+    result.$each_t = eachTEntry.eachT.useIntervalMacro
       ? "$__interval"
-      : sampleEntry.sample.duration;
+      : eachTEntry.eachT.duration;
   }
 
   const limitEntry = steps.find(
@@ -369,48 +394,50 @@ function parseSteps(
   eachT: unknown,
   limit: unknown,
 ): { success: boolean; steps?: Step[] } {
-  if (eachN !== undefined && eachT !== undefined) {
-    return { success: false };
-  }
+  const steps: Step[] = [];
 
-  let sample: SampleStep | undefined;
   if (eachN !== undefined) {
+    // null is what serializeSteps emits for an $each_n step added but not
+    // yet filled in - accepted here as "no count typed yet" so a query
+    // saved mid-edit still round-trips into Builder mode instead of being
+    // rejected as unrepresentable.
     if (eachN !== null && typeof eachN !== "number") {
       return { success: false };
     }
-    sample = {
-      kind: "$each_n",
-      everyNth: eachN === null ? undefined : eachN,
-      duration: "",
-      useIntervalMacro: false,
-    };
-  } else if (eachT !== undefined) {
+    steps.push({
+      id: crypto.randomUUID(),
+      type: "each_n",
+      eachN: { everyNth: eachN === null ? undefined : eachN },
+    });
+  }
+
+  if (eachT !== undefined) {
     if (typeof eachT !== "string") {
       return { success: false };
     }
-    sample =
-      eachT === "$__interval"
-        ? { kind: "$each_t", duration: "", useIntervalMacro: true }
-        : { kind: "$each_t", duration: eachT, useIntervalMacro: false };
+    steps.push({
+      id: crypto.randomUUID(),
+      type: "each_t",
+      eachT:
+        eachT === "$__interval"
+          ? { duration: "", useIntervalMacro: true }
+          : { duration: eachT, useIntervalMacro: false },
+    });
   }
 
-  let limitStep: LimitStep | undefined;
   if (limit !== undefined) {
     // Same reasoning as $each_n above: null is a blank Limit step, not a
     // malformed one.
     if (limit !== null && typeof limit !== "number") {
       return { success: false };
     }
-    limitStep = { count: limit === null ? undefined : limit };
+    steps.push({
+      id: crypto.randomUUID(),
+      type: "limit",
+      limit: { count: limit === null ? undefined : limit },
+    });
   }
 
-  const steps: Step[] = [];
-  if (sample) {
-    steps.push({ id: crypto.randomUUID(), type: "sample", sample });
-  }
-  if (limitStep) {
-    steps.push({ id: crypto.randomUUID(), type: "limit", limit: limitStep });
-  }
   return { success: true, steps: steps.length > 0 ? steps : undefined };
 }
 
@@ -527,34 +554,83 @@ export function addCondition(list: FlatCondition[]): FlatCondition[] {
   ];
 }
 
+function blankEachN(id: string): EachNStepEntry {
+  return { id, type: "each_n", eachN: { everyNth: 2 } };
+}
+
+function blankEachT(id: string): EachTStepEntry {
+  return {
+    id,
+    type: "each_t",
+    eachT: { duration: "", useIntervalMacro: true },
+  };
+}
+
+export function addEachNStep(steps: Step[]): Step[] {
+  return [...steps, blankEachN(crypto.randomUUID())];
+}
+
+export function addEachTStep(steps: Step[]): Step[] {
+  return [...steps, blankEachT(crypto.randomUUID())];
+}
+
+// The "+ Add step" > "Sample" action: fills in whichever kind isn't
+// already present (each_t first, since that's the app's own zero-config
+// default), so a query can only ever have at most one of each.
 export function addSampleStep(steps: Step[]): Step[] {
-  return [
-    ...steps,
-    {
-      id: crypto.randomUUID(),
-      type: "sample",
-      sample: { kind: "$each_t", duration: "", useIntervalMacro: false },
-    },
-  ];
+  const hasEachT = steps.some((step) => step.type === "each_t");
+  if (!hasEachT) {
+    return addEachTStep(steps);
+  }
+  const hasEachN = steps.some((step) => step.type === "each_n");
+  return hasEachN ? steps : addEachNStep(steps);
 }
 
 export function addLimitStep(steps: Step[]): Step[] {
   return [
     ...steps,
-    { id: crypto.randomUUID(), type: "limit", limit: { count: undefined } },
+    { id: crypto.randomUUID(), type: "limit", limit: { count: 100 } },
   ];
 }
 
-export function updateSampleStep(
+export function updateEachNStep(
   steps: Step[],
   id: string,
-  changes: Partial<SampleStep>,
+  changes: Partial<EachNStep>,
 ): Step[] {
   return steps.map((step) =>
-    step.id === id && step.type === "sample"
-      ? { ...step, sample: { ...step.sample, ...changes } }
+    step.id === id && step.type === "each_n"
+      ? { ...step, eachN: { ...step.eachN, ...changes } }
       : step,
   );
+}
+
+export function updateEachTStep(
+  steps: Step[],
+  id: string,
+  changes: Partial<EachTStep>,
+): Step[] {
+  return steps.map((step) =>
+    step.id === id && step.type === "each_t"
+      ? { ...step, eachT: { ...step.eachT, ...changes } }
+      : step,
+  );
+}
+
+// Switches a Sample-type entry (each_n or each_t) to the other kind,
+// keeping its id (and so its position) but resetting to that kind's blank
+// defaults - the same reset a fresh Sample step gets.
+export function switchSampleKind(
+  steps: Step[],
+  id: string,
+  kind: SampleKind,
+): Step[] {
+  return steps.map((step): Step => {
+    if (step.id !== id || (step.type !== "each_n" && step.type !== "each_t")) {
+      return step;
+    }
+    return kind === "each_n" ? blankEachN(id) : blankEachT(id);
+  });
 }
 
 export function updateLimitStep(
@@ -574,19 +650,25 @@ export function removeStep(steps: Step[], id: string): Step[] {
 }
 
 export function hasIncompleteSteps(steps: Step[]): boolean {
-  const sampleEntry = steps.find(
-    (step): step is SampleStepEntry => step.type === "sample",
+  const eachNEntry = steps.find(
+    (step): step is EachNStepEntry => step.type === "each_n",
   );
-  const sampleIncomplete =
-    !!sampleEntry &&
-    ((sampleEntry.sample.kind === "$each_n" &&
-      sampleEntry.sample.everyNth === undefined) ||
-      (sampleEntry.sample.kind === "$each_t" &&
-        !sampleEntry.sample.useIntervalMacro &&
-        sampleEntry.sample.duration.trim() === ""));
+  const eachNIncomplete =
+    !!eachNEntry && eachNEntry.eachN.everyNth === undefined;
+
+  const eachTEntry = steps.find(
+    (step): step is EachTStepEntry => step.type === "each_t",
+  );
+  const eachTIncomplete =
+    !!eachTEntry &&
+    !eachTEntry.eachT.useIntervalMacro &&
+    (eachTEntry.eachT.duration.trim() === "" ||
+      !isValidEachTDuration(eachTEntry.eachT.duration));
+
   const limitEntry = steps.find(
     (step): step is LimitStepEntry => step.type === "limit",
   );
   const limitIncomplete = !!limitEntry && limitEntry.limit.count === undefined;
-  return sampleIncomplete || limitIncomplete;
+
+  return eachNIncomplete || eachTIncomplete || limitIncomplete;
 }

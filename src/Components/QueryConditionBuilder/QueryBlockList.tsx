@@ -9,8 +9,10 @@ import {
   CONDITIONS_BLOCK_ID,
   FlatCondition,
   Step,
-  SampleStep,
+  EachNStep,
+  EachTStep,
   LimitStep,
+  SampleKind,
 } from "../../Helpers/conditionalQueryBuilder";
 
 type Block =
@@ -23,6 +25,7 @@ interface QueryBlockListProps {
   steps: Step[];
   sourceReady?: boolean;
   labelOptions?: string[];
+  intervalValue?: string;
   onChangeCondition: (
     id: string,
     changes: Partial<
@@ -34,9 +37,11 @@ interface QueryBlockListProps {
   ) => void;
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
-  onChangeSample: (id: string, changes: Partial<SampleStep>) => void;
+  onChangeEachN: (id: string, changes: Partial<EachNStep>) => void;
+  onChangeEachT: (id: string, changes: Partial<EachTStep>) => void;
   onChangeLimit: (id: string, changes: Partial<LimitStep>) => void;
   onAddSample: () => void;
+  onSwitchSampleKind: (id: string, kind: SampleKind) => void;
   onAddLimit: () => void;
   onAddConditionsBlock: () => void;
   onRemoveConditionsBlock: () => void;
@@ -50,12 +55,15 @@ export default function QueryBlockList({
   steps,
   sourceReady = true,
   labelOptions,
+  intervalValue,
   onChangeCondition,
   onRemoveCondition,
   onAddCondition,
-  onChangeSample,
+  onChangeEachN,
+  onChangeEachT,
   onChangeLimit,
   onAddSample,
+  onSwitchSampleKind,
   onAddLimit,
   onAddConditionsBlock,
   onRemoveConditionsBlock,
@@ -63,9 +71,14 @@ export default function QueryBlockList({
   onReorderBlock,
 }: QueryBlockListProps) {
   const hasConditionsBlock = blockOrder.includes(CONDITIONS_BLOCK_ID);
-  const hasSample = steps.some((step) => step.type === "sample");
+  const hasEachN = steps.some((step) => step.type === "each_n");
+  const hasEachT = steps.some((step) => step.type === "each_t");
   const hasLimit = steps.some((step) => step.type === "limit");
-  const allAdded = hasConditionsBlock && hasSample && hasLimit;
+  // Both Sample kinds are independent steps under the hood, but the "+ Add
+  // step" menu still offers one grouped "Sample" entry - a second click
+  // fills in whichever kind isn't taken yet.
+  const bothSampleKindsUsed = hasEachN && hasEachT;
+  const allAdded = hasConditionsBlock && bothSampleKindsUsed && hasLimit;
   const addStepHint = !sourceReady
     ? "Select a bucket and entries first"
     : allAdded
@@ -75,7 +88,7 @@ export default function QueryBlockList({
 
   const menuItems = [
     !hasConditionsBlock && { key: "conditions", label: "Where labels" },
-    !hasSample && { key: "sample", label: "Sample" },
+    !bothSampleKindsUsed && { key: "sample", label: "Sample" },
     !hasLimit && { key: "limit", label: "Limit" },
   ].filter((item) => item !== false);
 
@@ -89,8 +102,6 @@ export default function QueryBlockList({
     }
   };
 
-  // Every block - conditions included - only exists once a bucket and
-  // entries are selected, and only if the user has actually added it.
   const blocks: Block[] = sourceReady
     ? blockOrder.flatMap((id): Block[] => {
         if (id === CONDITIONS_BLOCK_ID) {
@@ -128,23 +139,35 @@ export default function QueryBlockList({
             );
           }
           const { step } = block;
-          return step.type === "sample" ? (
-            <SortableCard
-              key={step.id}
-              id={step.id}
-              label="Sample"
-              removeLabel="Remove sample step"
-              onRemove={() => onRemoveStep(step.id)}
-              inline
-            >
-              <SampleStepEditor
-                step={step.sample}
-                onChange={(changes) => onChangeSample(step.id, changes)}
+          if (step.type === "each_n" || step.type === "each_t") {
+            return (
+              <SortableCard
+                key={step.id}
+                id={step.id}
+                label="Sample"
+                removeLabel="Remove sample step"
                 onRemove={() => onRemoveStep(step.id)}
-                removable={false}
-              />
-            </SortableCard>
-          ) : (
+                inline
+              >
+                <SampleStepEditor
+                  kind={step.type}
+                  everyNth={
+                    step.type === "each_n" ? step.eachN.everyNth : undefined
+                  }
+                  duration={step.type === "each_t" ? step.eachT.duration : ""}
+                  useIntervalMacro={
+                    step.type === "each_t" ? step.eachT.useIntervalMacro : false
+                  }
+                  onChangeEachN={(changes) => onChangeEachN(step.id, changes)}
+                  onChangeEachT={(changes) => onChangeEachT(step.id, changes)}
+                  onSwitchKind={(kind) => onSwitchSampleKind(step.id, kind)}
+                  switchDisabled={bothSampleKindsUsed}
+                  intervalValue={intervalValue}
+                />
+              </SortableCard>
+            );
+          }
+          return (
             <SortableCard
               key={step.id}
               id={step.id}
@@ -156,8 +179,6 @@ export default function QueryBlockList({
               <LimitStepEditor
                 step={step.limit}
                 onChange={(changes) => onChangeLimit(step.id, changes)}
-                onRemove={() => onRemoveStep(step.id)}
-                removable={false}
               />
             </SortableCard>
           );
@@ -165,20 +186,24 @@ export default function QueryBlockList({
       />
 
       <Tooltip title={addStepHint}>
-        <Dropdown
-          menu={{ items: menuItems, onClick: handleMenuClick }}
-          trigger={["click"]}
-          disabled={disabled}
-        >
-          <Button
-            aria-label="Add step"
+        {/* A disabled Button doesn't receive pointer events, so wrapping it
+            directly stops the Tooltip's hover trigger from ever firing -
+            this extra span still does. */}
+        <span style={{ display: "inline-block", marginTop: 8 }}>
+          <Dropdown
+            menu={{ items: menuItems, onClick: handleMenuClick }}
+            trigger={["click"]}
             disabled={disabled}
-            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-            style={{ marginTop: 8 }}
           >
-            Add step
-          </Button>
-        </Dropdown>
+            <Button
+              aria-label="Add step"
+              disabled={disabled}
+              icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+            >
+              Add step
+            </Button>
+          </Dropdown>
+        </span>
       </Tooltip>
     </div>
   );

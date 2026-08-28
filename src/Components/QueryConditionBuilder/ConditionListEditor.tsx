@@ -92,13 +92,17 @@ export default function ConditionListEditor({
         ))}
 
       <Tooltip title={addConditionHint}>
-        <Button
-          aria-label="Add condition"
-          disabled={!canAddCondition}
-          icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-          onClick={onAddCondition}
-          style={{ marginTop: 8 }}
-        />
+        {/* A disabled Button doesn't receive pointer events, so wrapping it
+            directly stops the Tooltip's hover trigger from ever firing -
+            this extra span still does. */}
+        <span style={{ display: "inline-block", marginTop: 8 }}>
+          <Button
+            aria-label="Add condition"
+            disabled={!canAddCondition}
+            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+            onClick={onAddCondition}
+          />
+        </span>
       </Tooltip>
     </div>
   );

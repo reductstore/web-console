@@ -5,24 +5,24 @@ import QueryBlockList from "./QueryBlockList";
 import {
   CONDITIONS_BLOCK_ID,
   FlatCondition,
-  SampleStep,
-  SampleStepEntry,
+  SampleKind,
   Step,
   addCondition,
   addLimitStep,
   addSampleStep,
   hasIncompleteSteps,
   hasValue,
-  isDefaultSampleStep,
   moveItem,
   parseQueryValue,
   removeCondition,
   removeStep,
   serializeBuilderList,
   serializeSteps,
+  switchSampleKind,
   updateCondition,
+  updateEachNStep,
+  updateEachTStep,
   updateLimitStep,
-  updateSampleStep,
 } from "../../Helpers/conditionalQueryBuilder";
 import { formatAsStrictJSON } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
@@ -30,23 +30,6 @@ import { QueryOptions } from "reduct-js";
 type ValidationContext = ComponentProps<
   typeof JsonQueryEditor
 >["validationContext"];
-
-function splitSteps(parsed: Step[] | undefined): {
-  steps: Step[];
-  implicitSample: SampleStep | undefined;
-} {
-  const list = parsed ?? [];
-  const sampleEntry = list.find(
-    (step): step is SampleStepEntry => step.type === "sample",
-  );
-  if (sampleEntry && isDefaultSampleStep(sampleEntry.sample)) {
-    return {
-      steps: list.filter((step) => step.id !== sampleEntry.id),
-      implicitSample: sampleEntry.sample,
-    };
-  }
-  return { steps: list, implicitSample: undefined };
-}
 
 function initialBlockOrder(
   conditions: FlatCondition[],
@@ -58,12 +41,49 @@ function initialBlockOrder(
   ];
 }
 
+const STEP_KEYS: Record<Step["type"], string> = {
+  each_n: "$each_n",
+  each_t: "$each_t",
+  limit: "$limit",
+};
+
+function reorderQueryKeys(
+  value: Record<string, unknown>,
+  blockOrder: string[],
+  steps: Step[],
+): Record<string, unknown> {
+  const stepKeyById = new Map(
+    steps.map((step) => [step.id, STEP_KEYS[step.type]]),
+  );
+  const conditionsKey = Object.keys(value).find(
+    (key) => key !== "$each_n" && key !== "$each_t" && key !== "$limit",
+  );
+
+  const orderedKeys: string[] = [];
+  for (const blockId of blockOrder) {
+    const key =
+      blockId === CONDITIONS_BLOCK_ID
+        ? conditionsKey
+        : stepKeyById.get(blockId);
+    if (key !== undefined && key in value && !orderedKeys.includes(key)) {
+      orderedKeys.push(key);
+    }
+  }
+  const remainingKeys = Object.keys(value).filter(
+    (key) => !orderedKeys.includes(key),
+  );
+
+  const result: Record<string, unknown> = {};
+  for (const key of [...orderedKeys, ...remainingKeys]) {
+    result[key] = value[key];
+  }
+  return result;
+}
+
 interface QueryConditionBuilderProps {
   value: string;
   onChange: (value: string) => void;
   mode: "builder" | "json";
-  // Called when value can't be flattened into rows (e.g. real nested
-  // grouping); the parent decides how to react, typically switching to JSON.
   onUnrepresentable: () => void;
   height?: number | string;
   error?: string;
@@ -81,15 +101,12 @@ export default function QueryConditionBuilder({
   validationContext,
   onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
-  // Parsed once on mount and read by the four useState calls below, instead
-  // of each independently re-parsing `value`.
   const [initial] = useState(() => {
     const parsed = parseQueryValue(value);
-    const split = splitSteps(parsed?.steps);
+    const conditions = parsed?.list.length ? parsed.list : addCondition([]);
     return {
-      conditions: parsed?.list ?? [],
-      steps: split.steps,
-      implicitSample: split.implicitSample,
+      conditions,
+      steps: parsed?.steps ?? [],
     };
   });
 
@@ -97,12 +114,7 @@ export default function QueryConditionBuilder({
     initial.conditions,
   );
   const [steps, setSteps] = useState<Step[]>(initial.steps);
-  const [implicitSample, setImplicitSample] = useState<SampleStep | undefined>(
-    initial.implicitSample,
-  );
-  // Order that "Where labels" (fixed id, present only if added) and each
-  // Sample/Limit step render in - a purely visual arrangement, independent
-  // of the serialized JSON (step order doesn't affect query semantics).
+
   const [blockOrder, setBlockOrder] = useState<string[]>(() =>
     initialBlockOrder(initial.conditions, initial.steps),
   );
@@ -147,8 +159,9 @@ export default function QueryConditionBuilder({
           setLabelOptions(Array.from(foundLabels).sort());
         }
       } catch {
-        // Label suggestions are best-effort; a failed sample query just
-        // leaves the list empty.
+        if (!cancelled) {
+          setLabelOptions([]);
+        }
       }
     }
 
@@ -164,8 +177,6 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
-  // Resync whenever we're in Builder mode and `value` doesn't match what
-  // this component last emitted (a loaded query, or JSON->Builder switch).
   useEffect(() => {
     if (mode !== "builder" || value === lastEmittedValueRef.current) {
       return;
@@ -176,13 +187,11 @@ export default function QueryConditionBuilder({
       onUnrepresentable();
       return;
     }
-    setConditions(parsed.list);
-    const split = splitSteps(parsed.steps);
-    setSteps(split.steps);
-    setImplicitSample(split.implicitSample);
-    // A freshly loaded query has no prior UI arrangement to restore, so
-    // "Where labels" always leads again when present.
-    setBlockOrder(initialBlockOrder(parsed.list, split.steps));
+    const nextConditions = parsed.list.length ? parsed.list : addCondition([]);
+    const nextSteps = parsed.steps ?? [];
+    setConditions(nextConditions);
+    setSteps(nextSteps);
+    setBlockOrder(initialBlockOrder(nextConditions, nextSteps));
   }, [value, mode]);
 
   useEffect(() => {
@@ -201,27 +210,15 @@ export default function QueryConditionBuilder({
   const applyQuery = (
     nextConditions: FlatCondition[],
     nextSteps: Step[],
-    nextImplicitSample: SampleStep | undefined,
+    nextBlockOrder: string[] = blockOrder,
   ) => {
     setConditions(nextConditions);
     setSteps(nextSteps);
-    setImplicitSample(nextImplicitSample);
-    const hasSample = nextSteps.some((step) => step.type === "sample");
-    const effectiveSteps: Step[] =
-      !hasSample && nextImplicitSample
-        ? [
-            ...nextSteps,
-            {
-              id: "implicit-sample",
-              type: "sample",
-              sample: nextImplicitSample,
-            },
-          ]
-        : nextSteps;
-    const nextValue = {
+    const merged = {
       ...serializeBuilderList(nextConditions),
-      ...serializeSteps(effectiveSteps),
+      ...serializeSteps(nextSteps),
     };
+    const nextValue = reorderQueryKeys(merged, nextBlockOrder, nextSteps);
     const formatted = formatAsStrictJSON(nextValue);
     lastEmittedValueRef.current = formatted;
     onChange(formatted);
@@ -261,63 +258,57 @@ export default function QueryConditionBuilder({
         steps={steps}
         sourceReady={sourceReady}
         labelOptions={labelOptions}
+        intervalValue={validationContext?.intervalValue ?? undefined}
         onChangeCondition={(id, changes) =>
-          applyQuery(
-            updateCondition(conditions, id, changes),
-            steps,
-            implicitSample,
-          )
+          applyQuery(updateCondition(conditions, id, changes), steps)
         }
         onRemoveCondition={(id) =>
-          applyQuery(removeCondition(conditions, id), steps, implicitSample)
+          applyQuery(removeCondition(conditions, id), steps)
         }
-        onAddCondition={() =>
-          applyQuery(addCondition(conditions), steps, implicitSample)
+        onAddCondition={() => applyQuery(addCondition(conditions), steps)}
+        onChangeEachN={(id, changes) =>
+          applyQuery(conditions, updateEachNStep(steps, id, changes))
         }
-        onChangeSample={(id, changes) =>
-          applyQuery(
-            conditions,
-            updateSampleStep(steps, id, changes),
-            implicitSample,
-          )
+        onChangeEachT={(id, changes) =>
+          applyQuery(conditions, updateEachTStep(steps, id, changes))
         }
         onChangeLimit={(id, changes) =>
-          applyQuery(
-            conditions,
-            updateLimitStep(steps, id, changes),
-            implicitSample,
-          )
+          applyQuery(conditions, updateLimitStep(steps, id, changes))
         }
         onAddConditionsBlock={() => {
-          applyQuery(addCondition(conditions), steps, implicitSample);
+          applyQuery(addCondition(conditions), steps);
           appendBlock(CONDITIONS_BLOCK_ID);
         }}
         onRemoveConditionsBlock={() => {
-          applyQuery([], steps, implicitSample);
+          applyQuery([], steps);
           removeBlock(CONDITIONS_BLOCK_ID);
         }}
         onAddSample={() => {
           const nextSteps = addSampleStep(steps);
-          applyQuery(conditions, nextSteps, undefined);
-          appendBlock(nextSteps[nextSteps.length - 1].id);
+          if (nextSteps.length === steps.length) {
+            return;
+          }
+          const added = nextSteps[nextSteps.length - 1];
+          applyQuery(conditions, nextSteps);
+          appendBlock(added.id);
+        }}
+        onSwitchSampleKind={(id, kind: SampleKind) => {
+          applyQuery(conditions, switchSampleKind(steps, id, kind));
         }}
         onAddLimit={() => {
           const nextSteps = addLimitStep(steps);
-          applyQuery(conditions, nextSteps, implicitSample);
+          applyQuery(conditions, nextSteps);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onRemoveStep={(id) => {
-          const removed = steps.find((step) => step.id === id);
-          applyQuery(
-            conditions,
-            removeStep(steps, id),
-            removed?.type === "sample" ? undefined : implicitSample,
-          );
+          applyQuery(conditions, removeStep(steps, id));
           removeBlock(id);
         }}
-        onReorderBlock={(fromIndex, toIndex) =>
-          setBlockOrder(moveItem(blockOrder, fromIndex, toIndex))
-        }
+        onReorderBlock={(fromIndex, toIndex) => {
+          const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
+          setBlockOrder(nextBlockOrder);
+          applyQuery(conditions, steps, nextBlockOrder);
+        }}
       />
       {error && (
         <div className="jsonQueryEditorValidation">

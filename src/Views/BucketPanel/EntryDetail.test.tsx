@@ -336,10 +336,11 @@ describe("EntryDetail", () => {
       fireEvent.click(screen.getByRole("switch"));
       fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-      // The reset goes back to the app's zero-condition default, so Where
-      // labels (added just for the edited "&status" condition) is gone too.
-      expect(screen.queryByText("Where labels")).toBeNull();
-      expect(screen.queryByPlaceholderText("value")).toBeNull();
+      // The reset goes back to the app's zero-condition default - Where
+      // labels still shows by default, but the edited "&status" condition
+      // is gone, leaving a blank row.
+      expect(screen.getByText("Where labels")).toBeTruthy();
+      expect(screen.getByPlaceholderText("value")).toHaveValue("");
     });
 
     it("resets to the default $each_t query, not a bare {}, so a later JSON view still shows it", () => {

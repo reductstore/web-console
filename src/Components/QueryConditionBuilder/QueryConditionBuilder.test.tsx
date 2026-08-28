@@ -7,8 +7,26 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { Client } from "reduct-js";
+import type { DragEndEvent } from "@dnd-kit/core";
 import QueryConditionBuilder from "./QueryConditionBuilder";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
+
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
+
+vi.mock("@dnd-kit/core", async () => {
+  const actual =
+    await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  return {
+    ...actual,
+    // Renders the real DndContext (so nested SortableContext/useSortable
+    // still work) but also captures onDragEnd so tests can invoke it
+    // directly - simulating a real pointer drag isn't feasible in jsdom.
+    DndContext: (props: React.ComponentProps<typeof actual.DndContext>) => {
+      capturedOnDragEnd = props.onDragEnd;
+      return <actual.DndContext {...props} />;
+    },
+  };
+});
 
 vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
@@ -34,6 +52,7 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
 
 beforeEach(() => {
   mockJSDOM();
+  capturedOnDragEnd = undefined;
   globalThis.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -51,19 +70,8 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
-// Where labels is now a step like Sample/Limit - added on demand from the
-// "+ Add step" menu rather than shown by default.
-const addWhereLabels = async () => {
-  await act(async () => {
-    fireEvent.click(screen.getByLabelText("Add step"));
-  });
-  await act(async () => {
-    fireEvent.click(screen.getByText("Where labels"));
-  });
-};
-
 describe("QueryConditionBuilder", () => {
-  it("shows Query with no blocks for an empty value until one is added", () => {
+  it("shows a blank Where labels row by default, without needing to be added", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -74,22 +82,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getByText("Query")).toBeTruthy();
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.queryByPlaceholderText("value")).toBeNull();
-  });
-
-  it("reveals one empty condition row once Where labels is added from the menu", async () => {
-    render(
-      <QueryConditionBuilder
-        value=""
-        onChange={noop}
-        mode="builder"
-        onUnrepresentable={noop}
-        validationContext={readyValidationContext}
-      />,
-    );
-    await addWhereLabels();
-    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
+    expect(screen.getByText("Where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
@@ -185,9 +178,6 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    // This query has no conditions of its own yet - Where labels must be
-    // added before there's a row to edit.
-    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -226,7 +216,6 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -274,7 +263,6 @@ describe("QueryConditionBuilder", () => {
       expect.objectContaining({ head: true, when: { $limit: 20 } }),
     );
 
-    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(labelInput);
     expect(await screen.findByTitle("status")).toBeTruthy();
@@ -321,7 +309,6 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
-    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     // The "+" button stays disabled until the row it would chain off of has
@@ -361,7 +348,6 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
-    await addWhereLabels();
     // The "+" button stays disabled until row 1 has both a label and a
     // value.
     const [labelInput] = screen.getAllByRole("combobox");
@@ -407,7 +393,6 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    await addWhereLabels();
     expect(screen.queryByText("and")).toBeNull();
     expect(screen.queryByText("not")).toBeNull();
   });
@@ -442,11 +427,8 @@ describe("QueryConditionBuilder", () => {
         onIncompleteConditionChange={onIncompleteConditionChange}
       />,
     );
-    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
-
-    await addWhereLabels();
-    // A freshly revealed blank row isn't incomplete either - only a
-    // partially filled one is.
+    // The default blank Where labels row isn't incomplete on its own -
+    // only a partially filled one is.
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
     const [labelInput] = screen.getAllByRole("combobox");
@@ -473,14 +455,46 @@ describe("QueryConditionBuilder", () => {
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
   });
 
-  describe("Sample and Limit steps", () => {
+  describe("each_n/each_t/Limit steps", () => {
     const openAddStepMenu = async () => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add step"));
       });
     };
 
-    it("adds a sample step and combines it with an existing filter", async () => {
+    it("adds a Sample step (each_t by default) and combines it with an existing filter", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
+      });
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "30s" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({
+        "&status": { $eq: "active" },
+        $each_t: "30s",
+      });
+    });
+
+    it("switches a Sample step to each_n via the kind picker and reports its count", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -493,27 +507,79 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Where labels"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
-      fireEvent.change(labelInput, { target: { value: "status" } });
-      fireEvent.change(screen.getByPlaceholderText("value"), {
-        target: { value: "active" },
+      fireEvent.click(screen.getByText("By record count"));
+      fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
+        target: { value: "20" },
       });
 
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({ $each_n: 20 });
+    });
+
+    it("adds a second Sample step for the other kind, matching the mandant's each_n+each_t example", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      // The first Sample step defaults to each_t.
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Sample"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
       });
       fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
-        target: { value: "30s" },
+        target: { value: "1s" },
+      });
+
+      // Adding Sample again fills in the other kind, since each_t is
+      // already taken.
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
+      });
+      fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
+        target: { value: "20" },
       });
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).toEqual({
-        "&status": { $eq: "active" },
-        $each_t: "30s",
+        $each_t: "1s",
+        $each_n: 20,
       });
+    });
+
+    it("locks the kind picker on both Sample steps once each_n and each_t are both present", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
+      });
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
+      });
+
+      expect(document.querySelectorAll(".ant-segmented-disabled")).toHaveLength(
+        2,
+      );
+      // Both kinds taken, so Sample no longer appears in the menu either.
+      await openAddStepMenu();
+      expect(screen.queryByRole("menuitem", { name: "Sample" })).toBeNull();
     });
 
     it("adds a limit step and combines it with an existing filter", async () => {
@@ -527,10 +593,6 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      await openAddStepMenu();
-      await act(async () => {
-        fireEvent.click(screen.getByText("Where labels"));
-      });
       const [labelInput] = screen.getAllByRole("combobox");
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -539,7 +601,7 @@ describe("QueryConditionBuilder", () => {
 
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Limit"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
       });
       fireEvent.change(screen.getByPlaceholderText("max records"), {
         target: { value: "100" },
@@ -552,7 +614,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("adds both a sample step and a limit step together", async () => {
+    it("adds both a Sample step and a limit step together", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -563,10 +625,6 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      await openAddStepMenu();
-      await act(async () => {
-        fireEvent.click(screen.getByText("Where labels"));
-      });
       const [labelInput] = screen.getAllByRole("combobox");
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -575,14 +633,14 @@ describe("QueryConditionBuilder", () => {
 
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Sample"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
       });
       fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
         target: { value: "30s" },
       });
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Limit"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
       });
       fireEvent.change(screen.getByPlaceholderText("max records"), {
         target: { value: "50" },
@@ -596,7 +654,59 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("reports an incomplete step and clears once it's filled in", async () => {
+    it("reorders the JSON's keys to match a drag-and-drop reorder of the blocks", async () => {
+      // Spying (not mocking the implementation) still returns the real
+      // generated ids, just lets the test read back which one a specific
+      // action produced.
+      const uuidMock = vi.spyOn(crypto, "randomUUID");
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      const callsBeforeLimit = uuidMock.mock.results.length;
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      const limitStepId = uuidMock.mock.results[callsBeforeLimit]
+        .value as string;
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "50" },
+      });
+
+      const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(beforeDrag))).toEqual([
+        "&status",
+        "$limit",
+      ]);
+
+      // Drag the Limit block above the Where labels block.
+      act(() => {
+        capturedOnDragEnd?.({
+          active: { id: limitStepId },
+          over: { id: "conditions" },
+        } as DragEndEvent);
+      });
+
+      const [afterDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(afterDrag))).toEqual(["$limit", "&status"]);
+
+      uuidMock.mockRestore();
+    });
+
+    it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
       const onIncompleteConditionChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -611,17 +721,24 @@ describe("QueryConditionBuilder", () => {
 
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Limit"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      // Limit defaults to a count of 100, so adding it alone doesn't block
+      // Run Query.
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
       fireEvent.change(screen.getByPlaceholderText("max records"), {
-        target: { value: "100" },
+        target: { value: "50" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("reports an incomplete sample step and clears once a value is chosen", async () => {
+    it("reports an incomplete Sample step once its macro-based default is cleared, and clears once refilled", async () => {
       const onIncompleteConditionChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -629,14 +746,24 @@ describe("QueryConditionBuilder", () => {
           onChange={noop}
           mode="builder"
           onUnrepresentable={noop}
-          validationContext={readyValidationContext}
+          validationContext={{
+            ...readyValidationContext,
+            intervalValue: "30s",
+          }}
           onIncompleteConditionChange={onIncompleteConditionChange}
         />,
       );
 
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Sample"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Sample" }));
+      });
+      // Sample defaults to the interval macro, so adding it alone doesn't
+      // block Run Query.
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
@@ -646,7 +773,7 @@ describe("QueryConditionBuilder", () => {
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("removes the matching menu item once a step is already added", async () => {
+    it("removes the matching menu item once limit is already added", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -659,15 +786,15 @@ describe("QueryConditionBuilder", () => {
 
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByText("Sample"));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
       });
       await openAddStepMenu();
-      expect(screen.queryByRole("menuitem", { name: "Sample" })).toBeNull();
-      expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
+      expect(screen.queryByRole("menuitem", { name: "Limit" })).toBeNull();
+      expect(screen.getByRole("menuitem", { name: "Sample" })).toBeTruthy();
     });
 
-    describe("implicit default sample step", () => {
-      it("hides the default $each_t/$__interval sample step", () => {
+    describe("default Sample step", () => {
+      it("shows the default $each_t/$__interval step automatically, without needing to be added", () => {
         render(
           <QueryConditionBuilder
             value={'{"$each_t": "$__interval"}'}
@@ -677,11 +804,27 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        expect(screen.queryByText("Sample")).toBeNull();
-        expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+        expect(screen.getByText("Sample")).toBeTruthy();
+        expect(screen.getByLabelText("Remove sample step")).toBeTruthy();
       });
 
-      it("preserves the hidden default sample step when a condition is edited", async () => {
+      it("shows Where labels before Sample when both are present by default", () => {
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={noop}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+        const labels = screen
+          .getAllByText(/^(Where labels|Sample)$/)
+          .map((el) => el.textContent);
+        expect(labels).toEqual(["Where labels", "Sample"]);
+      });
+
+      it("preserves the default Sample step when a condition is edited", async () => {
         const onChange = vi.fn();
         render(
           <QueryConditionBuilder
@@ -692,12 +835,6 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        // This query has no conditions of its own yet - Where labels must
-        // be added before there's a row to edit.
-        await openAddStepMenu();
-        await act(async () => {
-          fireEvent.click(screen.getByText("Where labels"));
-        });
         const [labelInput] = screen.getAllByRole("combobox");
         fireEvent.change(labelInput, { target: { value: "status" } });
         fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -711,7 +848,7 @@ describe("QueryConditionBuilder", () => {
         });
       });
 
-      it("requires an explicit choice when revealing the default sample step, showing it blank in the meantime", async () => {
+      it("keeps using the interval macro on the default Sample step, letting a typed duration override it", () => {
         const onChange = vi.fn();
         render(
           <QueryConditionBuilder
@@ -722,15 +859,6 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-
-        await openAddStepMenu();
-        await act(async () => {
-          fireEvent.click(screen.getByText("Sample"));
-        });
-
-        expect(screen.getByLabelText("Remove sample step")).toBeTruthy();
-        const [afterReveal] = onChange.mock.calls.at(-1) as [string];
-        expect(JSON.parse(afterReveal)).toEqual({ $each_t: "" });
 
         fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
           target: { value: "30s" },
@@ -739,7 +867,7 @@ describe("QueryConditionBuilder", () => {
         expect(JSON.parse(afterDuration)).toEqual({ $each_t: "30s" });
       });
 
-      it("fully removes sampling once the revealed default step is removed", async () => {
+      it("fully removes sampling once the default step is removed via its X", () => {
         const onChange = vi.fn();
         render(
           <QueryConditionBuilder
@@ -751,13 +879,6 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        await openAddStepMenu();
-        await act(async () => {
-          fireEvent.click(screen.getByText("Sample"));
-        });
-        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
-          target: { value: "30s" },
-        });
         fireEvent.click(screen.getByLabelText("Remove sample step"));
 
         expect(screen.queryByLabelText("Remove sample step")).toBeNull();
@@ -765,7 +886,7 @@ describe("QueryConditionBuilder", () => {
         expect(JSON.parse(lastCall)).toEqual({});
       });
 
-      it("shows a non-default sample step immediately, without needing to be added", () => {
+      it("shows a non-default Sample step immediately, without needing to be added", () => {
         render(
           <QueryConditionBuilder
             value={'{"$each_t": "30s"}'}

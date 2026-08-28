@@ -6,19 +6,11 @@ import { CloseOutlined, HolderOutlined } from "@ant-design/icons";
 
 interface SortableCardProps {
   id: string;
-  // Omit to render the row with no label of its own (e.g. rows grouped
-  // inside one shared bordered block that already has its own title).
   label?: string;
   removeLabel?: string;
   onRemove: () => void;
   removable?: boolean;
-  // Renders the fields on the header row, beside the label, instead of on
-  // their own row below - for cards whose fields are compact enough to fit.
   inline?: boolean;
-  // True for the floating clone SortableList renders in its DragOverlay
-  // while this card is being dragged - purely visual (no ref, no drag
-  // listeners, no transform), and registered under a distinct dnd-kit id
-  // so it never fights the real list item for the same registration.
   isOverlay?: boolean;
   children: ReactNode;
 }
@@ -47,9 +39,6 @@ export default function SortableCard({
     : {
         transform: CSS.Transform.toString(transform),
         transition,
-        // The card being dragged gets a floating clone in SortableList's
-        // DragOverlay - fade this one to a placeholder rather than
-        // showing it twice.
         opacity: isDragging ? 0.4 : 1,
       };
 

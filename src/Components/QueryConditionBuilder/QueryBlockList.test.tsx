@@ -40,10 +40,15 @@ const condition = (id: string): FlatCondition => ({
   connector: "$and",
 });
 
-const sampleStep: Step = {
-  id: "sample-1",
-  type: "sample",
-  sample: { kind: "$each_t", duration: "", useIntervalMacro: true },
+const eachNStep: Step = {
+  id: "each-n-1",
+  type: "each_n",
+  eachN: { everyNth: 2 },
+};
+const eachTStep: Step = {
+  id: "each-t-1",
+  type: "each_t",
+  eachT: { duration: "", useIntervalMacro: true },
 };
 const limitStep: Step = {
   id: "limit-1",
@@ -55,9 +60,11 @@ const baseProps = {
   onChangeCondition: noop,
   onRemoveCondition: noop,
   onAddCondition: noop,
-  onChangeSample: noop,
+  onChangeEachN: noop,
+  onChangeEachT: noop,
   onChangeLimit: noop,
   onAddSample: noop,
+  onSwitchSampleKind: noop,
   onAddLimit: noop,
   onAddConditionsBlock: noop,
   onRemoveConditionsBlock: noop,
@@ -114,27 +121,28 @@ describe("QueryBlockList", () => {
     expect(onRemoveConditionsBlock).toHaveBeenCalled();
   });
 
-  it("renders Sample and Limit as their own draggable blocks", () => {
+  it("renders each_n and each_t as two separate Sample blocks, plus Limit", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["conditions", "sample-1", "limit-1"]}
+        blockOrder={["conditions", "each-n-1", "each-t-1", "limit-1"]}
         conditions={[condition("a")]}
-        steps={[sampleStep, limitStep]}
+        steps={[eachNStep, eachTStep, limitStep]}
       />,
     );
-    expect(screen.getByText("Sample")).toBeTruthy();
+    expect(screen.getAllByText("Sample")).toHaveLength(2);
     expect(screen.getByText("Limit")).toBeTruthy();
-    expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(3);
+    expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(4);
+    expect(screen.getAllByLabelText("Remove sample step")).toHaveLength(2);
   });
 
   it("hides every block until a data source is selected, but keeps Add step reachable", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["conditions", "sample-1"]}
+        blockOrder={["conditions", "each-t-1"]}
         conditions={[condition("a")]}
-        steps={[sampleStep]}
+        steps={[eachTStep]}
         sourceReady={false}
       />,
     );
@@ -158,19 +166,45 @@ describe("QueryBlockList", () => {
     expect(onRemoveStep).toHaveBeenCalledWith("limit-1");
   });
 
-  it("offers Where labels in the Add step menu when it hasn't been added yet", async () => {
+  it("offers Where labels, Sample, and Limit in the Add step menu when none has been added yet", async () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["sample-1"]}
+        blockOrder={[]}
         conditions={[]}
-        steps={[sampleStep]}
+        steps={[]}
       />,
     );
     await openAddStepMenu();
     expect(screen.getByRole("menuitem", { name: "Where labels" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Sample" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Sample" })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
+  });
+
+  it("keeps offering Sample in the menu when only one kind has been added", async () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["each-t-1"]}
+        conditions={[]}
+        steps={[eachTStep]}
+      />,
+    );
+    await openAddStepMenu();
+    expect(screen.getByRole("menuitem", { name: "Sample" })).toBeTruthy();
+  });
+
+  it("removes Sample from the menu once both kinds are already added", async () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["each-n-1", "each-t-1"]}
+        conditions={[]}
+        steps={[eachNStep, eachTStep]}
+      />,
+    );
+    await openAddStepMenu();
+    expect(screen.queryByRole("menuitem", { name: "Sample" })).toBeNull();
   });
 
   it("removes Where labels from the menu once it's already added", async () => {
@@ -204,16 +238,73 @@ describe("QueryBlockList", () => {
     expect(onAddConditionsBlock).toHaveBeenCalled();
   });
 
-  it("disables Add step only once Where labels, Sample, and Limit are all present", () => {
+  it("calls onAddSample when Sample is picked from the menu", async () => {
+    const onAddSample = vi.fn();
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["conditions", "sample-1", "limit-1"]}
+        blockOrder={[]}
+        conditions={[]}
+        steps={[]}
+        onAddSample={onAddSample}
+      />,
+    );
+    await openAddStepMenu();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Sample"));
+    });
+    expect(onAddSample).toHaveBeenCalled();
+  });
+
+  it("locks the kind switch on both Sample blocks once both kinds are present", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["each-n-1", "each-t-1"]}
+        conditions={[]}
+        steps={[eachNStep, eachTStep]}
+      />,
+    );
+    const disabledSegments = document.querySelectorAll(
+      ".ant-segmented-disabled",
+    );
+    expect(disabledSegments).toHaveLength(2);
+  });
+
+  it("leaves the kind switch enabled when only one Sample block is present", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["each-t-1"]}
+        conditions={[]}
+        steps={[eachTStep]}
+      />,
+    );
+    expect(document.querySelector(".ant-segmented-disabled")).toBeNull();
+  });
+
+  it("disables Add step only once every block type is present", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["conditions", "each-n-1", "each-t-1", "limit-1"]}
         conditions={[condition("a")]}
-        steps={[sampleStep, limitStep]}
+        steps={[eachNStep, eachTStep, limitStep]}
       />,
     );
     expect(screen.getByLabelText("Add step")).toBeDisabled();
+  });
+
+  it("keeps Add step enabled when only some block types are present", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["conditions", "each-n-1"]}
+        conditions={[condition("a")]}
+        steps={[eachNStep]}
+      />,
+    );
+    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
   });
 
   it("calls onReorderBlock with the resolved from/to indexes when a block is dragged over another", () => {
@@ -221,9 +312,9 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["conditions", "sample-1", "limit-1"]}
+        blockOrder={["conditions", "each-t-1", "limit-1"]}
         conditions={[condition("a")]}
-        steps={[sampleStep, limitStep]}
+        steps={[eachTStep, limitStep]}
         onReorderBlock={onReorderBlock}
       />,
     );

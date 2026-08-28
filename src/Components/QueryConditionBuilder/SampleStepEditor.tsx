@@ -1,33 +1,37 @@
-import { Input, InputNumber, Segmented, Button } from "antd";
-import { CloseOutlined } from "@ant-design/icons";
+import { Input, InputNumber, Segmented, Tooltip } from "antd";
 import {
-  SampleStep,
+  EachNStep,
+  EachTStep,
   SampleKind,
   SAMPLE_KINDS,
+  isValidEachTDuration,
 } from "../../Helpers/conditionalQueryBuilder";
 
 interface SampleStepEditorProps {
-  step: SampleStep;
-  onChange: (changes: Partial<SampleStep>) => void;
-  onRemove: () => void;
-  removable?: boolean;
+  kind: SampleKind;
+  everyNth?: number;
+  duration: string;
+  useIntervalMacro: boolean;
+  onChangeEachN: (changes: Partial<EachNStep>) => void;
+  onChangeEachT: (changes: Partial<EachTStep>) => void;
+  onSwitchKind: (kind: SampleKind) => void;
+  // True once both kinds are already in use by sibling Sample steps -
+  // switching would collide with the other one, so the picker locks.
+  switchDisabled?: boolean;
+  intervalValue?: string;
 }
 
 export default function SampleStepEditor({
-  step,
-  onChange,
-  onRemove,
-  removable = true,
+  kind,
+  everyNth,
+  duration,
+  useIntervalMacro,
+  onChangeEachN,
+  onChangeEachT,
+  onSwitchKind,
+  switchDisabled = false,
+  intervalValue,
 }: SampleStepEditorProps) {
-  const handleKindChange = (kind: SampleKind) => {
-    onChange({
-      kind,
-      everyNth: undefined,
-      duration: "",
-      useIntervalMacro: false,
-    });
-  };
-
   return (
     <div
       style={{
@@ -40,32 +44,47 @@ export default function SampleStepEditor({
     >
       <Segmented
         options={SAMPLE_KINDS}
-        value={step.kind}
-        onChange={handleKindChange}
+        value={kind}
+        onChange={onSwitchKind}
+        disabled={switchDisabled}
       />
-      {step.kind === "$each_n" ? (
+      {kind === "each_n" ? (
         <InputNumber
           min={1}
           placeholder="every Nth record"
-          value={step.everyNth}
-          onChange={(value) => onChange({ everyNth: value ?? undefined })}
-          style={{ flex: 1 }}
+          value={everyNth}
+          onChange={(value) => onChangeEachN({ everyNth: value ?? undefined })}
+          style={{ width: 140 }}
         />
       ) : (
-        <Input
-          placeholder="duration (e.g. 30s)"
-          value={step.duration}
-          onChange={(e) => onChange({ duration: e.target.value })}
-          style={{ flex: 1 }}
-        />
-      )}
-      {removable && (
-        <Button
-          aria-label="Remove sample step"
-          type="text"
-          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
-          onClick={onRemove}
-        />
+        <Tooltip
+          title={
+            !useIntervalMacro &&
+            duration.trim() !== "" &&
+            !isValidEachTDuration(duration)
+              ? "Expected a duration like 30s, 1m, 1h, 1d, or a combination like 1d 2h"
+              : ""
+          }
+        >
+          <Input
+            placeholder="duration (e.g. 30s)"
+            value={useIntervalMacro ? intervalValue : duration}
+            onChange={(e) =>
+              onChangeEachT({
+                duration: e.target.value,
+                useIntervalMacro: false,
+              })
+            }
+            status={
+              !useIntervalMacro &&
+              duration.trim() !== "" &&
+              !isValidEachTDuration(duration)
+                ? "error"
+                : undefined
+            }
+            style={{ width: 140 }}
+          />
+        </Tooltip>
       )}
     </div>
   );
