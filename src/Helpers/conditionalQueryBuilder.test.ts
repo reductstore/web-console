@@ -3,13 +3,11 @@ import {
   addEachNStep,
   addEachTStep,
   addLimitStep,
-  addSampleStep,
   EachNStepEntry,
   EachTStepEntry,
   FlatCondition,
   hasIncompleteSteps,
   isLabelOperator,
-  isValidEachTDuration,
   LimitStepEntry,
   moveItem,
   parseBuilderList,
@@ -18,7 +16,6 @@ import {
   serializeBuilderList,
   serializeSteps,
   Step,
-  switchSampleKind,
   updateCondition,
   updateEachNStep,
   updateEachTStep,
@@ -65,42 +62,6 @@ describe("conditionalQueryBuilder", () => {
     it("rejects logical operators and unknown strings", () => {
       expect(isLabelOperator("$and")).toBe(false);
       expect(isLabelOperator("$foo")).toBe(false);
-    });
-  });
-
-  describe("isValidEachTDuration", () => {
-    it("accepts a single unit for each supported unit", () => {
-      ["30s", "500ms", "10us", "5m", "2h", "1d"].forEach((duration) =>
-        expect(isValidEachTDuration(duration)).toBe(true),
-      );
-    });
-
-    it("accepts a decimal value", () => {
-      expect(isValidEachTDuration("1.5s")).toBe(true);
-    });
-
-    it("accepts combined units separated by whitespace", () => {
-      expect(isValidEachTDuration("1d 2h")).toBe(true);
-    });
-
-    it("accepts surrounding whitespace", () => {
-      expect(isValidEachTDuration("  30s  ")).toBe(true);
-    });
-
-    it("rejects a bare number with no unit", () => {
-      expect(isValidEachTDuration("30")).toBe(false);
-    });
-
-    it("rejects an unknown unit", () => {
-      expect(isValidEachTDuration("30x")).toBe(false);
-    });
-
-    it("rejects non-numeric text", () => {
-      expect(isValidEachTDuration("abc")).toBe(false);
-    });
-
-    it("rejects an empty string", () => {
-      expect(isValidEachTDuration("")).toBe(false);
     });
   });
 
@@ -301,9 +262,9 @@ describe("conditionalQueryBuilder", () => {
     });
 
     it("parses $limit as a limit step", () => {
-      const result = parseBuilderList({ $limit: 100 });
+      const result = parseBuilderList({ $limit: 1000 });
       expect(result.success).toBe(true);
-      expect(findLimit(result.steps)?.limit).toEqual({ count: 100 });
+      expect(findLimit(result.steps)?.limit).toEqual({ count: 1000 });
     });
 
     it("parses filters combined with an each_t step and a limit step", () => {
@@ -635,9 +596,9 @@ describe("conditionalQueryBuilder", () => {
       });
     });
 
-    it("adds a limit step defaulting to a count of 100", () => {
+    it("adds a limit step defaulting to a count of 1000", () => {
       const result = addLimitStep([]);
-      expect(findLimit(result)?.limit).toEqual({ count: 100 });
+      expect(findLimit(result)?.limit).toEqual({ count: 1000 });
     });
 
     it("keeps the other steps untouched when adding one", () => {
@@ -694,63 +655,7 @@ describe("conditionalQueryBuilder", () => {
       const result = removeStep(steps, findEachN(steps)!.id);
       expect(findEachN(result)).toBeUndefined();
       expect(findEachT(result)).toBeDefined();
-      expect(findLimit(result)?.limit).toEqual({ count: 100 });
-    });
-
-    describe("addSampleStep", () => {
-      it("adds an each_t step when neither kind is present yet", () => {
-        const result = addSampleStep([]);
-        expect(findEachT(result)?.eachT).toEqual({
-          duration: "",
-          useIntervalMacro: true,
-        });
-        expect(findEachN(result)).toBeUndefined();
-      });
-
-      it("adds an each_n step when each_t is already present", () => {
-        const steps = addEachTStep([]);
-        const result = addSampleStep(steps);
-        expect(findEachN(result)?.eachN).toEqual({ everyNth: 2 });
-        expect(findEachT(result)).toBeDefined();
-      });
-
-      it("is a no-op when both kinds are already present", () => {
-        const steps = addEachNStep(addEachTStep([]));
-        expect(addSampleStep(steps)).toEqual(steps);
-      });
-    });
-
-    describe("switchSampleKind", () => {
-      it("switches an each_t step to each_n, keeping the same id", () => {
-        const steps = addEachTStep([]);
-        const { id } = findEachT(steps)!;
-        const result = switchSampleKind(steps, id, "each_n");
-        expect(findEachT(result)).toBeUndefined();
-        expect(findEachN(result)).toEqual({
-          id,
-          type: "each_n",
-          eachN: { everyNth: 2 },
-        });
-      });
-
-      it("switches an each_n step to each_t, defaulting to the interval macro", () => {
-        const steps = addEachNStep([]);
-        const { id } = findEachN(steps)!;
-        const result = switchSampleKind(steps, id, "each_t");
-        expect(findEachN(result)).toBeUndefined();
-        expect(findEachT(result)).toEqual({
-          id,
-          type: "each_t",
-          eachT: { duration: "", useIntervalMacro: true },
-        });
-      });
-
-      it("leaves other steps untouched", () => {
-        const steps = addLimitStep(addEachTStep([]));
-        const { id } = findEachT(steps)!;
-        const result = switchSampleKind(steps, id, "each_n");
-        expect(findLimit(result)?.limit).toEqual({ count: 100 });
-      });
+      expect(findLimit(result)?.limit).toEqual({ count: 1000 });
     });
 
     describe("hasIncompleteSteps", () => {
@@ -770,19 +675,10 @@ describe("conditionalQueryBuilder", () => {
         expect(hasIncompleteSteps(result)).toBe(true);
       });
 
-      it("is true for an each_t step with a malformed duration", () => {
+      it("is false for an each_t step with any non-blank duration text - format errors are the API's to report", () => {
         const steps = addEachTStep([]);
         const result = updateEachTStep(steps, findEachT(steps)!.id, {
           duration: "not-a-duration",
-          useIntervalMacro: false,
-        });
-        expect(hasIncompleteSteps(result)).toBe(true);
-      });
-
-      it("is false for an each_t step with a valid duration", () => {
-        const steps = addEachTStep([]);
-        const result = updateEachTStep(steps, findEachT(steps)!.id, {
-          duration: "1d 2h",
           useIntervalMacro: false,
         });
         expect(hasIncompleteSteps(result)).toBe(false);
@@ -855,7 +751,7 @@ describe("conditionalQueryBuilder", () => {
       });
 
       it("serializes a freshly added limit step with its default count", () => {
-        expect(serializeSteps(addLimitStep([]))).toEqual({ $limit: 100 });
+        expect(serializeSteps(addLimitStep([]))).toEqual({ $limit: 1000 });
       });
 
       it("shows an incomplete each_n step with a null value", () => {

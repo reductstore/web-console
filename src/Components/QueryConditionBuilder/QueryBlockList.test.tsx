@@ -63,8 +63,8 @@ const baseProps = {
   onChangeEachN: noop,
   onChangeEachT: noop,
   onChangeLimit: noop,
-  onAddSample: noop,
-  onSwitchSampleKind: noop,
+  onAddEachT: noop,
+  onAddEachN: noop,
   onAddLimit: noop,
   onAddConditionsBlock: noop,
   onRemoveConditionsBlock: noop,
@@ -121,7 +121,7 @@ describe("QueryBlockList", () => {
     expect(onRemoveConditionsBlock).toHaveBeenCalled();
   });
 
-  it("renders each_n and each_t as two separate Sample blocks, plus Limit", () => {
+  it("renders each_n and each_t as two separate Sample blocks with distinct titles, plus Limit", () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -130,7 +130,8 @@ describe("QueryBlockList", () => {
         steps={[eachNStep, eachTStep, limitStep]}
       />,
     );
-    expect(screen.getAllByText("Sample")).toHaveLength(2);
+    expect(screen.getByText("Sample by record count")).toBeTruthy();
+    expect(screen.getByText("Sample by time interval")).toBeTruthy();
     expect(screen.getByText("Limit")).toBeTruthy();
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(4);
     expect(screen.getAllByLabelText("Remove sample step")).toHaveLength(2);
@@ -147,7 +148,7 @@ describe("QueryBlockList", () => {
       />,
     );
     expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.queryByText("Sample")).toBeNull();
+    expect(screen.queryByText("Sample by time interval")).toBeNull();
     expect(screen.getByLabelText("Add step")).toBeDisabled();
   });
 
@@ -166,7 +167,7 @@ describe("QueryBlockList", () => {
     expect(onRemoveStep).toHaveBeenCalledWith("limit-1");
   });
 
-  it("offers Where labels, Sample, and Limit in the Add step menu when none has been added yet", async () => {
+  it("offers Where labels, both Sample kinds, and Limit in the Add step menu when none has been added yet", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -177,11 +178,16 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(screen.getByRole("menuitem", { name: "Where labels" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "Sample" })).toBeTruthy();
+    expect(
+      screen.getByRole("menuitem", { name: "Sample by time interval" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("menuitem", { name: "Sample by record count" }),
+    ).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
   });
 
-  it("keeps offering Sample in the menu when only one kind has been added", async () => {
+  it("only offers the missing Sample kind in the menu when one has already been added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -191,10 +197,15 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
-    expect(screen.getByRole("menuitem", { name: "Sample" })).toBeTruthy();
+    expect(
+      screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("menuitem", { name: "Sample by record count" }),
+    ).toBeTruthy();
   });
 
-  it("removes Sample from the menu once both kinds are already added", async () => {
+  it("removes both Sample menu items once both kinds are already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -204,7 +215,12 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
-    expect(screen.queryByRole("menuitem", { name: "Sample" })).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Sample by record count" }),
+    ).toBeNull();
   });
 
   it("removes Where labels from the menu once it's already added", async () => {
@@ -238,49 +254,40 @@ describe("QueryBlockList", () => {
     expect(onAddConditionsBlock).toHaveBeenCalled();
   });
 
-  it("calls onAddSample when Sample is picked from the menu", async () => {
-    const onAddSample = vi.fn();
+  it("calls onAddEachT when Sample by time interval is picked from the menu", async () => {
+    const onAddEachT = vi.fn();
     render(
       <QueryBlockList
         {...baseProps}
         blockOrder={[]}
         conditions={[]}
         steps={[]}
-        onAddSample={onAddSample}
+        onAddEachT={onAddEachT}
       />,
     );
     await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Sample"));
+      fireEvent.click(screen.getByText("Sample by time interval"));
     });
-    expect(onAddSample).toHaveBeenCalled();
+    expect(onAddEachT).toHaveBeenCalled();
   });
 
-  it("locks the kind switch on both Sample blocks once both kinds are present", () => {
+  it("calls onAddEachN when Sample by record count is picked from the menu", async () => {
+    const onAddEachN = vi.fn();
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["each-n-1", "each-t-1"]}
+        blockOrder={[]}
         conditions={[]}
-        steps={[eachNStep, eachTStep]}
+        steps={[]}
+        onAddEachN={onAddEachN}
       />,
     );
-    const disabledSegments = document.querySelectorAll(
-      ".ant-segmented-disabled",
-    );
-    expect(disabledSegments).toHaveLength(2);
-  });
-
-  it("leaves the kind switch enabled when only one Sample block is present", () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["each-t-1"]}
-        conditions={[]}
-        steps={[eachTStep]}
-      />,
-    );
-    expect(document.querySelector(".ant-segmented-disabled")).toBeNull();
+    await openAddStepMenu();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Sample by record count"));
+    });
+    expect(onAddEachN).toHaveBeenCalled();
   });
 
   it("disables Add step only once every block type is present", () => {

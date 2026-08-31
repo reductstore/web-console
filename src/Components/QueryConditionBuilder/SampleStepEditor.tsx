@@ -1,10 +1,8 @@
-import { Input, InputNumber, Segmented, Tooltip } from "antd";
+import { Input, InputNumber, Typography } from "antd";
 import {
   EachNStep,
   EachTStep,
   SampleKind,
-  SAMPLE_KINDS,
-  isValidEachTDuration,
 } from "../../Helpers/conditionalQueryBuilder";
 
 interface SampleStepEditorProps {
@@ -14,10 +12,6 @@ interface SampleStepEditorProps {
   useIntervalMacro: boolean;
   onChangeEachN: (changes: Partial<EachNStep>) => void;
   onChangeEachT: (changes: Partial<EachTStep>) => void;
-  onSwitchKind: (kind: SampleKind) => void;
-  // True once both kinds are already in use by sibling Sample steps -
-  // switching would collide with the other one, so the picker locks.
-  switchDisabled?: boolean;
   intervalValue?: string;
 }
 
@@ -28,8 +22,6 @@ export default function SampleStepEditor({
   useIntervalMacro,
   onChangeEachN,
   onChangeEachT,
-  onSwitchKind,
-  switchDisabled = false,
   intervalValue,
 }: SampleStepEditorProps) {
   return (
@@ -42,12 +34,6 @@ export default function SampleStepEditor({
         minWidth: 0,
       }}
     >
-      <Segmented
-        options={SAMPLE_KINDS}
-        value={kind}
-        onChange={onSwitchKind}
-        disabled={switchDisabled}
-      />
       {kind === "each_n" ? (
         <InputNumber
           min={1}
@@ -57,34 +43,22 @@ export default function SampleStepEditor({
           style={{ width: 140 }}
         />
       ) : (
-        <Tooltip
-          title={
-            !useIntervalMacro &&
-            duration.trim() !== "" &&
-            !isValidEachTDuration(duration)
-              ? "Expected a duration like 30s, 1m, 1h, 1d, or a combination like 1d 2h"
-              : ""
+        <Input
+          placeholder="duration (e.g. 30s)"
+          value={useIntervalMacro ? "$__interval" : duration}
+          onChange={(e) =>
+            onChangeEachT({
+              duration: e.target.value,
+              useIntervalMacro: false,
+            })
           }
-        >
-          <Input
-            placeholder="duration (e.g. 30s)"
-            value={useIntervalMacro ? intervalValue : duration}
-            onChange={(e) =>
-              onChangeEachT({
-                duration: e.target.value,
-                useIntervalMacro: false,
-              })
-            }
-            status={
-              !useIntervalMacro &&
-              duration.trim() !== "" &&
-              !isValidEachTDuration(duration)
-                ? "error"
-                : undefined
-            }
-            style={{ width: 140 }}
-          />
-        </Tooltip>
+          style={{ width: 140 }}
+        />
+      )}
+      {kind === "each_t" && useIntervalMacro && intervalValue && (
+        <Typography.Text type="secondary">
+          resolves to {intervalValue}
+        </Typography.Text>
       )}
     </div>
   );

@@ -12,7 +12,6 @@ import {
   EachNStep,
   EachTStep,
   LimitStep,
-  SampleKind,
 } from "../../Helpers/conditionalQueryBuilder";
 
 type Block =
@@ -40,8 +39,8 @@ interface QueryBlockListProps {
   onChangeEachN: (id: string, changes: Partial<EachNStep>) => void;
   onChangeEachT: (id: string, changes: Partial<EachTStep>) => void;
   onChangeLimit: (id: string, changes: Partial<LimitStep>) => void;
-  onAddSample: () => void;
-  onSwitchSampleKind: (id: string, kind: SampleKind) => void;
+  onAddEachT: () => void;
+  onAddEachN: () => void;
   onAddLimit: () => void;
   onAddConditionsBlock: () => void;
   onRemoveConditionsBlock: () => void;
@@ -62,8 +61,8 @@ export default function QueryBlockList({
   onChangeEachN,
   onChangeEachT,
   onChangeLimit,
-  onAddSample,
-  onSwitchSampleKind,
+  onAddEachT,
+  onAddEachN,
   onAddLimit,
   onAddConditionsBlock,
   onRemoveConditionsBlock,
@@ -74,11 +73,7 @@ export default function QueryBlockList({
   const hasEachN = steps.some((step) => step.type === "each_n");
   const hasEachT = steps.some((step) => step.type === "each_t");
   const hasLimit = steps.some((step) => step.type === "limit");
-  // Both Sample kinds are independent steps under the hood, but the "+ Add
-  // step" menu still offers one grouped "Sample" entry - a second click
-  // fills in whichever kind isn't taken yet.
-  const bothSampleKindsUsed = hasEachN && hasEachT;
-  const allAdded = hasConditionsBlock && bothSampleKindsUsed && hasLimit;
+  const allAdded = hasConditionsBlock && hasEachN && hasEachT && hasLimit;
   const addStepHint = !sourceReady
     ? "Select a bucket and entries first"
     : allAdded
@@ -88,15 +83,18 @@ export default function QueryBlockList({
 
   const menuItems = [
     !hasConditionsBlock && { key: "conditions", label: "Where labels" },
-    !bothSampleKindsUsed && { key: "sample", label: "Sample" },
+    !hasEachT && { key: "sample_each_t", label: "Sample by time interval" },
+    !hasEachN && { key: "sample_each_n", label: "Sample by record count" },
     !hasLimit && { key: "limit", label: "Limit" },
   ].filter((item) => item !== false);
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "conditions") {
       onAddConditionsBlock();
-    } else if (key === "sample") {
-      onAddSample();
+    } else if (key === "sample_each_t") {
+      onAddEachT();
+    } else if (key === "sample_each_n") {
+      onAddEachN();
     } else if (key === "limit") {
       onAddLimit();
     }
@@ -144,7 +142,11 @@ export default function QueryBlockList({
               <SortableCard
                 key={step.id}
                 id={step.id}
-                label="Sample"
+                label={
+                  step.type === "each_n"
+                    ? "Sample by record count"
+                    : "Sample by time interval"
+                }
                 removeLabel="Remove sample step"
                 onRemove={() => onRemoveStep(step.id)}
                 inline
@@ -160,8 +162,6 @@ export default function QueryBlockList({
                   }
                   onChangeEachN={(changes) => onChangeEachN(step.id, changes)}
                   onChangeEachT={(changes) => onChangeEachT(step.id, changes)}
-                  onSwitchKind={(kind) => onSwitchSampleKind(step.id, kind)}
-                  switchDisabled={bothSampleKindsUsed}
                   intervalValue={intervalValue}
                 />
               </SortableCard>

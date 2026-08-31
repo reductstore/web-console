@@ -5,11 +5,11 @@ import QueryBlockList from "./QueryBlockList";
 import {
   CONDITIONS_BLOCK_ID,
   FlatCondition,
-  SampleKind,
   Step,
   addCondition,
+  addEachNStep,
+  addEachTStep,
   addLimitStep,
-  addSampleStep,
   hasIncompleteSteps,
   hasValue,
   moveItem,
@@ -18,7 +18,6 @@ import {
   removeStep,
   serializeBuilderList,
   serializeSteps,
-  switchSampleKind,
   updateCondition,
   updateEachNStep,
   updateEachTStep,
@@ -103,9 +102,8 @@ export default function QueryConditionBuilder({
 }: QueryConditionBuilderProps) {
   const [initial] = useState(() => {
     const parsed = parseQueryValue(value);
-    const conditions = parsed?.list.length ? parsed.list : addCondition([]);
     return {
-      conditions,
+      conditions: parsed?.list ?? [],
       steps: parsed?.steps ?? [],
     };
   });
@@ -187,11 +185,10 @@ export default function QueryConditionBuilder({
       onUnrepresentable();
       return;
     }
-    const nextConditions = parsed.list.length ? parsed.list : addCondition([]);
+    setConditions(parsed.list);
     const nextSteps = parsed.steps ?? [];
-    setConditions(nextConditions);
     setSteps(nextSteps);
-    setBlockOrder(initialBlockOrder(nextConditions, nextSteps));
+    setBlockOrder(initialBlockOrder(parsed.list, nextSteps));
   }, [value, mode]);
 
   useEffect(() => {
@@ -283,17 +280,15 @@ export default function QueryConditionBuilder({
           applyQuery([], steps);
           removeBlock(CONDITIONS_BLOCK_ID);
         }}
-        onAddSample={() => {
-          const nextSteps = addSampleStep(steps);
-          if (nextSteps.length === steps.length) {
-            return;
-          }
-          const added = nextSteps[nextSteps.length - 1];
+        onAddEachT={() => {
+          const nextSteps = addEachTStep(steps);
           applyQuery(conditions, nextSteps);
-          appendBlock(added.id);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
-        onSwitchSampleKind={(id, kind: SampleKind) => {
-          applyQuery(conditions, switchSampleKind(steps, id, kind));
+        onAddEachN={() => {
+          const nextSteps = addEachNStep(steps);
+          applyQuery(conditions, nextSteps);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddLimit={() => {
           const nextSteps = addLimitStep(steps);

@@ -9,7 +9,6 @@ const eachTProps = {
   useIntervalMacro: false,
   onChangeEachN: vi.fn(),
   onChangeEachT: vi.fn(),
-  onSwitchKind: vi.fn(),
 };
 
 const eachNProps = {
@@ -26,7 +25,7 @@ describe("SampleStepEditor", () => {
     );
   });
 
-  it("shows the resolved interval value in the duration field while using the macro", () => {
+  it("shows the literal $__interval macro in the duration field while using the macro", () => {
     render(
       <SampleStepEditor
         {...eachTProps}
@@ -35,8 +34,26 @@ describe("SampleStepEditor", () => {
       />,
     );
     expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
-      "30s",
+      "$__interval",
     );
+  });
+
+  it("shows the resolved interval value next to the input while using the macro", () => {
+    render(
+      <SampleStepEditor
+        {...eachTProps}
+        useIntervalMacro={true}
+        intervalValue="30s"
+      />,
+    );
+    expect(screen.getByText("resolves to 30s")).toBeTruthy();
+  });
+
+  it("does not show the resolved interval value when not using the macro", () => {
+    render(
+      <SampleStepEditor {...eachTProps} duration="30s" intervalValue="30s" />,
+    );
+    expect(screen.queryByText(/resolves to/)).toBeNull();
   });
 
   it("reports a typed duration and switches off the interval macro", () => {
@@ -58,54 +75,5 @@ describe("SampleStepEditor", () => {
       target: { value: "5" },
     });
     expect(onChangeEachN).toHaveBeenCalledWith({ everyNth: 5 });
-  });
-
-  it("calls onSwitchKind when a different kind is picked", () => {
-    const onSwitchKind = vi.fn();
-    render(<SampleStepEditor {...eachTProps} onSwitchKind={onSwitchKind} />);
-    fireEvent.click(screen.getByText("By record count"));
-    expect(onSwitchKind).toHaveBeenCalledWith("each_n");
-  });
-
-  it("disables the kind switch when switchDisabled is true", () => {
-    render(<SampleStepEditor {...eachTProps} switchDisabled />);
-    expect(screen.getByText("By record count").closest("label")).toHaveClass(
-      "ant-segmented-item-disabled",
-    );
-  });
-
-  it("flags a malformed duration as an error", () => {
-    render(<SampleStepEditor {...eachTProps} duration="not-a-duration" />);
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveClass(
-      "ant-input-status-error",
-    );
-  });
-
-  it("does not flag a blank duration as an error", () => {
-    render(<SampleStepEditor {...eachTProps} duration="" />);
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).not.toHaveClass(
-      "ant-input-status-error",
-    );
-  });
-
-  it("does not flag a valid duration as an error", () => {
-    render(<SampleStepEditor {...eachTProps} duration="1d 2h" />);
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).not.toHaveClass(
-      "ant-input-status-error",
-    );
-  });
-
-  it("does not flag the field as an error while using the interval macro, even if the typed duration was invalid", () => {
-    render(
-      <SampleStepEditor
-        {...eachTProps}
-        useIntervalMacro={true}
-        duration="not-a-duration"
-        intervalValue="30s"
-      />,
-    );
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).not.toHaveClass(
-      "ant-input-status-error",
-    );
   });
 });

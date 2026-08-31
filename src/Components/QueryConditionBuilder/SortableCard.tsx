@@ -72,7 +72,9 @@ export default function SortableCard({
           <Typography.Text
             strong
             className="queryCardLabel"
-            style={inline ? { flex: "0 0 auto", width: 60 } : undefined}
+            style={
+              inline ? { flex: "0 0 auto", whiteSpace: "nowrap" } : undefined
+            }
           >
             {label}
           </Typography.Text>

@@ -24,20 +24,6 @@ export interface EachTStep {
   useIntervalMacro: boolean;
 }
 
-// ReductStore's duration literal grammar: one or more <number><unit>
-// parts (decimals allowed, e.g. "1.5s"), combinable with whitespace (e.g.
-// "1d 2h"). Two-letter units are listed before their one-letter prefixes
-// (us/ms before s/m) so e.g. "500ms" isn't matched as "500m" + a stray "s".
-const EACH_T_DURATION_PATTERN = /^(\d+(\.\d+)?(us|ms|s|m|h|d)\s*)+$/;
-
-/**
- * Check whether a string is a valid $each_t duration - see
- * https://www.reduct.store/docs/conditional-query for the full grammar.
- */
-export function isValidEachTDuration(duration: string): boolean {
-  return EACH_T_DURATION_PATTERN.test(duration.trim());
-}
-
 export interface LimitStep {
   count?: number;
 }
@@ -62,23 +48,12 @@ export interface LimitStepEntry {
 
 // $each_n and $each_t are independent directives - a query can combine
 // both (e.g. thin to every 20th record, then also throttle to at most one
-// per second) - so each gets its own step, exactly like $limit. They're
-// still presented in the builder as one grouped "Sample" card with a
-// kind switch though: a fresh Sample step is one or the other, and adding
-// a second Sample step fills in whichever kind isn't taken yet.
+// per second) - so each gets its own step, exactly like $limit, added and
+// removed independently from the "+ Add step" menu (as "Sample by time
+// interval" / "Sample by record count").
 export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
 
 export type SampleKind = "each_n" | "each_t";
-
-export interface SampleKindInfo {
-  value: SampleKind;
-  label: string;
-}
-
-export const SAMPLE_KINDS: SampleKindInfo[] = [
-  { value: "each_n", label: "By record count" },
-  { value: "each_t", label: "By time interval" },
-];
 
 // Fixed id for the "Where labels" block in a QueryConditionBuilder's
 // blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
@@ -554,42 +529,28 @@ export function addCondition(list: FlatCondition[]): FlatCondition[] {
   ];
 }
 
-function blankEachN(id: string): EachNStepEntry {
-  return { id, type: "each_n", eachN: { everyNth: 2 } };
-}
-
-function blankEachT(id: string): EachTStepEntry {
-  return {
-    id,
-    type: "each_t",
-    eachT: { duration: "", useIntervalMacro: true },
-  };
-}
-
 export function addEachNStep(steps: Step[]): Step[] {
-  return [...steps, blankEachN(crypto.randomUUID())];
+  return [
+    ...steps,
+    { id: crypto.randomUUID(), type: "each_n", eachN: { everyNth: 2 } },
+  ];
 }
 
 export function addEachTStep(steps: Step[]): Step[] {
-  return [...steps, blankEachT(crypto.randomUUID())];
-}
-
-// The "+ Add step" > "Sample" action: fills in whichever kind isn't
-// already present (each_t first, since that's the app's own zero-config
-// default), so a query can only ever have at most one of each.
-export function addSampleStep(steps: Step[]): Step[] {
-  const hasEachT = steps.some((step) => step.type === "each_t");
-  if (!hasEachT) {
-    return addEachTStep(steps);
-  }
-  const hasEachN = steps.some((step) => step.type === "each_n");
-  return hasEachN ? steps : addEachNStep(steps);
+  return [
+    ...steps,
+    {
+      id: crypto.randomUUID(),
+      type: "each_t",
+      eachT: { duration: "", useIntervalMacro: true },
+    },
+  ];
 }
 
 export function addLimitStep(steps: Step[]): Step[] {
   return [
     ...steps,
-    { id: crypto.randomUUID(), type: "limit", limit: { count: 100 } },
+    { id: crypto.randomUUID(), type: "limit", limit: { count: 1000 } },
   ];
 }
 
@@ -615,22 +576,6 @@ export function updateEachTStep(
       ? { ...step, eachT: { ...step.eachT, ...changes } }
       : step,
   );
-}
-
-// Switches a Sample-type entry (each_n or each_t) to the other kind,
-// keeping its id (and so its position) but resetting to that kind's blank
-// defaults - the same reset a fresh Sample step gets.
-export function switchSampleKind(
-  steps: Step[],
-  id: string,
-  kind: SampleKind,
-): Step[] {
-  return steps.map((step): Step => {
-    if (step.id !== id || (step.type !== "each_n" && step.type !== "each_t")) {
-      return step;
-    }
-    return kind === "each_n" ? blankEachN(id) : blankEachT(id);
-  });
 }
 
 export function updateLimitStep(
@@ -662,8 +607,7 @@ export function hasIncompleteSteps(steps: Step[]): boolean {
   const eachTIncomplete =
     !!eachTEntry &&
     !eachTEntry.eachT.useIntervalMacro &&
-    (eachTEntry.eachT.duration.trim() === "" ||
-      !isValidEachTDuration(eachTEntry.eachT.duration));
+    eachTEntry.eachT.duration.trim() === "";
 
   const limitEntry = steps.find(
     (step): step is LimitStepEntry => step.type === "limit",

@@ -1067,6 +1067,7 @@ export default function QueryPanel({
   );
 
   const handleConditionModeChange = (nextMode: "builder" | "json") => {
+    setFetchError("");
     if (nextMode === "json") {
       setJsonEntrySnapshot(whenCondition);
       setConditionMode("json");
@@ -1081,6 +1082,7 @@ export default function QueryPanel({
 
   const confirmConditionReset = () => {
     setWhenCondition(defaultQuery);
+    setFetchError("");
     setConditionMode("builder");
     setPendingConditionReset(false);
   };
