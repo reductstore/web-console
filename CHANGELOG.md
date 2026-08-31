@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Add sampling ($each_n/$each_t) and limit ($limit) steps to the Data Explorer's Conditional Query builder, [PR-242](https://github.com/reductstore/web-console/pull/242)
+
 ## 1.16.0 - 2026-08-25
 
 ### Added

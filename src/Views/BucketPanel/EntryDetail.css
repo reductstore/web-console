@@ -39,6 +39,39 @@
   color: #595959;
 }
 
+.queryCard {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.queryCard + .queryCard {
+  margin-top: 6px;
+}
+
+.queryCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queryCardHandle {
+  cursor: grab;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+}
+
+.queryCardLabel {
+  flex: 1;
+  font-size: 12px;
+}
+
+.queryCardBody {
+  margin-top: 6px;
+}
+
 .queryFieldLabel {
   font-size: 12px;
 }

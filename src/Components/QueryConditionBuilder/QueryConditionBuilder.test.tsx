@@ -1,8 +1,32 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { Client } from "reduct-js";
+import type { DragEndEvent } from "@dnd-kit/core";
 import QueryConditionBuilder from "./QueryConditionBuilder";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
+
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
+
+vi.mock("@dnd-kit/core", async () => {
+  const actual =
+    await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  return {
+    ...actual,
+    // Renders the real DndContext (so nested SortableContext/useSortable
+    // still work) but also captures onDragEnd so tests can invoke it
+    // directly - simulating a real pointer drag isn't feasible in jsdom.
+    DndContext: (props: React.ComponentProps<typeof actual.DndContext>) => {
+      capturedOnDragEnd = props.onDragEnd;
+      return <actual.DndContext {...props} />;
+    },
+  };
+});
 
 vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
@@ -26,7 +50,15 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
 }));
 
-beforeEach(() => mockJSDOM());
+beforeEach(() => {
+  mockJSDOM();
+  capturedOnDragEnd = undefined;
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
 
 const noop = () => {};
 
@@ -38,8 +70,19 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
+// Where labels is a step like Sample/Limit - added on demand from the
+// "+ Add step" menu rather than shown by default.
+const addWhereLabels = async () => {
+  await act(async () => {
+    fireEvent.click(screen.getByLabelText("Add step"));
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByText("Where labels"));
+  });
+};
+
 describe("QueryConditionBuilder", () => {
-  it("shows Where labels with one empty condition for an empty value in builder mode", () => {
+  it("shows Query with no blocks for an empty value until one is added", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -49,11 +92,27 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
+    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByPlaceholderText("value")).toBeNull();
+  });
+
+  it("reveals one empty condition row once Where labels is added from the menu", async () => {
+    render(
+      <QueryConditionBuilder
+        value=""
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+    await addWhereLabels();
+    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("hides the condition row until a bucket and entry are selected", () => {
+  it("hides every block and disables Add step until a bucket and entry are selected", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -62,9 +121,9 @@ describe("QueryConditionBuilder", () => {
         onUnrepresentable={noop}
       />,
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add condition")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).toBeDisabled();
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
@@ -79,7 +138,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByTestId("monaco-editor")).toHaveValue(
       '{"&status": {"$eq": "active"}}',
     );
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByText("Query")).toBeNull();
   });
 
   it("resyncs conditions when value changes from outside while already in builder mode", () => {
@@ -134,7 +193,7 @@ describe("QueryConditionBuilder", () => {
     expect(onUnrepresentable).toHaveBeenCalled();
   });
 
-  it("preserves $each_t across an edit instead of silently dropping it", () => {
+  it("preserves $each_t across an edit instead of silently dropping it", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -145,6 +204,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -172,7 +232,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
   });
 
-  it("reports the serialized JSON when a condition is edited", () => {
+  it("reports the serialized JSON when a condition is edited", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -183,6 +243,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -230,6 +291,7 @@ describe("QueryConditionBuilder", () => {
       expect.objectContaining({ head: true, when: { $limit: 20 } }),
     );
 
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(labelInput);
     expect(await screen.findByTitle("status")).toBeTruthy();
@@ -258,10 +320,10 @@ describe("QueryConditionBuilder", () => {
     await waitFor(() =>
       expect(client.getBucket).toHaveBeenCalledWith("testBucket"),
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Query")).toBeTruthy();
   });
 
-  it("adds a chained condition with a connector when + is clicked", () => {
+  it("adds a chained condition with a connector when + is clicked", async () => {
     const onChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -276,6 +338,7 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
+    await addWhereLabels();
     const [labelInput] = screen.getAllByRole("combobox");
     fireEvent.change(labelInput, { target: { value: "status" } });
     // The "+" button stays disabled until the row it would chain off of has
@@ -298,7 +361,7 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  it("negates a chained condition by picking not from the connector dropdown", () => {
+  it("negates a chained condition by picking not from the connector dropdown", async () => {
     // The first row never has a connector/NOT control, so negation is only
     // reachable once a 2nd row exists.
     const onChange = vi.fn();
@@ -315,6 +378,7 @@ describe("QueryConditionBuilder", () => {
         }}
       />,
     );
+    await addWhereLabels();
     // The "+" button stays disabled until row 1 has both a label and a
     // value.
     const [labelInput] = screen.getAllByRole("combobox");
@@ -350,15 +414,17 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  it("never shows a connector or NOT control on the first row", () => {
+  it("never shows a connector or NOT control on the first row", async () => {
     render(
       <QueryConditionBuilder
         value=""
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
+        validationContext={readyValidationContext}
       />,
     );
+    await addWhereLabels();
     expect(screen.queryByText("and")).toBeNull();
     expect(screen.queryByText("not")).toBeNull();
   });
@@ -370,18 +436,18 @@ describe("QueryConditionBuilder", () => {
         onChange={noop}
         mode="builder"
         onUnrepresentable={noop}
-        error="Fill in or remove the incomplete condition row before running the query."
+        error="Fill in or remove the incomplete row before running the query."
         validationContext={readyValidationContext}
       />,
     );
     expect(
       screen.getByText(
-        "Fill in or remove the incomplete condition row before running the query.",
+        "Fill in or remove the incomplete row before running the query.",
       ),
     ).toBeTruthy();
   });
 
-  it("reports an incomplete condition once only the label is filled in", () => {
+  it("reports an incomplete condition once only the label is filled in", async () => {
     const onIncompleteConditionChange = vi.fn();
     render(
       <QueryConditionBuilder
@@ -393,6 +459,11 @@ describe("QueryConditionBuilder", () => {
         onIncompleteConditionChange={onIncompleteConditionChange}
       />,
     );
+    expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+    await addWhereLabels();
+    // A freshly revealed blank row isn't incomplete either - only a
+    // partially filled one is.
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
     const [labelInput] = screen.getAllByRole("combobox");
@@ -417,5 +488,498 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+  });
+
+  describe("each_n/each_t/Limit steps", () => {
+    const openAddStepMenu = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add step"));
+      });
+    };
+
+    it("adds a Sample step (each_t by default) and combines it with an existing filter", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+      });
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        );
+      });
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "30s" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({
+        "&status": { $eq: "active" },
+        $each_t: "30s",
+      });
+    });
+
+    it("adds a Sample every N records step directly and reports its count", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
+        );
+      });
+      fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
+        target: { value: "20" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({ $each_n: 20 });
+    });
+
+    it("adds each_t and each_n as two separate steps, matching the mandant's each_n+each_t example", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        );
+      });
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "1s" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
+        );
+      });
+      fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
+        target: { value: "20" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({
+        $each_t: "1s",
+        $each_n: 20,
+      });
+    });
+
+    it("offers neither Sample kind in the menu once each_n and each_t are both present", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        );
+      });
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
+        );
+      });
+
+      await openAddStepMenu();
+      expect(
+        screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("menuitem", { name: "Sample every N records" }),
+      ).toBeNull();
+    });
+
+    it("adds a limit step and combines it with an existing filter", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+      });
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "100" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({
+        "&status": { $eq: "active" },
+        $limit: 100,
+      });
+    });
+
+    it("adds both a Sample step and a limit step together", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+      });
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        );
+      });
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "30s" },
+      });
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "50" },
+      });
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).toEqual({
+        "&status": { $eq: "active" },
+        $each_t: "30s",
+        $limit: 50,
+      });
+    });
+
+    it("reorders the JSON's keys to match a drag-and-drop reorder of the blocks", async () => {
+      // Spying (not mocking the implementation) still returns the real
+      // generated ids, just lets the test read back which one a specific
+      // action produced.
+      const uuidMock = vi.spyOn(crypto, "randomUUID");
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+      });
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      const callsBeforeLimit = uuidMock.mock.results.length;
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      const limitStepId = uuidMock.mock.results[callsBeforeLimit]
+        .value as string;
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "50" },
+      });
+
+      const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(beforeDrag))).toEqual([
+        "&status",
+        "$limit",
+      ]);
+
+      // Drag the Limit block above the Where labels block.
+      act(() => {
+        capturedOnDragEnd?.({
+          active: { id: limitStepId },
+          over: { id: "conditions" },
+        } as DragEndEvent);
+      });
+
+      const [afterDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(afterDrag))).toEqual(["$limit", "&status"]);
+
+      uuidMock.mockRestore();
+    });
+
+    it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
+      const onIncompleteConditionChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+          onIncompleteConditionChange={onIncompleteConditionChange}
+        />,
+      );
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      // Limit defaults to a count of 1000, so adding it alone doesn't block
+      // Run Query.
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByPlaceholderText("max records"), {
+        target: { value: "50" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("reports an incomplete Sample step once its macro-based default is cleared, and clears once refilled", async () => {
+      const onIncompleteConditionChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={{
+            ...readyValidationContext,
+            intervalValue: "30s",
+          }}
+          onIncompleteConditionChange={onIncompleteConditionChange}
+        />,
+      );
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        );
+      });
+      // Sample defaults to the interval macro, so adding it alone doesn't
+      // block Run Query.
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        target: { value: "30s" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("removes the matching menu item once limit is already added", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
+      });
+      await openAddStepMenu();
+      expect(screen.queryByRole("menuitem", { name: "Limit" })).toBeNull();
+      expect(
+        screen.getByRole("menuitem", { name: "Sample by time interval" }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("menuitem", { name: "Sample every N records" }),
+      ).toBeTruthy();
+    });
+
+    describe("default Sample step", () => {
+      it("shows the default $each_t/$__interval step automatically, without needing to be added", () => {
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={noop}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+        expect(screen.getByText("Sample by time interval")).toBeTruthy();
+        expect(screen.getByLabelText("Remove sample step")).toBeTruthy();
+      });
+
+      it("preserves the default Sample step when a condition is edited", async () => {
+        const onChange = vi.fn();
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={onChange}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+        await openAddStepMenu();
+        await act(async () => {
+          fireEvent.click(
+            screen.getByRole("menuitem", { name: "Where labels" }),
+          );
+        });
+        const [labelInput] = screen.getAllByRole("combobox");
+        fireEvent.change(labelInput, { target: { value: "status" } });
+        fireEvent.change(screen.getByPlaceholderText("value"), {
+          target: { value: "active" },
+        });
+
+        const [lastCall] = onChange.mock.calls.at(-1) as [string];
+        expect(JSON.parse(lastCall)).toEqual({
+          "&status": { $eq: "active" },
+          $each_t: "$__interval",
+        });
+      });
+
+      it("keeps using the interval macro on the default Sample step, letting a typed duration override it", () => {
+        const onChange = vi.fn();
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={onChange}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+          target: { value: "30s" },
+        });
+        const [afterDuration] = onChange.mock.calls.at(-1) as [string];
+        expect(JSON.parse(afterDuration)).toEqual({ $each_t: "30s" });
+      });
+
+      it("fully removes sampling once the default step is removed via its X", () => {
+        const onChange = vi.fn();
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={onChange}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+
+        fireEvent.click(screen.getByLabelText("Remove sample step"));
+
+        expect(screen.queryByLabelText("Remove sample step")).toBeNull();
+        const [lastCall] = onChange.mock.calls.at(-1) as [string];
+        expect(JSON.parse(lastCall)).toEqual({});
+      });
+
+      it("does not report incomplete when typing a malformed duration - format errors are the API's to report", () => {
+        const onIncompleteConditionChange = vi.fn();
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "$__interval"}'}
+            onChange={noop}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+            onIncompleteConditionChange={onIncompleteConditionChange}
+          />,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+          target: { value: "30 s" },
+        });
+
+        expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+      });
+
+      it("shows a non-default Sample step immediately, without needing to be added", () => {
+        render(
+          <QueryConditionBuilder
+            value={'{"$each_t": "30s"}'}
+            onChange={noop}
+            mode="builder"
+            onUnrepresentable={noop}
+            validationContext={readyValidationContext}
+          />,
+        );
+        expect(screen.getByText("Sample by time interval")).toBeTruthy();
+        expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
+          "30s",
+        );
+      });
+    });
   });
 });

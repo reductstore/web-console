@@ -80,13 +80,15 @@ export default function LabelConditionEditor({
           style={{ flex: 1 }}
         />
       )}
-      {removable && (
+      {removable ? (
         <Button
           aria-label="Remove condition"
           type="text"
           icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
           onClick={() => onRemove(condition.id)}
         />
+      ) : (
+        <div style={{ width: 32, flexShrink: 0 }} />
       )}
     </div>
   );

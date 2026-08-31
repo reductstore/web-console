@@ -482,7 +482,7 @@ export default function QueryPanel({
 
       if (conditionMode === "builder" && hasIncompleteBuilderCondition) {
         setFetchError(
-          "Fill in or remove the incomplete condition row before running the query.",
+          "Fill in or remove the incomplete row before running the query.",
         );
         return;
       }
@@ -1067,6 +1067,7 @@ export default function QueryPanel({
   );
 
   const handleConditionModeChange = (nextMode: "builder" | "json") => {
+    setFetchError("");
     if (nextMode === "json") {
       setJsonEntrySnapshot(whenCondition);
       setConditionMode("json");
@@ -1081,6 +1082,7 @@ export default function QueryPanel({
 
   const confirmConditionReset = () => {
     setWhenCondition(defaultQuery);
+    setFetchError("");
     setConditionMode("builder");
     setPendingConditionReset(false);
   };
@@ -1370,13 +1372,6 @@ export default function QueryPanel({
                     flexWrap: "nowrap",
                   }}
                 >
-                  <Typography.Text
-                    strong
-                    className="querySectionLabel"
-                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                  >
-                    Conditional Query
-                  </Typography.Text>
                   <div
                     style={{
                       display: "flex",
@@ -1413,15 +1408,11 @@ export default function QueryPanel({
                     onIncompleteConditionChange={
                       setHasIncompleteBuilderCondition
                     }
-                    height={Math.min(
-                      400,
-                      Math.max(
-                        100,
-                        (whenCondition + "\n").split("\n").length * 18 + 45,
-                      ),
+                    height={Math.max(
+                      100,
+                      (whenCondition + "\n").split("\n").length * 18 + 45,
                     )}
                     error={fetchError}
-                    readOnly={false}
                     validationContext={{
                       client,
                       bucket: bucketName,

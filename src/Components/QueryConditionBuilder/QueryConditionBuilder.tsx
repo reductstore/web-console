@@ -1,15 +1,27 @@
 import { useEffect, useRef, useState, ComponentProps } from "react";
 import { Typography } from "antd";
 import { JsonQueryEditor } from "../JsonEditor";
-import ConditionListEditor from "./ConditionListEditor";
+import QueryBlockList from "./QueryBlockList";
 import {
+  CONDITIONS_BLOCK_ID,
   FlatCondition,
+  Step,
   addCondition,
+  addEachNStep,
+  addEachTStep,
+  addLimitStep,
+  hasIncompleteSteps,
   hasValue,
+  moveItem,
   parseQueryValue,
   removeCondition,
+  removeStep,
   serializeBuilderList,
+  serializeSteps,
   updateCondition,
+  updateEachNStep,
+  updateEachTStep,
+  updateLimitStep,
 } from "../../Helpers/conditionalQueryBuilder";
 import { formatAsStrictJSON } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
@@ -18,16 +30,62 @@ type ValidationContext = ComponentProps<
   typeof JsonQueryEditor
 >["validationContext"];
 
+function initialBlockOrder(
+  conditions: FlatCondition[],
+  steps: Step[],
+): string[] {
+  return [
+    ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
+    ...steps.map((step) => step.id),
+  ];
+}
+
+const STEP_KEYS: Record<Step["type"], string> = {
+  each_n: "$each_n",
+  each_t: "$each_t",
+  limit: "$limit",
+};
+
+function reorderQueryKeys(
+  value: Record<string, unknown>,
+  blockOrder: string[],
+  steps: Step[],
+): Record<string, unknown> {
+  const stepKeyById = new Map(
+    steps.map((step) => [step.id, STEP_KEYS[step.type]]),
+  );
+  const conditionsKey = Object.keys(value).find(
+    (key) => key !== "$each_n" && key !== "$each_t" && key !== "$limit",
+  );
+
+  const orderedKeys: string[] = [];
+  for (const blockId of blockOrder) {
+    const key =
+      blockId === CONDITIONS_BLOCK_ID
+        ? conditionsKey
+        : stepKeyById.get(blockId);
+    if (key !== undefined && key in value && !orderedKeys.includes(key)) {
+      orderedKeys.push(key);
+    }
+  }
+  const remainingKeys = Object.keys(value).filter(
+    (key) => !orderedKeys.includes(key),
+  );
+
+  const result: Record<string, unknown> = {};
+  for (const key of [...orderedKeys, ...remainingKeys]) {
+    result[key] = value[key];
+  }
+  return result;
+}
+
 interface QueryConditionBuilderProps {
   value: string;
   onChange: (value: string) => void;
   mode: "builder" | "json";
-  // Called when value can't be flattened into rows (e.g. real nested
-  // grouping); the parent decides how to react, typically switching to JSON.
   onUnrepresentable: () => void;
   height?: number | string;
   error?: string;
-  readOnly?: boolean;
   validationContext?: ValidationContext;
   onIncompleteConditionChange?: (hasIncomplete: boolean) => void;
 }
@@ -39,17 +97,24 @@ export default function QueryConditionBuilder({
   onUnrepresentable,
   height,
   error,
-  readOnly = false,
   validationContext,
   onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
-  const [conditions, setConditions] = useState<FlatCondition[]>(() => {
+  const [initial] = useState(() => {
     const parsed = parseQueryValue(value);
-    return parsed && parsed.list.length > 0 ? parsed.list : addCondition([]);
+    return {
+      conditions: parsed?.list ?? [],
+      steps: parsed?.steps ?? [],
+    };
   });
 
-  const [eachT, setEachT] = useState<unknown>(
-    () => parseQueryValue(value)?.eachT,
+  const [conditions, setConditions] = useState<FlatCondition[]>(
+    initial.conditions,
+  );
+  const [steps, setSteps] = useState<Step[]>(initial.steps);
+
+  const [blockOrder, setBlockOrder] = useState<string[]>(() =>
+    initialBlockOrder(initial.conditions, initial.steps),
   );
 
   const lastEmittedValueRef = useRef(value);
@@ -92,8 +157,9 @@ export default function QueryConditionBuilder({
           setLabelOptions(Array.from(foundLabels).sort());
         }
       } catch {
-        // Label suggestions are best-effort; a failed sample query just
-        // leaves the list empty.
+        if (!cancelled) {
+          setLabelOptions([]);
+        }
       }
     }
 
@@ -109,8 +175,6 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
-  // Resync whenever we're in Builder mode and `value` doesn't match what
-  // this component last emitted (a loaded query, or JSON->Builder switch).
   useEffect(() => {
     if (mode !== "builder" || value === lastEmittedValueRef.current) {
       return;
@@ -121,8 +185,10 @@ export default function QueryConditionBuilder({
       onUnrepresentable();
       return;
     }
-    setConditions(parsed.list.length > 0 ? parsed.list : addCondition([]));
-    setEachT(parsed.eachT);
+    setConditions(parsed.list);
+    const nextSteps = parsed.steps ?? [];
+    setSteps(nextSteps);
+    setBlockOrder(initialBlockOrder(parsed.list, nextSteps));
   }, [value, mode]);
 
   useEffect(() => {
@@ -130,22 +196,34 @@ export default function QueryConditionBuilder({
       onIncompleteConditionChange?.(false);
       return;
     }
-    const hasIncomplete = conditions.some(
-      (condition) =>
-        (condition.label.trim() !== "") !== hasValue(condition.value),
-    );
+    const hasIncomplete =
+      conditions.some(
+        (condition) =>
+          (condition.label.trim() !== "") !== hasValue(condition.value),
+      ) || hasIncompleteSteps(steps);
     onIncompleteConditionChange?.(hasIncomplete);
-  }, [conditions, mode]);
+  }, [conditions, steps, mode]);
 
-  const applyList = (nextConditions: FlatCondition[]) => {
+  const applyQuery = (
+    nextConditions: FlatCondition[],
+    nextSteps: Step[],
+    nextBlockOrder: string[] = blockOrder,
+  ) => {
     setConditions(nextConditions);
-    const serialized = serializeBuilderList(nextConditions);
-    const nextValue =
-      eachT !== undefined ? { ...serialized, $each_t: eachT } : serialized;
+    setSteps(nextSteps);
+    const merged = {
+      ...serializeBuilderList(nextConditions),
+      ...serializeSteps(nextSteps),
+    };
+    const nextValue = reorderQueryKeys(merged, nextBlockOrder, nextSteps);
     const formatted = formatAsStrictJSON(nextValue);
     lastEmittedValueRef.current = formatted;
     onChange(formatted);
   };
+
+  const appendBlock = (id: string) => setBlockOrder((prev) => [...prev, id]);
+  const removeBlock = (id: string) =>
+    setBlockOrder((prev) => prev.filter((blockId) => blockId !== id));
 
   const sourceReady =
     !!validationContext?.bucket &&
@@ -159,7 +237,6 @@ export default function QueryConditionBuilder({
         onChange={onChange}
         height={height}
         error={error}
-        readOnly={readOnly}
         validationContext={validationContext}
       />
     );
@@ -170,17 +247,63 @@ export default function QueryConditionBuilder({
       style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
     >
       <Typography.Text strong className="querySectionLabel">
-        Where labels
+        Query
       </Typography.Text>
-      <ConditionListEditor
+      <QueryBlockList
+        blockOrder={blockOrder}
         conditions={conditions}
-        labelOptions={labelOptions}
+        steps={steps}
         sourceReady={sourceReady}
+        labelOptions={labelOptions}
+        intervalValue={validationContext?.intervalValue ?? undefined}
         onChangeCondition={(id, changes) =>
-          applyList(updateCondition(conditions, id, changes))
+          applyQuery(updateCondition(conditions, id, changes), steps)
         }
-        onRemoveCondition={(id) => applyList(removeCondition(conditions, id))}
-        onAddCondition={() => applyList(addCondition(conditions))}
+        onRemoveCondition={(id) =>
+          applyQuery(removeCondition(conditions, id), steps)
+        }
+        onAddCondition={() => applyQuery(addCondition(conditions), steps)}
+        onChangeEachN={(id, changes) =>
+          applyQuery(conditions, updateEachNStep(steps, id, changes))
+        }
+        onChangeEachT={(id, changes) =>
+          applyQuery(conditions, updateEachTStep(steps, id, changes))
+        }
+        onChangeLimit={(id, changes) =>
+          applyQuery(conditions, updateLimitStep(steps, id, changes))
+        }
+        onAddConditionsBlock={() => {
+          applyQuery(addCondition(conditions), steps);
+          appendBlock(CONDITIONS_BLOCK_ID);
+        }}
+        onRemoveConditionsBlock={() => {
+          applyQuery([], steps);
+          removeBlock(CONDITIONS_BLOCK_ID);
+        }}
+        onAddEachT={() => {
+          const nextSteps = addEachTStep(steps);
+          applyQuery(conditions, nextSteps);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
+        }}
+        onAddEachN={() => {
+          const nextSteps = addEachNStep(steps);
+          applyQuery(conditions, nextSteps);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
+        }}
+        onAddLimit={() => {
+          const nextSteps = addLimitStep(steps);
+          applyQuery(conditions, nextSteps);
+          appendBlock(nextSteps[nextSteps.length - 1].id);
+        }}
+        onRemoveStep={(id) => {
+          applyQuery(conditions, removeStep(steps, id));
+          removeBlock(id);
+        }}
+        onReorderBlock={(fromIndex, toIndex) => {
+          const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
+          setBlockOrder(nextBlockOrder);
+          applyQuery(conditions, steps, nextBlockOrder);
+        }}
       />
       {error && (
         <div className="jsonQueryEditorValidation">
