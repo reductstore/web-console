@@ -84,7 +84,7 @@ export default function QueryBlockList({
   const menuItems = [
     !hasConditionsBlock && { key: "conditions", label: "Where labels" },
     !hasEachT && { key: "sample_each_t", label: "Sample by time interval" },
-    !hasEachN && { key: "sample_each_n", label: "Sample by record count" },
+    !hasEachN && { key: "sample_each_n", label: "Sample every N records" },
     !hasLimit && { key: "limit", label: "Limit" },
   ].filter((item) => item !== false);
 
@@ -144,7 +144,7 @@ export default function QueryBlockList({
                 id={step.id}
                 label={
                   step.type === "each_n"
-                    ? "Sample by record count"
+                    ? "Sample every N records"
                     : "Sample by time interval"
                 }
                 removeLabel="Remove sample step"

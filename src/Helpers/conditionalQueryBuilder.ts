@@ -50,7 +50,7 @@ export interface LimitStepEntry {
 // both (e.g. thin to every 20th record, then also throttle to at most one
 // per second) - so each gets its own step, exactly like $limit, added and
 // removed independently from the "+ Add step" menu (as "Sample by time
-// interval" / "Sample by record count").
+// interval" / "Sample every N records").
 export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
 
 export type SampleKind = "each_n" | "each_t";

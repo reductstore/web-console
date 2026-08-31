@@ -130,7 +130,7 @@ describe("QueryBlockList", () => {
         steps={[eachNStep, eachTStep, limitStep]}
       />,
     );
-    expect(screen.getByText("Sample by record count")).toBeTruthy();
+    expect(screen.getByText("Sample every N records")).toBeTruthy();
     expect(screen.getByText("Sample by time interval")).toBeTruthy();
     expect(screen.getByText("Limit")).toBeTruthy();
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(4);
@@ -182,7 +182,7 @@ describe("QueryBlockList", () => {
       screen.getByRole("menuitem", { name: "Sample by time interval" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("menuitem", { name: "Sample by record count" }),
+      screen.getByRole("menuitem", { name: "Sample every N records" }),
     ).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
   });
@@ -201,7 +201,7 @@ describe("QueryBlockList", () => {
       screen.queryByRole("menuitem", { name: "Sample by time interval" }),
     ).toBeNull();
     expect(
-      screen.getByRole("menuitem", { name: "Sample by record count" }),
+      screen.getByRole("menuitem", { name: "Sample every N records" }),
     ).toBeTruthy();
   });
 
@@ -219,7 +219,7 @@ describe("QueryBlockList", () => {
       screen.queryByRole("menuitem", { name: "Sample by time interval" }),
     ).toBeNull();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample by record count" }),
+      screen.queryByRole("menuitem", { name: "Sample every N records" }),
     ).toBeNull();
   });
 
@@ -272,7 +272,7 @@ describe("QueryBlockList", () => {
     expect(onAddEachT).toHaveBeenCalled();
   });
 
-  it("calls onAddEachN when Sample by record count is picked from the menu", async () => {
+  it("calls onAddEachN when Sample every N records is picked from the menu", async () => {
     const onAddEachN = vi.fn();
     render(
       <QueryBlockList
@@ -285,7 +285,7 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Sample by record count"));
+      fireEvent.click(screen.getByText("Sample every N records"));
     });
     expect(onAddEachN).toHaveBeenCalled();
   });

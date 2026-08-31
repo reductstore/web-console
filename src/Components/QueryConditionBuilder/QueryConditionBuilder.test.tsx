@@ -535,7 +535,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("adds a Sample by record count step directly and reports its count", async () => {
+    it("adds a Sample every N records step directly and reports its count", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -549,7 +549,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by record count" }),
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -584,7 +584,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by record count" }),
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -617,7 +617,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by record count" }),
+          screen.getByRole("menuitem", { name: "Sample every N records" }),
         );
       });
 
@@ -626,7 +626,7 @@ describe("QueryConditionBuilder", () => {
         screen.queryByRole("menuitem", { name: "Sample by time interval" }),
       ).toBeNull();
       expect(
-        screen.queryByRole("menuitem", { name: "Sample by record count" }),
+        screen.queryByRole("menuitem", { name: "Sample every N records" }),
       ).toBeNull();
     });
 
@@ -858,7 +858,7 @@ describe("QueryConditionBuilder", () => {
         screen.getByRole("menuitem", { name: "Sample by time interval" }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("menuitem", { name: "Sample by record count" }),
+        screen.getByRole("menuitem", { name: "Sample every N records" }),
       ).toBeTruthy();
     });
 
