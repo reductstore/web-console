@@ -3,6 +3,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import ConditionListEditor from "./ConditionListEditor";
 import SampleStepEditor from "./SampleStepEditor";
 import LimitStepEditor from "./LimitStepEditor";
+import TransformStepEditor from "./TransformStepEditor";
 import SortableCard from "./SortableCard";
 import SortableList from "./SortableList";
 import {
@@ -13,15 +14,28 @@ import {
   EachTStep,
   LimitStep,
 } from "../../Helpers/conditionalQueryBuilder";
+import {
+  KeyValueRow,
+  RosExportConfig,
+  RosSection,
+  TransformStepEntry,
+  TRANSFORM_BLOCK_ID,
+} from "../../Helpers/transformStepBuilder";
 
 type Block =
   | { id: typeof CONDITIONS_BLOCK_ID; kind: "conditions" }
+  | {
+      id: typeof TRANSFORM_BLOCK_ID;
+      kind: "transform";
+      transform: TransformStepEntry;
+    }
   | { id: string; kind: "step"; step: Step };
 
 interface QueryBlockListProps {
   blockOrder: string[];
   conditions: FlatCondition[];
   steps: Step[];
+  transform?: TransformStepEntry;
   sourceReady?: boolean;
   labelOptions?: string[];
   intervalValue?: string;
@@ -44,6 +58,24 @@ interface QueryBlockListProps {
   onAddLimit: () => void;
   onAddConditionsBlock: () => void;
   onRemoveConditionsBlock: () => void;
+  onAddTransformBlock: () => void;
+  onRemoveTransformBlock: () => void;
+  onAddSection: (section: RosSection) => void;
+  onRemoveSection: (section: RosSection) => void;
+  onChangeTopic: (topic: string) => void;
+  onAddEncodeRow: () => void;
+  onChangeEncodeRow: (
+    id: string,
+    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
+  ) => void;
+  onRemoveEncodeRow: (id: string) => void;
+  onAddAsLabelRow: () => void;
+  onChangeAsLabelRow: (
+    id: string,
+    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
+  ) => void;
+  onRemoveAsLabelRow: (id: string) => void;
+  onChangeExport: (changes: Partial<RosExportConfig>) => void;
   onRemoveStep: (id: string) => void;
   onReorderBlock: (fromIndex: number, toIndex: number) => void;
 }
@@ -52,6 +84,7 @@ export default function QueryBlockList({
   blockOrder,
   conditions,
   steps,
+  transform,
   sourceReady = true,
   labelOptions,
   intervalValue,
@@ -66,6 +99,18 @@ export default function QueryBlockList({
   onAddLimit,
   onAddConditionsBlock,
   onRemoveConditionsBlock,
+  onAddTransformBlock,
+  onRemoveTransformBlock,
+  onAddSection,
+  onRemoveSection,
+  onChangeTopic,
+  onAddEncodeRow,
+  onChangeEncodeRow,
+  onRemoveEncodeRow,
+  onAddAsLabelRow,
+  onChangeAsLabelRow,
+  onRemoveAsLabelRow,
+  onChangeExport,
   onRemoveStep,
   onReorderBlock,
 }: QueryBlockListProps) {
@@ -73,7 +118,9 @@ export default function QueryBlockList({
   const hasEachN = steps.some((step) => step.type === "each_n");
   const hasEachT = steps.some((step) => step.type === "each_t");
   const hasLimit = steps.some((step) => step.type === "limit");
-  const allAdded = hasConditionsBlock && hasEachN && hasEachT && hasLimit;
+  const hasTransform = !!transform;
+  const allAdded =
+    hasConditionsBlock && hasEachN && hasEachT && hasLimit && hasTransform;
   const addStepHint = !sourceReady
     ? "Select a bucket and entries first"
     : allAdded
@@ -86,6 +133,7 @@ export default function QueryBlockList({
     !hasEachT && { key: "sample_each_t", label: "Sample by time interval" },
     !hasEachN && { key: "sample_each_n", label: "Sample every N records" },
     !hasLimit && { key: "limit", label: "Limit" },
+    !hasTransform && { key: "transform_ros", label: "Transform (ReductROS)" },
   ].filter((item) => item !== false);
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -97,6 +145,8 @@ export default function QueryBlockList({
       onAddEachN();
     } else if (key === "limit") {
       onAddLimit();
+    } else if (key === "transform_ros") {
+      onAddTransformBlock();
     }
   };
 
@@ -104,6 +154,11 @@ export default function QueryBlockList({
     ? blockOrder.flatMap((id): Block[] => {
         if (id === CONDITIONS_BLOCK_ID) {
           return [{ id: CONDITIONS_BLOCK_ID, kind: "conditions" }];
+        }
+        if (id === TRANSFORM_BLOCK_ID) {
+          return transform
+            ? [{ id: TRANSFORM_BLOCK_ID, kind: "transform", transform }]
+            : [];
         }
         const step = steps.find((s) => s.id === id);
         return step ? [{ id, kind: "step", step }] : [];
@@ -132,6 +187,31 @@ export default function QueryBlockList({
                   onChangeCondition={onChangeCondition}
                   onRemoveCondition={onRemoveCondition}
                   onAddCondition={onAddCondition}
+                />
+              </SortableCard>
+            );
+          }
+          if (block.kind === "transform") {
+            return (
+              <SortableCard
+                key={TRANSFORM_BLOCK_ID}
+                id={TRANSFORM_BLOCK_ID}
+                label="Transform (ReductROS)"
+                removeLabel="Remove transform"
+                onRemove={onRemoveTransformBlock}
+              >
+                <TransformStepEditor
+                  step={block.transform.ros}
+                  onAddSection={onAddSection}
+                  onRemoveSection={onRemoveSection}
+                  onChangeTopic={onChangeTopic}
+                  onAddEncodeRow={onAddEncodeRow}
+                  onChangeEncodeRow={onChangeEncodeRow}
+                  onRemoveEncodeRow={onRemoveEncodeRow}
+                  onAddAsLabelRow={onAddAsLabelRow}
+                  onChangeAsLabelRow={onChangeAsLabelRow}
+                  onRemoveAsLabelRow={onRemoveAsLabelRow}
+                  onChangeExport={onChangeExport}
                 />
               </SortableCard>
             );

@@ -4,6 +4,10 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import QueryBlockList from "./QueryBlockList";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { FlatCondition, Step } from "../../Helpers/conditionalQueryBuilder";
+import {
+  TRANSFORM_BLOCK_ID,
+  TransformStepEntry,
+} from "../../Helpers/transformStepBuilder";
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
 
@@ -68,8 +72,31 @@ const baseProps = {
   onAddLimit: noop,
   onAddConditionsBlock: noop,
   onRemoveConditionsBlock: noop,
+  onAddTransformBlock: noop,
+  onRemoveTransformBlock: noop,
+  onAddSection: noop,
+  onRemoveSection: noop,
+  onChangeTopic: noop,
+  onAddEncodeRow: noop,
+  onChangeEncodeRow: noop,
+  onRemoveEncodeRow: noop,
+  onAddAsLabelRow: noop,
+  onChangeAsLabelRow: noop,
+  onRemoveAsLabelRow: noop,
+  onChangeExport: noop,
   onRemoveStep: noop,
   onReorderBlock: noop,
+};
+
+const transformStep: TransformStepEntry = {
+  kind: "ros",
+  ros: {
+    sections: ["filter", "label"],
+    topic: "/robot/odom",
+    encode: [],
+    asLabel: [{ id: "row-1", key: "speed", value: "speed" }],
+    export: { format: "", duration: "", size: "" },
+  },
 };
 
 const openAddStepMenu = async () => {
@@ -137,6 +164,73 @@ describe("QueryBlockList", () => {
     expect(screen.getAllByLabelText("Remove sample step")).toHaveLength(2);
   });
 
+  it("renders the Transform block with its title and remove button", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={transformStep}
+      />,
+    );
+    expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
+    expect(screen.getByLabelText("Remove transform")).toBeTruthy();
+  });
+
+  it("calls onRemoveTransformBlock from the Transform block's remove button", () => {
+    const onRemoveTransformBlock = vi.fn();
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={transformStep}
+        onRemoveTransformBlock={onRemoveTransformBlock}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Remove transform"));
+    expect(onRemoveTransformBlock).toHaveBeenCalled();
+  });
+
+  it("offers Transform (ReductROS) in the Add step menu, and calls onAddTransformBlock when picked", async () => {
+    const onAddTransformBlock = vi.fn();
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[]}
+        conditions={[]}
+        steps={[]}
+        onAddTransformBlock={onAddTransformBlock}
+      />,
+    );
+    await openAddStepMenu();
+    expect(
+      screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Transform (ReductROS)"));
+    });
+    expect(onAddTransformBlock).toHaveBeenCalled();
+  });
+
+  it("removes Transform (ReductROS) from the menu once it's already added", async () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={transformStep}
+      />,
+    );
+    await openAddStepMenu();
+    expect(
+      screen.queryByRole("menuitem", { name: "Transform (ReductROS)" }),
+    ).toBeNull();
+  });
+
   it("hides every block until a data source is selected, but keeps Add step reachable", () => {
     render(
       <QueryBlockList
@@ -167,7 +261,7 @@ describe("QueryBlockList", () => {
     expect(onRemoveStep).toHaveBeenCalledWith("limit-1");
   });
 
-  it("offers Where labels, both Sample kinds, and Limit in the Add step menu when none has been added yet", async () => {
+  it("offers Where labels, both Sample kinds, Limit, and Transform in the Add step menu when none has been added yet", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -185,6 +279,9 @@ describe("QueryBlockList", () => {
       screen.getByRole("menuitem", { name: "Sample every N records" }),
     ).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
+    expect(
+      screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+    ).toBeTruthy();
   });
 
   it("only offers the missing Sample kind in the menu when one has already been added", async () => {
@@ -294,9 +391,16 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={["conditions", "each-n-1", "each-t-1", "limit-1"]}
+        blockOrder={[
+          "conditions",
+          "each-n-1",
+          "each-t-1",
+          "limit-1",
+          TRANSFORM_BLOCK_ID,
+        ]}
         conditions={[condition("a")]}
         steps={[eachNStep, eachTStep, limitStep]}
+        transform={transformStep}
       />,
     );
     expect(screen.getByLabelText("Add step")).toBeDisabled();
