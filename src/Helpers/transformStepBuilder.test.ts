@@ -259,6 +259,12 @@ describe("transformStepBuilder", () => {
         ros: { export: { duration: "1m" } },
       });
     });
+
+    it("keeps an empty ros.export when the section is present but every field is blank", () => {
+      let transform = addSection(createRosTransformStep(), "export");
+      transform = updateExport(transform, { format: "" });
+      expect(buildExtPayload(transform)).toEqual({ ros: { export: {} } });
+    });
   });
 
   describe("parseExtPayload", () => {
@@ -275,10 +281,22 @@ describe("transformStepBuilder", () => {
       expect(parseExtPayload({}).success).toBe(false);
     });
 
+    it("rejects an array in place of ros, extract, or export", () => {
+      expect(parseExtPayload({ ros: [] }).success).toBe(false);
+      expect(parseExtPayload({ ros: { extract: [] } }).success).toBe(false);
+      expect(parseExtPayload({ ros: { export: [] } }).success).toBe(false);
+    });
+
     it("succeeds with an empty extract and no sections", () => {
       const result = parseExtPayload({ ros: { extract: {} } });
       expect(result.success).toBe(true);
       expect(result.transform?.ros.sections).toEqual([]);
+    });
+
+    it("parses an empty export object into the export section", () => {
+      const result = parseExtPayload({ ros: { export: {} } });
+      expect(result.success).toBe(true);
+      expect(result.transform?.ros.sections).toEqual(["export"]);
     });
 
     it("parses topic into the filter section", () => {

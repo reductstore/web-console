@@ -259,9 +259,9 @@ export function buildExtPayload(
     if (exportConfig.duration.trim())
       exportPayload.duration = exportConfig.duration.trim();
     if (exportConfig.size.trim()) exportPayload.size = exportConfig.size.trim();
-    if (Object.keys(exportPayload).length > 0) {
-      ros.export = exportPayload;
-    }
+    // Kept even when empty - the section being present is what signals
+    // export mode, not whether its fields happen to be filled in yet.
+    ros.export = exportPayload;
   }
 
   if (Object.keys(ros).length === 0) {
@@ -281,7 +281,7 @@ export function parseExtPayload(ext: unknown): {
     return { success: false };
   }
   const { ros } = ext as Record<string, unknown>;
-  if (typeof ros !== "object" || ros === null) {
+  if (typeof ros !== "object" || ros === null || Array.isArray(ros)) {
     return { success: false };
   }
   const { extract, export: exportRaw } = ros as Record<string, unknown>;
@@ -292,7 +292,11 @@ export function parseExtPayload(ext: unknown): {
   let asLabel: KeyValueRow[] = [];
 
   if (extract !== undefined) {
-    if (typeof extract !== "object" || extract === null) {
+    if (
+      typeof extract !== "object" ||
+      extract === null ||
+      Array.isArray(extract)
+    ) {
       return { success: false };
     }
     const {
@@ -354,7 +358,11 @@ export function parseExtPayload(ext: unknown): {
 
   let exportConfig: RosExportConfig = { format: "", duration: "", size: "" };
   if (exportRaw !== undefined) {
-    if (typeof exportRaw !== "object" || exportRaw === null) {
+    if (
+      typeof exportRaw !== "object" ||
+      exportRaw === null ||
+      Array.isArray(exportRaw)
+    ) {
       return { success: false };
     }
     const { format, duration, size } = exportRaw as Record<string, unknown>;

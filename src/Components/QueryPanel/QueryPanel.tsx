@@ -452,6 +452,7 @@ export default function QueryPanel({
     linkOptions.head = false;
     linkOptions.strict = options.strict;
     linkOptions.when = options.when;
+    linkOptions.ext = options.ext;
     return linkOptions;
   };
 
@@ -631,6 +632,7 @@ export default function QueryPanel({
       selectedEntries,
       selectedEntryQuery,
       timeRange.end,
+      timeRange.start,
       whenCondition,
     ],
   );
