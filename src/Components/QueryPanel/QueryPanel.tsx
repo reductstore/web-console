@@ -530,11 +530,20 @@ export default function QueryPanel({
             return;
           }
 
-          const each_t = extractIntervalFromCondition(
-            conditionResult.processedCondition,
-          );
+          const { "#ext": ext, ...whenFields } =
+            (conditionResult.processedCondition ?? {}) as Record<
+              string,
+              unknown
+            >;
+
+          const each_t = extractIntervalFromCondition(whenFields);
           setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
-          options.when = conditionResult.processedCondition;
+          if (Object.keys(whenFields).length > 0) {
+            options.when = whenFields;
+          }
+          if (ext !== undefined) {
+            options.ext = ext as Record<string, unknown>;
+          }
         }
 
         setQueryContext({
@@ -622,7 +631,6 @@ export default function QueryPanel({
       selectedEntries,
       selectedEntryQuery,
       timeRange.end,
-      timeRange.start,
       whenCondition,
     ],
   );
