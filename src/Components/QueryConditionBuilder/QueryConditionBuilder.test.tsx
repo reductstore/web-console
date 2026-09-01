@@ -768,6 +768,59 @@ describe("QueryConditionBuilder", () => {
       uuidMock.mockRestore();
     });
 
+    it("reorders the JSON's ext key to match a drag-and-drop reorder involving the Transform block", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+      });
+      const [labelInput] = screen.getAllByRole("combobox");
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Filter"));
+      });
+      fireEvent.change(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+        { target: { value: "/robot/odom" } },
+      );
+
+      const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(beforeDrag))).toEqual(["&status", "#ext"]);
+
+      // Drag the Transform block above the Where labels block.
+      act(() => {
+        capturedOnDragEnd?.({
+          active: { id: "transform" },
+          over: { id: "conditions" },
+        } as DragEndEvent);
+      });
+
+      const [afterDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(afterDrag))).toEqual(["#ext", "&status"]);
+    });
+
     it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
       const onIncompleteConditionChange = vi.fn();
       render(
@@ -980,6 +1033,186 @@ describe("QueryConditionBuilder", () => {
           "30s",
         );
       });
+    });
+  });
+
+  describe("Transform (ReductROS) step", () => {
+    const openAddStepMenu = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add step"));
+      });
+    };
+
+    const addTransformBlock = async () => {
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+        );
+      });
+    };
+
+    const addSection = async (
+      name: "Filter" | "Encode" | "Label" | "Export",
+    ) => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText(name));
+      });
+    };
+
+    it("adds a fresh transform (no sections yet) via the menu", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      expect(screen.getByLabelText("Add option")).toBeTruthy();
+      expect(
+        screen.queryByPlaceholderText("optional ROS topic filter"),
+      ).toBeNull();
+    });
+
+    it("removes the transform via its card's remove button", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove transform"));
+      expect(screen.queryByLabelText("Add option")).toBeNull();
+    });
+
+    it("reports a typed topic and as_label mapping through onChange, merged as a #ext key", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      await addSection("Filter");
+      fireEvent.change(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+        { target: { value: "/robot/odom" } },
+      );
+      await addSection("Label");
+      fireEvent.change(
+        screen.getByPlaceholderText("label name (e.g. label_name)"),
+        { target: { value: "speed" } },
+      );
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude)"), {
+        target: { value: "data.speed" },
+      });
+
+      const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
+      const parsed = JSON.parse(lastValue);
+      expect(parsed["#ext"].ros.extract).toMatchObject({
+        topic: "/robot/odom",
+        as_label: { speed: "data.speed" },
+      });
+    });
+
+    it("reports an incomplete transform for a half-filled encode row, and clears once both sides are filled", async () => {
+      const onIncompleteConditionChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+          onIncompleteConditionChange={onIncompleteConditionChange}
+        />,
+      );
+      await addTransformBlock();
+      await addSection("Encode");
+
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. data)"), {
+        target: { value: "data" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByPlaceholderText("encoding (e.g. jpeg)"), {
+        target: { value: "jpeg" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("shows a transform carried in the value prop's #ext key, without needing to be added", () => {
+      const value = JSON.stringify({
+        "#ext": {
+          ros: {
+            extract: {
+              topic: "/robot/odom",
+              as_label: { speed: "data.speed" },
+            },
+          },
+        },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
+      expect(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+      ).toHaveValue("/robot/odom");
+    });
+
+    it("resyncs when the value prop's #ext key changes from outside while already in builder mode", () => {
+      const { rerender } = render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.queryByText("Transform (ReductROS)")).toBeNull();
+
+      const value = JSON.stringify({
+        "#ext": {
+          ros: {
+            extract: {
+              topic: "/robot/odom",
+              as_label: { speed: "data.speed" },
+            },
+          },
+        },
+      });
+      rerender(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
     });
   });
 });
