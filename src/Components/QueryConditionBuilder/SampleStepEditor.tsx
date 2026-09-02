@@ -44,7 +44,7 @@ export default function SampleStepEditor({
         />
       ) : (
         <Input
-          placeholder="duration (e.g. 30s)"
+          placeholder="30s, 1m"
           value={useIntervalMacro ? "$__interval" : duration}
           onChange={(e) =>
             onChangeEachT({

@@ -524,7 +524,7 @@ describe("QueryConditionBuilder", () => {
           screen.getByRole("menuitem", { name: "Sample by time interval" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
         target: { value: "30s" },
       });
 
@@ -577,7 +577,7 @@ describe("QueryConditionBuilder", () => {
           screen.getByRole("menuitem", { name: "Sample by time interval" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
         target: { value: "1s" },
       });
 
@@ -693,7 +693,7 @@ describe("QueryConditionBuilder", () => {
           screen.getByRole("menuitem", { name: "Sample by time interval" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
         target: { value: "30s" },
       });
       await openAddStepMenu();
@@ -879,12 +879,12 @@ describe("QueryConditionBuilder", () => {
       // block Run Query.
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
         target: { value: "" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
         target: { value: "30s" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
@@ -972,7 +972,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
           target: { value: "30s" },
         });
         const [afterDuration] = onChange.mock.calls.at(-1) as [string];
@@ -1011,7 +1011,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
           target: { value: "30 s" },
         });
 
@@ -1029,9 +1029,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
         expect(screen.getByText("Sample by time interval")).toBeTruthy();
-        expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
-          "30s",
-        );
+        expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("30s");
       });
     });
   });

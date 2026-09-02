@@ -20,9 +20,7 @@ const eachNProps = {
 describe("SampleStepEditor", () => {
   it("shows the current duration", () => {
     render(<SampleStepEditor {...eachTProps} duration="30s" />);
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
-      "30s",
-    );
+    expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("30s");
   });
 
   it("shows the literal $__interval macro in the duration field while using the macro", () => {
@@ -33,9 +31,7 @@ describe("SampleStepEditor", () => {
         intervalValue="30s"
       />,
     );
-    expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
-      "$__interval",
-    );
+    expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("$__interval");
   });
 
   it("shows the resolved interval value next to the input while using the macro", () => {
@@ -59,7 +55,7 @@ describe("SampleStepEditor", () => {
   it("reports a typed duration and switches off the interval macro", () => {
     const onChangeEachT = vi.fn();
     render(<SampleStepEditor {...eachTProps} onChangeEachT={onChangeEachT} />);
-    fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+    fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
       target: { value: "1m" },
     });
     expect(onChangeEachT).toHaveBeenCalledWith({
