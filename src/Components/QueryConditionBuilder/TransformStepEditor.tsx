@@ -1,4 +1,4 @@
-import { CSSProperties, Fragment, ReactNode } from "react";
+import { ReactNode } from "react";
 import { Button, Dropdown, Input, Tooltip, Typography } from "antd";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 import {
@@ -17,11 +17,9 @@ const SECTION_LABELS: Record<RosSection, string> = {
 
 const ALL_SECTIONS: RosSection[] = ["filter", "encode", "label", "export"];
 
-const ROW_GRID_TEMPLATE_COLUMNS = "64px 1fr 1fr auto";
-const SECTION_CONTENT_MAX_WIDTH = 640;
+const ROW_INPUT_WIDTH = 260;
 
 interface RowListProps {
-  sectionLabel: string;
   rows: KeyValueRow[];
   keyPlaceholder: string;
   valuePlaceholder: string;
@@ -35,8 +33,7 @@ interface RowListProps {
   sectionRemoveLabel: string;
 }
 
-function RowListGridItems({
-  sectionLabel,
+function RowList({
   rows,
   keyPlaceholder,
   valuePlaceholder,
@@ -49,27 +46,23 @@ function RowListGridItems({
   const onlyRow = rows.length === 1;
 
   return (
-    <>
-      {rows.map((row, index) => (
-        <Fragment key={row.id}>
-          {index === 0 ? (
-            <Typography.Text strong style={{ fontSize: 12 }}>
-              {sectionLabel}
-            </Typography.Text>
-          ) : (
-            <span />
-          )}
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {rows.map((row) => (
+        <div
+          key={row.id}
+          style={{ display: "flex", alignItems: "center", gap: 8 }}
+        >
           <Input
             placeholder={keyPlaceholder}
             value={row.key}
             onChange={(e) => onChange(row.id, { key: e.target.value })}
-            style={{ minWidth: 0 }}
+            style={{ width: ROW_INPUT_WIDTH }}
           />
           <Input
             placeholder={valuePlaceholder}
             value={row.value}
             onChange={(e) => onChange(row.id, { value: e.target.value })}
-            style={{ minWidth: 0 }}
+            style={{ width: ROW_INPUT_WIDTH }}
           />
           <Button
             aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
@@ -77,9 +70,9 @@ function RowListGridItems({
             icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
             onClick={() => (onlyRow ? onRemoveSection() : onRemove(row.id))}
           />
-        </Fragment>
+        </div>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -106,11 +99,9 @@ interface TransformStepEditorProps {
 function RemoveSectionButton({
   section,
   onRemove,
-  style,
 }: {
   section: RosSection;
   onRemove: () => void;
-  style?: CSSProperties;
 }) {
   return (
     <Button
@@ -118,7 +109,6 @@ function RemoveSectionButton({
       type="text"
       icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
       onClick={onRemove}
-      style={style}
     />
   );
 }
@@ -138,16 +128,7 @@ function Section({
       >
         {SECTION_LABELS[section]}
       </Typography.Text>
-      <div
-        style={{
-          flexGrow: 0,
-          flexShrink: 1,
-          width: SECTION_CONTENT_MAX_WIDTH,
-          minWidth: 0,
-        }}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
@@ -218,101 +199,75 @@ export default function TransformStepEditor({
     }
   };
 
-  const hasGridSection =
-    step.sections.includes("filter") ||
-    step.sections.includes("encode") ||
-    step.sections.includes("label");
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {hasGridSection && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: ROW_GRID_TEMPLATE_COLUMNS,
-            columnGap: 10,
-            rowGap: 12,
-            alignItems: "center",
-            maxWidth: SECTION_CONTENT_MAX_WIDTH + 64 + 10,
-          }}
-        >
-          {step.sections.includes("filter") && (
-            <>
-              <Typography.Text strong style={{ fontSize: 12 }}>
-                {SECTION_LABELS.filter}
-              </Typography.Text>
-              <Input
-                placeholder="optional ROS topic filter"
-                value={step.topic}
-                onChange={(e) => onChangeTopic(e.target.value)}
-                style={{ minWidth: 0 }}
-              />
-              <RemoveSectionButton
-                section="filter"
-                onRemove={() => onRemoveSection("filter")}
-                style={{ justifySelf: "start" }}
-              />
-              <span />
-            </>
-          )}
-
-          {step.sections.includes("encode") && (
-            <RowListGridItems
-              sectionLabel={SECTION_LABELS.encode}
-              rows={step.encode}
-              keyPlaceholder="field (e.g. data)"
-              valuePlaceholder="encoding (e.g. jpeg)"
-              onChange={onChangeEncodeRow}
-              onRemove={onRemoveEncodeRow}
-              removeLabel="Remove encode mapping"
-              onRemoveSection={() => onRemoveSection("encode")}
-              sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
+      {step.sections.includes("filter") && (
+        <Section section="filter">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Input
+              placeholder="optional ROS topic filter"
+              value={step.topic}
+              onChange={(e) => onChangeTopic(e.target.value)}
+              style={{ width: ROW_INPUT_WIDTH }}
             />
-          )}
-
-          {step.sections.includes("label") && (
-            <RowListGridItems
-              sectionLabel={SECTION_LABELS.label}
-              rows={step.asLabel}
-              keyPlaceholder="label name (e.g. label_name)"
-              valuePlaceholder="field (e.g. latitude)"
-              onChange={onChangeAsLabelRow}
-              onRemove={onRemoveAsLabelRow}
-              removeLabel="Remove label mapping"
-              onRemoveSection={() => onRemoveSection("label")}
-              sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
+            <RemoveSectionButton
+              section="filter"
+              onRemove={() => onRemoveSection("filter")}
             />
-          )}
-        </div>
+          </div>
+        </Section>
+      )}
+
+      {step.sections.includes("encode") && (
+        <Section section="encode">
+          <RowList
+            rows={step.encode}
+            keyPlaceholder="field (e.g. data)"
+            valuePlaceholder="encoding (e.g. jpeg)"
+            onChange={onChangeEncodeRow}
+            onRemove={onRemoveEncodeRow}
+            removeLabel="Remove encode mapping"
+            onRemoveSection={() => onRemoveSection("encode")}
+            sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
+          />
+        </Section>
+      )}
+
+      {step.sections.includes("label") && (
+        <Section section="label">
+          <RowList
+            rows={step.asLabel}
+            keyPlaceholder="label name (e.g. label_name)"
+            valuePlaceholder="field (e.g. latitude)"
+            onChange={onChangeAsLabelRow}
+            onRemove={onRemoveAsLabelRow}
+            removeLabel="Remove label mapping"
+            onRemoveSection={() => onRemoveSection("label")}
+            sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
+          />
+        </Section>
       )}
 
       {step.sections.includes("export") && (
         <Section section="export">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minWidth: 0,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Input
               placeholder="mcap (currently the only format)"
               value={step.export.format}
               onChange={(e) => onChangeExport({ format: e.target.value })}
-              style={{ flex: 1, minWidth: 0 }}
+              style={{ width: ROW_INPUT_WIDTH }}
             />
             <Input
               placeholder="max duration (e.g. 1m)"
               value={step.export.duration}
               onChange={(e) => onChangeExport({ duration: e.target.value })}
-              style={{ flex: 1, minWidth: 0 }}
+              style={{ width: ROW_INPUT_WIDTH }}
             />
             <Input
               placeholder="max size (e.g. 100MB)"
               value={step.export.size}
               onChange={(e) => onChangeExport({ size: e.target.value })}
-              style={{ flex: 1, minWidth: 0 }}
+              style={{ width: ROW_INPUT_WIDTH }}
             />
             <RemoveSectionButton
               section="export"
