@@ -119,9 +119,14 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <Typography.Text strong>{SECTION_LABELS[section]}</Typography.Text>
-      {children}
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+      <Typography.Text
+        strong
+        style={{ width: 56, flexShrink: 0, paddingTop: 6 }}
+      >
+        {SECTION_LABELS[section]}
+      </Typography.Text>
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
   );
 }
@@ -203,6 +208,12 @@ export default function TransformStepEditor({
               onChange={(e) => onChangeTopic(e.target.value)}
               style={{ flex: 1 }}
             />
+            <Input
+              aria-hidden="true"
+              tabIndex={-1}
+              disabled
+              style={{ flex: 1, visibility: "hidden" }}
+            />
             <RemoveSectionButton
               section="filter"
               onRemove={() => onRemoveSection("filter")}
@@ -270,27 +281,38 @@ export default function TransformStepEditor({
         </Section>
       )}
 
-      {(availableSections.length > 0 ||
-        step.sections.includes("encode") ||
-        step.sections.includes("label")) && (
-        <Tooltip
-          title={menuItems.length > 0 ? "" : "Fill in the current row first"}
-        >
-          <span style={{ display: "inline-block", alignSelf: "flex-start" }}>
-            <Dropdown
-              menu={{ items: menuItems, onClick: handleMenuClick }}
-              trigger={menuItems.length > 0 ? ["click"] : []}
-              disabled={menuItems.length === 0}
-            >
-              <Button
-                aria-label="Add option"
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <a
+            href="https://www.reduct.store/docs/extensions/official/ros-ext"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <strong>View ReductROS Documentation →</strong>
+          </a>
+        </Typography.Text>
+        {(availableSections.length > 0 ||
+          step.sections.includes("encode") ||
+          step.sections.includes("label")) && (
+          <Tooltip
+            title={menuItems.length > 0 ? "" : "Fill in the current row first"}
+          >
+            <span style={{ display: "inline-block" }}>
+              <Dropdown
+                menu={{ items: menuItems, onClick: handleMenuClick }}
+                trigger={menuItems.length > 0 ? ["click"] : []}
                 disabled={menuItems.length === 0}
-                icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-              />
-            </Dropdown>
-          </span>
-        </Tooltip>
-      )}
+              >
+                <Button
+                  aria-label="Add option"
+                  disabled={menuItems.length === 0}
+                  icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+                />
+              </Dropdown>
+            </span>
+          </Tooltip>
+        )}
+      </div>
     </div>
   );
 }

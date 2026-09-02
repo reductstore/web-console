@@ -792,7 +792,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+          screen.getByRole("menuitem", { name: "Process (ROS)" }),
         );
       });
       await act(async () => {
@@ -1036,7 +1036,7 @@ describe("QueryConditionBuilder", () => {
     });
   });
 
-  describe("Transform (ReductROS) step", () => {
+  describe("Process (ROS) step", () => {
     const openAddStepMenu = async () => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add step"));
@@ -1047,7 +1047,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+          screen.getByRole("menuitem", { name: "Process (ROS)" }),
         );
       });
     };
@@ -1091,7 +1091,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove transform"));
+      fireEvent.click(screen.getByLabelText("Remove process"));
       expect(screen.queryByLabelText("Add option")).toBeNull();
     });
 
@@ -1175,7 +1175,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
+      expect(screen.getByText("Process (ROS)")).toBeTruthy();
       expect(
         screen.getByPlaceholderText("optional ROS topic filter"),
       ).toHaveValue("/robot/odom");
@@ -1191,7 +1191,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.queryByText("Transform (ReductROS)")).toBeNull();
+      expect(screen.queryByText("Process (ROS)")).toBeNull();
 
       const value = JSON.stringify({
         "#ext": {
@@ -1212,7 +1212,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
+      expect(screen.getByText("Process (ROS)")).toBeTruthy();
     });
   });
 });

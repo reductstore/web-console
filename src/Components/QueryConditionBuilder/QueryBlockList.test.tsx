@@ -174,8 +174,8 @@ describe("QueryBlockList", () => {
         transform={transformStep}
       />,
     );
-    expect(screen.getByText("Transform (ReductROS)")).toBeTruthy();
-    expect(screen.getByLabelText("Remove transform")).toBeTruthy();
+    expect(screen.getByText("Process (ROS)")).toBeTruthy();
+    expect(screen.getByLabelText("Remove process")).toBeTruthy();
   });
 
   it("calls onRemoveTransformBlock from the Transform block's remove button", () => {
@@ -190,11 +190,11 @@ describe("QueryBlockList", () => {
         onRemoveTransformBlock={onRemoveTransformBlock}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Remove transform"));
+    fireEvent.click(screen.getByLabelText("Remove process"));
     expect(onRemoveTransformBlock).toHaveBeenCalled();
   });
 
-  it("offers Transform (ReductROS) in the Add step menu, and calls onAddTransformBlock when picked", async () => {
+  it("offers Process (ROS) in the Add step menu, and calls onAddTransformBlock when picked", async () => {
     const onAddTransformBlock = vi.fn();
     render(
       <QueryBlockList
@@ -207,15 +207,15 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+      screen.getByRole("menuitem", { name: "Process (ROS)" }),
     ).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByText("Transform (ReductROS)"));
+      fireEvent.click(screen.getByText("Process (ROS)"));
     });
     expect(onAddTransformBlock).toHaveBeenCalled();
   });
 
-  it("removes Transform (ReductROS) from the menu once it's already added", async () => {
+  it("removes Process (ROS) from the menu once it's already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -227,7 +227,7 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Transform (ReductROS)" }),
+      screen.queryByRole("menuitem", { name: "Process (ROS)" }),
     ).toBeNull();
   });
 
@@ -280,7 +280,7 @@ describe("QueryBlockList", () => {
     ).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
     expect(
-      screen.getByRole("menuitem", { name: "Transform (ReductROS)" }),
+      screen.getByRole("menuitem", { name: "Process (ROS)" }),
     ).toBeTruthy();
   });
 

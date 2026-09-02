@@ -133,7 +133,7 @@ export default function QueryBlockList({
     !hasEachT && { key: "sample_each_t", label: "Sample by time interval" },
     !hasEachN && { key: "sample_each_n", label: "Sample every N records" },
     !hasLimit && { key: "limit", label: "Limit" },
-    !hasTransform && { key: "transform_ros", label: "Transform (ReductROS)" },
+    !hasTransform && { key: "transform_ros", label: "Process (ROS)" },
   ].filter((item) => item !== false);
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -196,8 +196,8 @@ export default function QueryBlockList({
               <SortableCard
                 key={TRANSFORM_BLOCK_ID}
                 id={TRANSFORM_BLOCK_ID}
-                label="Transform (ReductROS)"
-                removeLabel="Remove transform"
+                label="Process (ROS)"
+                removeLabel="Remove process"
                 onRemove={onRemoveTransformBlock}
               >
                 <TransformStepEditor
