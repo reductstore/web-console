@@ -109,6 +109,8 @@ const STEP_KEYS: Record<Step["type"], string> = {
   limit: "$limit",
 };
 
+const KEEP_TRANSFORM = Symbol("keep-transform");
+
 function reorderQueryKeys(
   value: Record<string, unknown>,
   blockOrder: string[],
@@ -284,13 +286,15 @@ export default function QueryConditionBuilder({
   const applyQuery = (
     nextConditions: FlatCondition[],
     nextSteps: Step[],
-    nextTransform: TransformStepEntry | undefined = transformState,
+    nextTransform: TransformStepEntry | undefined | typeof KEEP_TRANSFORM,
     nextBlockOrder: string[] = blockOrder,
   ) => {
+    const resolvedTransform =
+      nextTransform === KEEP_TRANSFORM ? transformState : nextTransform;
     setConditions(nextConditions);
     setSteps(nextSteps);
-    setTransformState(nextTransform);
-    const extPayload = buildExtPayload(nextTransform);
+    setTransformState(resolvedTransform);
+    const extPayload = buildExtPayload(resolvedTransform);
     const merged = {
       ...serializeBuilderList(nextConditions),
       ...serializeSteps(nextSteps),
@@ -339,42 +343,60 @@ export default function QueryConditionBuilder({
         labelOptions={labelOptions}
         intervalValue={validationContext?.intervalValue ?? undefined}
         onChangeCondition={(id, changes) =>
-          applyQuery(updateCondition(conditions, id, changes), steps)
+          applyQuery(
+            updateCondition(conditions, id, changes),
+            steps,
+            KEEP_TRANSFORM,
+          )
         }
         onRemoveCondition={(id) =>
-          applyQuery(removeCondition(conditions, id), steps)
+          applyQuery(removeCondition(conditions, id), steps, KEEP_TRANSFORM)
         }
-        onAddCondition={() => applyQuery(addCondition(conditions), steps)}
+        onAddCondition={() =>
+          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM)
+        }
         onChangeEachN={(id, changes) =>
-          applyQuery(conditions, updateEachNStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateEachNStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onChangeEachT={(id, changes) =>
-          applyQuery(conditions, updateEachTStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateEachTStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onChangeLimit={(id, changes) =>
-          applyQuery(conditions, updateLimitStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateLimitStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onAddConditionsBlock={() => {
-          applyQuery(addCondition(conditions), steps);
+          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM);
           appendBlock(CONDITIONS_BLOCK_ID);
         }}
         onRemoveConditionsBlock={() => {
-          applyQuery([], steps);
+          applyQuery([], steps, KEEP_TRANSFORM);
           removeBlock(CONDITIONS_BLOCK_ID);
         }}
         onAddEachT={() => {
           const nextSteps = addEachTStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddEachN={() => {
           const nextSteps = addEachNStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddLimit={() => {
           const nextSteps = addLimitStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddTransformBlock={() => {
@@ -434,7 +456,7 @@ export default function QueryConditionBuilder({
           applyQuery(conditions, steps, updateExport(transformState, changes))
         }
         onRemoveStep={(id) => {
-          applyQuery(conditions, removeStep(steps, id));
+          applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
           removeBlock(id);
         }}
         onReorderBlock={(fromIndex, toIndex) => {

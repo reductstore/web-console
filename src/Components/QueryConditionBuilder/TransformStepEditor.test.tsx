@@ -255,7 +255,7 @@ describe("TransformStepEditor", () => {
           onRemoveSection={onRemoveSection}
         />,
       );
-      fireEvent.click(screen.getByLabelText("Remove label"));
+      fireEvent.click(screen.getByLabelText("Remove as label"));
       expect(onRemoveSection).toHaveBeenCalledWith("label");
     });
   });

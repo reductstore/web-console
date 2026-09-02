@@ -1053,7 +1053,7 @@ describe("QueryConditionBuilder", () => {
     };
 
     const addSection = async (
-      name: "Filter" | "Encode" | "Label" | "Export",
+      name: "Filter" | "Encode" | "As label" | "Export",
     ) => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add option"));
@@ -1095,6 +1095,29 @@ describe("QueryConditionBuilder", () => {
       expect(screen.queryByLabelText("Add option")).toBeNull();
     });
 
+    it("offers Process (ROS) again in the Add step menu after it's removed, and drops #ext from onChange", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove process"));
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
+
+      await openAddStepMenu();
+      expect(
+        screen.getByRole("menuitem", { name: "Process (ROS)" }),
+      ).toBeTruthy();
+    });
+
     it("reports a typed topic and as_label mapping through onChange, merged as a #ext key", async () => {
       const onChange = vi.fn();
       render(
@@ -1112,7 +1135,7 @@ describe("QueryConditionBuilder", () => {
         screen.getByPlaceholderText("optional ROS topic filter"),
         { target: { value: "/robot/odom" } },
       );
-      await addSection("Label");
+      await addSection("As label");
       fireEvent.change(
         screen.getByPlaceholderText("label name (e.g. label_name)"),
         { target: { value: "speed" } },
