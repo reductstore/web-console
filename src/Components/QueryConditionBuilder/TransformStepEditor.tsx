@@ -238,7 +238,7 @@ export default function TransformStepEditor({
           <RowList
             rows={step.asLabel}
             keyPlaceholder="label name (e.g. label_name)"
-            valuePlaceholder="field (e.g. latitude)"
+            valuePlaceholder="field (e.g. latitude.x)"
             onChange={onChangeAsLabelRow}
             onRemove={onRemoveAsLabelRow}
             removeLabel="Remove label mapping"
