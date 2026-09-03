@@ -7,6 +7,12 @@ import {
   RosSection,
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
+import {
+  ROW_LABEL_WIDTH,
+  ROW_INPUT_WIDTH,
+  ROW_GAP,
+  ROW_GROUP_WIDTH,
+} from "./stepRowLayout";
 
 const SECTION_LABELS: Record<RosSection, string> = {
   filter: "Filter",
@@ -16,8 +22,6 @@ const SECTION_LABELS: Record<RosSection, string> = {
 };
 
 const ALL_SECTIONS: RosSection[] = ["filter", "encode", "label", "export"];
-
-const ROW_INPUT_WIDTH = 260;
 
 interface RowListProps {
   rows: KeyValueRow[];
@@ -50,20 +54,24 @@ function RowList({
       {rows.map((row) => (
         <div
           key={row.id}
-          style={{ display: "flex", alignItems: "center", gap: 8 }}
+          style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}
         >
-          <Input
-            placeholder={keyPlaceholder}
-            value={row.key}
-            onChange={(e) => onChange(row.id, { key: e.target.value })}
-            style={{ width: ROW_INPUT_WIDTH }}
-          />
-          <Input
-            placeholder={valuePlaceholder}
-            value={row.value}
-            onChange={(e) => onChange(row.id, { value: e.target.value })}
-            style={{ width: ROW_INPUT_WIDTH }}
-          />
+          <div
+            style={{ display: "flex", gap: ROW_GAP, width: ROW_GROUP_WIDTH }}
+          >
+            <Input
+              placeholder={keyPlaceholder}
+              value={row.key}
+              onChange={(e) => onChange(row.id, { key: e.target.value })}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <Input
+              placeholder={valuePlaceholder}
+              value={row.value}
+              onChange={(e) => onChange(row.id, { value: e.target.value })}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </div>
           <Button
             aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
             type="text"
@@ -124,7 +132,12 @@ function Section({
     <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
       <Typography.Text
         strong
-        style={{ width: 64, flexShrink: 0, paddingTop: 6, fontSize: 12 }}
+        style={{
+          width: ROW_LABEL_WIDTH,
+          flexShrink: 0,
+          paddingTop: 6,
+          fontSize: 12,
+        }}
       >
         {SECTION_LABELS[section]}
       </Typography.Text>
@@ -133,11 +146,29 @@ function Section({
   );
 }
 
-const ADD_ENCODE_ROW_KEY = "add_encode_row";
-const ADD_LABEL_ROW_KEY = "add_label_row";
+function disabledReason(
+  section: RosSection,
+  step: RosTransformStep,
+): string | undefined {
+  const hasExtractSection = step.sections.some(
+    (s) => s === "filter" || s === "encode" || s === "label",
+  );
+  const hasExportSection = step.sections.includes("export");
 
-function isRowComplete(row: KeyValueRow | undefined): boolean {
-  return !!row && row.key.trim() !== "" && row.value.trim() !== "";
+  if (section === "export") {
+    if (hasExportSection) return "Export is already added";
+    if (hasExtractSection)
+      return "Export can't be combined with Filter, Encode, or As label";
+    return undefined;
+  }
+  if (section === "filter") {
+    if (step.sections.includes("filter")) return "Filter is already added";
+    if (hasExportSection) return "Not available together with Export";
+    return undefined;
+  }
+  // encode / label: never "used up" - clicking again adds another row
+  if (hasExportSection) return "Not available together with Export";
+  return undefined;
 }
 
 export default function TransformStepEditor({
@@ -153,49 +184,31 @@ export default function TransformStepEditor({
   onRemoveAsLabelRow,
   onChangeExport,
 }: TransformStepEditorProps) {
-  // The server accepts only one of extract/export/transform per request, so
-  // Export can never coexist with Filter/Encode/Label (which all feed into
-  // extract) - confirmed by the server's own rejection message.
-  const hasExtractSection = step.sections.some(
-    (section) =>
-      section === "filter" || section === "encode" || section === "label",
-  );
-  const hasExportSection = step.sections.includes("export");
-  const availableSections = ALL_SECTIONS.filter((section) => {
-    if (step.sections.includes(section)) {
-      return false;
-    }
-    if (section === "export" && hasExtractSection) {
-      return false;
-    }
-    if (section !== "export" && hasExportSection) {
-      return false;
-    }
-    return true;
+  const menuItems = ALL_SECTIONS.map((section) => {
+    const reason = disabledReason(section, step);
+    return {
+      key: section,
+      disabled: !!reason,
+      label: reason ? (
+        <Tooltip title={reason} placement="right">
+          <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>
+            {SECTION_LABELS[section]}
+          </span>
+        </Tooltip>
+      ) : (
+        SECTION_LABELS[section]
+      ),
+    };
   });
 
-  const menuItems = [
-    ...availableSections.map((section) => ({
-      key: section,
-      label: SECTION_LABELS[section],
-    })),
-    ...(step.sections.includes("encode") &&
-    isRowComplete(step.encode[step.encode.length - 1])
-      ? [{ key: ADD_ENCODE_ROW_KEY, label: "Add encode row" }]
-      : []),
-    ...(step.sections.includes("label") &&
-    isRowComplete(step.asLabel[step.asLabel.length - 1])
-      ? [{ key: ADD_LABEL_ROW_KEY, label: "Add label row" }]
-      : []),
-  ];
-
   const handleMenuClick = ({ key }: { key: string }) => {
-    if (key === ADD_ENCODE_ROW_KEY) {
+    const section = key as RosSection;
+    if (section === "encode" && step.sections.includes("encode")) {
       onAddEncodeRow();
-    } else if (key === ADD_LABEL_ROW_KEY) {
+    } else if (section === "label" && step.sections.includes("label")) {
       onAddAsLabelRow();
     } else {
-      onAddSection(key as RosSection);
+      onAddSection(section);
     }
   };
 
@@ -203,12 +216,12 @@ export default function TransformStepEditor({
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {step.sections.includes("filter") && (
         <Section section="filter">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
             <Input
               placeholder="optional ROS topic filter"
               value={step.topic}
               onChange={(e) => onChangeTopic(e.target.value)}
-              style={{ width: ROW_INPUT_WIDTH }}
+              style={{ width: ROW_GROUP_WIDTH }}
             />
             <RemoveSectionButton
               section="filter"
@@ -278,27 +291,15 @@ export default function TransformStepEditor({
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {(availableSections.length > 0 ||
-          step.sections.includes("encode") ||
-          step.sections.includes("label")) && (
-          <Tooltip
-            title={menuItems.length > 0 ? "" : "Fill in the current row first"}
-          >
-            <span style={{ display: "inline-block" }}>
-              <Dropdown
-                menu={{ items: menuItems, onClick: handleMenuClick }}
-                trigger={menuItems.length > 0 ? ["click"] : []}
-                disabled={menuItems.length === 0}
-              >
-                <Button
-                  aria-label="Add option"
-                  disabled={menuItems.length === 0}
-                  icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-                />
-              </Dropdown>
-            </span>
-          </Tooltip>
-        )}
+        <Dropdown
+          menu={{ items: menuItems, onClick: handleMenuClick }}
+          trigger={["click"]}
+        >
+          <Button
+            aria-label="Add option"
+            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+          />
+        </Dropdown>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           <a
             href="https://www.reduct.store/docs/extensions/official/ros-ext"

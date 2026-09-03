@@ -10,7 +10,6 @@ interface SortableCardProps {
   removeLabel?: string;
   onRemove: () => void;
   removable?: boolean;
-  inline?: boolean;
   isOverlay?: boolean;
   children: ReactNode;
 }
@@ -21,7 +20,6 @@ export default function SortableCard({
   removeLabel,
   onRemove,
   removable = true,
-  inline = false,
   isOverlay = false,
   children,
 }: SortableCardProps) {
@@ -69,32 +67,13 @@ export default function SortableCard({
           <HolderOutlined />
         </span>
         {label && (
-          <Typography.Text
-            strong
-            className="queryCardLabel"
-            style={
-              inline ? { flex: "0 0 auto", whiteSpace: "nowrap" } : undefined
-            }
-          >
+          <Typography.Text strong className="queryCardLabel">
             {label}
           </Typography.Text>
         )}
-        {inline && (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minWidth: 0,
-            }}
-          >
-            {children}
-          </div>
-        )}
         {removeButton}
       </div>
-      {!inline && <div className="queryCardBody">{children}</div>}
+      <div className="queryCardBody">{children}</div>
     </div>
   );
 }

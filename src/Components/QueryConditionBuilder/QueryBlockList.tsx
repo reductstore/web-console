@@ -50,6 +50,7 @@ interface QueryBlockListProps {
   ) => void;
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
+
   onChangeEachN: (id: string, changes: Partial<EachNStep>) => void;
   onChangeEachT: (id: string, changes: Partial<EachTStep>) => void;
   onChangeLimit: (id: string, changes: Partial<LimitStep>) => void;
@@ -129,9 +130,9 @@ export default function QueryBlockList({
   const disabled = !sourceReady || allAdded;
 
   const menuItems = [
-    !hasConditionsBlock && { key: "conditions", label: "Where labels" },
-    !hasEachT && { key: "sample_each_t", label: "Sample by time interval" },
-    !hasEachN && { key: "sample_each_n", label: "Sample every N records" },
+    !hasConditionsBlock && { key: "conditions", label: "Label filter" },
+    !hasEachT && { key: "sample_each_t", label: "Sample by time" },
+    !hasEachN && { key: "sample_each_n", label: "Sample every N" },
     !hasLimit && { key: "limit", label: "Limit" },
     !hasTransform && { key: "transform_ros", label: "Process (ROS)" },
   ].filter((item) => item !== false);
@@ -176,8 +177,8 @@ export default function QueryBlockList({
               <SortableCard
                 key={CONDITIONS_BLOCK_ID}
                 id={CONDITIONS_BLOCK_ID}
-                label="Where labels"
-                removeLabel="Remove where labels"
+                label="Label filter"
+                removeLabel="Remove label filter"
                 onRemove={onRemoveConditionsBlock}
               >
                 <ConditionListEditor
@@ -223,13 +224,10 @@ export default function QueryBlockList({
                 key={step.id}
                 id={step.id}
                 label={
-                  step.type === "each_n"
-                    ? "Sample every N records"
-                    : "Sample by time interval"
+                  step.type === "each_n" ? "Sample every N" : "Sample by time"
                 }
                 removeLabel="Remove sample step"
                 onRemove={() => onRemoveStep(step.id)}
-                inline
               >
                 <SampleStepEditor
                   kind={step.type}
@@ -254,7 +252,6 @@ export default function QueryBlockList({
               label="Limit"
               removeLabel="Remove limit step"
               onRemove={() => onRemoveStep(step.id)}
-              inline
             >
               <LimitStepEditor
                 step={step.limit}

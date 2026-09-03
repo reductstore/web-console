@@ -47,7 +47,7 @@ describe("TransformStepEditor", () => {
     expect(onAddSection).toHaveBeenCalledWith("filter");
   });
 
-  it("hides Export from the menu once Filter/Encode/Label is added, and vice versa", async () => {
+  it("greys out Export once Filter/Encode/Label is added, and vice versa, but always shows all four options", async () => {
     const withFilter: RosTransformStep = {
       ...baseStep,
       sections: ["filter"],
@@ -55,21 +55,32 @@ describe("TransformStepEditor", () => {
     };
     render(<TransformStepEditor step={withFilter} {...noopHandlers} />);
     fireEvent.click(screen.getByLabelText("Add option"));
-    expect(await screen.findByText("Encode")).toBeTruthy();
-    expect(screen.queryByText("Export")).toBeNull();
+    expect(
+      await screen.findByRole("menuitem", { name: "Encode" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Export" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
-  it("leaves no addable section once Export is added, since it's mutually exclusive with the other three", () => {
+  it("greys out all four options once Export is added, since it's mutually exclusive with the other three", async () => {
     const withExport: RosTransformStep = {
       ...baseStep,
       sections: ["export"],
       export: { format: "mcap", duration: "", size: "" },
     };
     render(<TransformStepEditor step={withExport} {...noopHandlers} />);
-    expect(screen.queryByLabelText("Add option")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Add option"));
+    for (const name of ["Filter", "Encode", "As label", "Export"]) {
+      expect(await screen.findByRole("menuitem", { name })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+    }
   });
 
-  it("disables (but keeps visible) Add option once all four sections are added and no row is ready to duplicate", () => {
+  it("keeps Add option enabled even when every section is already added", () => {
     const step: RosTransformStep = {
       ...baseStep,
       sections: ["filter", "encode", "label", "export"],
@@ -77,7 +88,7 @@ describe("TransformStepEditor", () => {
       asLabel: [{ id: "l1", key: "", value: "" }],
     };
     render(<TransformStepEditor step={step} {...noopHandlers} />);
-    expect(screen.getByLabelText("Add option")).toBeDisabled();
+    expect(screen.getByLabelText("Add option")).not.toBeDisabled();
   });
 
   describe("Filter section", () => {
@@ -166,7 +177,7 @@ describe("TransformStepEditor", () => {
       expect(onRemoveSection).toHaveBeenCalledWith("encode");
     });
 
-    it("offers Add encode row from the single Add option menu when the last row is complete", async () => {
+    it("adds another encode row when Encode is picked again from the menu", async () => {
       const onAddEncodeRow = vi.fn();
       render(
         <TransformStepEditor
@@ -176,19 +187,27 @@ describe("TransformStepEditor", () => {
         />,
       );
       fireEvent.click(screen.getByLabelText("Add option"));
-      fireEvent.click(await screen.findByText("Add encode row"));
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
       expect(onAddEncodeRow).toHaveBeenCalled();
     });
 
-    it("omits Add encode row from the menu until the last row is complete", async () => {
+    it("still allows adding another encode row even when the last row is incomplete", async () => {
+      const onAddEncodeRow = vi.fn();
       const partial: RosTransformStep = {
         ...baseStep,
         sections: ["encode"],
         encode: [{ id: "e1", key: "data", value: "" }],
       };
-      render(<TransformStepEditor step={partial} {...noopHandlers} />);
+      render(
+        <TransformStepEditor
+          step={partial}
+          {...noopHandlers}
+          onAddEncodeRow={onAddEncodeRow}
+        />,
+      );
       fireEvent.click(screen.getByLabelText("Add option"));
-      expect(screen.queryByText("Add encode row")).toBeNull();
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
+      expect(onAddEncodeRow).toHaveBeenCalled();
     });
   });
 
@@ -208,15 +227,14 @@ describe("TransformStepEditor", () => {
           onChangeAsLabelRow={onChangeAsLabelRow}
         />,
       );
-      fireEvent.change(
-        screen.getByPlaceholderText("label name (e.g. label_name)"),
-        { target: { value: "velocity" } },
-      );
+      fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
+        target: { value: "velocity" },
+      });
       expect(onChangeAsLabelRow).toHaveBeenCalledWith("l1", {
         key: "velocity",
       });
 
-      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude)"), {
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
         target: { value: "data.speed" },
       });
       expect(onChangeAsLabelRow).toHaveBeenCalledWith("l1", {

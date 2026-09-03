@@ -1,5 +1,6 @@
-import { InputNumber } from "antd";
+import { InputNumber, Typography } from "antd";
 import { LimitStep } from "../../Helpers/conditionalQueryBuilder";
+import { ROW_LABEL_WIDTH } from "./stepRowLayout";
 
 interface LimitStepEditorProps {
   step: LimitStep;
@@ -20,6 +21,12 @@ export default function LimitStepEditor({
         minWidth: 0,
       }}
     >
+      <Typography.Text
+        strong
+        style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
+      >
+        Count
+      </Typography.Text>
       <InputNumber
         min={1}
         placeholder="max records"

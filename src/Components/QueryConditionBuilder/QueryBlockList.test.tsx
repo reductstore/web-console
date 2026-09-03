@@ -115,11 +115,11 @@ describe("QueryBlockList", () => {
         steps={[]}
       />,
     );
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByText("Label filter")).toBeNull();
     expect(screen.queryByLabelText("Drag to reorder")).toBeNull();
   });
 
-  it("renders the Where labels block with a drag handle and a remove button once added", () => {
+  it("renders the Label filter block with a drag handle and a remove button once added", () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -128,12 +128,12 @@ describe("QueryBlockList", () => {
         steps={[]}
       />,
     );
-    expect(screen.getByText("Where labels")).toBeTruthy();
+    expect(screen.getByText("Label filter")).toBeTruthy();
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(1);
-    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
+    expect(screen.getByLabelText("Remove label filter")).toBeTruthy();
   });
 
-  it("calls onRemoveConditionsBlock from the Where labels block's remove button", () => {
+  it("calls onRemoveConditionsBlock from the Label filter block's remove button", () => {
     const onRemoveConditionsBlock = vi.fn();
     render(
       <QueryBlockList
@@ -144,7 +144,7 @@ describe("QueryBlockList", () => {
         onRemoveConditionsBlock={onRemoveConditionsBlock}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Remove where labels"));
+    fireEvent.click(screen.getByLabelText("Remove label filter"));
     expect(onRemoveConditionsBlock).toHaveBeenCalled();
   });
 
@@ -157,8 +157,8 @@ describe("QueryBlockList", () => {
         steps={[eachNStep, eachTStep, limitStep]}
       />,
     );
-    expect(screen.getByText("Sample every N records")).toBeTruthy();
-    expect(screen.getByText("Sample by time interval")).toBeTruthy();
+    expect(screen.getByText("Sample every N")).toBeTruthy();
+    expect(screen.getByText("Sample by time")).toBeTruthy();
     expect(screen.getByText("Limit")).toBeTruthy();
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(4);
     expect(screen.getAllByLabelText("Remove sample step")).toHaveLength(2);
@@ -241,8 +241,8 @@ describe("QueryBlockList", () => {
         sourceReady={false}
       />,
     );
-    expect(screen.queryByText("Where labels")).toBeNull();
-    expect(screen.queryByText("Sample by time interval")).toBeNull();
+    expect(screen.queryByText("Label filter")).toBeNull();
+    expect(screen.queryByText("Sample by time")).toBeNull();
     expect(screen.getByLabelText("Add step")).toBeDisabled();
   });
 
@@ -261,7 +261,7 @@ describe("QueryBlockList", () => {
     expect(onRemoveStep).toHaveBeenCalledWith("limit-1");
   });
 
-  it("offers Where labels, both Sample kinds, Limit, and Transform in the Add step menu when none has been added yet", async () => {
+  it("offers Label filter, both Sample kinds, Limit, and Transform in the Add step menu when none has been added yet", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -271,12 +271,12 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
-    expect(screen.getByRole("menuitem", { name: "Where labels" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Label filter" })).toBeTruthy();
     expect(
-      screen.getByRole("menuitem", { name: "Sample by time interval" }),
+      screen.getByRole("menuitem", { name: "Sample by time" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("menuitem", { name: "Sample every N records" }),
+      screen.getByRole("menuitem", { name: "Sample every N" }),
     ).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
     expect(
@@ -295,10 +295,10 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+      screen.queryByRole("menuitem", { name: "Sample by time" }),
     ).toBeNull();
     expect(
-      screen.getByRole("menuitem", { name: "Sample every N records" }),
+      screen.getByRole("menuitem", { name: "Sample every N" }),
     ).toBeTruthy();
   });
 
@@ -313,14 +313,14 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+      screen.queryByRole("menuitem", { name: "Sample by time" }),
     ).toBeNull();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample every N records" }),
+      screen.queryByRole("menuitem", { name: "Sample every N" }),
     ).toBeNull();
   });
 
-  it("removes Where labels from the menu once it's already added", async () => {
+  it("removes Label filter from the menu once it's already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -330,10 +330,10 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
-    expect(screen.queryByRole("menuitem", { name: "Where labels" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Label filter" })).toBeNull();
   });
 
-  it("calls onAddConditionsBlock when Where labels is picked from the menu", async () => {
+  it("calls onAddConditionsBlock when Label filter is picked from the menu", async () => {
     const onAddConditionsBlock = vi.fn();
     render(
       <QueryBlockList
@@ -346,12 +346,12 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Where labels"));
+      fireEvent.click(screen.getByText("Label filter"));
     });
     expect(onAddConditionsBlock).toHaveBeenCalled();
   });
 
-  it("calls onAddEachT when Sample by time interval is picked from the menu", async () => {
+  it("calls onAddEachT when Sample by time is picked from the menu", async () => {
     const onAddEachT = vi.fn();
     render(
       <QueryBlockList
@@ -364,12 +364,12 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Sample by time interval"));
+      fireEvent.click(screen.getByText("Sample by time"));
     });
     expect(onAddEachT).toHaveBeenCalled();
   });
 
-  it("calls onAddEachN when Sample every N records is picked from the menu", async () => {
+  it("calls onAddEachN when Sample every N is picked from the menu", async () => {
     const onAddEachN = vi.fn();
     render(
       <QueryBlockList
@@ -382,7 +382,7 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Sample every N records"));
+      fireEvent.click(screen.getByText("Sample every N"));
     });
     expect(onAddEachN).toHaveBeenCalled();
   });
