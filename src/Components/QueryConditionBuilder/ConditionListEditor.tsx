@@ -1,7 +1,8 @@
-import { Button, Select, Tooltip } from "antd";
+import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
+import { ROW_LABEL_WIDTH } from "./stepRowLayout";
 
 type ConnectorChoice = "$and" | "$or" | "not";
 
@@ -72,14 +73,21 @@ export default function ConditionListEditor({
               marginBottom: 6,
             }}
           >
-            {index > 0 && (
+            {index > 0 ? (
               <Select
                 popupMatchSelectWidth={false}
                 value={connectorChoiceFor(condition)}
                 options={CONNECTOR_OPTIONS}
                 onChange={(value) => handleConnectorChange(condition.id, value)}
-                style={{ width: 70 }}
+                style={{ width: ROW_LABEL_WIDTH }}
               />
+            ) : (
+              <Typography.Text
+                strong
+                style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
+              >
+                Where
+              </Typography.Text>
             )}
             <LabelConditionEditor
               condition={condition}

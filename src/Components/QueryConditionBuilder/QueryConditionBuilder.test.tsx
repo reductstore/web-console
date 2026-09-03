@@ -70,14 +70,14 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
-// Where labels is a step like Sample/Limit - added on demand from the
+// Label filter is a step like Sample/Limit - added on demand from the
 // "+ Add step" menu rather than shown by default.
 const addWhereLabels = async () => {
   await act(async () => {
     fireEvent.click(screen.getByLabelText("Add step"));
   });
   await act(async () => {
-    fireEvent.click(screen.getByText("Where labels"));
+    fireEvent.click(screen.getByText("Label filter"));
   });
 };
 
@@ -93,11 +93,11 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getByText("Query")).toBeTruthy();
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByText("Label filter")).toBeNull();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
   });
 
-  it("reveals one empty condition row once Where labels is added from the menu", async () => {
+  it("reveals one empty condition row once Label filter is added from the menu", async () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -108,11 +108,11 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
+    expect(screen.getByLabelText("Remove label filter")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("hides every block and disables Add step until a bucket and entry are selected", () => {
+  it("hides every block until a bucket and entry are selected, but keeps Add step reachable and greys out its menu", async () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -123,7 +123,13 @@ describe("QueryConditionBuilder", () => {
     );
     expect(screen.getByText("Query")).toBeTruthy();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add step")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Add step"));
+    });
+    expect(
+      screen.getByRole("menuitem", { name: "Label filter" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
@@ -165,7 +171,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
 
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     expect(labelInput).toHaveValue("method");
     expect(screen.getByPlaceholderText("value")).toHaveValue("GET");
   });
@@ -205,7 +211,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -227,7 +233,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     expect(labelInput).toHaveValue("status");
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
   });
@@ -244,7 +250,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -292,7 +298,7 @@ describe("QueryConditionBuilder", () => {
     );
 
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.mouseDown(labelInput);
     expect(await screen.findByTitle("status")).toBeTruthy();
     expect(screen.getByTitle("method")).toBeTruthy();
@@ -339,7 +345,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     // The "+" button stays disabled until the row it would chain off of has
     // both a label and a value.
@@ -381,7 +387,7 @@ describe("QueryConditionBuilder", () => {
     await addWhereLabels();
     // The "+" button stays disabled until row 1 has both a label and a
     // value.
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -466,7 +472,7 @@ describe("QueryConditionBuilder", () => {
     // partially filled one is.
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
@@ -510,9 +516,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -521,10 +527,10 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
 
@@ -535,7 +541,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("adds a Sample every N records step directly and reports its count", async () => {
+    it("adds a Sample every N step directly and reports its count", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -549,7 +555,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -574,17 +580,17 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "1s" },
       });
 
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -598,7 +604,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("offers neither Sample kind in the menu once each_n and each_t are both present", async () => {
+    it("greys out both Sample kinds in the menu once each_n and each_t are both present", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -611,23 +617,23 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
 
       await openAddStepMenu();
       expect(
-        screen.queryByRole("menuitem", { name: "Sample by time interval" }),
-      ).toBeNull();
+        screen.getByRole("menuitem", { name: "Sample by time" }),
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
-        screen.queryByRole("menuitem", { name: "Sample every N records" }),
-      ).toBeNull();
+        screen.getByRole("menuitem", { name: "Sample every N" }),
+      ).toHaveAttribute("aria-disabled", "true");
     });
 
     it("adds a limit step and combines it with an existing filter", async () => {
@@ -643,9 +649,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -679,9 +685,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -690,10 +696,10 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
       await openAddStepMenu();
@@ -729,9 +735,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -754,7 +760,7 @@ describe("QueryConditionBuilder", () => {
         "$limit",
       ]);
 
-      // Drag the Limit block above the Where labels block.
+      // Drag the Limit block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
           active: { id: limitStepId },
@@ -766,6 +772,59 @@ describe("QueryConditionBuilder", () => {
       expect(Object.keys(JSON.parse(afterDrag))).toEqual(["$limit", "&status"]);
 
       uuidMock.mockRestore();
+    });
+
+    it("reorders the JSON's ext key to match a drag-and-drop reorder involving the Transform block", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
+      });
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
+      fireEvent.change(labelInput, { target: { value: "status" } });
+      fireEvent.change(screen.getByPlaceholderText("value"), {
+        target: { value: "active" },
+      });
+
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Process (ROS)" }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Filter"));
+      });
+      fireEvent.change(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+        { target: { value: "/robot/odom" } },
+      );
+
+      const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(beforeDrag))).toEqual(["&status", "#ext"]);
+
+      // Drag the Transform block above the Label filter block.
+      act(() => {
+        capturedOnDragEnd?.({
+          active: { id: "transform" },
+          over: { id: "conditions" },
+        } as DragEndEvent);
+      });
+
+      const [afterDrag] = onChange.mock.calls.at(-1) as [string];
+      expect(Object.keys(JSON.parse(afterDrag))).toEqual(["#ext", "&status"]);
     });
 
     it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
@@ -819,25 +878,25 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
       // Sample defaults to the interval macro, so adding it alone doesn't
       // block Run Query.
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
-      fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("removes the matching menu item once limit is already added", async () => {
+    it("greys out the matching menu item once limit is already added", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -853,12 +912,15 @@ describe("QueryConditionBuilder", () => {
         fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
       });
       await openAddStepMenu();
-      expect(screen.queryByRole("menuitem", { name: "Limit" })).toBeNull();
+      expect(screen.getByRole("menuitem", { name: "Limit" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
       expect(
-        screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        screen.getByRole("menuitem", { name: "Sample by time" }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("menuitem", { name: "Sample every N records" }),
+        screen.getByRole("menuitem", { name: "Sample every N" }),
       ).toBeTruthy();
     });
 
@@ -873,7 +935,7 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        expect(screen.getByText("Sample by time interval")).toBeTruthy();
+        expect(screen.getByText("Sample by time")).toBeTruthy();
         expect(screen.getByLabelText("Remove sample step")).toBeTruthy();
       });
 
@@ -891,10 +953,10 @@ describe("QueryConditionBuilder", () => {
         await openAddStepMenu();
         await act(async () => {
           fireEvent.click(
-            screen.getByRole("menuitem", { name: "Where labels" }),
+            screen.getByRole("menuitem", { name: "Label filter" }),
           );
         });
-        const [labelInput] = screen.getAllByRole("combobox");
+        const labelInput = screen.getByRole("combobox", { name: "Label" });
         fireEvent.change(labelInput, { target: { value: "status" } });
         fireEvent.change(screen.getByPlaceholderText("value"), {
           target: { value: "active" },
@@ -919,7 +981,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
           target: { value: "30s" },
         });
         const [afterDuration] = onChange.mock.calls.at(-1) as [string];
@@ -958,7 +1020,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("duration (e.g. 30s)"), {
+        fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
           target: { value: "30 s" },
         });
 
@@ -975,11 +1037,213 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        expect(screen.getByText("Sample by time interval")).toBeTruthy();
-        expect(screen.getByPlaceholderText("duration (e.g. 30s)")).toHaveValue(
+        expect(screen.getByText("Sample by time")).toBeTruthy();
+        expect(screen.getByRole("combobox", { name: "Interval" })).toHaveValue(
           "30s",
         );
       });
+    });
+  });
+
+  describe("Process (ROS) step", () => {
+    const openAddStepMenu = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add step"));
+      });
+    };
+
+    const addTransformBlock = async () => {
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Process (ROS)" }),
+        );
+      });
+    };
+
+    const addSection = async (
+      name: "Filter" | "Encode" | "As label" | "Export",
+    ) => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText(name));
+      });
+    };
+
+    it("adds a fresh transform (no sections yet) via the menu", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      expect(screen.getByLabelText("Add option")).toBeTruthy();
+      expect(
+        screen.queryByPlaceholderText("optional ROS topic filter"),
+      ).toBeNull();
+    });
+
+    it("removes the transform via its card's remove button", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove process"));
+      expect(screen.queryByLabelText("Add option")).toBeNull();
+    });
+
+    it("offers Process (ROS) again in the Add step menu after it's removed, and drops #ext from onChange", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove process"));
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
+
+      await openAddStepMenu();
+      expect(
+        screen.getByRole("menuitem", { name: "Process (ROS)" }),
+      ).toBeTruthy();
+    });
+
+    it("reports a typed topic and as_label mapping through onChange, merged as a #ext key", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      await addSection("Filter");
+      fireEvent.change(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+        { target: { value: "/robot/odom" } },
+      );
+      await addSection("As label");
+      fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
+        target: { value: "speed" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
+        target: { value: "data.speed" },
+      });
+
+      const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
+      const parsed = JSON.parse(lastValue);
+      expect(parsed["#ext"].ros.extract).toMatchObject({
+        topic: "/robot/odom",
+        as_label: { speed: "data.speed" },
+      });
+    });
+
+    it("reports an incomplete transform for a half-filled encode row, and clears once both sides are filled", async () => {
+      const onIncompleteConditionChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+          onIncompleteConditionChange={onIncompleteConditionChange}
+        />,
+      );
+      await addTransformBlock();
+      await addSection("Encode");
+
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. data)"), {
+        target: { value: "data" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByPlaceholderText("encoding (e.g. jpeg)"), {
+        target: { value: "jpeg" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("shows a transform carried in the value prop's #ext key, without needing to be added", () => {
+      const value = JSON.stringify({
+        "#ext": {
+          ros: {
+            extract: {
+              topic: "/robot/odom",
+              as_label: { speed: "data.speed" },
+            },
+          },
+        },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Process (ROS)")).toBeTruthy();
+      expect(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+      ).toHaveValue("/robot/odom");
+    });
+
+    it("resyncs when the value prop's #ext key changes from outside while already in builder mode", () => {
+      const { rerender } = render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.queryByText("Process (ROS)")).toBeNull();
+
+      const value = JSON.stringify({
+        "#ext": {
+          ros: {
+            extract: {
+              topic: "/robot/odom",
+              as_label: { speed: "data.speed" },
+            },
+          },
+        },
+      });
+      rerender(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Process (ROS)")).toBeTruthy();
     });
   });
 });

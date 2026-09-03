@@ -6,6 +6,7 @@ import {
   LABEL_OPERATORS,
   isMultiValueOperator,
 } from "../../Helpers/conditionalQueryBuilder";
+import { ROW_INPUT_WIDTH, ROW_GAP, ROW_GROUP_WIDTH } from "./stepRowLayout";
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;
@@ -44,42 +45,45 @@ export default function LabelConditionEditor({
   };
 
   return (
-    <div style={{ display: "flex", gap: 8, flex: 1 }}>
-      <AutoComplete
-        placeholder="label"
-        value={condition.label}
-        options={labelOptions.map((option) => ({ value: option }))}
-        onChange={(value) =>
-          onChange(condition.id, { label: value.replace(/^&/, "") })
-        }
-        style={{ minWidth: 130, flexShrink: 0 }}
-        popupMatchSelectWidth={false}
-      />
-      <Select
-        value={condition.operator}
-        options={LABEL_OPERATORS}
-        onChange={handleOperatorChange}
-        style={{ width: "max-content", minWidth: 48, flexShrink: 0 }}
-        popupMatchSelectWidth={false}
-      />
-      {isMultiValue ? (
-        <Select
-          mode="tags"
-          placeholder="values"
-          tokenSeparators={[","]}
-          value={condition.value as string[]}
-          onChange={(value) => onChange(condition.id, { value })}
-          style={{ flex: 1, minWidth: 130 }}
+    <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
+      <div style={{ display: "flex", gap: ROW_GAP, width: ROW_GROUP_WIDTH }}>
+        <AutoComplete
+          aria-label="Label"
+          placeholder="label"
+          value={condition.label}
+          options={labelOptions.map((option) => ({ value: option }))}
+          onChange={(value) =>
+            onChange(condition.id, { label: value.replace(/^&/, "") })
+          }
+          style={{ width: ROW_INPUT_WIDTH, flexShrink: 0 }}
           popupMatchSelectWidth={false}
         />
-      ) : (
-        <Input
-          placeholder="value"
-          value={condition.value as string}
-          onChange={(e) => onChange(condition.id, { value: e.target.value })}
-          style={{ flex: 1 }}
+        <Select
+          value={condition.operator}
+          options={LABEL_OPERATORS}
+          onChange={handleOperatorChange}
+          style={{ width: "max-content", minWidth: 48, flexShrink: 0 }}
+          popupMatchSelectWidth={false}
         />
-      )}
+        {isMultiValue ? (
+          <Select
+            mode="tags"
+            placeholder="values"
+            tokenSeparators={[","]}
+            value={condition.value as string[]}
+            onChange={(value) => onChange(condition.id, { value })}
+            style={{ flex: 1, minWidth: 0 }}
+            popupMatchSelectWidth={false}
+          />
+        ) : (
+          <Input
+            placeholder="value"
+            value={condition.value as string}
+            onChange={(e) => onChange(condition.id, { value: e.target.value })}
+            style={{ flex: 1, minWidth: 0 }}
+          />
+        )}
+      </div>
       {removable ? (
         <Button
           aria-label="Remove condition"

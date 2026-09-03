@@ -13,7 +13,7 @@ import {
   hasIncompleteSteps,
   hasValue,
   moveItem,
-  parseQueryValue,
+  parseBuilderList,
   removeCondition,
   removeStep,
   serializeBuilderList,
@@ -23,7 +23,27 @@ import {
   updateEachTStep,
   updateLimitStep,
 } from "../../Helpers/conditionalQueryBuilder";
-import { formatAsStrictJSON } from "../../Helpers/json5Utils";
+import {
+  addAsLabelRow,
+  addEncodeRow,
+  addSection,
+  buildExtPayload,
+  createRosTransformStep,
+  hasIncompleteTransform,
+  parseExtPayload,
+  removeAsLabelRow,
+  removeEncodeRow,
+  removeSection,
+  RosExportConfig,
+  RosSection,
+  TransformStepEntry,
+  TRANSFORM_BLOCK_ID,
+  updateAsLabelRow,
+  updateEncodeRow,
+  updateExport,
+  updateTopic,
+} from "../../Helpers/transformStepBuilder";
+import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
 
 type ValidationContext = ComponentProps<
@@ -33,11 +53,54 @@ type ValidationContext = ComponentProps<
 function initialBlockOrder(
   conditions: FlatCondition[],
   steps: Step[],
+  transform: TransformStepEntry | undefined,
 ): string[] {
   return [
     ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
     ...steps.map((step) => step.id),
+    ...(transform ? [TRANSFORM_BLOCK_ID] : []),
   ];
+}
+
+interface ParsedQueryAndTransform {
+  list: FlatCondition[];
+  steps?: Step[];
+  transform?: TransformStepEntry;
+}
+
+// Mirrors conditionalQueryBuilder's own parseQueryValue, but also splits out
+// the "#ext" sibling key this file merges into the same text (see
+// applyQuery) before handing the rest to the condition/step parser - kept
+// here rather than in either Helper module so neither has to import the
+// other.
+function parseQueryAndTransform(
+  text: string,
+): ParsedQueryAndTransform | undefined {
+  const parsed = safeParseJSON5(text);
+  if (!parsed.success) {
+    return undefined;
+  }
+  const raw = parsed.value;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    const result = parseBuilderList(raw);
+    return result.success
+      ? { list: result.list ?? [], steps: result.steps }
+      : undefined;
+  }
+  const { "#ext": ext, ...rest } = raw as Record<string, unknown>;
+  const extResult = parseExtPayload(ext);
+  if (!extResult.success) {
+    return undefined;
+  }
+  const result = parseBuilderList(rest);
+  if (!result.success) {
+    return undefined;
+  }
+  return {
+    list: result.list ?? [],
+    steps: result.steps,
+    transform: extResult.transform,
+  };
 }
 
 const STEP_KEYS: Record<Step["type"], string> = {
@@ -45,6 +108,8 @@ const STEP_KEYS: Record<Step["type"], string> = {
   each_t: "$each_t",
   limit: "$limit",
 };
+
+const KEEP_TRANSFORM = Symbol("keep-transform");
 
 function reorderQueryKeys(
   value: Record<string, unknown>,
@@ -55,7 +120,11 @@ function reorderQueryKeys(
     steps.map((step) => [step.id, STEP_KEYS[step.type]]),
   );
   const conditionsKey = Object.keys(value).find(
-    (key) => key !== "$each_n" && key !== "$each_t" && key !== "$limit",
+    (key) =>
+      key !== "$each_n" &&
+      key !== "$each_t" &&
+      key !== "$limit" &&
+      key !== "#ext",
   );
 
   const orderedKeys: string[] = [];
@@ -63,7 +132,9 @@ function reorderQueryKeys(
     const key =
       blockId === CONDITIONS_BLOCK_ID
         ? conditionsKey
-        : stepKeyById.get(blockId);
+        : blockId === TRANSFORM_BLOCK_ID
+          ? "#ext"
+          : stepKeyById.get(blockId);
     if (key !== undefined && key in value && !orderedKeys.includes(key)) {
       orderedKeys.push(key);
     }
@@ -101,10 +172,11 @@ export default function QueryConditionBuilder({
   onIncompleteConditionChange,
 }: QueryConditionBuilderProps) {
   const [initial] = useState(() => {
-    const parsed = parseQueryValue(value);
+    const parsed = parseQueryAndTransform(value);
     return {
       conditions: parsed?.list ?? [],
       steps: parsed?.steps ?? [],
+      transform: parsed?.transform,
     };
   });
 
@@ -113,8 +185,12 @@ export default function QueryConditionBuilder({
   );
   const [steps, setSteps] = useState<Step[]>(initial.steps);
 
+  const [transformState, setTransformState] = useState<
+    TransformStepEntry | undefined
+  >(initial.transform);
+
   const [blockOrder, setBlockOrder] = useState<string[]>(() =>
-    initialBlockOrder(initial.conditions, initial.steps),
+    initialBlockOrder(initial.conditions, initial.steps, initial.transform),
   );
 
   const lastEmittedValueRef = useRef(value);
@@ -180,7 +256,7 @@ export default function QueryConditionBuilder({
       return;
     }
     lastEmittedValueRef.current = value;
-    const parsed = parseQueryValue(value);
+    const parsed = parseQueryAndTransform(value);
     if (parsed === undefined) {
       onUnrepresentable();
       return;
@@ -188,7 +264,8 @@ export default function QueryConditionBuilder({
     setConditions(parsed.list);
     const nextSteps = parsed.steps ?? [];
     setSteps(nextSteps);
-    setBlockOrder(initialBlockOrder(parsed.list, nextSteps));
+    setTransformState(parsed.transform);
+    setBlockOrder(initialBlockOrder(parsed.list, nextSteps, parsed.transform));
   }, [value, mode]);
 
   useEffect(() => {
@@ -200,20 +277,28 @@ export default function QueryConditionBuilder({
       conditions.some(
         (condition) =>
           (condition.label.trim() !== "") !== hasValue(condition.value),
-      ) || hasIncompleteSteps(steps);
+      ) ||
+      hasIncompleteSteps(steps) ||
+      hasIncompleteTransform(transformState);
     onIncompleteConditionChange?.(hasIncomplete);
-  }, [conditions, steps, mode]);
+  }, [conditions, steps, transformState, mode]);
 
   const applyQuery = (
     nextConditions: FlatCondition[],
     nextSteps: Step[],
+    nextTransform: TransformStepEntry | undefined | typeof KEEP_TRANSFORM,
     nextBlockOrder: string[] = blockOrder,
   ) => {
+    const resolvedTransform =
+      nextTransform === KEEP_TRANSFORM ? transformState : nextTransform;
     setConditions(nextConditions);
     setSteps(nextSteps);
+    setTransformState(resolvedTransform);
+    const extPayload = buildExtPayload(resolvedTransform);
     const merged = {
       ...serializeBuilderList(nextConditions),
       ...serializeSteps(nextSteps),
+      ...(extPayload ? { "#ext": extPayload } : {}),
     };
     const nextValue = reorderQueryKeys(merged, nextBlockOrder, nextSteps);
     const formatted = formatAsStrictJSON(nextValue);
@@ -253,56 +338,131 @@ export default function QueryConditionBuilder({
         blockOrder={blockOrder}
         conditions={conditions}
         steps={steps}
+        transform={transformState}
         sourceReady={sourceReady}
         labelOptions={labelOptions}
         intervalValue={validationContext?.intervalValue ?? undefined}
         onChangeCondition={(id, changes) =>
-          applyQuery(updateCondition(conditions, id, changes), steps)
+          applyQuery(
+            updateCondition(conditions, id, changes),
+            steps,
+            KEEP_TRANSFORM,
+          )
         }
         onRemoveCondition={(id) =>
-          applyQuery(removeCondition(conditions, id), steps)
+          applyQuery(removeCondition(conditions, id), steps, KEEP_TRANSFORM)
         }
-        onAddCondition={() => applyQuery(addCondition(conditions), steps)}
+        onAddCondition={() =>
+          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM)
+        }
         onChangeEachN={(id, changes) =>
-          applyQuery(conditions, updateEachNStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateEachNStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onChangeEachT={(id, changes) =>
-          applyQuery(conditions, updateEachTStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateEachTStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onChangeLimit={(id, changes) =>
-          applyQuery(conditions, updateLimitStep(steps, id, changes))
+          applyQuery(
+            conditions,
+            updateLimitStep(steps, id, changes),
+            KEEP_TRANSFORM,
+          )
         }
         onAddConditionsBlock={() => {
-          applyQuery(addCondition(conditions), steps);
+          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM);
           appendBlock(CONDITIONS_BLOCK_ID);
         }}
         onRemoveConditionsBlock={() => {
-          applyQuery([], steps);
+          applyQuery([], steps, KEEP_TRANSFORM);
           removeBlock(CONDITIONS_BLOCK_ID);
         }}
         onAddEachT={() => {
           const nextSteps = addEachTStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddEachN={() => {
           const nextSteps = addEachNStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddLimit={() => {
           const nextSteps = addLimitStep(steps);
-          applyQuery(conditions, nextSteps);
+          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
+        onAddTransformBlock={() => {
+          applyQuery(conditions, steps, createRosTransformStep());
+          appendBlock(TRANSFORM_BLOCK_ID);
+        }}
+        onRemoveTransformBlock={() => {
+          applyQuery(conditions, steps, undefined);
+          removeBlock(TRANSFORM_BLOCK_ID);
+        }}
+        onAddSection={(section: RosSection) =>
+          transformState &&
+          applyQuery(conditions, steps, addSection(transformState, section))
+        }
+        onRemoveSection={(section: RosSection) =>
+          transformState &&
+          applyQuery(conditions, steps, removeSection(transformState, section))
+        }
+        onChangeTopic={(topic: string) =>
+          transformState &&
+          applyQuery(conditions, steps, updateTopic(transformState, topic))
+        }
+        onAddEncodeRow={() =>
+          transformState &&
+          applyQuery(conditions, steps, addEncodeRow(transformState))
+        }
+        onChangeEncodeRow={(id, changes) =>
+          transformState &&
+          applyQuery(
+            conditions,
+            steps,
+            updateEncodeRow(transformState, id, changes),
+          )
+        }
+        onRemoveEncodeRow={(id) =>
+          transformState &&
+          applyQuery(conditions, steps, removeEncodeRow(transformState, id))
+        }
+        onAddAsLabelRow={() =>
+          transformState &&
+          applyQuery(conditions, steps, addAsLabelRow(transformState))
+        }
+        onChangeAsLabelRow={(id, changes) =>
+          transformState &&
+          applyQuery(
+            conditions,
+            steps,
+            updateAsLabelRow(transformState, id, changes),
+          )
+        }
+        onRemoveAsLabelRow={(id) =>
+          transformState &&
+          applyQuery(conditions, steps, removeAsLabelRow(transformState, id))
+        }
+        onChangeExport={(changes: Partial<RosExportConfig>) =>
+          transformState &&
+          applyQuery(conditions, steps, updateExport(transformState, changes))
+        }
         onRemoveStep={(id) => {
-          applyQuery(conditions, removeStep(steps, id));
+          applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
           removeBlock(id);
         }}
         onReorderBlock={(fromIndex, toIndex) => {
           const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
           setBlockOrder(nextBlockOrder);
-          applyQuery(conditions, steps, nextBlockOrder);
+          applyQuery(conditions, steps, transformState, nextBlockOrder);
         }}
       />
       {error && (

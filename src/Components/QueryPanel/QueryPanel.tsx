@@ -452,6 +452,7 @@ export default function QueryPanel({
     linkOptions.head = false;
     linkOptions.strict = options.strict;
     linkOptions.when = options.when;
+    linkOptions.ext = options.ext;
     return linkOptions;
   };
 
@@ -530,11 +531,20 @@ export default function QueryPanel({
             return;
           }
 
-          const each_t = extractIntervalFromCondition(
-            conditionResult.processedCondition,
-          );
+          const { "#ext": ext, ...whenFields } =
+            (conditionResult.processedCondition ?? {}) as Record<
+              string,
+              unknown
+            >;
+
+          const each_t = extractIntervalFromCondition(whenFields);
           setTimeRangeState((prev) => ({ ...prev, interval: each_t }));
-          options.when = conditionResult.processedCondition;
+          if (Object.keys(whenFields).length > 0) {
+            options.when = whenFields;
+          }
+          if (ext !== undefined) {
+            options.ext = ext as Record<string, unknown>;
+          }
         }
 
         setQueryContext({
@@ -1112,9 +1122,8 @@ export default function QueryPanel({
     [selectedEntries],
   );
   const validationIntervalValue = useMemo(
-    () =>
-      timeRange.interval ?? pickEachTInterval(timeRange.start, timeRange.end),
-    [timeRange.end, timeRange.interval, timeRange.start],
+    () => pickEachTInterval(timeRange.start, timeRange.end),
+    [timeRange.end, timeRange.start],
   );
 
   return (

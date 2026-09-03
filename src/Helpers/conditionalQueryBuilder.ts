@@ -49,13 +49,13 @@ export interface LimitStepEntry {
 // $each_n and $each_t are independent directives - a query can combine
 // both (e.g. thin to every 20th record, then also throttle to at most one
 // per second) - so each gets its own step, exactly like $limit, added and
-// removed independently from the "+ Add step" menu (as "Sample by time
-// interval" / "Sample every N records").
+// removed independently from the "+ Add step" menu (as "Sample by time" /
+// "Sample every N").
 export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
 
 export type SampleKind = "each_n" | "each_t";
 
-// Fixed id for the "Where labels" block in a QueryConditionBuilder's
+// Fixed id for the "Label filter" block in a QueryConditionBuilder's
 // blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
 // can't drift apart on what it's called.
 export const CONDITIONS_BLOCK_ID = "conditions";

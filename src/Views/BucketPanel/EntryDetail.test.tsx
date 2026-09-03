@@ -288,27 +288,25 @@ describe("EntryDetail", () => {
       return textArea;
     };
 
-    // The default query has no conditions of its own, so Where labels (a
+    // The default query has no conditions of its own, so Label filter (a
     // step like Sample/Limit) has to be added from the menu before there's
     // a row to interact with.
-    const addWhereLabels = async () => {
+    const addLabelFilter = async () => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add step"));
       });
       await act(async () => {
-        fireEvent.click(screen.getByText("Where labels"));
+        fireEvent.click(screen.getByText("Label filter"));
       });
     };
 
-    it("starts in Builder mode, ready to add a Where labels block", () => {
+    it("starts in Builder mode, ready to add a Label filter block", () => {
       expect(screen.getByLabelText("Add step")).not.toBeDisabled();
     });
 
     it("reparses losslessly when returning to Builder without touching the JSON", async () => {
-      await addWhereLabels();
-      const labelInput = container.querySelector(
-        ".ant-select-auto-complete input",
-      ) as HTMLElement;
+      await addLabelFilter();
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -317,7 +315,7 @@ describe("EntryDetail", () => {
       fireEvent.click(screen.getByRole("switch"));
       fireEvent.click(screen.getByRole("switch"));
 
-      expect(screen.getByText("Where labels")).toBeTruthy();
+      expect(screen.getByText("Label filter")).toBeTruthy();
       expect(screen.getByPlaceholderText("value")).toHaveValue("active");
     });
 
@@ -326,7 +324,7 @@ describe("EntryDetail", () => {
 
       fireEvent.click(screen.getByRole("switch"));
       // Still in JSON mode: the switch is deferred behind the confirmation.
-      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.queryByText("Label filter")).toBeNull();
       expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
     });
 
@@ -338,7 +336,7 @@ describe("EntryDetail", () => {
 
       // The reset goes back to the app's zero-condition default, so Where
       // labels (added just for the edited "&status" condition) is gone too.
-      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.queryByText("Label filter")).toBeNull();
       expect(screen.queryByPlaceholderText("value")).toBeNull();
     });
 
@@ -364,19 +362,13 @@ describe("EntryDetail", () => {
       fireEvent.click(screen.getByRole("switch"));
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-      expect(screen.queryByText("Where labels")).toBeNull();
+      expect(screen.queryByText("Label filter")).toBeNull();
       expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
     });
 
     it("blocks Run Query and shows an error when a condition row is missing its value", async () => {
-      await addWhereLabels();
-      // The label field is an AutoComplete: antd renders its placeholder as
-      // a decorative overlay rather than a native `placeholder` attribute,
-      // so it has to be targeted by its distinguishing class instead.
-      const labelInput = container.querySelector(
-        ".ant-select-auto-complete input",
-      ) as HTMLElement;
-      expect(labelInput).not.toBeNull();
+      await addLabelFilter();
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
 
       (bucket.query as Mock).mockClear();
@@ -444,7 +436,7 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("json-saved");
 
-        expect(screen.queryByText("Where labels")).toBeNull();
+        expect(screen.queryByText("Label filter")).toBeNull();
         const monacoEditor = container.querySelector(".monaco-editor-mock");
         const textArea = monacoEditor!.querySelector(
           "textarea",
@@ -466,7 +458,7 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("builder-saved");
 
-        expect(screen.getByText("Where labels")).toBeTruthy();
+        expect(screen.getByText("Label filter")).toBeTruthy();
         expect(screen.getByPlaceholderText("value")).toHaveValue("active");
       });
 
@@ -481,7 +473,7 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("legacy-saved");
 
-        expect(screen.getByText("Where labels")).toBeTruthy();
+        expect(screen.getByText("Label filter")).toBeTruthy();
       });
 
       it("keeps Save disabled for an untouched query saved before mode was tracked", async () => {
