@@ -120,22 +120,45 @@ export default function QueryBlockList({
   const hasEachT = steps.some((step) => step.type === "each_t");
   const hasLimit = steps.some((step) => step.type === "limit");
   const hasTransform = !!transform;
-  const allAdded =
-    hasConditionsBlock && hasEachN && hasEachT && hasLimit && hasTransform;
-  const addStepHint = !sourceReady
-    ? "Select a bucket and entries first"
-    : allAdded
-      ? "All steps are already added"
-      : "";
-  const disabled = !sourceReady || allAdded;
 
-  const menuItems = [
-    !hasConditionsBlock && { key: "conditions", label: "Label filter" },
-    !hasEachT && { key: "sample_each_t", label: "Sample by time" },
-    !hasEachN && { key: "sample_each_n", label: "Sample every N" },
-    !hasLimit && { key: "limit", label: "Limit" },
-    !hasTransform && { key: "transform_ros", label: "Process (ROS)" },
-  ].filter((item) => item !== false);
+  const STEP_LABELS: Record<string, string> = {
+    conditions: "Label filter",
+    sample_each_t: "Sample by time",
+    sample_each_n: "Sample every N",
+    limit: "Limit",
+    transform_ros: "Process (ROS)",
+  };
+
+  const disabledStepReason = (key: string): string | undefined => {
+    if (!sourceReady) return "Select a bucket and entries first";
+    if (key === "conditions" && hasConditionsBlock)
+      return "Label filter is already added";
+    if (key === "sample_each_t" && hasEachT)
+      return "Sample by time is already added";
+    if (key === "sample_each_n" && hasEachN)
+      return "Sample every N is already added";
+    if (key === "limit" && hasLimit) return "Limit is already added";
+    if (key === "transform_ros" && hasTransform)
+      return "Process (ROS) is already added";
+    return undefined;
+  };
+
+  const menuItems = Object.keys(STEP_LABELS).map((key) => {
+    const reason = disabledStepReason(key);
+    return {
+      key,
+      disabled: !!reason,
+      label: reason ? (
+        <Tooltip title={reason} placement="right">
+          <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>
+            {STEP_LABELS[key]}
+          </span>
+        </Tooltip>
+      ) : (
+        STEP_LABELS[key]
+      ),
+    };
+  });
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "conditions") {
@@ -262,26 +285,19 @@ export default function QueryBlockList({
         }}
       />
 
-      <Tooltip title={addStepHint}>
-        {/* A disabled Button doesn't receive pointer events, so wrapping it
-            directly stops the Tooltip's hover trigger from ever firing -
-            this extra span still does. */}
-        <span style={{ display: "inline-block", marginTop: 8 }}>
-          <Dropdown
-            menu={{ items: menuItems, onClick: handleMenuClick }}
-            trigger={["click"]}
-            disabled={disabled}
+      <span style={{ display: "inline-block", marginTop: 8 }}>
+        <Dropdown
+          menu={{ items: menuItems, onClick: handleMenuClick }}
+          trigger={["click"]}
+        >
+          <Button
+            aria-label="Add step"
+            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
           >
-            <Button
-              aria-label="Add step"
-              disabled={disabled}
-              icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-            >
-              Add step
-            </Button>
-          </Dropdown>
-        </span>
-      </Tooltip>
+            Add step
+          </Button>
+        </Dropdown>
+      </span>
     </div>
   );
 }

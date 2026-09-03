@@ -215,7 +215,7 @@ describe("QueryBlockList", () => {
     expect(onAddTransformBlock).toHaveBeenCalled();
   });
 
-  it("removes Process (ROS) from the menu once it's already added", async () => {
+  it("greys out Process (ROS) once it's already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -227,11 +227,11 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Process (ROS)" }),
-    ).toBeNull();
+      screen.getByRole("menuitem", { name: "Process (ROS)" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("hides every block until a data source is selected, but keeps Add step reachable", () => {
+  it("hides every block until a data source is selected, but keeps Add step reachable and greys out its menu", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -243,7 +243,11 @@ describe("QueryBlockList", () => {
     );
     expect(screen.queryByText("Label filter")).toBeNull();
     expect(screen.queryByText("Sample by time")).toBeNull();
-    expect(screen.getByLabelText("Add step")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    await openAddStepMenu();
+    expect(
+      screen.getByRole("menuitem", { name: "Label filter" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("calls onRemoveStep with a step's id from its block's remove button", () => {
@@ -284,7 +288,7 @@ describe("QueryBlockList", () => {
     ).toBeTruthy();
   });
 
-  it("only offers the missing Sample kind in the menu when one has already been added", async () => {
+  it("greys out only the Sample kind that's already been added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -295,14 +299,14 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample by time" }),
-    ).toBeNull();
+      screen.getByRole("menuitem", { name: "Sample by time" }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("menuitem", { name: "Sample every N" }),
-    ).toBeTruthy();
+    ).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  it("removes both Sample menu items once both kinds are already added", async () => {
+  it("greys out both Sample menu items once both kinds are already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -313,14 +317,14 @@ describe("QueryBlockList", () => {
     );
     await openAddStepMenu();
     expect(
-      screen.queryByRole("menuitem", { name: "Sample by time" }),
-    ).toBeNull();
+      screen.getByRole("menuitem", { name: "Sample by time" }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
-      screen.queryByRole("menuitem", { name: "Sample every N" }),
-    ).toBeNull();
+      screen.getByRole("menuitem", { name: "Sample every N" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("removes Label filter from the menu once it's already added", async () => {
+  it("greys out Label filter once it's already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -330,7 +334,9 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
-    expect(screen.queryByRole("menuitem", { name: "Label filter" })).toBeNull();
+    expect(
+      screen.getByRole("menuitem", { name: "Label filter" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("calls onAddConditionsBlock when Label filter is picked from the menu", async () => {
@@ -387,7 +393,7 @@ describe("QueryBlockList", () => {
     expect(onAddEachN).toHaveBeenCalled();
   });
 
-  it("disables Add step only once every block type is present", () => {
+  it("keeps Add step enabled and greys out every item once every block type is present", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -403,7 +409,20 @@ describe("QueryBlockList", () => {
         transform={transformStep}
       />,
     );
-    expect(screen.getByLabelText("Add step")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    await openAddStepMenu();
+    for (const name of [
+      "Label filter",
+      "Sample by time",
+      "Sample every N",
+      "Limit",
+      "Process (ROS)",
+    ]) {
+      expect(screen.getByRole("menuitem", { name })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+    }
   });
 
   it("keeps Add step enabled when only some block types are present", () => {

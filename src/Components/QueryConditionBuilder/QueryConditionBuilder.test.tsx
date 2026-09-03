@@ -112,7 +112,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("hides every block and disables Add step until a bucket and entry are selected", () => {
+  it("hides every block until a bucket and entry are selected, but keeps Add step reachable and greys out its menu", async () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -123,7 +123,13 @@ describe("QueryConditionBuilder", () => {
     );
     expect(screen.getByText("Query")).toBeTruthy();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add step")).toBeDisabled();
+    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Add step"));
+    });
+    expect(
+      screen.getByRole("menuitem", { name: "Label filter" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
@@ -598,7 +604,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("offers neither Sample kind in the menu once each_n and each_t are both present", async () => {
+    it("greys out both Sample kinds in the menu once each_n and each_t are both present", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -623,11 +629,11 @@ describe("QueryConditionBuilder", () => {
 
       await openAddStepMenu();
       expect(
-        screen.queryByRole("menuitem", { name: "Sample by time" }),
-      ).toBeNull();
+        screen.getByRole("menuitem", { name: "Sample by time" }),
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
-        screen.queryByRole("menuitem", { name: "Sample every N" }),
-      ).toBeNull();
+        screen.getByRole("menuitem", { name: "Sample every N" }),
+      ).toHaveAttribute("aria-disabled", "true");
     });
 
     it("adds a limit step and combines it with an existing filter", async () => {
@@ -890,7 +896,7 @@ describe("QueryConditionBuilder", () => {
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("removes the matching menu item once limit is already added", async () => {
+    it("greys out the matching menu item once limit is already added", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -906,7 +912,10 @@ describe("QueryConditionBuilder", () => {
         fireEvent.click(screen.getByRole("menuitem", { name: "Limit" }));
       });
       await openAddStepMenu();
-      expect(screen.queryByRole("menuitem", { name: "Limit" })).toBeNull();
+      expect(screen.getByRole("menuitem", { name: "Limit" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
       expect(
         screen.getByRole("menuitem", { name: "Sample by time" }),
       ).toBeTruthy();
