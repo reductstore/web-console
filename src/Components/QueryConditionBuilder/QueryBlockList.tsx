@@ -174,20 +174,28 @@ export default function QueryBlockList({
     }
   };
 
-  const blocks: Block[] = sourceReady
-    ? blockOrder.flatMap((id): Block[] => {
-        if (id === CONDITIONS_BLOCK_ID) {
-          return [{ id: CONDITIONS_BLOCK_ID, kind: "conditions" }];
-        }
-        if (id === TRANSFORM_BLOCK_ID) {
-          return transform
-            ? [{ id: TRANSFORM_BLOCK_ID, kind: "transform", transform }]
-            : [];
-        }
-        const step = steps.find((s) => s.id === id);
-        return step ? [{ id, kind: "step", step }] : [];
-      })
-    : [];
+  const blocks: Block[] = blockOrder.flatMap((id): Block[] => {
+    if (id === CONDITIONS_BLOCK_ID) {
+      return sourceReady
+        ? [{ id: CONDITIONS_BLOCK_ID, kind: "conditions" }]
+        : [];
+    }
+    if (id === TRANSFORM_BLOCK_ID) {
+      return sourceReady && transform
+        ? [{ id: TRANSFORM_BLOCK_ID, kind: "transform", transform }]
+        : [];
+    }
+    const step = steps.find((s) => s.id === id);
+    if (!step) return [];
+    // The each_t/interval step is the app's built-in default (present even
+    // before a bucket/entry is picked), so it stays visible regardless of
+    // sourceReady - every other step is only ever added once a source is
+    // selected, so those still wait on it.
+    if (step.type === "each_t" || sourceReady) {
+      return [{ id, kind: "step", step }];
+    }
+    return [];
+  });
 
   return (
     <div>

@@ -231,7 +231,7 @@ describe("QueryBlockList", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("hides every block until a data source is selected, but keeps Add step reachable and greys out its menu", async () => {
+  it("hides every block except the default Interval step until a data source is selected, but keeps Add step reachable and greys out its menu", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -242,12 +242,26 @@ describe("QueryBlockList", () => {
       />,
     );
     expect(screen.queryByText("Label filter")).toBeNull();
-    expect(screen.queryByText("Sample by time")).toBeNull();
+    expect(screen.getByText("Sample by time")).toBeTruthy();
     expect(screen.getByLabelText("Add step")).not.toBeDisabled();
     await openAddStepMenu();
     expect(
       screen.getByRole("menuitem", { name: "Label filter" }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("still hides non-default steps like Limit until a data source is selected", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={["each-t-1", "limit-1"]}
+        conditions={[]}
+        steps={[eachTStep, limitStep]}
+        sourceReady={false}
+      />,
+    );
+    expect(screen.getByText("Sample by time")).toBeTruthy();
+    expect(screen.queryByText("Limit")).toBeNull();
   });
 
   it("calls onRemoveStep with a step's id from its block's remove button", () => {
