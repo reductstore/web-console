@@ -4,7 +4,7 @@ import {
   EachTStep,
   SampleKind,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stepRowLayout";
 
 const DURATION_SUGGESTIONS = [
   "$__interval",
@@ -61,7 +61,7 @@ export default function SampleStepEditor({
           placeholder="every Nth record"
           value={everyNth}
           onChange={(value) => onChangeEachN({ everyNth: value ?? undefined })}
-          style={{ width: 140 }}
+          style={{ width: VALUE_INPUT_WIDTH / 2 }}
         />
       ) : (
         <AutoComplete
@@ -74,7 +74,7 @@ export default function SampleStepEditor({
               : onChangeEachT({ duration: value, useIntervalMacro: false })
           }
           placeholder="30s, 1m"
-          style={{ width: 140 }}
+          style={{ width: VALUE_INPUT_WIDTH }}
           popupMatchSelectWidth={false}
         />
       )}

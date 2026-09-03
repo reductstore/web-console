@@ -1,6 +1,6 @@
 import { InputNumber, Typography } from "antd";
 import { LimitStep } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stepRowLayout";
 
 interface LimitStepEditorProps {
   step: LimitStep;
@@ -32,7 +32,7 @@ export default function LimitStepEditor({
         placeholder="max records"
         value={step.count}
         onChange={(value) => onChange({ count: value ?? undefined })}
-        style={{ width: 140 }}
+        style={{ width: VALUE_INPUT_WIDTH }}
       />
     </div>
   );
