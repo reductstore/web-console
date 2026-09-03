@@ -291,7 +291,7 @@ describe("EntryDetail", () => {
     // The default query has no conditions of its own, so Label filter (a
     // step like Sample/Limit) has to be added from the menu before there's
     // a row to interact with.
-    const addWhereLabels = async () => {
+    const addLabelFilter = async () => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add step"));
       });
@@ -305,7 +305,7 @@ describe("EntryDetail", () => {
     });
 
     it("reparses losslessly when returning to Builder without touching the JSON", async () => {
-      await addWhereLabels();
+      await addLabelFilter();
       const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -367,7 +367,7 @@ describe("EntryDetail", () => {
     });
 
     it("blocks Run Query and shows an error when a condition row is missing its value", async () => {
-      await addWhereLabels();
+      await addLabelFilter();
       const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
 
