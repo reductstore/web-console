@@ -1122,9 +1122,8 @@ export default function QueryPanel({
     [selectedEntries],
   );
   const validationIntervalValue = useMemo(
-    () =>
-      timeRange.interval ?? pickEachTInterval(timeRange.start, timeRange.end),
-    [timeRange.end, timeRange.interval, timeRange.start],
+    () => pickEachTInterval(timeRange.start, timeRange.end),
+    [timeRange.end, timeRange.start],
   );
 
   return (

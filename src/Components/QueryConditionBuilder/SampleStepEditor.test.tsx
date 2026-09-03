@@ -20,7 +20,9 @@ const eachNProps = {
 describe("SampleStepEditor", () => {
   it("shows the current duration", () => {
     render(<SampleStepEditor {...eachTProps} duration="30s" />);
-    expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("30s");
+    expect(screen.getByRole("combobox", { name: "Interval" })).toHaveValue(
+      "30s",
+    );
   });
 
   it("shows the literal $__interval macro in the duration field while using the macro", () => {
@@ -31,7 +33,9 @@ describe("SampleStepEditor", () => {
         intervalValue="30s"
       />,
     );
-    expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("$__interval");
+    expect(screen.getByRole("combobox", { name: "Interval" })).toHaveValue(
+      "$__interval",
+    );
   });
 
   it("shows the resolved interval value next to the input while using the macro", () => {
@@ -55,13 +59,28 @@ describe("SampleStepEditor", () => {
   it("reports a typed duration and switches off the interval macro", () => {
     const onChangeEachT = vi.fn();
     render(<SampleStepEditor {...eachTProps} onChangeEachT={onChangeEachT} />);
-    fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
       target: { value: "1m" },
     });
     expect(onChangeEachT).toHaveBeenCalledWith({
       duration: "1m",
       useIntervalMacro: false,
     });
+  });
+
+  it("re-enables the interval macro when $__interval is typed back in", () => {
+    const onChangeEachT = vi.fn();
+    render(
+      <SampleStepEditor
+        {...eachTProps}
+        duration="1m"
+        onChangeEachT={onChangeEachT}
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
+      target: { value: "$__interval" },
+    });
+    expect(onChangeEachT).toHaveBeenCalledWith({ useIntervalMacro: true });
   });
 
   it("shows a plain number field for each_n and reports a typed count", () => {

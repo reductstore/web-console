@@ -70,14 +70,14 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
-// Where labels is a step like Sample/Limit - added on demand from the
+// Label filter is a step like Sample/Limit - added on demand from the
 // "+ Add step" menu rather than shown by default.
 const addWhereLabels = async () => {
   await act(async () => {
     fireEvent.click(screen.getByLabelText("Add step"));
   });
   await act(async () => {
-    fireEvent.click(screen.getByText("Where labels"));
+    fireEvent.click(screen.getByText("Label filter"));
   });
 };
 
@@ -93,11 +93,11 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getByText("Query")).toBeTruthy();
-    expect(screen.queryByText("Where labels")).toBeNull();
+    expect(screen.queryByText("Label filter")).toBeNull();
     expect(screen.queryByPlaceholderText("value")).toBeNull();
   });
 
-  it("reveals one empty condition row once Where labels is added from the menu", async () => {
+  it("reveals one empty condition row once Label filter is added from the menu", async () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -108,7 +108,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    expect(screen.getByLabelText("Remove where labels")).toBeTruthy();
+    expect(screen.getByLabelText("Remove label filter")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
@@ -165,7 +165,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
 
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     expect(labelInput).toHaveValue("method");
     expect(screen.getByPlaceholderText("value")).toHaveValue("GET");
   });
@@ -205,7 +205,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -227,7 +227,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     expect(labelInput).toHaveValue("status");
     expect(screen.getByPlaceholderText("value")).toHaveValue("active");
   });
@@ -244,7 +244,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -292,7 +292,7 @@ describe("QueryConditionBuilder", () => {
     );
 
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.mouseDown(labelInput);
     expect(await screen.findByTitle("status")).toBeTruthy();
     expect(screen.getByTitle("method")).toBeTruthy();
@@ -339,7 +339,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     // The "+" button stays disabled until the row it would chain off of has
     // both a label and a value.
@@ -381,7 +381,7 @@ describe("QueryConditionBuilder", () => {
     await addWhereLabels();
     // The "+" button stays disabled until row 1 has both a label and a
     // value.
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     fireEvent.change(screen.getByPlaceholderText("value"), {
       target: { value: "active" },
@@ -466,7 +466,7 @@ describe("QueryConditionBuilder", () => {
     // partially filled one is.
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
-    const [labelInput] = screen.getAllByRole("combobox");
+    const labelInput = screen.getByRole("combobox", { name: "Label" });
     fireEvent.change(labelInput, { target: { value: "status" } });
     expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
@@ -510,9 +510,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -521,10 +521,10 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
 
@@ -535,7 +535,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("adds a Sample every N records step directly and reports its count", async () => {
+    it("adds a Sample every N step directly and reports its count", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -549,7 +549,7 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -574,17 +574,17 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "1s" },
       });
 
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
       fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
@@ -611,22 +611,22 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample every N records" }),
+          screen.getByRole("menuitem", { name: "Sample every N" }),
         );
       });
 
       await openAddStepMenu();
       expect(
-        screen.queryByRole("menuitem", { name: "Sample by time interval" }),
+        screen.queryByRole("menuitem", { name: "Sample by time" }),
       ).toBeNull();
       expect(
-        screen.queryByRole("menuitem", { name: "Sample every N records" }),
+        screen.queryByRole("menuitem", { name: "Sample every N" }),
       ).toBeNull();
     });
 
@@ -643,9 +643,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -679,9 +679,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -690,10 +690,10 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
-      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
       await openAddStepMenu();
@@ -729,9 +729,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -754,7 +754,7 @@ describe("QueryConditionBuilder", () => {
         "$limit",
       ]);
 
-      // Drag the Limit block above the Where labels block.
+      // Drag the Limit block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
           active: { id: limitStepId },
@@ -781,9 +781,9 @@ describe("QueryConditionBuilder", () => {
       );
       await openAddStepMenu();
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Where labels" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Label filter" }));
       });
-      const [labelInput] = screen.getAllByRole("combobox");
+      const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
@@ -809,7 +809,7 @@ describe("QueryConditionBuilder", () => {
       const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
       expect(Object.keys(JSON.parse(beforeDrag))).toEqual(["&status", "#ext"]);
 
-      // Drag the Transform block above the Where labels block.
+      // Drag the Transform block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
           active: { id: "transform" },
@@ -872,19 +872,19 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       await act(async () => {
         fireEvent.click(
-          screen.getByRole("menuitem", { name: "Sample by time interval" }),
+          screen.getByRole("menuitem", { name: "Sample by time" }),
         );
       });
       // Sample defaults to the interval macro, so adding it alone doesn't
       // block Run Query.
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
 
-      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
 
-      fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+      fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
         target: { value: "30s" },
       });
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
@@ -908,10 +908,10 @@ describe("QueryConditionBuilder", () => {
       await openAddStepMenu();
       expect(screen.queryByRole("menuitem", { name: "Limit" })).toBeNull();
       expect(
-        screen.getByRole("menuitem", { name: "Sample by time interval" }),
+        screen.getByRole("menuitem", { name: "Sample by time" }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("menuitem", { name: "Sample every N records" }),
+        screen.getByRole("menuitem", { name: "Sample every N" }),
       ).toBeTruthy();
     });
 
@@ -926,7 +926,7 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        expect(screen.getByText("Sample by time interval")).toBeTruthy();
+        expect(screen.getByText("Sample by time")).toBeTruthy();
         expect(screen.getByLabelText("Remove sample step")).toBeTruthy();
       });
 
@@ -944,10 +944,10 @@ describe("QueryConditionBuilder", () => {
         await openAddStepMenu();
         await act(async () => {
           fireEvent.click(
-            screen.getByRole("menuitem", { name: "Where labels" }),
+            screen.getByRole("menuitem", { name: "Label filter" }),
           );
         });
-        const [labelInput] = screen.getAllByRole("combobox");
+        const labelInput = screen.getByRole("combobox", { name: "Label" });
         fireEvent.change(labelInput, { target: { value: "status" } });
         fireEvent.change(screen.getByPlaceholderText("value"), {
           target: { value: "active" },
@@ -972,7 +972,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+        fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
           target: { value: "30s" },
         });
         const [afterDuration] = onChange.mock.calls.at(-1) as [string];
@@ -1011,7 +1011,7 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.change(screen.getByPlaceholderText("30s, 1m"), {
+        fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
           target: { value: "30 s" },
         });
 
@@ -1028,8 +1028,10 @@ describe("QueryConditionBuilder", () => {
             validationContext={readyValidationContext}
           />,
         );
-        expect(screen.getByText("Sample by time interval")).toBeTruthy();
-        expect(screen.getByPlaceholderText("30s, 1m")).toHaveValue("30s");
+        expect(screen.getByText("Sample by time")).toBeTruthy();
+        expect(screen.getByRole("combobox", { name: "Interval" })).toHaveValue(
+          "30s",
+        );
       });
     });
   });
@@ -1134,11 +1136,10 @@ describe("QueryConditionBuilder", () => {
         { target: { value: "/robot/odom" } },
       );
       await addSection("As label");
-      fireEvent.change(
-        screen.getByPlaceholderText("label name (e.g. label_name)"),
-        { target: { value: "speed" } },
-      );
-      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude)"), {
+      fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
+        target: { value: "speed" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
         target: { value: "data.speed" },
       });
 
