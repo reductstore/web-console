@@ -26,21 +26,31 @@ import {
 import {
   addAsLabelRow,
   addEncodeRow,
+  addFormatSection,
+  addProtobufFieldRow,
   addSection,
   buildExtPayload,
+  changeFormat,
   createRosTransformStep,
+  createSelectTransformStep,
   hasIncompleteTransform,
   parseExtPayload,
   removeAsLabelRow,
   removeEncodeRow,
+  removeFormatSection,
+  removeProtobufFieldRow,
   removeSection,
-  RosExportConfig,
-  RosSection,
+  TransformKind,
   TransformStepEntry,
   TRANSFORM_BLOCK_ID,
   updateAsLabelRow,
+  updateCsv,
   updateEncodeRow,
   updateExport,
+  updateProtobuf,
+  updateProtobufFieldRow,
+  updateSelectExport,
+  updateSql,
   updateTopic,
 } from "../../Helpers/transformStepBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
@@ -306,6 +316,19 @@ export default function QueryConditionBuilder({
     onChange(formatted);
   };
 
+  function withTransform<Args extends unknown[]>(
+    mutate: (
+      transform: TransformStepEntry,
+      ...args: Args
+    ) => TransformStepEntry,
+  ): (...args: Args) => void {
+    return (...args: Args) => {
+      if (transformState) {
+        applyQuery(conditions, steps, mutate(transformState, ...args));
+      }
+    };
+  }
+
   const appendBlock = (id: string) => setBlockOrder((prev) => [...prev, id]);
   const removeBlock = (id: string) =>
     setBlockOrder((prev) => prev.filter((blockId) => blockId !== id));
@@ -399,62 +422,40 @@ export default function QueryConditionBuilder({
           applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
-        onAddTransformBlock={() => {
-          applyQuery(conditions, steps, createRosTransformStep());
+        onAddTransformBlock={(kind: TransformKind) => {
+          applyQuery(
+            conditions,
+            steps,
+            kind === "ros"
+              ? createRosTransformStep()
+              : createSelectTransformStep(),
+          );
           appendBlock(TRANSFORM_BLOCK_ID);
         }}
         onRemoveTransformBlock={() => {
           applyQuery(conditions, steps, undefined);
           removeBlock(TRANSFORM_BLOCK_ID);
         }}
-        onAddSection={(section: RosSection) =>
-          transformState &&
-          applyQuery(conditions, steps, addSection(transformState, section))
-        }
-        onRemoveSection={(section: RosSection) =>
-          transformState &&
-          applyQuery(conditions, steps, removeSection(transformState, section))
-        }
-        onChangeTopic={(topic: string) =>
-          transformState &&
-          applyQuery(conditions, steps, updateTopic(transformState, topic))
-        }
-        onAddEncodeRow={() =>
-          transformState &&
-          applyQuery(conditions, steps, addEncodeRow(transformState))
-        }
-        onChangeEncodeRow={(id, changes) =>
-          transformState &&
-          applyQuery(
-            conditions,
-            steps,
-            updateEncodeRow(transformState, id, changes),
-          )
-        }
-        onRemoveEncodeRow={(id) =>
-          transformState &&
-          applyQuery(conditions, steps, removeEncodeRow(transformState, id))
-        }
-        onAddAsLabelRow={() =>
-          transformState &&
-          applyQuery(conditions, steps, addAsLabelRow(transformState))
-        }
-        onChangeAsLabelRow={(id, changes) =>
-          transformState &&
-          applyQuery(
-            conditions,
-            steps,
-            updateAsLabelRow(transformState, id, changes),
-          )
-        }
-        onRemoveAsLabelRow={(id) =>
-          transformState &&
-          applyQuery(conditions, steps, removeAsLabelRow(transformState, id))
-        }
-        onChangeExport={(changes: Partial<RosExportConfig>) =>
-          transformState &&
-          applyQuery(conditions, steps, updateExport(transformState, changes))
-        }
+        onAddSection={withTransform(addSection)}
+        onRemoveSection={withTransform(removeSection)}
+        onChangeTopic={withTransform(updateTopic)}
+        onAddEncodeRow={withTransform(addEncodeRow)}
+        onChangeEncodeRow={withTransform(updateEncodeRow)}
+        onRemoveEncodeRow={withTransform(removeEncodeRow)}
+        onAddAsLabelRow={withTransform(addAsLabelRow)}
+        onChangeAsLabelRow={withTransform(updateAsLabelRow)}
+        onRemoveAsLabelRow={withTransform(removeAsLabelRow)}
+        onChangeExport={withTransform(updateExport)}
+        onChangeSql={withTransform(updateSql)}
+        onAddFormatSection={withTransform(addFormatSection)}
+        onRemoveFormatSection={withTransform(removeFormatSection)}
+        onChangeFormat={withTransform(changeFormat)}
+        onChangeCsv={withTransform(updateCsv)}
+        onChangeProtobuf={withTransform(updateProtobuf)}
+        onAddProtobufFieldRow={withTransform(addProtobufFieldRow)}
+        onChangeProtobufFieldRow={withTransform(updateProtobufFieldRow)}
+        onRemoveProtobufFieldRow={withTransform(removeProtobufFieldRow)}
+        onChangeSelectExport={withTransform(updateSelectExport)}
         onRemoveStep={(id) => {
           applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
           removeBlock(id);

@@ -1246,4 +1246,276 @@ describe("QueryConditionBuilder", () => {
       expect(screen.getByText("Process (ROS)")).toBeTruthy();
     });
   });
+
+  describe("Process (Select) step", () => {
+    const openAddStepMenu = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add step"));
+      });
+    };
+
+    const addTransformBlock = async () => {
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Process (Select)" }),
+        );
+      });
+    };
+
+    const addLabelMapping = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("As label"));
+      });
+    };
+
+    it("adds a fresh transform (no SQL or as_label yet) via the menu", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      expect(screen.getByPlaceholderText("SELECT * FROM ENTRY()")).toBeTruthy();
+      expect(screen.queryByText("As label")).toBeNull();
+    });
+
+    it("removes the transform via its card's remove button", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove select"));
+      expect(screen.queryByPlaceholderText("SELECT * FROM ENTRY()")).toBeNull();
+    });
+
+    it("offers Process (Select) again in the Add step menu after it's removed, and drops #ext from onChange", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Remove select"));
+
+      const [lastCall] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
+
+      await openAddStepMenu();
+      expect(
+        screen.getByRole("menuitem", { name: "Process (Select)" }),
+      ).toBeTruthy();
+    });
+
+    it("reports a typed sql and as_label mapping through onChange, merged as a #ext key", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      fireEvent.change(screen.getByPlaceholderText("SELECT * FROM ENTRY()"), {
+        target: { value: "SELECT temp.value AS value FROM ENTRY()" },
+      });
+      await addLabelMapping();
+      fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
+        target: { value: "value" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
+        target: { value: "value" },
+      });
+
+      const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
+      const parsed = JSON.parse(lastValue);
+      expect(parsed["#ext"].select).toMatchObject({
+        sql: "SELECT temp.value AS value FROM ENTRY()",
+        as_label: { value: "value" },
+      });
+    });
+
+    it("reports a parquet input format and export config through onChange, merged as a #ext key", async () => {
+      const onChange = vi.fn();
+      const { container } = render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Format"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Parquet"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add option"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("Export"));
+      });
+
+      const exportFormatSelect = container.querySelector(
+        ".ant-select",
+      ) as HTMLElement;
+      fireEvent.mouseDown(exportFormatSelect);
+      fireEvent.click(screen.getByTitle("parquet"));
+
+      fireEvent.change(screen.getByPlaceholderText("max rows"), {
+        target: { value: "500" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("max duration (e.g. 1m)"), {
+        target: { value: "1m" },
+      });
+
+      const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
+      const parsed = JSON.parse(lastValue);
+      expect(parsed["#ext"].select).toMatchObject({
+        parquet: {},
+        export: { format: "parquet", rows: 500, duration: "1m" },
+      });
+    });
+
+    it("reports an incomplete transform for a half-filled as_label row, and clears once both sides are filled", async () => {
+      const onIncompleteConditionChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+          onIncompleteConditionChange={onIncompleteConditionChange}
+        />,
+      );
+      await addTransformBlock();
+      await addLabelMapping();
+
+      fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
+        target: { value: "value" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
+        target: { value: "value" },
+      });
+      expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("shows a transform carried in the value prop's #ext key, without needing to be added", () => {
+      const value = JSON.stringify({
+        "#ext": {
+          select: {
+            sql: "SELECT * FROM ENTRY()",
+            as_label: { value: "value" },
+          },
+        },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Process (Select)")).toBeTruthy();
+      expect(screen.getByPlaceholderText("SELECT * FROM ENTRY()")).toHaveValue(
+        "SELECT * FROM ENTRY()",
+      );
+    });
+
+    it("resyncs when the value prop's #ext key changes from outside while already in builder mode", () => {
+      const { rerender } = render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.queryByText("Process (Select)")).toBeNull();
+
+      const value = JSON.stringify({
+        "#ext": {
+          select: {
+            sql: "SELECT * FROM ENTRY()",
+            as_label: { value: "value" },
+          },
+        },
+      });
+      rerender(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByText("Process (Select)")).toBeTruthy();
+    });
+
+    it("falls back to JSON mode when #ext carries both ros and select", () => {
+      const onUnrepresentable = vi.fn();
+      const { rerender } = render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={onUnrepresentable}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      const value = JSON.stringify({
+        "#ext": {
+          ros: { extract: {} },
+          select: { sql: "SELECT * FROM ENTRY()" },
+        },
+      });
+      rerender(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={onUnrepresentable}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(onUnrepresentable).toHaveBeenCalled();
+    });
+  });
 });
