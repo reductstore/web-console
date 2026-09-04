@@ -43,6 +43,10 @@ function expectSelect(
   return transform;
 }
 
+function blankSelectTransform() {
+  return updateSql(createSelectTransformStep(), "");
+}
+
 describe("transformStepBuilder", () => {
   describe("createRosTransformStep", () => {
     it("defaults to no sections and blank fields", () => {
@@ -405,10 +409,10 @@ describe("transformStepBuilder", () => {
 
   describe("select transform", () => {
     describe("createSelectTransformStep", () => {
-      it("defaults to a blank sql and no as_label rows", () => {
+      it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
-        expect(transform.select.sql).toBe("");
+        expect(transform.select.sql).toBe("SELECT * FROM ENTRY()");
         expect(transform.select.asLabel).toEqual([]);
       });
     });
@@ -475,8 +479,14 @@ describe("transformStepBuilder", () => {
     });
 
     describe("buildExtPayload", () => {
-      it("returns an empty select object when nothing is filled in", () => {
+      it("includes the default sql when nothing else is filled in", () => {
         expect(buildExtPayload(createSelectTransformStep())).toEqual({
+          select: { sql: "SELECT * FROM ENTRY()" },
+        });
+      });
+
+      it("returns an empty select object when sql is also blank", () => {
+        expect(buildExtPayload(blankSelectTransform())).toEqual({
           select: {},
         });
       });
@@ -492,7 +502,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("builds the as_label map, dropping incomplete rows", () => {
-        let transform = addAsLabelRow(createSelectTransformStep());
+        let transform = addAsLabelRow(blankSelectTransform());
         transform = updateAsLabelRow(
           transform,
           transform.select.asLabel[0].id,
@@ -729,7 +739,7 @@ describe("transformStepBuilder", () => {
 
     describe("buildExtPayload (input formats and export)", () => {
       it("includes csv with has_headers", () => {
-        let transform = addFormatSection(createSelectTransformStep(), "csv");
+        let transform = addFormatSection(blankSelectTransform(), "csv");
         transform = updateCsv(transform, { hasHeaders: true });
         expect(buildExtPayload(transform)).toEqual({
           select: { csv: { has_headers: true } },
@@ -737,25 +747,19 @@ describe("transformStepBuilder", () => {
       });
 
       it("includes an empty json object", () => {
-        const transform = addFormatSection(createSelectTransformStep(), "json");
+        const transform = addFormatSection(blankSelectTransform(), "json");
         expect(buildExtPayload(transform)).toEqual({ select: { json: {} } });
       });
 
       it("includes an empty parquet object", () => {
-        const transform = addFormatSection(
-          createSelectTransformStep(),
-          "parquet",
-        );
+        const transform = addFormatSection(blankSelectTransform(), "parquet");
         expect(buildExtPayload(transform)).toEqual({
           select: { parquet: {} },
         });
       });
 
       it("builds protobuf from message_name/schema when no field rows are complete", () => {
-        let transform = addFormatSection(
-          createSelectTransformStep(),
-          "protobuf",
-        );
+        let transform = addFormatSection(blankSelectTransform(), "protobuf");
         transform = updateProtobuf(transform, {
           messageName: "pkg.SensorReading",
           schema: "base64==",
@@ -771,10 +775,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("prefers complete field rows over message_name/schema", () => {
-        let transform = addFormatSection(
-          createSelectTransformStep(),
-          "protobuf",
-        );
+        let transform = addFormatSection(blankSelectTransform(), "protobuf");
         transform = updateProtobuf(transform, {
           messageName: "pkg.SensorReading",
           schema: "base64==",
@@ -793,10 +794,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("drops an incomplete field row and falls back to message_name/schema", () => {
-        let transform = addFormatSection(
-          createSelectTransformStep(),
-          "protobuf",
-        );
+        let transform = addFormatSection(blankSelectTransform(), "protobuf");
         transform = updateProtobuf(transform, {
           messageName: "pkg.SensorReading",
         });
@@ -813,10 +811,7 @@ describe("transformStepBuilder", () => {
 
       it("treats a negative, zero, or non-integer field id as incomplete", () => {
         for (const badId of ["-1", "0", "1.5"]) {
-          let transform = addFormatSection(
-            createSelectTransformStep(),
-            "protobuf",
-          );
+          let transform = addFormatSection(blankSelectTransform(), "protobuf");
           transform = updateProtobuf(transform, {
             messageName: "pkg.SensorReading",
           });
@@ -833,7 +828,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("includes export fields only when the export section is added", () => {
-        let transform = updateSelectExport(createSelectTransformStep(), {
+        let transform = updateSelectExport(blankSelectTransform(), {
           format: "parquet",
           rows: "100",
         });
@@ -846,7 +841,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("omits a non-numeric rows value", () => {
-        let transform = addFormatSection(createSelectTransformStep(), "export");
+        let transform = addFormatSection(blankSelectTransform(), "export");
         transform = updateSelectExport(transform, { rows: "not-a-number" });
         expect(buildExtPayload(transform)).toEqual({ select: { export: {} } });
       });

@@ -91,7 +91,7 @@ export function createSelectTransformStep(): Extract<
   return {
     kind: "select",
     select: {
-      sql: "",
+      sql: "SELECT * FROM ENTRY()",
       asLabel: [],
       formatSections: [],
       csv: { hasHeaders: false },
