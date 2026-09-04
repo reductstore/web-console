@@ -84,6 +84,16 @@ const baseProps = {
   onChangeAsLabelRow: noop,
   onRemoveAsLabelRow: noop,
   onChangeExport: noop,
+  onChangeSql: noop,
+  onAddFormatSection: noop,
+  onRemoveFormatSection: noop,
+  onChangeFormat: noop,
+  onChangeCsv: noop,
+  onChangeProtobuf: noop,
+  onAddProtobufFieldRow: noop,
+  onChangeProtobufFieldRow: noop,
+  onRemoveProtobufFieldRow: noop,
+  onChangeSelectExport: noop,
   onRemoveStep: noop,
   onReorderBlock: noop,
 };
@@ -96,6 +106,18 @@ const transformStep: TransformStepEntry = {
     encode: [],
     asLabel: [{ id: "row-1", key: "speed", value: "speed" }],
     export: { format: "", duration: "", size: "" },
+  },
+};
+
+const selectTransformStep: TransformStepEntry = {
+  kind: "select",
+  select: {
+    sql: "SELECT * FROM ENTRY()",
+    asLabel: [{ id: "row-1", key: "speed", value: "speed" }],
+    formatSections: [],
+    csv: { hasHeaders: false },
+    protobuf: { messageName: "", schema: "", fields: [] },
+    export: { format: "", rows: "", duration: "" },
   },
 };
 
@@ -194,7 +216,7 @@ describe("QueryBlockList", () => {
     expect(onRemoveTransformBlock).toHaveBeenCalled();
   });
 
-  it("offers Process (ROS) in the Add step menu, and calls onAddTransformBlock when picked", async () => {
+  it("offers Process (ROS) in the Add step menu, and calls onAddTransformBlock with ros when picked", async () => {
     const onAddTransformBlock = vi.fn();
     render(
       <QueryBlockList
@@ -212,10 +234,61 @@ describe("QueryBlockList", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Process (ROS)"));
     });
-    expect(onAddTransformBlock).toHaveBeenCalled();
+    expect(onAddTransformBlock).toHaveBeenCalledWith("ros");
   });
 
-  it("greys out Process (ROS) once it's already added", async () => {
+  it("renders the Process (Select) block with its title and remove button", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={selectTransformStep}
+      />,
+    );
+    expect(screen.getByText("Process (Select)")).toBeTruthy();
+    expect(screen.getByLabelText("Remove select")).toBeTruthy();
+  });
+
+  it("calls onRemoveTransformBlock from the Process (Select) block's remove button", () => {
+    const onRemoveTransformBlock = vi.fn();
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={selectTransformStep}
+        onRemoveTransformBlock={onRemoveTransformBlock}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Remove select"));
+    expect(onRemoveTransformBlock).toHaveBeenCalled();
+  });
+
+  it("offers Process (Select) in the Add step menu, and calls onAddTransformBlock with select when picked", async () => {
+    const onAddTransformBlock = vi.fn();
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[]}
+        conditions={[]}
+        steps={[]}
+        onAddTransformBlock={onAddTransformBlock}
+      />,
+    );
+    await openAddStepMenu();
+    expect(
+      screen.getByRole("menuitem", { name: "Process (Select)" }),
+    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Process (Select)"));
+    });
+    expect(onAddTransformBlock).toHaveBeenCalledWith("select");
+  });
+
+  it("greys out both transform options once ROS is already added", async () => {
     render(
       <QueryBlockList
         {...baseProps}
@@ -226,6 +299,28 @@ describe("QueryBlockList", () => {
       />,
     );
     await openAddStepMenu();
+    expect(
+      screen.getByRole("menuitem", { name: "Process (ROS)" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("menuitem", { name: "Process (Select)" }),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("greys out both transform options once Select is already added", async () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transform={selectTransformStep}
+      />,
+    );
+    await openAddStepMenu();
+    expect(
+      screen.getByRole("menuitem", { name: "Process (Select)" }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("menuitem", { name: "Process (ROS)" }),
     ).toHaveAttribute("aria-disabled", "true");
@@ -431,6 +526,7 @@ describe("QueryBlockList", () => {
       "Sample every N",
       "Limit",
       "Process (ROS)",
+      "Process (Select)",
     ]) {
       expect(screen.getByRole("menuitem", { name })).toHaveAttribute(
         "aria-disabled",

@@ -4,6 +4,7 @@ import ConditionListEditor from "./ConditionListEditor";
 import SampleStepEditor from "./SampleStepEditor";
 import LimitStepEditor from "./LimitStepEditor";
 import TransformStepEditor from "./TransformStepEditor";
+import SelectStepEditor from "./SelectStepEditor";
 import SortableCard from "./SortableCard";
 import SortableList from "./SortableList";
 import {
@@ -15,9 +16,16 @@ import {
   LimitStep,
 } from "../../Helpers/conditionalQueryBuilder";
 import {
+  CsvConfig,
   KeyValueRow,
+  ProtobufConfig,
+  ProtobufFieldRow,
   RosExportConfig,
   RosSection,
+  SelectExportConfig,
+  SelectFormatSection,
+  SelectInputFormat,
+  TransformKind,
   TransformStepEntry,
   TRANSFORM_BLOCK_ID,
 } from "../../Helpers/transformStepBuilder";
@@ -59,7 +67,7 @@ interface QueryBlockListProps {
   onAddLimit: () => void;
   onAddConditionsBlock: () => void;
   onRemoveConditionsBlock: () => void;
-  onAddTransformBlock: () => void;
+  onAddTransformBlock: (kind: TransformKind) => void;
   onRemoveTransformBlock: () => void;
   onAddSection: (section: RosSection) => void;
   onRemoveSection: (section: RosSection) => void;
@@ -77,6 +85,23 @@ interface QueryBlockListProps {
   ) => void;
   onRemoveAsLabelRow: (id: string) => void;
   onChangeExport: (changes: Partial<RosExportConfig>) => void;
+  onChangeSql: (sql: string) => void;
+  onAddFormatSection: (section: SelectFormatSection) => void;
+  onRemoveFormatSection: (section: SelectFormatSection) => void;
+  onChangeFormat: (format: SelectInputFormat) => void;
+  onChangeCsv: (changes: Partial<CsvConfig>) => void;
+  onChangeProtobuf: (
+    changes: Partial<Pick<ProtobufConfig, "messageName" | "schema">>,
+  ) => void;
+  onAddProtobufFieldRow: () => void;
+  onChangeProtobufFieldRow: (
+    id: string,
+    changes: Partial<
+      Pick<ProtobufFieldRow, "column" | "fieldId" | "fieldType">
+    >,
+  ) => void;
+  onRemoveProtobufFieldRow: (id: string) => void;
+  onChangeSelectExport: (changes: Partial<SelectExportConfig>) => void;
   onRemoveStep: (id: string) => void;
   onReorderBlock: (fromIndex: number, toIndex: number) => void;
 }
@@ -112,6 +137,16 @@ export default function QueryBlockList({
   onChangeAsLabelRow,
   onRemoveAsLabelRow,
   onChangeExport,
+  onChangeSql,
+  onAddFormatSection,
+  onRemoveFormatSection,
+  onChangeFormat,
+  onChangeCsv,
+  onChangeProtobuf,
+  onAddProtobufFieldRow,
+  onChangeProtobufFieldRow,
+  onRemoveProtobufFieldRow,
+  onChangeSelectExport,
   onRemoveStep,
   onReorderBlock,
 }: QueryBlockListProps) {
@@ -127,6 +162,7 @@ export default function QueryBlockList({
     sample_each_n: "Sample every N",
     limit: "Limit",
     transform_ros: "Process (ROS)",
+    transform_select: "Process (Select)",
   };
 
   const disabledStepReason = (key: string): string | undefined => {
@@ -138,8 +174,16 @@ export default function QueryBlockList({
     if (key === "sample_each_n" && hasEachN)
       return "Sample every N is already added";
     if (key === "limit" && hasLimit) return "Limit is already added";
-    if (key === "transform_ros" && hasTransform)
-      return "Process (ROS) is already added";
+    if (key === "transform_ros" && hasTransform) {
+      return transform?.kind === "ros"
+        ? "Process (ROS) is already added"
+        : "Not available together with Process (Select)";
+    }
+    if (key === "transform_select" && hasTransform) {
+      return transform?.kind === "select"
+        ? "Process (Select) is already added"
+        : "Not available together with Process (ROS)";
+    }
     return undefined;
   };
 
@@ -170,7 +214,9 @@ export default function QueryBlockList({
     } else if (key === "limit") {
       onAddLimit();
     } else if (key === "transform_ros") {
-      onAddTransformBlock();
+      onAddTransformBlock("ros");
+    } else if (key === "transform_select") {
+      onAddTransformBlock("select");
     }
   };
 
@@ -224,6 +270,34 @@ export default function QueryBlockList({
             );
           }
           if (block.kind === "transform") {
+            if (block.transform.kind === "select") {
+              return (
+                <SortableCard
+                  key={TRANSFORM_BLOCK_ID}
+                  id={TRANSFORM_BLOCK_ID}
+                  label="Process (Select)"
+                  removeLabel="Remove select"
+                  onRemove={onRemoveTransformBlock}
+                >
+                  <SelectStepEditor
+                    step={block.transform.select}
+                    onChangeSql={onChangeSql}
+                    onAddFormatSection={onAddFormatSection}
+                    onRemoveFormatSection={onRemoveFormatSection}
+                    onChangeFormat={onChangeFormat}
+                    onChangeCsv={onChangeCsv}
+                    onChangeProtobuf={onChangeProtobuf}
+                    onAddProtobufFieldRow={onAddProtobufFieldRow}
+                    onChangeProtobufFieldRow={onChangeProtobufFieldRow}
+                    onRemoveProtobufFieldRow={onRemoveProtobufFieldRow}
+                    onChangeSelectExport={onChangeSelectExport}
+                    onAddAsLabelRow={onAddAsLabelRow}
+                    onChangeAsLabelRow={onChangeAsLabelRow}
+                    onRemoveAsLabelRow={onRemoveAsLabelRow}
+                  />
+                </SortableCard>
+              );
+            }
             return (
               <SortableCard
                 key={TRANSFORM_BLOCK_ID}
