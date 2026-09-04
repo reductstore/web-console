@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add sampling ($each_n/$each_t) and limit ($limit) steps to the Data Explorer's Conditional Query builder, [PR-242](https://github.com/reductstore/web-console/pull/242)
 - Add a Transform (ReductROS) step to the Data Explorer's Conditional Query builder, [PR-243](https://github.com/reductstore/web-console/pull/243)
+- Add a Transform (ReductSelect) step to the Data Explorer's Conditional Query builder, [PR-246](https://github.com/reductstore/web-console/pull/246)
 
 ## 1.16.0 - 2026-08-25
 
