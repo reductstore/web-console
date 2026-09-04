@@ -64,6 +64,8 @@ export default function ProtobufFieldRowList({
           <InputNumber
             aria-label="Field id"
             placeholder="id"
+            min={1}
+            precision={0}
             value={row.fieldId === "" ? undefined : Number(row.fieldId)}
             onChange={(value) =>
               onChange(row.id, {

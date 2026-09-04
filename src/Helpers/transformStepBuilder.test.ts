@@ -811,6 +811,27 @@ describe("transformStepBuilder", () => {
         });
       });
 
+      it("treats a negative, zero, or non-integer field id as incomplete", () => {
+        for (const badId of ["-1", "0", "1.5"]) {
+          let transform = addFormatSection(
+            createSelectTransformStep(),
+            "protobuf",
+          );
+          transform = updateProtobuf(transform, {
+            messageName: "pkg.SensorReading",
+          });
+          transform = addProtobufFieldRow(transform);
+          transform = updateProtobufFieldRow(
+            transform,
+            transform.select.protobuf.fields[0].id,
+            { column: "device_id", fieldId: badId, fieldType: "string" },
+          );
+          expect(buildExtPayload(transform)).toEqual({
+            select: { protobuf: { message_name: "pkg.SensorReading" } },
+          });
+        }
+      });
+
       it("includes export fields only when the export section is added", () => {
         let transform = updateSelectExport(createSelectTransformStep(), {
           format: "parquet",
@@ -878,6 +899,29 @@ describe("transformStepBuilder", () => {
               protobuf: { fields: { device_id: { id: "1", type: "string" } } },
             },
           }).success,
+        ).toBe(false);
+      });
+
+      it("rejects a zero, negative, or non-integer protobuf field id", () => {
+        for (const badId of [0, -1, 1.5]) {
+          expect(
+            parseExtPayload({
+              select: {
+                protobuf: {
+                  fields: { device_id: { id: badId, type: "string" } },
+                },
+              },
+            }).success,
+          ).toBe(false);
+        }
+      });
+
+      it("rejects conflicting input format sections", () => {
+        expect(parseExtPayload({ select: { csv: {}, json: {} } }).success).toBe(
+          false,
+        );
+        expect(
+          parseExtPayload({ select: { csv: {}, protobuf: {} } }).success,
         ).toBe(false);
       });
 

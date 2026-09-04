@@ -32,7 +32,7 @@ import {
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
 
-const SQL_INPUT_WIDTH = 704;
+const SQL_INPUT_MAX_WIDTH = 704;
 
 const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
   { value: "csv", label: "CSV" },
@@ -211,7 +211,7 @@ export default function SelectStepEditor({
           placeholder="SELECT * FROM ENTRY()"
           value={step.sql}
           onChange={(e) => onChangeSql(e.target.value)}
-          style={{ width: SQL_INPUT_WIDTH }}
+          style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}
         />
       </FormatSection>
 

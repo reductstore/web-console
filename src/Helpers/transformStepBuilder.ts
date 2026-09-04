@@ -457,6 +457,11 @@ function hasPartialProtobufFieldRow(rows: ProtobufFieldRow[]): boolean {
   });
 }
 
+function isValidProtobufFieldId(fieldId: string): boolean {
+  const value = Number(fieldId);
+  return Number.isInteger(value) && value > 0;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -535,7 +540,7 @@ export function buildExtPayload(
         (row) =>
           row.column.trim() &&
           row.fieldType.trim() &&
-          !Number.isNaN(Number(row.fieldId)),
+          isValidProtobufFieldId(row.fieldId),
       );
       if (completeFields.length > 0) {
         select.protobuf = {
@@ -749,6 +754,13 @@ function parseSelectPayload(select: unknown): {
     return { success: false };
   }
 
+  const presentFormats = [csvRaw, jsonRaw, parquetRaw, protobufRaw].filter(
+    (raw) => raw !== undefined,
+  ).length;
+  if (presentFormats > 1) {
+    return { success: false };
+  }
+
   const formatSections: SelectFormatSection[] = [];
   let csv: CsvConfig = { hasHeaders: false };
   let protobuf: ProtobufConfig = { messageName: "", schema: "", fields: [] };
@@ -807,6 +819,8 @@ function parseSelectPayload(select: unknown): {
         const { id: fieldIdRaw, type: fieldTypeRaw } = rawField;
         if (
           typeof fieldIdRaw !== "number" ||
+          !Number.isInteger(fieldIdRaw) ||
+          fieldIdRaw <= 0 ||
           typeof fieldTypeRaw !== "string"
         ) {
           return { success: false };
