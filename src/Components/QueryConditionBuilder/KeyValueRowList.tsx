@@ -1,7 +1,7 @@
 import { Button, Input } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { KeyValueRow } from "../../Helpers/transformStepBuilder";
-import { ROW_GAP, ROW_GROUP_WIDTH } from "./stepRowLayout";
+import { ROW_GAP, ROW_INPUT_WIDTH } from "./stepRowLayout";
 
 interface RowListProps {
   rows: KeyValueRow[];
@@ -34,24 +34,25 @@ export default function RowList({
       {rows.map((row) => (
         <div
           key={row.id}
-          style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: ROW_GAP,
+          }}
         >
-          <div
-            style={{ display: "flex", gap: ROW_GAP, width: ROW_GROUP_WIDTH }}
-          >
-            <Input
-              placeholder={keyPlaceholder}
-              value={row.key}
-              onChange={(e) => onChange(row.id, { key: e.target.value })}
-              style={{ flex: 1, minWidth: 0 }}
-            />
-            <Input
-              placeholder={valuePlaceholder}
-              value={row.value}
-              onChange={(e) => onChange(row.id, { value: e.target.value })}
-              style={{ flex: 1, minWidth: 0 }}
-            />
-          </div>
+          <Input
+            placeholder={keyPlaceholder}
+            value={row.key}
+            onChange={(e) => onChange(row.id, { key: e.target.value })}
+            style={{ width: ROW_INPUT_WIDTH }}
+          />
+          <Input
+            placeholder={valuePlaceholder}
+            value={row.value}
+            onChange={(e) => onChange(row.id, { value: e.target.value })}
+            style={{ width: ROW_INPUT_WIDTH }}
+          />
           <Button
             aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
             type="text"

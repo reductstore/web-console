@@ -22,12 +22,9 @@ export interface RosTransformStep {
   export: RosExportConfig;
 }
 
-export type SelectFormatSection =
-  | "csv"
-  | "json"
-  | "parquet"
-  | "protobuf"
-  | "export";
+export type SelectInputFormat = "csv" | "json" | "parquet";
+
+export type SelectFormatSection = SelectInputFormat | "protobuf" | "export";
 
 export interface CsvConfig {
   hasHeaders: boolean;
@@ -135,7 +132,7 @@ export function addFormatSection<Entry extends TransformStepEntry>(
 
 export function changeFormat<Entry extends TransformStepEntry>(
   transform: Entry,
-  format: SelectFormatSection,
+  format: SelectInputFormat,
 ): Entry {
   if (transform.kind !== "select") return transform;
   const formatSections = transform.select.formatSections.filter(
@@ -460,6 +457,22 @@ function hasPartialProtobufFieldRow(rows: ProtobufFieldRow[]): boolean {
   });
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseRowMap(raw: unknown): KeyValueRow[] | undefined {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  const rows = Object.entries(raw).map(([key, value]) => ({
+    id: crypto.randomUUID(),
+    key,
+    value: typeof value === "string" ? value : String(value),
+  }));
+  return rows.length === 0 ? [blankRow()] : rows;
+}
+
 export function hasIncompleteTransform(
   transform: TransformStepEntry | undefined,
 ): boolean {
@@ -620,10 +633,10 @@ export function parseExtPayload(ext: unknown): {
   if (ext === undefined) {
     return { success: true };
   }
-  if (typeof ext !== "object" || ext === null) {
+  if (!isPlainObject(ext)) {
     return { success: false };
   }
-  const { ros, select } = ext as Record<string, unknown>;
+  const { ros, select } = ext;
   if (ros !== undefined && select !== undefined) {
     return { success: false };
   }
@@ -636,10 +649,10 @@ function parseRosPayload(ros: unknown): {
   success: boolean;
   transform?: TransformStepEntry;
 } {
-  if (typeof ros !== "object" || ros === null || Array.isArray(ros)) {
+  if (!isPlainObject(ros)) {
     return { success: false };
   }
-  const { extract, export: exportRaw } = ros as Record<string, unknown>;
+  const { extract, export: exportRaw } = ros;
 
   const sections: RosSection[] = [];
   let topic = "";
@@ -647,18 +660,14 @@ function parseRosPayload(ros: unknown): {
   let asLabel: KeyValueRow[] = [];
 
   if (extract !== undefined) {
-    if (
-      typeof extract !== "object" ||
-      extract === null ||
-      Array.isArray(extract)
-    ) {
+    if (!isPlainObject(extract)) {
       return { success: false };
     }
     const {
       topic: topicRaw,
       encode: encodeRaw,
       as_label: asLabelRaw,
-    } = extract as Record<string, unknown>;
+    } = extract;
 
     if (topicRaw !== undefined) {
       if (typeof topicRaw !== "string") {
@@ -669,58 +678,30 @@ function parseRosPayload(ros: unknown): {
     }
 
     if (encodeRaw !== undefined) {
-      if (
-        typeof encodeRaw !== "object" ||
-        encodeRaw === null ||
-        Array.isArray(encodeRaw)
-      ) {
+      const rows = parseRowMap(encodeRaw);
+      if (!rows) {
         return { success: false };
       }
       sections.push("encode");
-      encode = Object.entries(encodeRaw as Record<string, unknown>).map(
-        ([key, value]) => ({
-          id: crypto.randomUUID(),
-          key,
-          value: typeof value === "string" ? value : String(value),
-        }),
-      );
-      if (encode.length === 0) {
-        encode = [blankRow()];
-      }
+      encode = rows;
     }
 
     if (asLabelRaw !== undefined) {
-      if (
-        typeof asLabelRaw !== "object" ||
-        asLabelRaw === null ||
-        Array.isArray(asLabelRaw)
-      ) {
+      const rows = parseRowMap(asLabelRaw);
+      if (!rows) {
         return { success: false };
       }
       sections.push("label");
-      asLabel = Object.entries(asLabelRaw as Record<string, unknown>).map(
-        ([key, value]) => ({
-          id: crypto.randomUUID(),
-          key,
-          value: typeof value === "string" ? value : String(value),
-        }),
-      );
-      if (asLabel.length === 0) {
-        asLabel = [blankRow()];
-      }
+      asLabel = rows;
     }
   }
 
   let exportConfig: RosExportConfig = { format: "", duration: "", size: "" };
   if (exportRaw !== undefined) {
-    if (
-      typeof exportRaw !== "object" ||
-      exportRaw === null ||
-      Array.isArray(exportRaw)
-    ) {
+    if (!isPlainObject(exportRaw)) {
       return { success: false };
     }
-    const { format, duration, size } = exportRaw as Record<string, unknown>;
+    const { format, duration, size } = exportRaw;
     if (format !== undefined && typeof format !== "string") {
       return { success: false };
     }
@@ -751,7 +732,7 @@ function parseSelectPayload(select: unknown): {
   success: boolean;
   transform?: TransformStepEntry;
 } {
-  if (typeof select !== "object" || select === null || Array.isArray(select)) {
+  if (!isPlainObject(select)) {
     return { success: false };
   }
   const {
@@ -762,7 +743,7 @@ function parseSelectPayload(select: unknown): {
     parquet: parquetRaw,
     protobuf: protobufRaw,
     export: exportRaw,
-  } = select as Record<string, unknown>;
+  } = select;
 
   if (sql !== undefined && typeof sql !== "string") {
     return { success: false };
@@ -774,14 +755,10 @@ function parseSelectPayload(select: unknown): {
   let exportConfig: SelectExportConfig = { format: "", rows: "", duration: "" };
 
   if (csvRaw !== undefined) {
-    if (
-      typeof csvRaw !== "object" ||
-      csvRaw === null ||
-      Array.isArray(csvRaw)
-    ) {
+    if (!isPlainObject(csvRaw)) {
       return { success: false };
     }
-    const { has_headers: hasHeadersRaw } = csvRaw as Record<string, unknown>;
+    const { has_headers: hasHeadersRaw } = csvRaw;
     if (hasHeadersRaw !== undefined && typeof hasHeadersRaw !== "boolean") {
       return { success: false };
     }
@@ -790,40 +767,28 @@ function parseSelectPayload(select: unknown): {
   }
 
   if (jsonRaw !== undefined) {
-    if (
-      typeof jsonRaw !== "object" ||
-      jsonRaw === null ||
-      Array.isArray(jsonRaw)
-    ) {
+    if (!isPlainObject(jsonRaw)) {
       return { success: false };
     }
     formatSections.push("json");
   }
 
   if (parquetRaw !== undefined) {
-    if (
-      typeof parquetRaw !== "object" ||
-      parquetRaw === null ||
-      Array.isArray(parquetRaw)
-    ) {
+    if (!isPlainObject(parquetRaw)) {
       return { success: false };
     }
     formatSections.push("parquet");
   }
 
   if (protobufRaw !== undefined) {
-    if (
-      typeof protobufRaw !== "object" ||
-      protobufRaw === null ||
-      Array.isArray(protobufRaw)
-    ) {
+    if (!isPlainObject(protobufRaw)) {
       return { success: false };
     }
     const {
       message_name: messageNameRaw,
       schema: schemaRaw,
       fields: fieldsRaw,
-    } = protobufRaw as Record<string, unknown>;
+    } = protobufRaw;
     if (messageNameRaw !== undefined && typeof messageNameRaw !== "string") {
       return { success: false };
     }
@@ -832,27 +797,14 @@ function parseSelectPayload(select: unknown): {
     }
     const fields: ProtobufFieldRow[] = [];
     if (fieldsRaw !== undefined) {
-      if (
-        typeof fieldsRaw !== "object" ||
-        fieldsRaw === null ||
-        Array.isArray(fieldsRaw)
-      ) {
+      if (!isPlainObject(fieldsRaw)) {
         return { success: false };
       }
-      for (const [column, rawField] of Object.entries(
-        fieldsRaw as Record<string, unknown>,
-      )) {
-        if (
-          typeof rawField !== "object" ||
-          rawField === null ||
-          Array.isArray(rawField)
-        ) {
+      for (const [column, rawField] of Object.entries(fieldsRaw)) {
+        if (!isPlainObject(rawField)) {
           return { success: false };
         }
-        const { id: fieldIdRaw, type: fieldTypeRaw } = rawField as Record<
-          string,
-          unknown
-        >;
+        const { id: fieldIdRaw, type: fieldTypeRaw } = rawField;
         if (
           typeof fieldIdRaw !== "number" ||
           typeof fieldTypeRaw !== "string"
@@ -876,14 +828,10 @@ function parseSelectPayload(select: unknown): {
   }
 
   if (exportRaw !== undefined) {
-    if (
-      typeof exportRaw !== "object" ||
-      exportRaw === null ||
-      Array.isArray(exportRaw)
-    ) {
+    if (!isPlainObject(exportRaw)) {
       return { success: false };
     }
-    const { format, rows, duration } = exportRaw as Record<string, unknown>;
+    const { format, rows, duration } = exportRaw;
     if (format !== undefined && typeof format !== "string") {
       return { success: false };
     }
@@ -907,23 +855,11 @@ function parseSelectPayload(select: unknown): {
 
   let asLabel: KeyValueRow[] = [];
   if (asLabelRaw !== undefined) {
-    if (
-      typeof asLabelRaw !== "object" ||
-      asLabelRaw === null ||
-      Array.isArray(asLabelRaw)
-    ) {
+    const rows = parseRowMap(asLabelRaw);
+    if (!rows) {
       return { success: false };
     }
-    asLabel = Object.entries(asLabelRaw as Record<string, unknown>).map(
-      ([key, value]) => ({
-        id: crypto.randomUUID(),
-        key,
-        value: typeof value === "string" ? value : String(value),
-      }),
-    );
-    if (asLabel.length === 0) {
-      asLabel = [blankRow()];
-    }
+    asLabel = rows;
   }
 
   return {

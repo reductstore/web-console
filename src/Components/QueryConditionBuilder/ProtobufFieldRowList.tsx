@@ -48,10 +48,15 @@ export default function ProtobufFieldRowList({
       {rows.map((row) => (
         <div
           key={row.id}
-          style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: ROW_GAP,
+          }}
         >
           <Input
-            placeholder="column (e.g. temperature)"
+            placeholder="column"
             value={row.column}
             onChange={(e) => onChange(row.id, { column: e.target.value })}
             style={{ width: PROTOBUF_COLUMN_WIDTH }}
