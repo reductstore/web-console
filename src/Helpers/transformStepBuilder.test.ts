@@ -624,23 +624,32 @@ describe("transformStepBuilder", () => {
         expect(withJson.select.formatSections).toEqual(["json"]);
       });
 
-      it("leaves protobuf and export untouched", () => {
+      it("leaves export untouched but replaces protobuf", () => {
         const withProtobuf = addFormatSection(
           createSelectTransformStep(),
           "protobuf",
         );
         const withExport = addFormatSection(withProtobuf, "export");
         const changed = changeFormat(withExport, "parquet");
-        expect(changed.select.formatSections).toEqual([
-          "protobuf",
-          "export",
-          "parquet",
-        ]);
+        expect(changed.select.formatSections).toEqual(["export", "parquet"]);
       });
 
       it("is a single mutation even when no format was active yet", () => {
         const changed = changeFormat(createSelectTransformStep(), "csv");
         expect(changed.select.formatSections).toEqual(["csv"]);
+      });
+
+      it("seeds a blank field row when switching to protobuf with none yet", () => {
+        const changed = changeFormat(createSelectTransformStep(), "protobuf");
+        expect(changed.select.protobuf.fields).toHaveLength(1);
+      });
+
+      it("does not duplicate existing protobuf field rows when switching back", () => {
+        let transform = changeFormat(createSelectTransformStep(), "protobuf");
+        transform = addProtobufFieldRow(transform);
+        transform = changeFormat(transform, "csv");
+        transform = changeFormat(transform, "protobuf");
+        expect(transform.select.protobuf.fields).toHaveLength(2);
       });
     });
 

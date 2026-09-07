@@ -3,6 +3,26 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import SelectStepEditor from "./SelectStepEditor";
 import { SelectTransformStep } from "../../Helpers/transformStepBuilder";
 
+vi.mock("@monaco-editor/react", () => ({
+  __esModule: true,
+  default: ({
+    value,
+    onChange,
+  }: {
+    value?: string;
+    onChange?: (value: string) => void;
+  }) => (
+    <textarea
+      data-testid="monaco-editor"
+      value={value}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
+  ),
+}));
+vi.mock("@reductstore/reduct-query-monaco", () => ({
+  getSqlCompletionProvider: () => ({}),
+}));
+
 const baseStep: SelectTransformStep = {
   sql: "",
   asLabel: [],
@@ -36,7 +56,7 @@ describe("SelectStepEditor", () => {
         {...noopHandlers}
       />,
     );
-    expect(screen.getByPlaceholderText("SELECT * FROM ENTRY()")).toHaveValue(
+    expect(screen.getByTestId("monaco-editor")).toHaveValue(
       "SELECT * FROM ENTRY()",
     );
   });
@@ -50,7 +70,7 @@ describe("SelectStepEditor", () => {
         onChangeSql={onChangeSql}
       />,
     );
-    fireEvent.change(screen.getByPlaceholderText("SELECT * FROM ENTRY()"), {
+    fireEvent.change(screen.getByTestId("monaco-editor"), {
       target: { value: "SELECT temp.value FROM ENTRY()" },
     });
     expect(onChangeSql).toHaveBeenCalledWith("SELECT temp.value FROM ENTRY()");
@@ -156,7 +176,7 @@ describe("SelectStepEditor", () => {
       expect(onAddFormatSection).toHaveBeenCalledWith("csv");
     });
 
-    it("greys out Format and Protobuf once one of them is added, but always shows both", () => {
+    it("greys out Format once a format is already added", () => {
       const step: SelectTransformStep = {
         ...baseStep,
         formatSections: ["csv"],
@@ -167,9 +187,6 @@ describe("SelectStepEditor", () => {
         "aria-disabled",
         "true",
       );
-      expect(
-        screen.getByRole("menuitem", { name: "Protobuf" }),
-      ).toHaveAttribute("aria-disabled", "true");
     });
 
     it("keeps Export and As label enabled regardless of which input format is active", () => {
@@ -185,29 +202,6 @@ describe("SelectStepEditor", () => {
       expect(
         screen.getByRole("menuitem", { name: "As label" }),
       ).not.toHaveAttribute("aria-disabled", "true");
-    });
-
-    it("adds another protobuf field row when Protobuf is picked again from the menu", () => {
-      const onAddProtobufFieldRow = vi.fn();
-      const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["protobuf"],
-        protobuf: {
-          messageName: "",
-          schema: "",
-          fields: [{ id: "f1", column: "", fieldId: "", fieldType: "" }],
-        },
-      };
-      render(
-        <SelectStepEditor
-          step={step}
-          {...noopHandlers}
-          onAddProtobufFieldRow={onAddProtobufFieldRow}
-        />,
-      );
-      fireEvent.click(screen.getByLabelText("Add option"));
-      fireEvent.click(screen.getByRole("menuitem", { name: "Protobuf" }));
-      expect(onAddProtobufFieldRow).toHaveBeenCalled();
     });
 
     it("keeps Add option enabled even when a format and Export are both already added", () => {
@@ -275,6 +269,23 @@ describe("SelectStepEditor", () => {
       expect(onChangeFormat).toHaveBeenCalledWith("json");
     });
 
+    it("switches to Protobuf via the segmented control", () => {
+      const onChangeFormat = vi.fn();
+      const step: SelectTransformStep = {
+        ...baseStep,
+        formatSections: ["csv"],
+      };
+      render(
+        <SelectStepEditor
+          step={step}
+          {...noopHandlers}
+          onChangeFormat={onChangeFormat}
+        />,
+      );
+      fireEvent.click(screen.getByText("Protobuf"));
+      expect(onChangeFormat).toHaveBeenCalledWith("protobuf");
+    });
+
     it("removes the section via its remove button", () => {
       const onRemoveFormatSection = vi.fn();
       const step: SelectTransformStep = {
@@ -291,100 +302,125 @@ describe("SelectStepEditor", () => {
       fireEvent.click(screen.getByLabelText("Remove format"));
       expect(onRemoveFormatSection).toHaveBeenCalledWith("parquet");
     });
-  });
 
-  describe("Protobuf section", () => {
-    const step: SelectTransformStep = {
-      ...baseStep,
-      formatSections: ["protobuf"],
-      protobuf: {
-        messageName: "Telemetry",
-        schema: "message Telemetry { double temp = 1; }",
-        fields: [
+    describe("when Protobuf is the active format", () => {
+      const step: SelectTransformStep = {
+        ...baseStep,
+        formatSections: ["protobuf"],
+        protobuf: {
+          messageName: "Telemetry",
+          schema: "message Telemetry { double temp = 1; }",
+          fields: [
+            {
+              id: "f1",
+              column: "temperature",
+              fieldId: "1",
+              fieldType: "double",
+            },
+          ],
+        },
+      };
+
+      it("hides the has-headers checkbox", () => {
+        render(<SelectStepEditor step={step} {...noopHandlers} />);
+        expect(screen.queryByRole("checkbox")).toBeNull();
+      });
+
+      it("shows the current message name and schema", () => {
+        render(<SelectStepEditor step={step} {...noopHandlers} />);
+        expect(screen.getByPlaceholderText("message name")).toHaveValue(
+          "Telemetry",
+        );
+        expect(
+          screen.getByPlaceholderText("schema (.proto content)"),
+        ).toHaveValue("message Telemetry { double temp = 1; }");
+      });
+
+      it("reports edits to the message name and schema", () => {
+        const onChangeProtobuf = vi.fn();
+        render(
+          <SelectStepEditor
+            step={step}
+            {...noopHandlers}
+            onChangeProtobuf={onChangeProtobuf}
+          />,
+        );
+        fireEvent.change(screen.getByPlaceholderText("message name"), {
+          target: { value: "Reading" },
+        });
+        expect(onChangeProtobuf).toHaveBeenCalledWith({
+          messageName: "Reading",
+        });
+
+        fireEvent.change(
+          screen.getByPlaceholderText("schema (.proto content)"),
           {
-            id: "f1",
-            column: "temperature",
-            fieldId: "1",
-            fieldType: "double",
+            target: { value: "message Reading {}" },
           },
-        ],
-      },
-    };
-
-    it("shows the current message name and schema", () => {
-      render(<SelectStepEditor step={step} {...noopHandlers} />);
-      expect(screen.getByPlaceholderText("message name")).toHaveValue(
-        "Telemetry",
-      );
-      expect(
-        screen.getByPlaceholderText("schema (.proto content)"),
-      ).toHaveValue("message Telemetry { double temp = 1; }");
-    });
-
-    it("reports edits to the message name and schema", () => {
-      const onChangeProtobuf = vi.fn();
-      render(
-        <SelectStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeProtobuf={onChangeProtobuf}
-        />,
-      );
-      fireEvent.change(screen.getByPlaceholderText("message name"), {
-        target: { value: "Reading" },
+        );
+        expect(onChangeProtobuf).toHaveBeenCalledWith({
+          schema: "message Reading {}",
+        });
       });
-      expect(onChangeProtobuf).toHaveBeenCalledWith({ messageName: "Reading" });
 
-      fireEvent.change(screen.getByPlaceholderText("schema (.proto content)"), {
-        target: { value: "message Reading {}" },
+      it("shows the current field row and reports a column edit", () => {
+        const onChangeProtobufFieldRow = vi.fn();
+        render(
+          <SelectStepEditor
+            step={step}
+            {...noopHandlers}
+            onChangeProtobufFieldRow={onChangeProtobufFieldRow}
+          />,
+        );
+        expect(screen.getByPlaceholderText("column")).toHaveValue(
+          "temperature",
+        );
+        fireEvent.change(screen.getByPlaceholderText("column"), {
+          target: { value: "humidity" },
+        });
+        expect(onChangeProtobufFieldRow).toHaveBeenCalledWith("f1", {
+          column: "humidity",
+        });
       });
-      expect(onChangeProtobuf).toHaveBeenCalledWith({
-        schema: "message Reading {}",
-      });
-    });
 
-    it("shows the current field row and reports a column edit", () => {
-      const onChangeProtobufFieldRow = vi.fn();
-      render(
-        <SelectStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeProtobufFieldRow={onChangeProtobufFieldRow}
-        />,
-      );
-      expect(screen.getByPlaceholderText("column")).toHaveValue("temperature");
-      fireEvent.change(screen.getByPlaceholderText("column"), {
-        target: { value: "humidity" },
+      it("adds another field row via the dedicated add button", () => {
+        const onAddProtobufFieldRow = vi.fn();
+        render(
+          <SelectStepEditor
+            step={step}
+            {...noopHandlers}
+            onAddProtobufFieldRow={onAddProtobufFieldRow}
+          />,
+        );
+        fireEvent.click(screen.getByLabelText("Add protobuf field"));
+        expect(onAddProtobufFieldRow).toHaveBeenCalled();
       });
-      expect(onChangeProtobufFieldRow).toHaveBeenCalledWith("f1", {
-        column: "humidity",
+
+      it("removes a field row directly", () => {
+        const onRemoveProtobufFieldRow = vi.fn();
+        render(
+          <SelectStepEditor
+            step={step}
+            {...noopHandlers}
+            onRemoveProtobufFieldRow={onRemoveProtobufFieldRow}
+          />,
+        );
+        fireEvent.click(screen.getByLabelText("Remove protobuf field"));
+        expect(onRemoveProtobufFieldRow).toHaveBeenCalledWith("f1");
       });
-    });
 
-    it("removes a field row directly", () => {
-      const onRemoveProtobufFieldRow = vi.fn();
-      render(
-        <SelectStepEditor
-          step={step}
-          {...noopHandlers}
-          onRemoveProtobufFieldRow={onRemoveProtobufFieldRow}
-        />,
-      );
-      fireEvent.click(screen.getByLabelText("Remove protobuf field"));
-      expect(onRemoveProtobufFieldRow).toHaveBeenCalledWith("f1");
-    });
-
-    it("removes the whole section via its remove button", () => {
-      const onRemoveFormatSection = vi.fn();
-      render(
-        <SelectStepEditor
-          step={step}
-          {...noopHandlers}
-          onRemoveFormatSection={onRemoveFormatSection}
-        />,
-      );
-      fireEvent.click(screen.getByLabelText("Remove protobuf"));
-      expect(onRemoveFormatSection).toHaveBeenCalledWith("protobuf");
+      it("removes the whole section via its remove button", () => {
+        const onRemoveFormatSection = vi.fn();
+        render(
+          <SelectStepEditor
+            step={step}
+            {...noopHandlers}
+            onRemoveFormatSection={onRemoveFormatSection}
+          />,
+        );
+        fireEvent.click(screen.getByLabelText("Remove format"));
+        expect(onRemoveFormatSection).toHaveBeenCalledWith("protobuf");
+      });
     });
   });
 

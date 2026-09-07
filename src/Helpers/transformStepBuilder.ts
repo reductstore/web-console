@@ -22,9 +22,9 @@ export interface RosTransformStep {
   export: RosExportConfig;
 }
 
-export type SelectInputFormat = "csv" | "json" | "parquet";
+export type SelectInputFormat = "csv" | "json" | "parquet" | "protobuf";
 
-export type SelectFormatSection = SelectInputFormat | "protobuf" | "export";
+export type SelectFormatSection = SelectInputFormat | "export";
 
 export interface CsvConfig {
   hasHeaders: boolean;
@@ -136,15 +136,19 @@ export function changeFormat<Entry extends TransformStepEntry>(
 ): Entry {
   if (transform.kind !== "select") return transform;
   const formatSections = transform.select.formatSections.filter(
-    (s) => s !== "csv" && s !== "json" && s !== "parquet",
+    (s) => s !== "csv" && s !== "json" && s !== "parquet" && s !== "protobuf",
   );
-  return {
-    ...transform,
-    select: {
-      ...transform.select,
-      formatSections: [...formatSections, format],
-    },
-  } as Entry;
+  const select = {
+    ...transform.select,
+    formatSections: [...formatSections, format],
+  };
+  if (format === "protobuf" && select.protobuf.fields.length === 0) {
+    select.protobuf = {
+      ...select.protobuf,
+      fields: [blankProtobufFieldRow()],
+    };
+  }
+  return { ...transform, select } as Entry;
 }
 
 export function removeFormatSection<Entry extends TransformStepEntry>(

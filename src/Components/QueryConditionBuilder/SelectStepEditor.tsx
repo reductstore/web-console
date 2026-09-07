@@ -31,6 +31,7 @@ import {
 } from "./stepRowLayout";
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
+import SqlInput from "./SqlInput";
 
 const SQL_INPUT_MAX_WIDTH = 704;
 
@@ -38,9 +39,10 @@ const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
   { value: "csv", label: "CSV" },
   { value: "json", label: "JSON" },
   { value: "parquet", label: "Parquet" },
+  { value: "protobuf", label: "Protobuf" },
 ];
 
-const EXPORT_FORMATS = FORMAT_CHOICES.map((f) => f.value);
+const EXPORT_FORMATS = ["csv", "json", "parquet"];
 
 function activeFormatOf(
   step: SelectTransformStep,
@@ -49,13 +51,12 @@ function activeFormatOf(
     ?.value;
 }
 
-type AddOption = "format" | "protobuf" | "export" | "asLabel";
+type AddOption = "format" | "export" | "asLabel";
 
-const ADD_OPTIONS: AddOption[] = ["format", "protobuf", "export", "asLabel"];
+const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
   format: "Format",
-  protobuf: "Protobuf",
   export: "Export",
   asLabel: "As label",
 };
@@ -72,16 +73,9 @@ function disabledReason(
       : undefined;
   }
 
-  const hasFormat = activeFormatOf(step) !== undefined;
-  const hasProtobuf = step.formatSections.includes("protobuf");
-
-  if (option === "protobuf") {
-    return hasFormat ? "Not available together with Format" : undefined;
-  }
-
-  if (hasFormat) return "Format is already added";
-  if (hasProtobuf) return "Not available together with Protobuf";
-  return undefined;
+  return activeFormatOf(step) !== undefined
+    ? "Format is already added"
+    : undefined;
 }
 
 interface SelectStepEditorProps {
@@ -189,12 +183,6 @@ export default function SelectStepEditor({
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "asLabel") {
       onAddAsLabelRow();
-    } else if (key === "protobuf") {
-      if (step.formatSections.includes("protobuf")) {
-        onAddProtobufFieldRow();
-      } else {
-        onAddFormatSection("protobuf");
-      }
     } else if (key === "export") {
       onAddFormatSection("export");
     } else if (key === "format") {
@@ -207,47 +195,15 @@ export default function SelectStepEditor({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <FormatSection label="SQL">
-        <Input
-          placeholder="SELECT * FROM ENTRY()"
+        <SqlInput
           value={step.sql}
-          onChange={(e) => onChangeSql(e.target.value)}
+          onChange={onChangeSql}
           style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}
         />
       </FormatSection>
 
       {activeFormat && (
         <FormatSection label="Format">
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: ROW_GAP,
-            }}
-          >
-            <Segmented
-              value={activeFormat}
-              options={FORMAT_CHOICES}
-              onChange={(value) => onChangeFormat(value as SelectInputFormat)}
-            />
-            {activeFormat === "csv" && (
-              <Checkbox
-                checked={step.csv.hasHeaders}
-                onChange={(e) => onChangeCsv({ hasHeaders: e.target.checked })}
-              >
-                Has headers
-              </Checkbox>
-            )}
-            <RemoveSectionButton
-              label="Format"
-              onRemove={() => onRemoveFormatSection(activeFormat)}
-            />
-          </div>
-        </FormatSection>
-      )}
-
-      {step.formatSections.includes("protobuf") && (
-        <FormatSection label="Protobuf">
           <div
             style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
           >
@@ -259,30 +215,65 @@ export default function SelectStepEditor({
                 gap: ROW_GAP,
               }}
             >
-              <Input
-                placeholder="message name"
-                value={step.protobuf.messageName}
-                onChange={(e) =>
-                  onChangeProtobuf({ messageName: e.target.value })
-                }
-                style={{ width: PROTOBUF_MESSAGE_NAME_WIDTH }}
+              <Segmented
+                value={activeFormat}
+                options={FORMAT_CHOICES}
+                onChange={(value) => onChangeFormat(value as SelectInputFormat)}
               />
-              <Input
-                placeholder="schema (.proto content)"
-                value={step.protobuf.schema}
-                onChange={(e) => onChangeProtobuf({ schema: e.target.value })}
-                style={{ width: PROTOBUF_SCHEMA_WIDTH }}
-              />
+              {activeFormat === "csv" && (
+                <Checkbox
+                  checked={step.csv.hasHeaders}
+                  onChange={(e) =>
+                    onChangeCsv({ hasHeaders: e.target.checked })
+                  }
+                >
+                  Has headers
+                </Checkbox>
+              )}
               <RemoveSectionButton
-                label="Protobuf"
-                onRemove={() => onRemoveFormatSection("protobuf")}
+                label="Format"
+                onRemove={() => onRemoveFormatSection(activeFormat)}
               />
             </div>
-            <ProtobufFieldRowList
-              rows={step.protobuf.fields}
-              onChange={onChangeProtobufFieldRow}
-              onRemove={onRemoveProtobufFieldRow}
-            />
+            {activeFormat === "protobuf" && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: ROW_GAP,
+                  }}
+                >
+                  <Input
+                    placeholder="message name"
+                    value={step.protobuf.messageName}
+                    onChange={(e) =>
+                      onChangeProtobuf({ messageName: e.target.value })
+                    }
+                    style={{ width: PROTOBUF_MESSAGE_NAME_WIDTH }}
+                  />
+                  <Input
+                    placeholder="schema (.proto content)"
+                    value={step.protobuf.schema}
+                    onChange={(e) =>
+                      onChangeProtobuf({ schema: e.target.value })
+                    }
+                    style={{ width: PROTOBUF_SCHEMA_WIDTH }}
+                  />
+                </div>
+                <ProtobufFieldRowList
+                  rows={step.protobuf.fields}
+                  onChange={onChangeProtobufFieldRow}
+                  onRemove={onRemoveProtobufFieldRow}
+                />
+                <Button
+                  aria-label="Add protobuf field"
+                  icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+                  onClick={onAddProtobufFieldRow}
+                />
+              </>
+            )}
           </div>
         </FormatSection>
       )}

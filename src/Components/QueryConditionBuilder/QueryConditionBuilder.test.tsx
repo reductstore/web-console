@@ -48,6 +48,7 @@ vi.mock("@monaco-editor/react", () => ({
 vi.mock("monaco-editor", () => ({}));
 vi.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
+  getSqlCompletionProvider: () => ({}),
 }));
 
 beforeEach(() => {
@@ -1283,7 +1284,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      expect(screen.getByPlaceholderText("SELECT * FROM ENTRY()")).toBeTruthy();
+      expect(screen.getByTestId("monaco-editor")).toBeTruthy();
       expect(screen.queryByText("As label")).toBeNull();
     });
 
@@ -1337,7 +1338,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.change(screen.getByPlaceholderText("SELECT * FROM ENTRY()"), {
+      fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT temp.value AS value FROM ENTRY()" },
       });
       await addLabelMapping();
@@ -1451,7 +1452,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       expect(screen.getByText("Process (Select)")).toBeTruthy();
-      expect(screen.getByPlaceholderText("SELECT * FROM ENTRY()")).toHaveValue(
+      expect(screen.getByTestId("monaco-editor")).toHaveValue(
         "SELECT * FROM ENTRY()",
       );
     });
