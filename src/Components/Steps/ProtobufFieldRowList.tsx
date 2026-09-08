@@ -3,6 +3,7 @@ import { CloseOutlined } from "@ant-design/icons";
 import { ProtobufFieldRow } from "../../Helpers/transformStepBuilder";
 import {
   ROW_GAP,
+  ROW_ICON_FONT_SIZE,
   PROTOBUF_COLUMN_WIDTH,
   PROTOBUF_FIELD_ID_WIDTH,
   PROTOBUF_TYPE_WIDTH,
@@ -85,7 +86,7 @@ export default function ProtobufFieldRowList({
           <Button
             aria-label="Remove protobuf field"
             type="text"
-            icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+            icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
             onClick={() => onRemove(row.id)}
           />
         </div>

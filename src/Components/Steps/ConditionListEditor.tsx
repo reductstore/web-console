@@ -2,7 +2,7 @@ import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
 
 type ConnectorChoice = "$and" | "$or" | "not";
 
@@ -107,7 +107,7 @@ export default function ConditionListEditor({
           <Button
             aria-label="Add condition"
             disabled={!canAddCondition}
-            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
             onClick={onAddCondition}
           />
         </span>

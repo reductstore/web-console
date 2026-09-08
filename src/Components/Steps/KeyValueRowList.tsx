@@ -1,7 +1,7 @@
 import { Button, Input } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { KeyValueRow } from "../../Helpers/transformStepBuilder";
-import { ROW_GAP, ROW_INPUT_WIDTH } from "./stepRowLayout";
+import { ROW_GAP, ROW_INPUT_WIDTH, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
 
 interface RowListProps {
   rows: KeyValueRow[];
@@ -56,7 +56,7 @@ export default function RowList({
           <Button
             aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
             type="text"
-            icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+            icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
             onClick={() => (onlyRow ? onRemoveSection() : onRemove(row.id))}
           />
         </div>

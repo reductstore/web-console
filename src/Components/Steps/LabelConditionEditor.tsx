@@ -6,7 +6,7 @@ import {
   LABEL_OPERATORS,
   isMultiValueOperator,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_INPUT_WIDTH, ROW_GAP } from "./stepRowLayout";
+import { ROW_INPUT_WIDTH, ROW_GAP, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;
@@ -93,7 +93,7 @@ export default function LabelConditionEditor({
         <Button
           aria-label="Remove condition"
           type="text"
-          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+          icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
           onClick={() => onRemove(condition.id)}
         />
       ) : (

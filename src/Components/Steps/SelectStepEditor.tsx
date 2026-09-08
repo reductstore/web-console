@@ -24,6 +24,7 @@ import {
 import {
   ROW_LABEL_WIDTH,
   ROW_GAP,
+  ROW_ICON_FONT_SIZE,
   VALUE_INPUT_WIDTH,
   EXPORT_DURATION_WIDTH,
   PROTOBUF_MESSAGE_NAME_WIDTH,
@@ -116,7 +117,7 @@ function RemoveSectionButton({
     <Button
       aria-label={`Remove ${label.toLowerCase()}`}
       type="text"
-      icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+      icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
       onClick={onRemove}
     />
   );
@@ -269,7 +270,9 @@ export default function SelectStepEditor({
                 />
                 <Button
                   aria-label="Add protobuf field"
-                  icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+                  icon={
+                    <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
+                  }
                   onClick={onAddProtobufFieldRow}
                 />
               </>
@@ -347,7 +350,7 @@ export default function SelectStepEditor({
         >
           <Button
             aria-label="Add option"
-            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
           />
         </Dropdown>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
