@@ -819,7 +819,7 @@ describe("QueryConditionBuilder", () => {
       // Drag the Transform block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
-          active: { id: "transform" },
+          active: { id: "transform-ros" },
           over: { id: "conditions" },
         } as DragEndEvent);
       });
@@ -1489,25 +1489,15 @@ describe("QueryConditionBuilder", () => {
       expect(screen.getByText("Process (Select)")).toBeTruthy();
     });
 
-    it("falls back to JSON mode when #ext carries both ros and select", () => {
+    it("renders both Process (ROS) and Process (Select) when #ext carries both", () => {
       const onUnrepresentable = vi.fn();
-      const { rerender } = render(
-        <QueryConditionBuilder
-          value=""
-          onChange={noop}
-          mode="builder"
-          onUnrepresentable={onUnrepresentable}
-          validationContext={readyValidationContext}
-        />,
-      );
-
       const value = JSON.stringify({
         "#ext": {
           ros: { extract: {} },
           select: { sql: "SELECT * FROM ENTRY()" },
         },
       });
-      rerender(
+      render(
         <QueryConditionBuilder
           value={value}
           onChange={noop}
@@ -1516,7 +1506,9 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(onUnrepresentable).toHaveBeenCalled();
+      expect(screen.getByText("Process (ROS)")).toBeTruthy();
+      expect(screen.getByText("Process (Select)")).toBeTruthy();
+      expect(onUnrepresentable).not.toHaveBeenCalled();
     });
   });
 });

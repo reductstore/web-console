@@ -62,7 +62,12 @@ export type TransformStepEntry =
   | { kind: "ros"; ros: RosTransformStep }
   | { kind: "select"; select: SelectTransformStep };
 
-export const TRANSFORM_BLOCK_ID = "transform";
+export const ROS_TRANSFORM_BLOCK_ID = "transform-ros";
+export const SELECT_TRANSFORM_BLOCK_ID = "transform-select";
+
+export function transformBlockId(kind: TransformKind): string {
+  return kind === "ros" ? ROS_TRANSFORM_BLOCK_ID : SELECT_TRANSFORM_BLOCK_ID;
+}
 
 function blankRow(): KeyValueRow {
   return { id: crypto.randomUUID(), key: "", value: "" };
@@ -483,28 +488,27 @@ function parseRowMap(raw: unknown): KeyValueRow[] | undefined {
 }
 
 export function hasIncompleteTransform(
-  transform: TransformStepEntry | undefined,
+  transforms: TransformStepEntry[],
 ): boolean {
-  if (!transform) {
-    return false;
-  }
-  if (transform.kind === "select") {
-    if (hasPartialRow(transform.select.asLabel)) {
+  return transforms.some((transform) => {
+    if (transform.kind === "select") {
+      if (hasPartialRow(transform.select.asLabel)) {
+        return true;
+      }
+      return (
+        transform.select.formatSections.includes("protobuf") &&
+        hasPartialProtobufFieldRow(transform.select.protobuf.fields)
+      );
+    }
+    const { sections, encode, asLabel } = transform.ros;
+    if (sections.includes("encode") && hasPartialRow(encode)) {
       return true;
     }
-    return (
-      transform.select.formatSections.includes("protobuf") &&
-      hasPartialProtobufFieldRow(transform.select.protobuf.fields)
-    );
-  }
-  const { sections, encode, asLabel } = transform.ros;
-  if (sections.includes("encode") && hasPartialRow(encode)) {
-    return true;
-  }
-  if (sections.includes("label") && hasPartialRow(asLabel)) {
-    return true;
-  }
-  return false;
+    if (sections.includes("label") && hasPartialRow(asLabel)) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function rowsToMap(rows: KeyValueRow[]): Record<string, string> {
@@ -513,85 +517,75 @@ function rowsToMap(rows: KeyValueRow[]): Record<string, string> {
   );
 }
 
-export function buildExtPayload(
-  transform: TransformStepEntry | undefined,
-): Record<string, unknown> | undefined {
-  if (!transform) {
-    return undefined;
-  }
-  if (transform.kind === "select") {
-    const {
-      sql,
-      asLabel,
-      formatSections,
-      csv,
-      protobuf,
-      export: exportConfig,
-    } = transform.select;
-    const select: Record<string, unknown> = {};
-
-    if (formatSections.includes("csv")) {
-      select.csv = { has_headers: csv.hasHeaders };
-    }
-    if (formatSections.includes("json")) {
-      select.json = {};
-    }
-    if (formatSections.includes("parquet")) {
-      select.parquet = {};
-    }
-    if (formatSections.includes("protobuf")) {
-      const completeFields = protobuf.fields.filter(
-        (row) =>
-          row.column.trim() &&
-          row.fieldType.trim() &&
-          isValidProtobufFieldId(row.fieldId),
-      );
-      if (completeFields.length > 0) {
-        select.protobuf = {
-          fields: Object.fromEntries(
-            completeFields.map((row) => [
-              row.column.trim(),
-              { id: Number(row.fieldId), type: row.fieldType },
-            ]),
-          ),
-        };
-      } else {
-        const protobufConfig: Record<string, unknown> = {};
-        if (protobuf.messageName.trim())
-          protobufConfig.message_name = protobuf.messageName.trim();
-        if (protobuf.schema.trim())
-          protobufConfig.schema = protobuf.schema.trim();
-        select.protobuf = protobufConfig;
-      }
-    }
-
-    if (sql.trim()) select.sql = sql.trim();
-
-    if (formatSections.includes("export")) {
-      const exportPayload: Record<string, unknown> = {};
-      if (exportConfig.format.trim())
-        exportPayload.format = exportConfig.format.trim();
-      if (exportConfig.rows.trim()) {
-        const rows = Number(exportConfig.rows);
-        if (!Number.isNaN(rows)) exportPayload.rows = rows;
-      }
-      if (exportConfig.duration.trim())
-        exportPayload.duration = exportConfig.duration.trim();
-      select.export = exportPayload;
-    }
-
-    const asLabelMap = rowsToMap(asLabel);
-    if (Object.keys(asLabelMap).length > 0) select.as_label = asLabelMap;
-
-    return { select };
-  }
+function buildSelectExt(select: SelectTransformStep): Record<string, unknown> {
   const {
-    sections,
-    topic,
-    encode,
+    sql,
     asLabel,
+    formatSections,
+    csv,
+    protobuf,
     export: exportConfig,
-  } = transform.ros;
+  } = select;
+  const payload: Record<string, unknown> = {};
+
+  if (formatSections.includes("csv")) {
+    payload.csv = { has_headers: csv.hasHeaders };
+  }
+  if (formatSections.includes("json")) {
+    payload.json = {};
+  }
+  if (formatSections.includes("parquet")) {
+    payload.parquet = {};
+  }
+  if (formatSections.includes("protobuf")) {
+    const completeFields = protobuf.fields.filter(
+      (row) =>
+        row.column.trim() &&
+        row.fieldType.trim() &&
+        isValidProtobufFieldId(row.fieldId),
+    );
+    if (completeFields.length > 0) {
+      payload.protobuf = {
+        fields: Object.fromEntries(
+          completeFields.map((row) => [
+            row.column.trim(),
+            { id: Number(row.fieldId), type: row.fieldType },
+          ]),
+        ),
+      };
+    } else {
+      const protobufConfig: Record<string, unknown> = {};
+      if (protobuf.messageName.trim())
+        protobufConfig.message_name = protobuf.messageName.trim();
+      if (protobuf.schema.trim())
+        protobufConfig.schema = protobuf.schema.trim();
+      payload.protobuf = protobufConfig;
+    }
+  }
+
+  if (sql.trim()) payload.sql = sql.trim();
+
+  if (formatSections.includes("export")) {
+    const exportPayload: Record<string, unknown> = {};
+    if (exportConfig.format.trim())
+      exportPayload.format = exportConfig.format.trim();
+    if (exportConfig.rows.trim()) {
+      const rows = Number(exportConfig.rows);
+      if (!Number.isNaN(rows)) exportPayload.rows = rows;
+    }
+    if (exportConfig.duration.trim())
+      exportPayload.duration = exportConfig.duration.trim();
+    payload.export = exportPayload;
+  }
+
+  const asLabelMap = rowsToMap(asLabel);
+  if (Object.keys(asLabelMap).length > 0) payload.as_label = asLabelMap;
+
+  return payload;
+}
+
+function buildRosExt(ros: RosTransformStep): Record<string, unknown> {
+  const { sections, topic, encode, asLabel, export: exportConfig } = ros;
 
   const extract: Record<string, unknown> = {};
   if (sections.includes("filter") && topic.trim()) {
@@ -610,12 +604,12 @@ export function buildExtPayload(
     }
   }
 
-  const ros: Record<string, unknown> = {};
+  const payload: Record<string, unknown> = {};
   // The server only accepts one of extract/export/transform per request, so
   // extract is only ever included when a filter/encode/label section is
   // actually contributing something to it.
   if (Object.keys(extract).length > 0) {
-    ros.extract = extract;
+    payload.extract = extract;
   }
   if (sections.includes("export")) {
     const exportPayload: Record<string, unknown> = {};
@@ -626,32 +620,64 @@ export function buildExtPayload(
     if (exportConfig.size.trim()) exportPayload.size = exportConfig.size.trim();
     // Kept even when empty - the section being present is what signals
     // export mode, not whether its fields happen to be filled in yet.
-    ros.export = exportPayload;
+    payload.export = exportPayload;
   }
 
-  if (Object.keys(ros).length === 0) {
-    return { ros: { extract: {} } };
+  if (Object.keys(payload).length === 0) {
+    return { extract: {} };
   }
-  return { ros };
+  return payload;
+}
+
+export function buildExtPayload(
+  transforms: TransformStepEntry[],
+): Record<string, unknown> | undefined {
+  if (transforms.length === 0) {
+    return undefined;
+  }
+  const payload: Record<string, unknown> = {};
+  for (const transform of transforms) {
+    if (transform.kind === "select") {
+      payload.select = buildSelectExt(transform.select);
+    } else {
+      payload.ros = buildRosExt(transform.ros);
+    }
+  }
+  return payload;
 }
 
 export function parseExtPayload(ext: unknown): {
   success: boolean;
-  transform?: TransformStepEntry;
+  transforms?: TransformStepEntry[];
 } {
   if (ext === undefined) {
-    return { success: true };
+    return { success: true, transforms: [] };
   }
   if (!isPlainObject(ext)) {
     return { success: false };
   }
   const { ros, select } = ext;
-  if (ros !== undefined && select !== undefined) {
+  if (ros === undefined && select === undefined) {
     return { success: false };
   }
-  return select !== undefined
-    ? parseSelectPayload(select)
-    : parseRosPayload(ros);
+
+  const transforms: TransformStepEntry[] = [];
+  if (ros !== undefined) {
+    const result = parseRosPayload(ros);
+    if (!result.success || !result.transform) {
+      return { success: false };
+    }
+    transforms.push(result.transform);
+  }
+  if (select !== undefined) {
+    const result = parseSelectPayload(select);
+    if (!result.success || !result.transform) {
+      return { success: false };
+    }
+    transforms.push(result.transform);
+  }
+
+  return { success: true, transforms };
 }
 
 function parseRosPayload(ros: unknown): {

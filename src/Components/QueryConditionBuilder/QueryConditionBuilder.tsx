@@ -40,9 +40,11 @@ import {
   removeFormatSection,
   removeProtobufFieldRow,
   removeSection,
+  ROS_TRANSFORM_BLOCK_ID,
+  SELECT_TRANSFORM_BLOCK_ID,
   TransformKind,
   TransformStepEntry,
-  TRANSFORM_BLOCK_ID,
+  transformBlockId,
   updateAsLabelRow,
   updateCsv,
   updateEncodeRow,
@@ -63,19 +65,19 @@ type ValidationContext = ComponentProps<
 function initialBlockOrder(
   conditions: FlatCondition[],
   steps: Step[],
-  transform: TransformStepEntry | undefined,
+  transforms: TransformStepEntry[],
 ): string[] {
   return [
     ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
     ...steps.map((step) => step.id),
-    ...(transform ? [TRANSFORM_BLOCK_ID] : []),
+    ...transforms.map((transform) => transformBlockId(transform.kind)),
   ];
 }
 
 interface ParsedQueryAndTransform {
   list: FlatCondition[];
   steps?: Step[];
-  transform?: TransformStepEntry;
+  transforms?: TransformStepEntry[];
 }
 
 // Mirrors conditionalQueryBuilder's own parseQueryValue, but also splits out
@@ -109,7 +111,7 @@ function parseQueryAndTransform(
   return {
     list: result.list ?? [],
     steps: result.steps,
-    transform: extResult.transform,
+    transforms: extResult.transforms,
   };
 }
 
@@ -142,7 +144,8 @@ function reorderQueryKeys(
     const key =
       blockId === CONDITIONS_BLOCK_ID
         ? conditionsKey
-        : blockId === TRANSFORM_BLOCK_ID
+        : blockId === ROS_TRANSFORM_BLOCK_ID ||
+            blockId === SELECT_TRANSFORM_BLOCK_ID
           ? "#ext"
           : stepKeyById.get(blockId);
     if (key !== undefined && key in value && !orderedKeys.includes(key)) {
@@ -186,7 +189,7 @@ export default function QueryConditionBuilder({
     return {
       conditions: parsed?.list ?? [],
       steps: parsed?.steps ?? [],
-      transform: parsed?.transform,
+      transforms: parsed?.transforms ?? [],
     };
   });
 
@@ -195,12 +198,12 @@ export default function QueryConditionBuilder({
   );
   const [steps, setSteps] = useState<Step[]>(initial.steps);
 
-  const [transformState, setTransformState] = useState<
-    TransformStepEntry | undefined
-  >(initial.transform);
+  const [transforms, setTransforms] = useState<TransformStepEntry[]>(
+    initial.transforms,
+  );
 
   const [blockOrder, setBlockOrder] = useState<string[]>(() =>
-    initialBlockOrder(initial.conditions, initial.steps, initial.transform),
+    initialBlockOrder(initial.conditions, initial.steps, initial.transforms),
   );
 
   const lastEmittedValueRef = useRef(value);
@@ -274,8 +277,9 @@ export default function QueryConditionBuilder({
     setConditions(parsed.list);
     const nextSteps = parsed.steps ?? [];
     setSteps(nextSteps);
-    setTransformState(parsed.transform);
-    setBlockOrder(initialBlockOrder(parsed.list, nextSteps, parsed.transform));
+    const nextTransforms = parsed.transforms ?? [];
+    setTransforms(nextTransforms);
+    setBlockOrder(initialBlockOrder(parsed.list, nextSteps, nextTransforms));
   }, [value, mode]);
 
   useEffect(() => {
@@ -289,22 +293,22 @@ export default function QueryConditionBuilder({
           (condition.label.trim() !== "") !== hasValue(condition.value),
       ) ||
       hasIncompleteSteps(steps) ||
-      hasIncompleteTransform(transformState);
+      hasIncompleteTransform(transforms);
     onIncompleteConditionChange?.(hasIncomplete);
-  }, [conditions, steps, transformState, mode]);
+  }, [conditions, steps, transforms, mode]);
 
   const applyQuery = (
     nextConditions: FlatCondition[],
     nextSteps: Step[],
-    nextTransform: TransformStepEntry | undefined | typeof KEEP_TRANSFORM,
+    nextTransforms: TransformStepEntry[] | typeof KEEP_TRANSFORM,
     nextBlockOrder: string[] = blockOrder,
   ) => {
-    const resolvedTransform =
-      nextTransform === KEEP_TRANSFORM ? transformState : nextTransform;
+    const resolvedTransforms =
+      nextTransforms === KEEP_TRANSFORM ? transforms : nextTransforms;
     setConditions(nextConditions);
     setSteps(nextSteps);
-    setTransformState(resolvedTransform);
-    const extPayload = buildExtPayload(resolvedTransform);
+    setTransforms(resolvedTransforms);
+    const extPayload = buildExtPayload(resolvedTransforms);
     const merged = {
       ...serializeBuilderList(nextConditions),
       ...serializeSteps(nextSteps),
@@ -317,15 +321,23 @@ export default function QueryConditionBuilder({
   };
 
   function withTransform<Args extends unknown[]>(
+    kind: TransformKind,
     mutate: (
       transform: TransformStepEntry,
       ...args: Args
     ) => TransformStepEntry,
   ): (...args: Args) => void {
     return (...args: Args) => {
-      if (transformState) {
-        applyQuery(conditions, steps, mutate(transformState, ...args));
-      }
+      const target = transforms.find((transform) => transform.kind === kind);
+      if (!target) return;
+      const updated = mutate(target, ...args);
+      applyQuery(
+        conditions,
+        steps,
+        transforms.map((transform) =>
+          transform.kind === kind ? updated : transform,
+        ),
+      );
     };
   }
 
@@ -361,7 +373,7 @@ export default function QueryConditionBuilder({
         blockOrder={blockOrder}
         conditions={conditions}
         steps={steps}
-        transform={transformState}
+        transforms={transforms}
         sourceReady={sourceReady}
         labelOptions={labelOptions}
         intervalValue={validationContext?.intervalValue ?? undefined}
@@ -423,39 +435,50 @@ export default function QueryConditionBuilder({
           appendBlock(nextSteps[nextSteps.length - 1].id);
         }}
         onAddTransformBlock={(kind: TransformKind) => {
+          const newTransform =
+            kind === "ros"
+              ? createRosTransformStep()
+              : createSelectTransformStep();
+          applyQuery(conditions, steps, [...transforms, newTransform]);
+          appendBlock(transformBlockId(kind));
+        }}
+        onRemoveTransformBlock={(kind: TransformKind) => {
           applyQuery(
             conditions,
             steps,
-            kind === "ros"
-              ? createRosTransformStep()
-              : createSelectTransformStep(),
+            transforms.filter((transform) => transform.kind !== kind),
           );
-          appendBlock(TRANSFORM_BLOCK_ID);
+          removeBlock(transformBlockId(kind));
         }}
-        onRemoveTransformBlock={() => {
-          applyQuery(conditions, steps, undefined);
-          removeBlock(TRANSFORM_BLOCK_ID);
-        }}
-        onAddSection={withTransform(addSection)}
-        onRemoveSection={withTransform(removeSection)}
-        onChangeTopic={withTransform(updateTopic)}
-        onAddEncodeRow={withTransform(addEncodeRow)}
-        onChangeEncodeRow={withTransform(updateEncodeRow)}
-        onRemoveEncodeRow={withTransform(removeEncodeRow)}
-        onAddAsLabelRow={withTransform(addAsLabelRow)}
-        onChangeAsLabelRow={withTransform(updateAsLabelRow)}
-        onRemoveAsLabelRow={withTransform(removeAsLabelRow)}
-        onChangeExport={withTransform(updateExport)}
-        onChangeSql={withTransform(updateSql)}
-        onAddFormatSection={withTransform(addFormatSection)}
-        onRemoveFormatSection={withTransform(removeFormatSection)}
-        onChangeFormat={withTransform(changeFormat)}
-        onChangeCsv={withTransform(updateCsv)}
-        onChangeProtobuf={withTransform(updateProtobuf)}
-        onAddProtobufFieldRow={withTransform(addProtobufFieldRow)}
-        onChangeProtobufFieldRow={withTransform(updateProtobufFieldRow)}
-        onRemoveProtobufFieldRow={withTransform(removeProtobufFieldRow)}
-        onChangeSelectExport={withTransform(updateSelectExport)}
+        onAddSection={withTransform("ros", addSection)}
+        onRemoveSection={withTransform("ros", removeSection)}
+        onChangeTopic={withTransform("ros", updateTopic)}
+        onAddEncodeRow={withTransform("ros", addEncodeRow)}
+        onChangeEncodeRow={withTransform("ros", updateEncodeRow)}
+        onRemoveEncodeRow={withTransform("ros", removeEncodeRow)}
+        onAddRosAsLabelRow={withTransform("ros", addAsLabelRow)}
+        onChangeRosAsLabelRow={withTransform("ros", updateAsLabelRow)}
+        onRemoveRosAsLabelRow={withTransform("ros", removeAsLabelRow)}
+        onChangeExport={withTransform("ros", updateExport)}
+        onChangeSql={withTransform("select", updateSql)}
+        onAddFormatSection={withTransform("select", addFormatSection)}
+        onRemoveFormatSection={withTransform("select", removeFormatSection)}
+        onChangeFormat={withTransform("select", changeFormat)}
+        onChangeCsv={withTransform("select", updateCsv)}
+        onChangeProtobuf={withTransform("select", updateProtobuf)}
+        onAddProtobufFieldRow={withTransform("select", addProtobufFieldRow)}
+        onChangeProtobufFieldRow={withTransform(
+          "select",
+          updateProtobufFieldRow,
+        )}
+        onRemoveProtobufFieldRow={withTransform(
+          "select",
+          removeProtobufFieldRow,
+        )}
+        onChangeSelectExport={withTransform("select", updateSelectExport)}
+        onAddSelectAsLabelRow={withTransform("select", addAsLabelRow)}
+        onChangeSelectAsLabelRow={withTransform("select", updateAsLabelRow)}
+        onRemoveSelectAsLabelRow={withTransform("select", removeAsLabelRow)}
         onRemoveStep={(id) => {
           applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
           removeBlock(id);
@@ -463,7 +486,7 @@ export default function QueryConditionBuilder({
         onReorderBlock={(fromIndex, toIndex) => {
           const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
           setBlockOrder(nextBlockOrder);
-          applyQuery(conditions, steps, transformState, nextBlockOrder);
+          applyQuery(conditions, steps, transforms, nextBlockOrder);
         }}
       />
       {error && (

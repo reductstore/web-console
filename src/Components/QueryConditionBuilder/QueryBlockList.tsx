@@ -7,6 +7,7 @@ import TransformStepEditor from "../Steps/TransformStepEditor";
 import SelectStepEditor from "../Steps/SelectStepEditor";
 import SortableCard from "./SortableCard";
 import SortableList from "./SortableList";
+import { ROW_ICON_FONT_SIZE } from "../Steps/stepRowLayout";
 import {
   CONDITIONS_BLOCK_ID,
   FlatCondition,
@@ -20,20 +21,21 @@ import {
   KeyValueRow,
   ProtobufConfig,
   ProtobufFieldRow,
+  ROS_TRANSFORM_BLOCK_ID,
   RosExportConfig,
   RosSection,
+  SELECT_TRANSFORM_BLOCK_ID,
   SelectExportConfig,
   SelectFormatSection,
   SelectInputFormat,
   TransformKind,
   TransformStepEntry,
-  TRANSFORM_BLOCK_ID,
 } from "../../Helpers/transformStepBuilder";
 
 type Block =
   | { id: typeof CONDITIONS_BLOCK_ID; kind: "conditions" }
   | {
-      id: typeof TRANSFORM_BLOCK_ID;
+      id: string;
       kind: "transform";
       transform: TransformStepEntry;
     }
@@ -43,7 +45,7 @@ interface QueryBlockListProps {
   blockOrder: string[];
   conditions: FlatCondition[];
   steps: Step[];
-  transform?: TransformStepEntry;
+  transforms: TransformStepEntry[];
   sourceReady?: boolean;
   labelOptions?: string[];
   intervalValue?: string;
@@ -68,7 +70,7 @@ interface QueryBlockListProps {
   onAddConditionsBlock: () => void;
   onRemoveConditionsBlock: () => void;
   onAddTransformBlock: (kind: TransformKind) => void;
-  onRemoveTransformBlock: () => void;
+  onRemoveTransformBlock: (kind: TransformKind) => void;
   onAddSection: (section: RosSection) => void;
   onRemoveSection: (section: RosSection) => void;
   onChangeTopic: (topic: string) => void;
@@ -78,12 +80,12 @@ interface QueryBlockListProps {
     changes: Partial<Pick<KeyValueRow, "key" | "value">>,
   ) => void;
   onRemoveEncodeRow: (id: string) => void;
-  onAddAsLabelRow: () => void;
-  onChangeAsLabelRow: (
+  onAddRosAsLabelRow: () => void;
+  onChangeRosAsLabelRow: (
     id: string,
     changes: Partial<Pick<KeyValueRow, "key" | "value">>,
   ) => void;
-  onRemoveAsLabelRow: (id: string) => void;
+  onRemoveRosAsLabelRow: (id: string) => void;
   onChangeExport: (changes: Partial<RosExportConfig>) => void;
   onChangeSql: (sql: string) => void;
   onAddFormatSection: (section: SelectFormatSection) => void;
@@ -102,6 +104,12 @@ interface QueryBlockListProps {
   ) => void;
   onRemoveProtobufFieldRow: (id: string) => void;
   onChangeSelectExport: (changes: Partial<SelectExportConfig>) => void;
+  onAddSelectAsLabelRow: () => void;
+  onChangeSelectAsLabelRow: (
+    id: string,
+    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
+  ) => void;
+  onRemoveSelectAsLabelRow: (id: string) => void;
   onRemoveStep: (id: string) => void;
   onReorderBlock: (fromIndex: number, toIndex: number) => void;
 }
@@ -110,7 +118,7 @@ export default function QueryBlockList({
   blockOrder,
   conditions,
   steps,
-  transform,
+  transforms,
   sourceReady = true,
   labelOptions,
   intervalValue,
@@ -133,9 +141,9 @@ export default function QueryBlockList({
   onAddEncodeRow,
   onChangeEncodeRow,
   onRemoveEncodeRow,
-  onAddAsLabelRow,
-  onChangeAsLabelRow,
-  onRemoveAsLabelRow,
+  onAddRosAsLabelRow,
+  onChangeRosAsLabelRow,
+  onRemoveRosAsLabelRow,
   onChangeExport,
   onChangeSql,
   onAddFormatSection,
@@ -147,6 +155,9 @@ export default function QueryBlockList({
   onChangeProtobufFieldRow,
   onRemoveProtobufFieldRow,
   onChangeSelectExport,
+  onAddSelectAsLabelRow,
+  onChangeSelectAsLabelRow,
+  onRemoveSelectAsLabelRow,
   onRemoveStep,
   onReorderBlock,
 }: QueryBlockListProps) {
@@ -154,7 +165,8 @@ export default function QueryBlockList({
   const hasEachN = steps.some((step) => step.type === "each_n");
   const hasEachT = steps.some((step) => step.type === "each_t");
   const hasLimit = steps.some((step) => step.type === "limit");
-  const hasTransform = !!transform;
+  const hasRos = transforms.some((transform) => transform.kind === "ros");
+  const hasSelect = transforms.some((transform) => transform.kind === "select");
 
   const STEP_LABELS: Record<string, string> = {
     conditions: "Label filter",
@@ -174,15 +186,11 @@ export default function QueryBlockList({
     if (key === "sample_each_n" && hasEachN)
       return "Sample every N is already added";
     if (key === "limit" && hasLimit) return "Limit is already added";
-    if (key === "transform_ros" && hasTransform) {
-      return transform?.kind === "ros"
-        ? "Process (ROS) is already added"
-        : "Not available together with Process (Select)";
+    if (key === "transform_ros" && hasRos) {
+      return "Process (ROS) is already added";
     }
-    if (key === "transform_select" && hasTransform) {
-      return transform?.kind === "select"
-        ? "Process (Select) is already added"
-        : "Not available together with Process (ROS)";
+    if (key === "transform_select" && hasSelect) {
+      return "Process (Select) is already added";
     }
     return undefined;
   };
@@ -226,9 +234,12 @@ export default function QueryBlockList({
         ? [{ id: CONDITIONS_BLOCK_ID, kind: "conditions" }]
         : [];
     }
-    if (id === TRANSFORM_BLOCK_ID) {
+    if (id === ROS_TRANSFORM_BLOCK_ID || id === SELECT_TRANSFORM_BLOCK_ID) {
+      const kind: TransformKind =
+        id === ROS_TRANSFORM_BLOCK_ID ? "ros" : "select";
+      const transform = transforms.find((t) => t.kind === kind);
       return sourceReady && transform
-        ? [{ id: TRANSFORM_BLOCK_ID, kind: "transform", transform }]
+        ? [{ id, kind: "transform", transform }]
         : [];
     }
     const step = steps.find((s) => s.id === id);
@@ -273,11 +284,11 @@ export default function QueryBlockList({
             if (block.transform.kind === "select") {
               return (
                 <SortableCard
-                  key={TRANSFORM_BLOCK_ID}
-                  id={TRANSFORM_BLOCK_ID}
+                  key={block.id}
+                  id={block.id}
                   label="Process (Select)"
                   removeLabel="Remove select"
-                  onRemove={onRemoveTransformBlock}
+                  onRemove={() => onRemoveTransformBlock("select")}
                 >
                   <SelectStepEditor
                     step={block.transform.select}
@@ -291,20 +302,20 @@ export default function QueryBlockList({
                     onChangeProtobufFieldRow={onChangeProtobufFieldRow}
                     onRemoveProtobufFieldRow={onRemoveProtobufFieldRow}
                     onChangeSelectExport={onChangeSelectExport}
-                    onAddAsLabelRow={onAddAsLabelRow}
-                    onChangeAsLabelRow={onChangeAsLabelRow}
-                    onRemoveAsLabelRow={onRemoveAsLabelRow}
+                    onAddAsLabelRow={onAddSelectAsLabelRow}
+                    onChangeAsLabelRow={onChangeSelectAsLabelRow}
+                    onRemoveAsLabelRow={onRemoveSelectAsLabelRow}
                   />
                 </SortableCard>
               );
             }
             return (
               <SortableCard
-                key={TRANSFORM_BLOCK_ID}
-                id={TRANSFORM_BLOCK_ID}
+                key={block.id}
+                id={block.id}
                 label="Process (ROS)"
                 removeLabel="Remove process"
-                onRemove={onRemoveTransformBlock}
+                onRemove={() => onRemoveTransformBlock("ros")}
               >
                 <TransformStepEditor
                   step={block.transform.ros}
@@ -314,9 +325,9 @@ export default function QueryBlockList({
                   onAddEncodeRow={onAddEncodeRow}
                   onChangeEncodeRow={onChangeEncodeRow}
                   onRemoveEncodeRow={onRemoveEncodeRow}
-                  onAddAsLabelRow={onAddAsLabelRow}
-                  onChangeAsLabelRow={onChangeAsLabelRow}
-                  onRemoveAsLabelRow={onRemoveAsLabelRow}
+                  onAddAsLabelRow={onAddRosAsLabelRow}
+                  onChangeAsLabelRow={onChangeRosAsLabelRow}
+                  onRemoveAsLabelRow={onRemoveRosAsLabelRow}
                   onChangeExport={onChangeExport}
                 />
               </SortableCard>
@@ -374,7 +385,7 @@ export default function QueryBlockList({
         >
           <Button
             aria-label="Add step"
-            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
+            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
           >
             Add step
           </Button>

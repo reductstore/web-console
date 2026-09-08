@@ -28,18 +28,18 @@ import {
 } from "./transformStepBuilder";
 
 function expectRos(
-  transform: TransformStepEntry | undefined,
+  transforms: TransformStepEntry[] | undefined,
 ): Extract<TransformStepEntry, { kind: "ros" }> {
-  if (transform?.kind !== "ros") throw new Error("expected a ros transform");
+  const transform = transforms?.find((t) => t.kind === "ros");
+  if (!transform) throw new Error("expected a ros transform");
   return transform;
 }
 
 function expectSelect(
-  transform: TransformStepEntry | undefined,
+  transforms: TransformStepEntry[] | undefined,
 ): Extract<TransformStepEntry, { kind: "select" }> {
-  if (transform?.kind !== "select") {
-    throw new Error("expected a select transform");
-  }
+  const transform = transforms?.find((t) => t.kind === "select");
+  if (!transform) throw new Error("expected a select transform");
   return transform;
 }
 
@@ -178,16 +178,16 @@ describe("transformStepBuilder", () => {
 
   describe("hasIncompleteTransform", () => {
     it("is false when there is no transform", () => {
-      expect(hasIncompleteTransform(undefined)).toBe(false);
+      expect(hasIncompleteTransform([])).toBe(false);
     });
 
     it("is false with no sections added at all", () => {
-      expect(hasIncompleteTransform(createRosTransformStep())).toBe(false);
+      expect(hasIncompleteTransform([createRosTransformStep()])).toBe(false);
     });
 
     it("is false for a filter section with a blank topic", () => {
       const transform = addSection(createRosTransformStep(), "filter");
-      expect(hasIncompleteTransform(transform)).toBe(false);
+      expect(hasIncompleteTransform([transform])).toBe(false);
     });
 
     it("is true for an encode row with only the key filled in", () => {
@@ -195,7 +195,7 @@ describe("transformStepBuilder", () => {
       transform = updateEncodeRow(transform, transform.ros.encode[0].id, {
         key: "data",
       });
-      expect(hasIncompleteTransform(transform)).toBe(true);
+      expect(hasIncompleteTransform([transform])).toBe(true);
     });
 
     it("is true for a label row with only the value filled in", () => {
@@ -203,7 +203,7 @@ describe("transformStepBuilder", () => {
       transform = updateAsLabelRow(transform, transform.ros.asLabel[0].id, {
         value: "data.speed",
       });
-      expect(hasIncompleteTransform(transform)).toBe(true);
+      expect(hasIncompleteTransform([transform])).toBe(true);
     });
 
     it("is false once every row is either complete or fully blank", () => {
@@ -212,27 +212,27 @@ describe("transformStepBuilder", () => {
         key: "data",
         value: "jpeg",
       });
-      expect(hasIncompleteTransform(transform)).toBe(false);
+      expect(hasIncompleteTransform([transform])).toBe(false);
     });
   });
 
   describe("buildExtPayload", () => {
     it("returns undefined when there is no transform", () => {
-      expect(buildExtPayload(undefined)).toBeUndefined();
+      expect(buildExtPayload([])).toBeUndefined();
     });
 
     it("returns an empty extract when no section is added", () => {
-      expect(buildExtPayload(createRosTransformStep())).toEqual({
+      expect(buildExtPayload([createRosTransformStep()])).toEqual({
         ros: { extract: {} },
       });
     });
 
     it("includes topic only when the filter section is added and filled", () => {
       let transform = addSection(createRosTransformStep(), "filter");
-      expect(buildExtPayload(transform)).toEqual({ ros: { extract: {} } });
+      expect(buildExtPayload([transform])).toEqual({ ros: { extract: {} } });
 
       transform = updateTopic(transform, "  /robot/odom  ");
-      expect(buildExtPayload(transform)).toEqual({
+      expect(buildExtPayload([transform])).toEqual({
         ros: { extract: { topic: "/robot/odom" } },
       });
     });
@@ -248,7 +248,7 @@ describe("transformStepBuilder", () => {
       const [, partial] = transform.ros.encode;
       transform = updateEncodeRow(transform, partial.id, { key: "other" });
 
-      expect(buildExtPayload(transform)).toEqual({
+      expect(buildExtPayload([transform])).toEqual({
         ros: { extract: { encode: { data: "jpeg" } } },
       });
     });
@@ -261,7 +261,7 @@ describe("transformStepBuilder", () => {
         value: "data.speed",
       });
 
-      expect(buildExtPayload(transform)).toEqual({
+      expect(buildExtPayload([transform])).toEqual({
         ros: { extract: { as_label: { speed: "data.speed" } } },
       });
     });
@@ -273,10 +273,10 @@ describe("transformStepBuilder", () => {
         duration: "1m",
         size: "100MB",
       });
-      expect(buildExtPayload(transform)).toEqual({ ros: { extract: {} } });
+      expect(buildExtPayload([transform])).toEqual({ ros: { extract: {} } });
 
       transform = addSection(transform, "export");
-      expect(buildExtPayload(transform)).toEqual({
+      expect(buildExtPayload([transform])).toEqual({
         ros: {
           export: { format: "mcap", duration: "1m", size: "100MB" },
         },
@@ -286,7 +286,7 @@ describe("transformStepBuilder", () => {
     it("omits blank export fields", () => {
       let transform = addSection(createRosTransformStep(), "export");
       transform = updateExport(transform, { format: "", duration: "1m" });
-      expect(buildExtPayload(transform)).toEqual({
+      expect(buildExtPayload([transform])).toEqual({
         ros: { export: { duration: "1m" } },
       });
     });
@@ -294,13 +294,16 @@ describe("transformStepBuilder", () => {
     it("keeps an empty ros.export when the section is present but every field is blank", () => {
       let transform = addSection(createRosTransformStep(), "export");
       transform = updateExport(transform, { format: "" });
-      expect(buildExtPayload(transform)).toEqual({ ros: { export: {} } });
+      expect(buildExtPayload([transform])).toEqual({ ros: { export: {} } });
     });
   });
 
   describe("parseExtPayload", () => {
     it("succeeds with no transform when ext is undefined", () => {
-      expect(parseExtPayload(undefined)).toEqual({ success: true });
+      expect(parseExtPayload(undefined)).toEqual({
+        success: true,
+        transforms: [],
+      });
     });
 
     it("rejects a non-object ext", () => {
@@ -321,13 +324,13 @@ describe("transformStepBuilder", () => {
     it("succeeds with an empty extract and no sections", () => {
       const result = parseExtPayload({ ros: { extract: {} } });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual([]);
+      expect(expectRos(result.transforms).ros.sections).toEqual([]);
     });
 
     it("parses an empty export object into the export section", () => {
       const result = parseExtPayload({ ros: { export: {} } });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual(["export"]);
+      expect(expectRos(result.transforms).ros.sections).toEqual(["export"]);
     });
 
     it("parses topic into the filter section", () => {
@@ -335,8 +338,8 @@ describe("transformStepBuilder", () => {
         ros: { extract: { topic: "/robot/odom" } },
       });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual(["filter"]);
-      expect(expectRos(result.transform).ros.topic).toBe("/robot/odom");
+      expect(expectRos(result.transforms).ros.sections).toEqual(["filter"]);
+      expect(expectRos(result.transforms).ros.topic).toBe("/robot/odom");
     });
 
     it("rejects a non-string topic", () => {
@@ -350,8 +353,8 @@ describe("transformStepBuilder", () => {
         ros: { extract: { encode: { data: "jpeg" } } },
       });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual(["encode"]);
-      expect(expectRos(result.transform).ros.encode).toContainEqual(
+      expect(expectRos(result.transforms).ros.sections).toEqual(["encode"]);
+      expect(expectRos(result.transforms).ros.encode).toContainEqual(
         expect.objectContaining({ key: "data", value: "jpeg" }),
       );
     });
@@ -361,8 +364,8 @@ describe("transformStepBuilder", () => {
         ros: { extract: { as_label: { speed: "data.speed" } } },
       });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual(["label"]);
-      expect(expectRos(result.transform).ros.asLabel).toContainEqual(
+      expect(expectRos(result.transforms).ros.sections).toEqual(["label"]);
+      expect(expectRos(result.transforms).ros.asLabel).toContainEqual(
         expect.objectContaining({ key: "speed", value: "data.speed" }),
       );
     });
@@ -375,8 +378,8 @@ describe("transformStepBuilder", () => {
         },
       });
       expect(result.success).toBe(true);
-      expect(expectRos(result.transform).ros.sections).toEqual(["export"]);
-      expect(expectRos(result.transform).ros.export).toEqual({
+      expect(expectRos(result.transforms).ros.sections).toEqual(["export"]);
+      expect(expectRos(result.transforms).ros.export).toEqual({
         format: "mcap",
         duration: "1m",
         size: "100MB",
@@ -400,10 +403,10 @@ describe("transformStepBuilder", () => {
           export: { format: "mcap", duration: "1m", size: "100MB" },
         },
       };
-      const payload = buildExtPayload(transform);
+      const payload = buildExtPayload([transform]);
       const parsed = parseExtPayload(payload);
       expect(parsed.success).toBe(true);
-      expect(buildExtPayload(parsed.transform)).toEqual(payload);
+      expect(buildExtPayload(parsed.transforms ?? [])).toEqual(payload);
     });
   });
 
@@ -449,7 +452,9 @@ describe("transformStepBuilder", () => {
 
     describe("hasIncompleteTransform", () => {
       it("is false with a blank sql and no as_label rows", () => {
-        expect(hasIncompleteTransform(createSelectTransformStep())).toBe(false);
+        expect(hasIncompleteTransform([createSelectTransformStep()])).toBe(
+          false,
+        );
       });
 
       it("is true for a partially filled as_label row", () => {
@@ -461,7 +466,7 @@ describe("transformStepBuilder", () => {
             key: "speed",
           },
         );
-        expect(hasIncompleteTransform(transform)).toBe(true);
+        expect(hasIncompleteTransform([transform])).toBe(true);
       });
 
       it("is false once the as_label row is complete", () => {
@@ -474,19 +479,19 @@ describe("transformStepBuilder", () => {
             value: "vector.x",
           },
         );
-        expect(hasIncompleteTransform(transform)).toBe(false);
+        expect(hasIncompleteTransform([transform])).toBe(false);
       });
     });
 
     describe("buildExtPayload", () => {
       it("includes the default sql when nothing else is filled in", () => {
-        expect(buildExtPayload(createSelectTransformStep())).toEqual({
+        expect(buildExtPayload([createSelectTransformStep()])).toEqual({
           select: { sql: "SELECT * FROM ENTRY()" },
         });
       });
 
       it("returns an empty select object when sql is also blank", () => {
-        expect(buildExtPayload(blankSelectTransform())).toEqual({
+        expect(buildExtPayload([blankSelectTransform()])).toEqual({
           select: {},
         });
       });
@@ -496,7 +501,7 @@ describe("transformStepBuilder", () => {
           createSelectTransformStep(),
           "  SELECT * FROM ENTRY()  ",
         );
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { sql: "SELECT * FROM ENTRY()" },
         });
       });
@@ -511,7 +516,7 @@ describe("transformStepBuilder", () => {
             value: "vector.x",
           },
         );
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { as_label: { speed: "vector.x" } },
         });
       });
@@ -530,7 +535,7 @@ describe("transformStepBuilder", () => {
             value: "vector.x",
           },
         );
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: {
             sql: "SELECT * FROM ENTRY()",
             as_label: { speed: "vector.x" },
@@ -557,7 +562,7 @@ describe("transformStepBuilder", () => {
       it("succeeds with an empty select object", () => {
         const result = parseExtPayload({ select: {} });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transform).select).toEqual({
+        expect(expectSelect(result.transforms).select).toEqual({
           sql: "",
           asLabel: [],
           formatSections: [],
@@ -575,10 +580,10 @@ describe("transformStepBuilder", () => {
           },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transform).select.sql).toBe(
+        expect(expectSelect(result.transforms).select.sql).toBe(
           "SELECT * FROM ENTRY()",
         );
-        expect(expectSelect(result.transform).select.asLabel).toContainEqual(
+        expect(expectSelect(result.transforms).select.asLabel).toContainEqual(
           expect.objectContaining({ key: "speed", value: "vector.x" }),
         );
       });
@@ -595,10 +600,10 @@ describe("transformStepBuilder", () => {
             export: { format: "", rows: "", duration: "" },
           },
         };
-        const payload = buildExtPayload(transform);
+        const payload = buildExtPayload([transform]);
         const parsed = parseExtPayload(payload);
         expect(parsed.success).toBe(true);
-        expect(buildExtPayload(parsed.transform)).toEqual(payload);
+        expect(buildExtPayload(parsed.transforms ?? [])).toEqual(payload);
       });
     });
 
@@ -714,7 +719,7 @@ describe("transformStepBuilder", () => {
           transform.select.protobuf.fields[0].id,
           { column: "device_id" },
         );
-        expect(hasIncompleteTransform(transform)).toBe(false);
+        expect(hasIncompleteTransform([transform])).toBe(false);
       });
 
       it("is true for a partially filled field row once protobuf is active", () => {
@@ -728,7 +733,7 @@ describe("transformStepBuilder", () => {
           transform.select.protobuf.fields[0].id,
           { column: "device_id" },
         );
-        expect(hasIncompleteTransform(transform)).toBe(true);
+        expect(hasIncompleteTransform([transform])).toBe(true);
       });
 
       it("is false once the field row is fully filled", () => {
@@ -742,7 +747,7 @@ describe("transformStepBuilder", () => {
           transform.select.protobuf.fields[0].id,
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
-        expect(hasIncompleteTransform(transform)).toBe(false);
+        expect(hasIncompleteTransform([transform])).toBe(false);
       });
     });
 
@@ -750,19 +755,19 @@ describe("transformStepBuilder", () => {
       it("includes csv with has_headers", () => {
         let transform = addFormatSection(blankSelectTransform(), "csv");
         transform = updateCsv(transform, { hasHeaders: true });
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { csv: { has_headers: true } },
         });
       });
 
       it("includes an empty json object", () => {
         const transform = addFormatSection(blankSelectTransform(), "json");
-        expect(buildExtPayload(transform)).toEqual({ select: { json: {} } });
+        expect(buildExtPayload([transform])).toEqual({ select: { json: {} } });
       });
 
       it("includes an empty parquet object", () => {
         const transform = addFormatSection(blankSelectTransform(), "parquet");
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { parquet: {} },
         });
       });
@@ -773,7 +778,7 @@ describe("transformStepBuilder", () => {
           messageName: "pkg.SensorReading",
           schema: "base64==",
         });
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: {
             protobuf: {
               message_name: "pkg.SensorReading",
@@ -795,7 +800,7 @@ describe("transformStepBuilder", () => {
           transform.select.protobuf.fields[0].id,
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: {
             protobuf: { fields: { device_id: { id: 1, type: "string" } } },
           },
@@ -813,7 +818,7 @@ describe("transformStepBuilder", () => {
           transform.select.protobuf.fields[0].id,
           { column: "device_id" },
         );
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { protobuf: { message_name: "pkg.SensorReading" } },
         });
       });
@@ -830,7 +835,7 @@ describe("transformStepBuilder", () => {
             transform.select.protobuf.fields[0].id,
             { column: "device_id", fieldId: badId, fieldType: "string" },
           );
-          expect(buildExtPayload(transform)).toEqual({
+          expect(buildExtPayload([transform])).toEqual({
             select: { protobuf: { message_name: "pkg.SensorReading" } },
           });
         }
@@ -841,10 +846,10 @@ describe("transformStepBuilder", () => {
           format: "parquet",
           rows: "100",
         });
-        expect(buildExtPayload(transform)).toEqual({ select: {} });
+        expect(buildExtPayload([transform])).toEqual({ select: {} });
 
         transform = addFormatSection(transform, "export");
-        expect(buildExtPayload(transform)).toEqual({
+        expect(buildExtPayload([transform])).toEqual({
           select: { export: { format: "parquet", rows: 100 } },
         });
       });
@@ -852,7 +857,9 @@ describe("transformStepBuilder", () => {
       it("omits a non-numeric rows value", () => {
         let transform = addFormatSection(blankSelectTransform(), "export");
         transform = updateSelectExport(transform, { rows: "not-a-number" });
-        expect(buildExtPayload(transform)).toEqual({ select: { export: {} } });
+        expect(buildExtPayload([transform])).toEqual({
+          select: { export: {} },
+        });
       });
     });
 
@@ -862,10 +869,10 @@ describe("transformStepBuilder", () => {
           select: { csv: { has_headers: true } },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transform).select.formatSections).toEqual([
+        expect(expectSelect(result.transforms).select.formatSections).toEqual([
           "csv",
         ]);
-        expect(expectSelect(result.transform).select.csv).toEqual({
+        expect(expectSelect(result.transforms).select.csv).toEqual({
           hasHeaders: true,
         });
       });
@@ -886,7 +893,7 @@ describe("transformStepBuilder", () => {
         });
         expect(result.success).toBe(true);
         expect(
-          expectSelect(result.transform).select.protobuf.fields,
+          expectSelect(result.transforms).select.protobuf.fields,
         ).toContainEqual(
           expect.objectContaining({
             column: "device_id",
@@ -934,7 +941,7 @@ describe("transformStepBuilder", () => {
           select: { export: { format: "parquet", rows: 100, duration: "1m" } },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transform).select.export).toEqual({
+        expect(expectSelect(result.transforms).select.export).toEqual({
           format: "parquet",
           rows: "100",
           duration: "1m",
@@ -964,19 +971,35 @@ describe("transformStepBuilder", () => {
           rows: "50",
         });
 
-        const payload = buildExtPayload(transform);
+        const payload = buildExtPayload([transform]);
         const parsed = parseExtPayload(payload);
         expect(parsed.success).toBe(true);
-        expect(buildExtPayload(parsed.transform)).toEqual(payload);
+        expect(buildExtPayload(parsed.transforms ?? [])).toEqual(payload);
       });
     });
   });
 
-  describe("ros and select are mutually exclusive", () => {
-    it("rejects ext with both ros and select present", () => {
+  describe("ros and select can coexist", () => {
+    it("parses ext with both ros and select present into two transforms", () => {
+      const result = parseExtPayload({
+        ros: { extract: { topic: "/robot/odom" } },
+        select: { sql: "SELECT * FROM ENTRY()" },
+      });
+      expect(result.success).toBe(true);
+      expect(result.transforms).toHaveLength(2);
+      expect(expectRos(result.transforms).ros.topic).toBe("/robot/odom");
+      expect(expectSelect(result.transforms).select.sql).toBe(
+        "SELECT * FROM ENTRY()",
+      );
+    });
+
+    it("merges both into a single #ext object when building the payload", () => {
       expect(
-        parseExtPayload({ ros: { extract: {} }, select: {} }).success,
-      ).toBe(false);
+        buildExtPayload([createRosTransformStep(), blankSelectTransform()]),
+      ).toEqual({
+        ros: { extract: {} },
+        select: {},
+      });
     });
   });
 

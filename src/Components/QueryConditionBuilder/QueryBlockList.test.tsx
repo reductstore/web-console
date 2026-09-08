@@ -5,7 +5,8 @@ import QueryBlockList from "./QueryBlockList";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { FlatCondition, Step } from "../../Helpers/conditionalQueryBuilder";
 import {
-  TRANSFORM_BLOCK_ID,
+  ROS_TRANSFORM_BLOCK_ID,
+  SELECT_TRANSFORM_BLOCK_ID,
   TransformStepEntry,
 } from "../../Helpers/transformStepBuilder";
 
@@ -80,9 +81,9 @@ const baseProps = {
   onAddEncodeRow: noop,
   onChangeEncodeRow: noop,
   onRemoveEncodeRow: noop,
-  onAddAsLabelRow: noop,
-  onChangeAsLabelRow: noop,
-  onRemoveAsLabelRow: noop,
+  onAddRosAsLabelRow: noop,
+  onChangeRosAsLabelRow: noop,
+  onRemoveRosAsLabelRow: noop,
   onChangeExport: noop,
   onChangeSql: noop,
   onAddFormatSection: noop,
@@ -94,8 +95,12 @@ const baseProps = {
   onChangeProtobufFieldRow: noop,
   onRemoveProtobufFieldRow: noop,
   onChangeSelectExport: noop,
+  onAddSelectAsLabelRow: noop,
+  onChangeSelectAsLabelRow: noop,
+  onRemoveSelectAsLabelRow: noop,
   onRemoveStep: noop,
   onReorderBlock: noop,
+  transforms: [] as TransformStepEntry[],
 };
 
 const transformStep: TransformStepEntry = {
@@ -190,30 +195,30 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[ROS_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={transformStep}
+        transforms={[transformStep]}
       />,
     );
     expect(screen.getByText("Process (ROS)")).toBeTruthy();
     expect(screen.getByLabelText("Remove process")).toBeTruthy();
   });
 
-  it("calls onRemoveTransformBlock from the Transform block's remove button", () => {
+  it("calls onRemoveTransformBlock with 'ros' from the Transform block's remove button", () => {
     const onRemoveTransformBlock = vi.fn();
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[ROS_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={transformStep}
+        transforms={[transformStep]}
         onRemoveTransformBlock={onRemoveTransformBlock}
       />,
     );
     fireEvent.click(screen.getByLabelText("Remove process"));
-    expect(onRemoveTransformBlock).toHaveBeenCalled();
+    expect(onRemoveTransformBlock).toHaveBeenCalledWith("ros");
   });
 
   it("offers Process (ROS) in the Add step menu, and calls onAddTransformBlock with ros when picked", async () => {
@@ -241,30 +246,30 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[SELECT_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={selectTransformStep}
+        transforms={[selectTransformStep]}
       />,
     );
     expect(screen.getByText("Process (Select)")).toBeTruthy();
     expect(screen.getByLabelText("Remove select")).toBeTruthy();
   });
 
-  it("calls onRemoveTransformBlock from the Process (Select) block's remove button", () => {
+  it("calls onRemoveTransformBlock with 'select' from the Process (Select) block's remove button", () => {
     const onRemoveTransformBlock = vi.fn();
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[SELECT_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={selectTransformStep}
+        transforms={[selectTransformStep]}
         onRemoveTransformBlock={onRemoveTransformBlock}
       />,
     );
     fireEvent.click(screen.getByLabelText("Remove select"));
-    expect(onRemoveTransformBlock).toHaveBeenCalled();
+    expect(onRemoveTransformBlock).toHaveBeenCalledWith("select");
   });
 
   it("offers Process (Select) in the Add step menu, and calls onAddTransformBlock with select when picked", async () => {
@@ -288,14 +293,14 @@ describe("QueryBlockList", () => {
     expect(onAddTransformBlock).toHaveBeenCalledWith("select");
   });
 
-  it("greys out both transform options once ROS is already added", async () => {
+  it("greys out only Process (ROS) once ROS is already added, leaving Process (Select) available", async () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[ROS_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={transformStep}
+        transforms={[transformStep]}
       />,
     );
     await openAddStepMenu();
@@ -304,17 +309,17 @@ describe("QueryBlockList", () => {
     ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("menuitem", { name: "Process (Select)" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    ).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  it("greys out both transform options once Select is already added", async () => {
+  it("greys out only Process (Select) once Select is already added, leaving Process (ROS) available", async () => {
     render(
       <QueryBlockList
         {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
+        blockOrder={[SELECT_TRANSFORM_BLOCK_ID]}
         conditions={[]}
         steps={[]}
-        transform={selectTransformStep}
+        transforms={[selectTransformStep]}
       />,
     );
     await openAddStepMenu();
@@ -323,7 +328,21 @@ describe("QueryBlockList", () => {
     ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("menuitem", { name: "Process (ROS)" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    ).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders both Process (ROS) and Process (Select) blocks at the same time", () => {
+    render(
+      <QueryBlockList
+        {...baseProps}
+        blockOrder={[ROS_TRANSFORM_BLOCK_ID, SELECT_TRANSFORM_BLOCK_ID]}
+        conditions={[]}
+        steps={[]}
+        transforms={[transformStep, selectTransformStep]}
+      />,
+    );
+    expect(screen.getByText("Process (ROS)")).toBeTruthy();
+    expect(screen.getByText("Process (Select)")).toBeTruthy();
   });
 
   it("hides every block except the default Interval step until a data source is selected, but keeps Add step reachable and greys out its menu", async () => {
@@ -511,11 +530,12 @@ describe("QueryBlockList", () => {
           "each-n-1",
           "each-t-1",
           "limit-1",
-          TRANSFORM_BLOCK_ID,
+          ROS_TRANSFORM_BLOCK_ID,
+          SELECT_TRANSFORM_BLOCK_ID,
         ]}
         conditions={[condition("a")]}
         steps={[eachNStep, eachTStep, limitStep]}
-        transform={transformStep}
+        transforms={[transformStep, selectTransformStep]}
       />,
     );
     expect(screen.getByLabelText("Add step")).not.toBeDisabled();
