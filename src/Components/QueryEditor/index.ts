@@ -1,2 +1,2 @@
-export { JsonQueryEditor } from "./JsonQueryEditor";
-export { default } from "./JsonQueryEditor";
+export { QueryEditor } from "./QueryEditor";
+export { default } from "./QueryEditor";

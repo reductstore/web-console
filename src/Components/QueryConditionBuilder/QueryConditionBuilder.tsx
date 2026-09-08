@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, ComponentProps } from "react";
 import { Typography } from "antd";
-import { JsonQueryEditor } from "../JsonEditor";
+import { QueryEditor } from "../QueryEditor";
 import QueryBlockList from "./QueryBlockList";
 import {
   CONDITIONS_BLOCK_ID,
@@ -59,7 +59,7 @@ import { formatAsStrictJSON, safeParseJSON5 } from "../../Helpers/json5Utils";
 import { QueryOptions } from "reduct-js";
 
 type ValidationContext = ComponentProps<
-  typeof JsonQueryEditor
+  typeof QueryEditor
 >["validationContext"];
 
 function initialBlockOrder(
@@ -352,7 +352,7 @@ export default function QueryConditionBuilder({
 
   if (mode === "json") {
     return (
-      <JsonQueryEditor
+      <QueryEditor
         value={value}
         onChange={onChange}
         height={height}

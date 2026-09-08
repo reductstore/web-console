@@ -19,7 +19,7 @@ import {
 } from "antd";
 import { DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "./ReplicationSettingsForm.css";
-import { JsonQueryEditor } from "../JsonEditor";
+import { QueryEditor } from "../QueryEditor";
 import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
 
 const isTestEnvironment = process.env.NODE_ENV === "test";
@@ -538,7 +538,7 @@ export default class ReplicationSettingsForm extends React.Component<
             }
           >
             {!isTestEnvironment && (
-              <JsonQueryEditor
+              <QueryEditor
                 value={this.state.formattedWhen}
                 onChange={(value: string) =>
                   this.handleWhenConditionChange(value)

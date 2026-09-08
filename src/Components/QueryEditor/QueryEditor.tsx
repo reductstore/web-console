@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import Editor, { OnMount, Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import { getCompletionProvider } from "@reductstore/reduct-query-monaco";
+import {
+  getCompletionProvider,
+  getSqlCompletionProvider,
+} from "@reductstore/reduct-query-monaco";
 import { Button, Modal, Tooltip } from "antd";
 import { APIError, Client, QueryOptions } from "reduct-js";
 import {
@@ -11,7 +14,7 @@ import {
   FormatPainterOutlined,
 } from "@ant-design/icons";
 import { processWhenCondition } from "../../Helpers/json5Utils";
-import "./JsonQueryEditor.css";
+import "./QueryEditor.css";
 
 enum ValidationStatus {
   Idle = "idle",
@@ -25,6 +28,8 @@ const MIN_INLINE_EDITOR_HEIGHT = 100;
 const MAX_INLINE_EDITOR_VIEWPORT_RATIO = 0.8;
 const KEYBOARD_RESIZE_STEP = 16;
 
+type QueryEditorLanguage = "json" | "sql";
+
 interface ValidationContext {
   client: Client;
   bucket?: string;
@@ -36,17 +41,29 @@ interface ValidationContext {
   intervalValue?: string | null;
 }
 
-interface JsonQueryEditorProps {
+interface QueryEditorProps {
   value: string;
   onChange: (value: string) => void;
+  language?: QueryEditorLanguage;
   height?: number | string;
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
 }
 
-// Global flag to track if completion provider has been registered
-let isCompletionProviderRegistered = false;
+interface IDisposable {
+  dispose(): void;
+}
+
+// Kept on window (not a module variable) so it survives Vite's HMR reloads,
+// which would otherwise stack a duplicate provider on every reload.
+declare global {
+  interface Window {
+    __queryEditorCompletionProviders?: Partial<
+      Record<QueryEditorLanguage, IDisposable>
+    >;
+  }
+}
 
 type JsonDefaults = {
   setDiagnosticsOptions: (options: { validate?: boolean }) => void;
@@ -64,14 +81,15 @@ type JsonDefaults = {
   }) => void;
 };
 
-export function JsonQueryEditor({
+export function QueryEditor({
   value,
   onChange,
+  language = "json",
   height = 120,
   error,
   readOnly = false,
   validationContext,
-}: JsonQueryEditorProps) {
+}: QueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const inlineContainerRef = useRef<HTMLDivElement | null>(null);
   const stopPointerResizeRef = useRef<(() => void) | null>(null);
@@ -100,42 +118,57 @@ export function JsonQueryEditor({
   const validationEnd = validationContext?.end;
   const validationIntervalValue = validationContext?.intervalValue ?? undefined;
 
-  const handleEditorMount: OnMount = (editor, monacoInstance) => {
+  const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
+    if (language === "sql") {
+      const triggerSuggest = () => {
+        editor.trigger("keyboard", "editor.action.triggerSuggest", {});
+      };
+      editor.onDidFocusEditorText(triggerSuggest);
+      editor.onMouseDown(triggerSuggest);
+    }
   };
 
   const handleBeforeMount = (monacoInstance: Monaco) => {
-    if (!isCompletionProviderRegistered) {
-      const jsonDefaults =
-        (
-          monacoInstance as unknown as {
-            json?: { jsonDefaults?: JsonDefaults };
-          }
-        ).json?.jsonDefaults ??
-        (
-          monacoInstance as unknown as {
-            languages?: { json?: { jsonDefaults?: JsonDefaults } };
-          }
-        ).languages?.json?.jsonDefaults;
-      jsonDefaults?.setDiagnosticsOptions({ validate: false });
-      jsonDefaults?.setModeConfiguration({
-        completionItems: false,
-        hovers: false,
-        documentSymbols: false,
-        documentFormattingEdits: true,
-        documentRangeFormattingEdits: true,
-        tokens: true, // keep syntax highlighting
-        colors: true,
-        foldingRanges: false,
-        diagnostics: false,
-        selectionRanges: false,
-      });
-      monacoInstance.languages.registerCompletionItemProvider(
-        "json",
-        getCompletionProvider(),
+    const disposables = (window.__queryEditorCompletionProviders ??= {});
+    disposables[language]?.dispose();
+
+    if (language === "sql") {
+      disposables.sql = monacoInstance.languages.registerCompletionItemProvider(
+        "sql",
+        getSqlCompletionProvider(),
       );
-      isCompletionProviderRegistered = true;
+      return;
     }
+
+    const jsonDefaults =
+      (
+        monacoInstance as unknown as {
+          json?: { jsonDefaults?: JsonDefaults };
+        }
+      ).json?.jsonDefaults ??
+      (
+        monacoInstance as unknown as {
+          languages?: { json?: { jsonDefaults?: JsonDefaults } };
+        }
+      ).languages?.json?.jsonDefaults;
+    jsonDefaults?.setDiagnosticsOptions({ validate: false });
+    jsonDefaults?.setModeConfiguration({
+      completionItems: false,
+      hovers: false,
+      documentSymbols: false,
+      documentFormattingEdits: true,
+      documentRangeFormattingEdits: true,
+      tokens: true, // keep syntax highlighting
+      colors: true,
+      foldingRanges: false,
+      diagnostics: false,
+      selectionRanges: false,
+    });
+    disposables.json = monacoInstance.languages.registerCompletionItemProvider(
+      "json",
+      getCompletionProvider(),
+    );
   };
 
   const handleChange = (newValue: string | undefined) => {
@@ -489,6 +522,12 @@ export function JsonQueryEditor({
     return null;
   };
 
+  const languageLabel = language.toUpperCase();
+  const formatLabel = `Format ${languageLabel}`;
+  const resizeLabel = `Resize ${languageLabel} editor`;
+  const modalTitle =
+    language === "sql" ? "SQL Editor" : "Conditional Query Editor";
+
   const renderEditorShell = (
     style?: React.CSSProperties,
     resizable = false,
@@ -501,7 +540,7 @@ export function JsonQueryEditor({
       <div className="jsonQueryEditorBody">
         <Editor
           height="100%"
-          language="json"
+          language={language}
           value={value}
           onChange={handleChange}
           onMount={handleEditorMount}
@@ -510,7 +549,7 @@ export function JsonQueryEditor({
         />
       </div>
       <div className="jsonQueryEditorToolbar">
-        {!readOnly && (
+        {!readOnly && language === "json" && (
           <Tooltip title="Validate condition">
             <Button
               aria-label="Validate condition"
@@ -526,15 +565,17 @@ export function JsonQueryEditor({
             />
           </Tooltip>
         )}
-        <div className="jsonQueryEditorValidation">
-          {renderValidationStatus(readOnly)}
-        </div>
+        {language === "json" && (
+          <div className="jsonQueryEditorValidation">
+            {renderValidationStatus(readOnly)}
+          </div>
+        )}
         <div className="jsonQueryEditorToolbarActions">
           <Tooltip
-            title={readOnly ? "Cannot format in read-only mode" : "Format JSON"}
+            title={readOnly ? "Cannot format in read-only mode" : formatLabel}
           >
             <Button
-              aria-label="Format JSON"
+              aria-label={formatLabel}
               type="text"
               size="small"
               icon={<FormatPainterOutlined />}
@@ -557,7 +598,7 @@ export function JsonQueryEditor({
         <div
           className="jsonQueryEditorResizeHandle"
           role="separator"
-          aria-label="Resize JSON editor"
+          aria-label={resizeLabel}
           aria-orientation="horizontal"
           aria-valuemin={MIN_INLINE_EDITOR_HEIGHT}
           aria-valuemax={getMaximumEditorHeight()}
@@ -579,7 +620,7 @@ export function JsonQueryEditor({
           className="jsonQueryEditorPlaceholder"
           style={{ height: containerHeight }}
         >
-          Editing in expanded JSON editor
+          Editing in expanded {languageLabel} editor
         </div>
       ) : (
         renderEditorShell({ height: containerHeight }, true)
@@ -590,8 +631,8 @@ export function JsonQueryEditor({
           onCancel={() => setIsExpanded(false)}
           footer={null}
           closable
-          title="Conditional Query Editor"
-          maskClosable={false}
+          title={modalTitle}
+          mask={{ closable: false }}
           keyboard={false}
           className="jsonQueryEditorModal"
           width="90vw"
@@ -611,4 +652,4 @@ export function JsonQueryEditor({
   );
 }
 
-export default JsonQueryEditor;
+export default QueryEditor;

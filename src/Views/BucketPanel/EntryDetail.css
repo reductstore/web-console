@@ -221,6 +221,18 @@
   border-color: transparent;
 }
 
+/* The rules above remove the border for the top-level condition editor,
+   which already sits inside this panel's own frame - but an editor nested
+   inside a step card (e.g. the Select step's SQL editor) has no such frame
+   of its own, so it needs its border back. */
+.queryConditionalContent .queryCard .jsonQueryEditor {
+  border: 1px solid var(--input-border);
+}
+
+.queryConditionalContent .queryCard .jsonQueryEditor:focus-within {
+  border-color: var(--input-focus);
+}
+
 .jsonExample {
   display: block;
   margin-top: var(--entry-detail-inner-spacing);

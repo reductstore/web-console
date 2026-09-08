@@ -34,7 +34,7 @@ import {
 } from "./StepSectionLayout";
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
-import SqlInput from "./SqlInput";
+import { QueryEditor } from "../QueryEditor";
 
 const SQL_INPUT_MAX_WIDTH = 704;
 
@@ -156,11 +156,14 @@ export default function SelectStepEditor({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <SectionRow label="SQL">
-        <SqlInput
-          value={step.sql}
-          onChange={onChangeSql}
-          style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}
-        />
+        <div style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}>
+          <QueryEditor
+            language="sql"
+            value={step.sql}
+            onChange={onChangeSql}
+            height={56}
+          />
+        </div>
       </SectionRow>
 
       {activeFormat && (
