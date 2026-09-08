@@ -175,6 +175,51 @@ describe("useQueryProgress", () => {
     expect(result.current.percent).toBe(50);
   });
 
+  it("matches only one path segment with a single wildcard", () => {
+    const { result } = renderHook(() => useQueryProgress());
+    const entries = [
+      makeEntry("data", BigInt(0), BigInt(99)),
+      makeEntry("data/direct", BigInt(0), BigInt(99)),
+      makeEntry("data/branch/nested", BigInt(0), BigInt(99)),
+    ];
+    act(() => result.current.start(entries, ["data/*"]));
+    vi.advanceTimersByTime(1000);
+
+    act(() => result.current.update("data", BigInt(99)));
+    expect(result.current.percent).toBe(0);
+
+    act(() => result.current.update("data/branch/nested", BigInt(99)));
+    expect(result.current.percent).toBe(0);
+
+    act(() => result.current.update("data/direct", BigInt(99)));
+    expect(result.current.percent).toBe(99);
+  });
+
+  it("matches direct and nested descendants with recursive wildcards", () => {
+    const { result } = renderHook(() => useQueryProgress());
+    const entries = [
+      makeEntry("entry", BigInt(0), BigInt(99)),
+      makeEntry("entry/direct", BigInt(0), BigInt(99)),
+      makeEntry("entry/branch/nested", BigInt(0), BigInt(99)),
+      makeEntry("entry-other", BigInt(0), BigInt(99)),
+      makeEntry("other/entry", BigInt(0), BigInt(99)),
+    ];
+    act(() => result.current.start(entries, ["entry/**"]));
+    vi.advanceTimersByTime(1000);
+
+    act(() => result.current.update("entry", BigInt(99)));
+    expect(result.current.percent).toBe(0);
+
+    act(() => result.current.update("entry-other", BigInt(99)));
+    expect(result.current.percent).toBe(0);
+
+    act(() => result.current.update("entry/direct", BigInt(99)));
+    expect(result.current.percent).toBe(50);
+
+    act(() => result.current.update("entry/branch/nested", BigInt(99)));
+    expect(result.current.percent).toBe(99);
+  });
+
   it("ignores updates for unknown entries", () => {
     const { result } = renderHook(() => useQueryProgress());
     act(() =>
