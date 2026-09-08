@@ -54,4 +54,9 @@ describe("SortableCard", () => {
     expect(handle).not.toHaveAttribute("role", "button");
     expect(handle).not.toHaveAttribute("tabindex");
   });
+
+  it("does not render children in the overlay clone, so heavy editors (e.g. Monaco) aren't mounted twice during a drag", () => {
+    renderCard({ isOverlay: true });
+    expect(screen.queryByText("fields")).toBeNull();
+  });
 });
