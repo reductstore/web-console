@@ -1,10 +1,10 @@
 import { Button, Dropdown, Tooltip } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import ConditionListEditor from "./ConditionListEditor";
-import SampleStepEditor from "./SampleStepEditor";
-import LimitStepEditor from "./LimitStepEditor";
-import TransformStepEditor from "./TransformStepEditor";
-import SelectStepEditor from "./SelectStepEditor";
+import ConditionListEditor from "../Steps/ConditionListEditor";
+import SampleStepEditor from "../Steps/SampleStepEditor";
+import LimitStepEditor from "../Steps/LimitStepEditor";
+import TransformStepEditor from "../Steps/TransformStepEditor";
+import SelectStepEditor from "../Steps/SelectStepEditor";
 import SortableCard from "./SortableCard";
 import SortableList from "./SortableList";
 import {
