@@ -4,6 +4,7 @@ import { ProtobufFieldRow } from "../../Helpers/transformStepBuilder";
 import {
   ROW_GAP,
   ROW_ICON_FONT_SIZE,
+  WRAP_ROW_STYLE,
   PROTOBUF_COLUMN_WIDTH,
   PROTOBUF_FIELD_ID_WIDTH,
   PROTOBUF_TYPE_WIDTH,
@@ -47,15 +48,7 @@ export default function ProtobufFieldRowList({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
       {rows.map((row) => (
-        <div
-          key={row.id}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: ROW_GAP,
-          }}
-        >
+        <div key={row.id} style={WRAP_ROW_STYLE}>
           <Input
             placeholder="column"
             value={row.column}

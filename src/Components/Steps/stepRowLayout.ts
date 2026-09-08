@@ -1,8 +1,16 @@
+import { CSSProperties } from "react";
+
 export const ROW_LABEL_WIDTH = 70;
 export const ROW_ICON_FONT_SIZE = 9;
 export const ROW_INPUT_WIDTH = 195;
 export const ROW_GAP = 8;
 export const ROW_GROUP_WIDTH = ROW_INPUT_WIDTH * 2 + ROW_GAP;
+export const WRAP_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: ROW_GAP,
+};
 export const VALUE_INPUT_WIDTH = 100;
 export const PROTOBUF_FIELD_ID_WIDTH = 90;
 export const PROTOBUF_TYPE_WIDTH = 140;

@@ -6,7 +6,11 @@ import {
   LABEL_OPERATORS,
   isMultiValueOperator,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_INPUT_WIDTH, ROW_GAP, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
+import {
+  ROW_INPUT_WIDTH,
+  ROW_ICON_FONT_SIZE,
+  WRAP_ROW_STYLE,
+} from "./stepRowLayout";
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;
@@ -45,14 +49,7 @@ export default function LabelConditionEditor({
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: ROW_GAP,
-      }}
-    >
+    <div style={WRAP_ROW_STYLE}>
       <AutoComplete
         aria-label="Label"
         placeholder="label"

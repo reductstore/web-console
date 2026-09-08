@@ -1,6 +1,4 @@
-import { ReactNode } from "react";
-import { Button, Dropdown, Input, Tooltip, Typography } from "antd";
-import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import { Input, Tooltip } from "antd";
 import {
   KeyValueRow,
   RosExportConfig,
@@ -8,12 +6,16 @@ import {
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
 import {
-  ROW_LABEL_WIDTH,
   ROW_INPUT_WIDTH,
   ROW_GAP,
   ROW_GROUP_WIDTH,
-  ROW_ICON_FONT_SIZE,
+  WRAP_ROW_STYLE,
 } from "./stepRowLayout";
+import {
+  SectionRow,
+  RemoveSectionButton,
+  AddOptionFooter,
+} from "./StepSectionLayout";
 import RowList from "./KeyValueRowList";
 
 const SECTION_LABELS: Record<RosSection, string> = {
@@ -43,48 +45,6 @@ interface TransformStepEditorProps {
   ) => void;
   onRemoveAsLabelRow: (id: string) => void;
   onChangeExport: (changes: Partial<RosExportConfig>) => void;
-}
-
-function RemoveSectionButton({
-  section,
-  onRemove,
-}: {
-  section: RosSection;
-  onRemove: () => void;
-}) {
-  return (
-    <Button
-      aria-label={`Remove ${SECTION_LABELS[section].toLowerCase()}`}
-      type="text"
-      icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      onClick={onRemove}
-    />
-  );
-}
-
-function Section({
-  section,
-  children,
-}: {
-  section: RosSection;
-  children: ReactNode;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-      <Typography.Text
-        strong
-        style={{
-          width: ROW_LABEL_WIDTH,
-          flexShrink: 0,
-          paddingTop: 6,
-          fontSize: 12,
-        }}
-      >
-        {SECTION_LABELS[section]}
-      </Typography.Text>
-      {children}
-    </div>
-  );
 }
 
 function disabledReason(
@@ -156,7 +116,7 @@ export default function TransformStepEditor({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {step.sections.includes("filter") && (
-        <Section section="filter">
+        <SectionRow label={SECTION_LABELS.filter}>
           <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
             <Input
               placeholder="optional ROS topic filter"
@@ -165,15 +125,15 @@ export default function TransformStepEditor({
               style={{ width: ROW_GROUP_WIDTH }}
             />
             <RemoveSectionButton
-              section="filter"
+              label={SECTION_LABELS.filter}
               onRemove={() => onRemoveSection("filter")}
             />
           </div>
-        </Section>
+        </SectionRow>
       )}
 
       {step.sections.includes("encode") && (
-        <Section section="encode">
+        <SectionRow label={SECTION_LABELS.encode}>
           <RowList
             rows={step.encode}
             keyPlaceholder="field (e.g. data)"
@@ -184,11 +144,11 @@ export default function TransformStepEditor({
             onRemoveSection={() => onRemoveSection("encode")}
             sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
           />
-        </Section>
+        </SectionRow>
       )}
 
       {step.sections.includes("label") && (
-        <Section section="label">
+        <SectionRow label={SECTION_LABELS.label}>
           <RowList
             rows={step.asLabel}
             keyPlaceholder="label name (e.g. lat_x)"
@@ -199,19 +159,12 @@ export default function TransformStepEditor({
             onRemoveSection={() => onRemoveSection("label")}
             sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
           />
-        </Section>
+        </SectionRow>
       )}
 
       {step.sections.includes("export") && (
-        <Section section="export">
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
+        <SectionRow label={SECTION_LABELS.export}>
+          <div style={WRAP_ROW_STYLE}>
             <Input
               placeholder="mcap (currently the only format)"
               value={step.export.format}
@@ -231,33 +184,19 @@ export default function TransformStepEditor({
               style={{ width: ROW_INPUT_WIDTH }}
             />
             <RemoveSectionButton
-              section="export"
+              label={SECTION_LABELS.export}
               onRemove={() => onRemoveSection("export")}
             />
           </div>
-        </Section>
+        </SectionRow>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Dropdown
-          menu={{ items: menuItems, onClick: handleMenuClick }}
-          trigger={["click"]}
-        >
-          <Button
-            aria-label="Add option"
-            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-          />
-        </Dropdown>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          <a
-            href="https://www.reduct.store/docs/extensions/official/ros-ext"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <strong>View ReductROS Documentation →</strong>
-          </a>
-        </Typography.Text>
-      </div>
+      <AddOptionFooter
+        menuItems={menuItems}
+        onMenuClick={handleMenuClick}
+        docHref="https://www.reduct.store/docs/extensions/official/ros-ext"
+        docLabel="View ReductROS Documentation →"
+      />
     </div>
   );
 }

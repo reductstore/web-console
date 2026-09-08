@@ -1,7 +1,11 @@
 import { Button, Input } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { KeyValueRow } from "../../Helpers/transformStepBuilder";
-import { ROW_GAP, ROW_INPUT_WIDTH, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
+import {
+  ROW_INPUT_WIDTH,
+  ROW_ICON_FONT_SIZE,
+  WRAP_ROW_STYLE,
+} from "./stepRowLayout";
 
 interface RowListProps {
   rows: KeyValueRow[];
@@ -32,15 +36,7 @@ export default function RowList({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {rows.map((row) => (
-        <div
-          key={row.id}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: ROW_GAP,
-          }}
-        >
+        <div key={row.id} style={WRAP_ROW_STYLE}>
           <Input
             placeholder={keyPlaceholder}
             value={row.key}

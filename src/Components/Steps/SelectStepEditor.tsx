@@ -1,16 +1,13 @@
-import { ReactNode } from "react";
 import {
   Button,
   Checkbox,
-  Dropdown,
   Input,
   InputNumber,
   Segmented,
   Select,
   Tooltip,
-  Typography,
 } from "antd";
-import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import {
   CsvConfig,
   KeyValueRow,
@@ -22,14 +19,19 @@ import {
   SelectTransformStep,
 } from "../../Helpers/transformStepBuilder";
 import {
-  ROW_LABEL_WIDTH,
   ROW_GAP,
   ROW_ICON_FONT_SIZE,
+  WRAP_ROW_STYLE,
   VALUE_INPUT_WIDTH,
   EXPORT_DURATION_WIDTH,
   PROTOBUF_MESSAGE_NAME_WIDTH,
   PROTOBUF_SCHEMA_WIDTH,
 } from "./stepRowLayout";
+import {
+  SectionRow,
+  RemoveSectionButton,
+  AddOptionFooter,
+} from "./StepSectionLayout";
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
 import SqlInput from "./SqlInput";
@@ -106,48 +108,6 @@ interface SelectStepEditorProps {
   onRemoveAsLabelRow: (id: string) => void;
 }
 
-function RemoveSectionButton({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
-  return (
-    <Button
-      aria-label={`Remove ${label.toLowerCase()}`}
-      type="text"
-      icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      onClick={onRemove}
-    />
-  );
-}
-
-function FormatSection({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-      <Typography.Text
-        strong
-        style={{
-          width: ROW_LABEL_WIDTH,
-          flexShrink: 0,
-          paddingTop: 6,
-          fontSize: 12,
-        }}
-      >
-        {label}
-      </Typography.Text>
-      {children}
-    </div>
-  );
-}
-
 export default function SelectStepEditor({
   step,
   onChangeSql,
@@ -195,27 +155,20 @@ export default function SelectStepEditor({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <FormatSection label="SQL">
+      <SectionRow label="SQL">
         <SqlInput
           value={step.sql}
           onChange={onChangeSql}
           style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}
         />
-      </FormatSection>
+      </SectionRow>
 
       {activeFormat && (
-        <FormatSection label="Format">
+        <SectionRow label="Format">
           <div
             style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
           >
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: ROW_GAP,
-              }}
-            >
+            <div style={WRAP_ROW_STYLE}>
               <Segmented
                 value={activeFormat}
                 options={FORMAT_CHOICES}
@@ -238,14 +191,7 @@ export default function SelectStepEditor({
             </div>
             {activeFormat === "protobuf" && (
               <>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    gap: ROW_GAP,
-                  }}
-                >
+                <div style={WRAP_ROW_STYLE}>
                   <Input
                     placeholder="message name"
                     value={step.protobuf.messageName}
@@ -278,19 +224,12 @@ export default function SelectStepEditor({
               </>
             )}
           </div>
-        </FormatSection>
+        </SectionRow>
       )}
 
       {step.formatSections.includes("export") && (
-        <FormatSection label="Export">
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: ROW_GAP,
-            }}
-          >
+        <SectionRow label="Export">
+          <div style={WRAP_ROW_STYLE}>
             <Select
               aria-label="Export format"
               placeholder="format"
@@ -325,11 +264,11 @@ export default function SelectStepEditor({
               onRemove={() => onRemoveFormatSection("export")}
             />
           </div>
-        </FormatSection>
+        </SectionRow>
       )}
 
       {step.asLabel.length > 0 && (
-        <FormatSection label="As label">
+        <SectionRow label="As label">
           <RowList
             rows={step.asLabel}
             keyPlaceholder="label name (e.g. lat_x)"
@@ -340,29 +279,15 @@ export default function SelectStepEditor({
             onRemoveSection={() => onRemoveAsLabelRow(step.asLabel[0].id)}
             sectionRemoveLabel="Remove label mapping"
           />
-        </FormatSection>
+        </SectionRow>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Dropdown
-          menu={{ items: menuItems, onClick: handleMenuClick }}
-          trigger={["click"]}
-        >
-          <Button
-            aria-label="Add option"
-            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-          />
-        </Dropdown>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          <a
-            href="https://www.reduct.store/docs/extensions/official/select-ext"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <strong>View ReductSelect Documentation →</strong>
-          </a>
-        </Typography.Text>
-      </div>
+      <AddOptionFooter
+        menuItems={menuItems}
+        onMenuClick={handleMenuClick}
+        docHref="https://www.reduct.store/docs/extensions/official/select-ext"
+        docLabel="View ReductSelect Documentation →"
+      />
     </div>
   );
 }
