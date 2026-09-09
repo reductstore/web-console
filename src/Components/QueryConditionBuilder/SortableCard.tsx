@@ -73,7 +73,7 @@ export default function SortableCard({
         )}
         {removeButton}
       </div>
-      {!isOverlay && <div className="queryCardBody">{children}</div>}
+      <div className="queryCardBody">{children}</div>
     </div>
   );
 }
