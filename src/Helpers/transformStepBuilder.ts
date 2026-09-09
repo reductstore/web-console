@@ -635,14 +635,22 @@ export function buildExtPayload(
   if (transforms.length === 0) {
     return undefined;
   }
+  // The server applies extensions in the order their keys appear in the
+  // payload, and ROS must run before Select (Select otherwise receives the
+  // raw, not-yet-extracted record). This is fixed regardless of how the
+  // blocks are arranged in the builder, since that ordering is purely
+  // visual and unrelated to this pipeline requirement.
   const payload: Record<string, unknown> = {};
-  for (const transform of transforms) {
-    if (transform.kind === "select") {
-      payload.select = buildSelectExt(transform.select);
-    } else {
-      payload.ros = buildRosExt(transform.ros);
-    }
-  }
+  const ros = transforms.find(
+    (transform): transform is Extract<TransformStepEntry, { kind: "ros" }> =>
+      transform.kind === "ros",
+  );
+  const select = transforms.find(
+    (transform): transform is Extract<TransformStepEntry, { kind: "select" }> =>
+      transform.kind === "select",
+  );
+  if (ros) payload.ros = buildRosExt(ros.ros);
+  if (select) payload.select = buildSelectExt(select.select);
   return payload;
 }
 

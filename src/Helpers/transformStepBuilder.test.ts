@@ -1001,6 +1001,18 @@ describe("transformStepBuilder", () => {
         select: {},
       });
     });
+
+    it("always puts ros before select in the payload, regardless of block order", () => {
+      // The server applies extensions in payload key order, and ros must run
+      // before select (select otherwise receives the raw, not-yet-extracted
+      // record) - this must hold even when the user has visually arranged
+      // the Select block above the ROS block.
+      const payload = buildExtPayload([
+        blankSelectTransform(),
+        createRosTransformStep(),
+      ]);
+      expect(Object.keys(payload ?? {})).toEqual(["ros", "select"]);
+    });
   });
 
   describe("ROS-only mutators guard against a select-kind transform", () => {
