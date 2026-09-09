@@ -157,12 +157,7 @@ export default function SelectStepEditor({
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <SectionRow label="SQL">
         <div style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}>
-          <QueryEditor
-            language="sql"
-            value={step.sql}
-            onChange={onChangeSql}
-            height={56}
-          />
+          <QueryEditor language="sql" value={step.sql} onChange={onChangeSql} />
         </div>
       </SectionRow>
 

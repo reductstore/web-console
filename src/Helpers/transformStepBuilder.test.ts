@@ -415,7 +415,7 @@ describe("transformStepBuilder", () => {
       it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
-        expect(transform.select.sql).toBe("SELECT * FROM ENTRY()");
+        expect(transform.select.sql).toBe("SELECT * FROM ENTRY()\n");
         expect(transform.select.asLabel).toEqual([]);
       });
     });

@@ -120,13 +120,6 @@ export function QueryEditor({
 
   const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
-    if (language === "sql") {
-      const triggerSuggest = () => {
-        editor.trigger("keyboard", "editor.action.triggerSuggest", {});
-      };
-      editor.onDidFocusEditorText(triggerSuggest);
-      editor.onMouseDown(triggerSuggest);
-    }
   };
 
   const handleBeforeMount = (monacoInstance: Monaco) => {
