@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, ComponentProps } from "react";
 import { Typography } from "antd";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList from "./QueryBlockList";
+import BuilderErrorBoundary from "./BuilderErrorBoundary";
 import {
   CONDITIONS_BLOCK_ID,
   FlatCondition,
@@ -369,126 +370,128 @@ export default function QueryConditionBuilder({
       <Typography.Text strong className="querySectionLabel">
         Query
       </Typography.Text>
-      <QueryBlockList
-        blockOrder={blockOrder}
-        conditions={conditions}
-        steps={steps}
-        transforms={transforms}
-        sourceReady={sourceReady}
-        labelOptions={labelOptions}
-        intervalValue={validationContext?.intervalValue ?? undefined}
-        onChangeCondition={(id, changes) =>
-          applyQuery(
-            updateCondition(conditions, id, changes),
-            steps,
-            KEEP_TRANSFORM,
-          )
-        }
-        onRemoveCondition={(id) =>
-          applyQuery(removeCondition(conditions, id), steps, KEEP_TRANSFORM)
-        }
-        onAddCondition={() =>
-          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM)
-        }
-        onChangeEachN={(id, changes) =>
-          applyQuery(
-            conditions,
-            updateEachNStep(steps, id, changes),
-            KEEP_TRANSFORM,
-          )
-        }
-        onChangeEachT={(id, changes) =>
-          applyQuery(
-            conditions,
-            updateEachTStep(steps, id, changes),
-            KEEP_TRANSFORM,
-          )
-        }
-        onChangeLimit={(id, changes) =>
-          applyQuery(
-            conditions,
-            updateLimitStep(steps, id, changes),
-            KEEP_TRANSFORM,
-          )
-        }
-        onAddConditionsBlock={() => {
-          applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM);
-          appendBlock(CONDITIONS_BLOCK_ID);
-        }}
-        onRemoveConditionsBlock={() => {
-          applyQuery([], steps, KEEP_TRANSFORM);
-          removeBlock(CONDITIONS_BLOCK_ID);
-        }}
-        onAddEachT={() => {
-          const nextSteps = addEachTStep(steps);
-          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
-          appendBlock(nextSteps[nextSteps.length - 1].id);
-        }}
-        onAddEachN={() => {
-          const nextSteps = addEachNStep(steps);
-          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
-          appendBlock(nextSteps[nextSteps.length - 1].id);
-        }}
-        onAddLimit={() => {
-          const nextSteps = addLimitStep(steps);
-          applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
-          appendBlock(nextSteps[nextSteps.length - 1].id);
-        }}
-        onAddTransformBlock={(kind: TransformKind) => {
-          const newTransform =
-            kind === "ros"
-              ? createRosTransformStep()
-              : createSelectTransformStep();
-          applyQuery(conditions, steps, [...transforms, newTransform]);
-          appendBlock(transformBlockId(kind));
-        }}
-        onRemoveTransformBlock={(kind: TransformKind) => {
-          applyQuery(
-            conditions,
-            steps,
-            transforms.filter((transform) => transform.kind !== kind),
-          );
-          removeBlock(transformBlockId(kind));
-        }}
-        onAddSection={withTransform("ros", addSection)}
-        onRemoveSection={withTransform("ros", removeSection)}
-        onChangeTopic={withTransform("ros", updateTopic)}
-        onAddEncodeRow={withTransform("ros", addEncodeRow)}
-        onChangeEncodeRow={withTransform("ros", updateEncodeRow)}
-        onRemoveEncodeRow={withTransform("ros", removeEncodeRow)}
-        onAddRosAsLabelRow={withTransform("ros", addAsLabelRow)}
-        onChangeRosAsLabelRow={withTransform("ros", updateAsLabelRow)}
-        onRemoveRosAsLabelRow={withTransform("ros", removeAsLabelRow)}
-        onChangeExport={withTransform("ros", updateExport)}
-        onChangeSql={withTransform("select", updateSql)}
-        onAddFormatSection={withTransform("select", addFormatSection)}
-        onRemoveFormatSection={withTransform("select", removeFormatSection)}
-        onChangeFormat={withTransform("select", changeFormat)}
-        onChangeCsv={withTransform("select", updateCsv)}
-        onChangeProtobuf={withTransform("select", updateProtobuf)}
-        onAddProtobufFieldRow={withTransform("select", addProtobufFieldRow)}
-        onChangeProtobufFieldRow={withTransform(
-          "select",
-          updateProtobufFieldRow,
-        )}
-        onRemoveProtobufFieldRow={withTransform(
-          "select",
-          removeProtobufFieldRow,
-        )}
-        onChangeSelectExport={withTransform("select", updateSelectExport)}
-        onAddSelectAsLabelRow={withTransform("select", addAsLabelRow)}
-        onChangeSelectAsLabelRow={withTransform("select", updateAsLabelRow)}
-        onRemoveSelectAsLabelRow={withTransform("select", removeAsLabelRow)}
-        onRemoveStep={(id) => {
-          applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
-          removeBlock(id);
-        }}
-        onReorderBlock={(fromIndex, toIndex) => {
-          const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
-          setBlockOrder(nextBlockOrder);
-          applyQuery(conditions, steps, transforms, nextBlockOrder);
-        }}
-      />
+      <BuilderErrorBoundary>
+        <QueryBlockList
+          blockOrder={blockOrder}
+          conditions={conditions}
+          steps={steps}
+          transforms={transforms}
+          sourceReady={sourceReady}
+          labelOptions={labelOptions}
+          intervalValue={validationContext?.intervalValue ?? undefined}
+          onChangeCondition={(id, changes) =>
+            applyQuery(
+              updateCondition(conditions, id, changes),
+              steps,
+              KEEP_TRANSFORM,
+            )
+          }
+          onRemoveCondition={(id) =>
+            applyQuery(removeCondition(conditions, id), steps, KEEP_TRANSFORM)
+          }
+          onAddCondition={() =>
+            applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM)
+          }
+          onChangeEachN={(id, changes) =>
+            applyQuery(
+              conditions,
+              updateEachNStep(steps, id, changes),
+              KEEP_TRANSFORM,
+            )
+          }
+          onChangeEachT={(id, changes) =>
+            applyQuery(
+              conditions,
+              updateEachTStep(steps, id, changes),
+              KEEP_TRANSFORM,
+            )
+          }
+          onChangeLimit={(id, changes) =>
+            applyQuery(
+              conditions,
+              updateLimitStep(steps, id, changes),
+              KEEP_TRANSFORM,
+            )
+          }
+          onAddConditionsBlock={() => {
+            applyQuery(addCondition(conditions), steps, KEEP_TRANSFORM);
+            appendBlock(CONDITIONS_BLOCK_ID);
+          }}
+          onRemoveConditionsBlock={() => {
+            applyQuery([], steps, KEEP_TRANSFORM);
+            removeBlock(CONDITIONS_BLOCK_ID);
+          }}
+          onAddEachT={() => {
+            const nextSteps = addEachTStep(steps);
+            applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
+            appendBlock(nextSteps[nextSteps.length - 1].id);
+          }}
+          onAddEachN={() => {
+            const nextSteps = addEachNStep(steps);
+            applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
+            appendBlock(nextSteps[nextSteps.length - 1].id);
+          }}
+          onAddLimit={() => {
+            const nextSteps = addLimitStep(steps);
+            applyQuery(conditions, nextSteps, KEEP_TRANSFORM);
+            appendBlock(nextSteps[nextSteps.length - 1].id);
+          }}
+          onAddTransformBlock={(kind: TransformKind) => {
+            const newTransform =
+              kind === "ros"
+                ? createRosTransformStep()
+                : createSelectTransformStep();
+            applyQuery(conditions, steps, [...transforms, newTransform]);
+            appendBlock(transformBlockId(kind));
+          }}
+          onRemoveTransformBlock={(kind: TransformKind) => {
+            applyQuery(
+              conditions,
+              steps,
+              transforms.filter((transform) => transform.kind !== kind),
+            );
+            removeBlock(transformBlockId(kind));
+          }}
+          onAddSection={withTransform("ros", addSection)}
+          onRemoveSection={withTransform("ros", removeSection)}
+          onChangeTopic={withTransform("ros", updateTopic)}
+          onAddEncodeRow={withTransform("ros", addEncodeRow)}
+          onChangeEncodeRow={withTransform("ros", updateEncodeRow)}
+          onRemoveEncodeRow={withTransform("ros", removeEncodeRow)}
+          onAddRosAsLabelRow={withTransform("ros", addAsLabelRow)}
+          onChangeRosAsLabelRow={withTransform("ros", updateAsLabelRow)}
+          onRemoveRosAsLabelRow={withTransform("ros", removeAsLabelRow)}
+          onChangeExport={withTransform("ros", updateExport)}
+          onChangeSql={withTransform("select", updateSql)}
+          onAddFormatSection={withTransform("select", addFormatSection)}
+          onRemoveFormatSection={withTransform("select", removeFormatSection)}
+          onChangeFormat={withTransform("select", changeFormat)}
+          onChangeCsv={withTransform("select", updateCsv)}
+          onChangeProtobuf={withTransform("select", updateProtobuf)}
+          onAddProtobufFieldRow={withTransform("select", addProtobufFieldRow)}
+          onChangeProtobufFieldRow={withTransform(
+            "select",
+            updateProtobufFieldRow,
+          )}
+          onRemoveProtobufFieldRow={withTransform(
+            "select",
+            removeProtobufFieldRow,
+          )}
+          onChangeSelectExport={withTransform("select", updateSelectExport)}
+          onAddSelectAsLabelRow={withTransform("select", addAsLabelRow)}
+          onChangeSelectAsLabelRow={withTransform("select", updateAsLabelRow)}
+          onRemoveSelectAsLabelRow={withTransform("select", removeAsLabelRow)}
+          onRemoveStep={(id) => {
+            applyQuery(conditions, removeStep(steps, id), KEEP_TRANSFORM);
+            removeBlock(id);
+          }}
+          onReorderBlock={(fromIndex, toIndex) => {
+            const nextBlockOrder = moveItem(blockOrder, fromIndex, toIndex);
+            setBlockOrder(nextBlockOrder);
+            applyQuery(conditions, steps, transforms, nextBlockOrder);
+          }}
+        />
+      </BuilderErrorBoundary>
       {error && (
         <div className="jsonQueryEditorValidation">
           <span className="jsonQueryEditorValidationError">✗</span>
