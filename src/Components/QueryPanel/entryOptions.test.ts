@@ -8,6 +8,7 @@ describe("buildEntryOptions", () => {
       "entry/branch",
       "entry/branch/nested",
       "other",
+      "standalone",
     ]);
 
     expect(options).toEqual([
@@ -20,7 +21,13 @@ describe("buildEntryOptions", () => {
           { label: "entry/direct", value: "entry/direct" },
         ],
       },
-      { label: "other", options: [{ label: "other", value: "other" }] },
+      {
+        label: "Other",
+        options: [
+          { label: "other", value: "other" },
+          { label: "standalone", value: "standalone" },
+        ],
+      },
     ]);
     expect(options.flatMap((group) => group.options)).not.toContainEqual({
       label: "entry/*",

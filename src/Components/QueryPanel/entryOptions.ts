@@ -56,12 +56,17 @@ export const buildEntryOptions = (entries: string[]) => {
   }
 
   const groupedOptions = new Map<string, EntryOption[]>();
+  const otherOptions: EntryOption[] = [];
   for (const option of options) {
     if (option.value === "**") continue;
 
     const slashIdx = option.value.indexOf("/");
-    const groupName =
-      slashIdx === -1 ? option.value : option.value.substring(0, slashIdx);
+    if (slashIdx === -1) {
+      otherOptions.push(option);
+      continue;
+    }
+
+    const groupName = option.value.substring(0, slashIdx);
     const group = groupedOptions.get(groupName) ?? [];
     group.push(option);
     groupedOptions.set(groupName, group);
@@ -72,6 +77,9 @@ export const buildEntryOptions = (entries: string[]) => {
   ];
   for (const [label, groupOptions] of groupedOptions) {
     groups.push({ label, options: groupOptions });
+  }
+  if (otherOptions.length > 0) {
+    groups.push({ label: "Other", options: otherOptions });
   }
   return groups;
 };
