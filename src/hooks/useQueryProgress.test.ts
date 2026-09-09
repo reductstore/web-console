@@ -220,6 +220,22 @@ describe("useQueryProgress", () => {
     expect(result.current.percent).toBe(99);
   });
 
+  it("matches every entry with a root recursive wildcard", () => {
+    const { result } = renderHook(() => useQueryProgress());
+    const entries = [
+      makeEntry("root", BigInt(0), BigInt(99)),
+      makeEntry("nested/entry", BigInt(0), BigInt(99)),
+    ];
+    act(() => result.current.start(entries, ["**"]));
+    vi.advanceTimersByTime(1000);
+
+    act(() => result.current.update("root", BigInt(99)));
+    expect(result.current.percent).toBe(50);
+
+    act(() => result.current.update("nested/entry", BigInt(99)));
+    expect(result.current.percent).toBe(99);
+  });
+
   it("ignores updates for unknown entries", () => {
     const { result } = renderHook(() => useQueryProgress());
     act(() =>

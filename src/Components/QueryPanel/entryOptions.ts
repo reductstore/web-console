@@ -4,7 +4,17 @@ export const normalizeEntrySelection = (entries: string[]): string[] =>
     new Set(entries.map((entry) => entry.trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
 
-/** Builds literal leaf options and recursive wildcards for grouped entries. */
+interface EntryOption {
+  label: string;
+  value: string;
+}
+
+interface EntryOptionGroup {
+  label: string;
+  options: EntryOption[];
+}
+
+/** Groups literal leaves and recursive wildcards by top-level entry. */
 export const buildEntryOptions = (entries: string[]) => {
   const allEntryNames = normalizeEntrySelection(entries);
   const childCount = new Map<string, number>();
@@ -26,7 +36,7 @@ export const buildEntryOptions = (entries: string[]) => {
   }
 
   const seen = new Set<string>();
-  const options: { label: string; value: string }[] = [];
+  const options: EntryOption[] = [];
   for (const entry of allEntryNames) {
     if (nonLeafSet.has(entry) && (childCount.get(entry) ?? 0) > 1) {
       // Non-leaf with multiple children: show recursive wildcard instead
@@ -44,5 +54,24 @@ export const buildEntryOptions = (entries: string[]) => {
     }
     // Non-leaf with 1 child: skip (child is already listed)
   }
-  return options;
+
+  const groupedOptions = new Map<string, EntryOption[]>();
+  for (const option of options) {
+    if (option.value === "**") continue;
+
+    const slashIdx = option.value.indexOf("/");
+    const groupName =
+      slashIdx === -1 ? option.value : option.value.substring(0, slashIdx);
+    const group = groupedOptions.get(groupName) ?? [];
+    group.push(option);
+    groupedOptions.set(groupName, group);
+  }
+
+  const groups: EntryOptionGroup[] = [
+    { label: "All", options: [{ label: "**", value: "**" }] },
+  ];
+  for (const [label, groupOptions] of groupedOptions) {
+    groups.push({ label, options: groupOptions });
+  }
+  return groups;
 };

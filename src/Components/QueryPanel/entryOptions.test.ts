@@ -1,7 +1,7 @@
 import { buildEntryOptions } from "./entryOptions";
 
 describe("buildEntryOptions", () => {
-  it("uses a recursive wildcard for grouped entries", () => {
+  it("groups entries by root and includes recursive wildcard choices", () => {
     const options = buildEntryOptions([
       "entry",
       "entry/direct",
@@ -10,7 +10,21 @@ describe("buildEntryOptions", () => {
       "other",
     ]);
 
-    expect(options).toContainEqual({ label: "entry/**", value: "entry/**" });
-    expect(options).not.toContainEqual({ label: "entry/*", value: "entry/*" });
+    expect(options).toEqual([
+      { label: "All", options: [{ label: "**", value: "**" }] },
+      {
+        label: "entry",
+        options: [
+          { label: "entry/**", value: "entry/**" },
+          { label: "entry/branch/nested", value: "entry/branch/nested" },
+          { label: "entry/direct", value: "entry/direct" },
+        ],
+      },
+      { label: "other", options: [{ label: "other", value: "other" }] },
+    ]);
+    expect(options.flatMap((group) => group.options)).not.toContainEqual({
+      label: "entry/*",
+      value: "entry/*",
+    });
   });
 });
