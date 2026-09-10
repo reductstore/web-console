@@ -8,7 +8,7 @@ import {
   ComponentProps,
 } from "react";
 import { Button, Dropdown, Tooltip, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import BuilderErrorBoundary from "./BuilderErrorBoundary";
@@ -24,8 +24,7 @@ import {
   hasValue,
 } from "../../Helpers/conditionalQueryBuilder";
 import {
-  ROS_TRANSFORM_BLOCK_ID,
-  SELECT_TRANSFORM_BLOCK_ID,
+  PROCESS_BLOCK_ID,
   hasIncompleteTransform,
 } from "../../Helpers/transformStepBuilder";
 import {
@@ -64,6 +63,46 @@ const STEP_LABELS: Record<string, string> = {
   transform_select: "Process (Select)",
 };
 
+function ProcessSubsection({
+  title,
+  removeLabel,
+  onRemove,
+  divider = false,
+  children,
+}: {
+  title: string;
+  removeLabel: string;
+  onRemove: () => void;
+  divider?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      style={
+        divider ? { borderTop: "1px solid #f0f0f0", paddingTop: 16 } : undefined
+      }
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 8,
+        }}
+      >
+        <Typography.Text strong>{title}</Typography.Text>
+        <Button
+          aria-label={removeLabel}
+          type="text"
+          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+          onClick={onRemove}
+        />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function buildBlocks(
   state: BuilderState,
   sourceReady: boolean,
@@ -100,33 +139,47 @@ function buildBlocks(
       ];
     }
 
-    if (id === ROS_TRANSFORM_BLOCK_ID || id === SELECT_TRANSFORM_BLOCK_ID) {
-      const kind = id === ROS_TRANSFORM_BLOCK_ID ? "ros" : "select";
-      const transform = state.transforms.find((t) => t.kind === kind);
-      if (!sourceReady || !transform) return [];
-      if (transform.kind === "select") {
-        return [
-          {
-            id,
-            label: STEP_LABELS.transform_select,
-            removeLabel: "Remove select",
-            onRemove: () =>
-              dispatch({ type: "block/removeTransform", kind: "select" }),
-            content: (
-              <SelectStepEditor step={transform.select} dispatch={dispatch} />
-            ),
-          },
-        ];
-      }
+    if (id === PROCESS_BLOCK_ID) {
+      const rosTransform = state.transforms.find((t) => t.kind === "ros");
+      const selectTransform = state.transforms.find((t) => t.kind === "select");
+      if (!sourceReady || (!rosTransform && !selectTransform)) return [];
       return [
         {
-          id,
-          label: STEP_LABELS.transform_ros,
-          removeLabel: "Remove process",
-          onRemove: () =>
-            dispatch({ type: "block/removeTransform", kind: "ros" }),
+          id: PROCESS_BLOCK_ID,
+          label: "Process",
+          removable: false,
           content: (
-            <TransformStepEditor step={transform.ros} dispatch={dispatch} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {rosTransform && (
+                <ProcessSubsection
+                  title="ROS"
+                  removeLabel="Remove ROS processing"
+                  onRemove={() =>
+                    dispatch({ type: "block/removeTransform", kind: "ros" })
+                  }
+                >
+                  <TransformStepEditor
+                    step={rosTransform.ros}
+                    dispatch={dispatch}
+                  />
+                </ProcessSubsection>
+              )}
+              {selectTransform && (
+                <ProcessSubsection
+                  title="Select"
+                  removeLabel="Remove Select processing"
+                  divider={!!rosTransform}
+                  onRemove={() =>
+                    dispatch({ type: "block/removeTransform", kind: "select" })
+                  }
+                >
+                  <SelectStepEditor
+                    step={selectTransform.select}
+                    dispatch={dispatch}
+                  />
+                </ProcessSubsection>
+              )}
+            </div>
           ),
         },
       ];

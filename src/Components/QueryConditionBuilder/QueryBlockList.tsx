@@ -6,7 +6,8 @@ export interface BuilderBlock {
   id: string;
   label?: string;
   removeLabel?: string;
-  onRemove: () => void;
+  removable?: boolean;
+  onRemove?: () => void;
   content: ReactNode;
 }
 
@@ -32,7 +33,8 @@ export default function QueryBlockList({
             id={block.id}
             label={block.label}
             removeLabel={block.removeLabel}
-            onRemove={block.onRemove}
+            removable={block.removable}
+            onRemove={block.onRemove ?? (() => {})}
           >
             {block.content}
           </SortableCard>

@@ -450,7 +450,7 @@ describe("builderReducer", () => {
       });
       expect(state.transforms).toHaveLength(1);
       expect(state.transforms[0].kind).toBe("ros");
-      expect(state.blockOrder).toEqual(["transform-ros"]);
+      expect(state.blockOrder).toEqual(["process"]);
     });
 
     it("block/addTransform adds a select transform and its block id", () => {
@@ -460,21 +460,48 @@ describe("builderReducer", () => {
       });
       expect(state.transforms).toHaveLength(1);
       expect(state.transforms[0].kind).toBe("select");
-      expect(state.blockOrder).toEqual(["transform-select"]);
+      expect(state.blockOrder).toEqual(["process"]);
     });
 
-    it("block/removeTransform removes only the transform of the given kind", () => {
+    it("block/addTransform doesn't add a second block id when the process block already exists", () => {
+      const withRos = builderReducer(emptyState(), {
+        type: "block/addTransform",
+        kind: "ros",
+      });
+      const state = builderReducer(withRos, {
+        type: "block/addTransform",
+        kind: "select",
+      });
+      expect(state.transforms.map((t) => t.kind)).toEqual(["ros", "select"]);
+      expect(state.blockOrder).toEqual(["process"]);
+    });
+
+    it("block/removeTransform keeps the process block id while the other kind remains", () => {
       const withBoth: BuilderState = {
         ...emptyState(),
         transforms: [createRosTransformStep(), createSelectTransformStep()],
-        blockOrder: ["transform-ros", "transform-select"],
+        blockOrder: ["process"],
       };
       const state = builderReducer(withBoth, {
         type: "block/removeTransform",
         kind: "ros",
       });
       expect(state.transforms.map((t) => t.kind)).toEqual(["select"]);
-      expect(state.blockOrder).toEqual(["transform-select"]);
+      expect(state.blockOrder).toEqual(["process"]);
+    });
+
+    it("block/removeTransform drops the process block id once no transform remains", () => {
+      const withRos: BuilderState = {
+        ...emptyState(),
+        transforms: [createRosTransformStep()],
+        blockOrder: ["process"],
+      };
+      const state = builderReducer(withRos, {
+        type: "block/removeTransform",
+        kind: "ros",
+      });
+      expect(state.transforms).toEqual([]);
+      expect(state.blockOrder).toEqual([]);
     });
 
     it("block/reorder moves the block id from one index to another", () => {

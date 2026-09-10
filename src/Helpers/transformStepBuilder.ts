@@ -62,12 +62,7 @@ export type TransformStepEntry =
   | { kind: "ros"; ros: RosTransformStep }
   | { kind: "select"; select: SelectTransformStep };
 
-export const ROS_TRANSFORM_BLOCK_ID = "transform-ros";
-export const SELECT_TRANSFORM_BLOCK_ID = "transform-select";
-
-export function transformBlockId(kind: TransformKind): string {
-  return kind === "ros" ? ROS_TRANSFORM_BLOCK_ID : SELECT_TRANSFORM_BLOCK_ID;
-}
+export const PROCESS_BLOCK_ID = "process";
 
 function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
   return { id, key: "", value: "" };

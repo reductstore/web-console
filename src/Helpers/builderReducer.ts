@@ -26,10 +26,9 @@ import {
   KeyValueRow,
   ProtobufConfig,
   ProtobufFieldRow,
-  ROS_TRANSFORM_BLOCK_ID,
+  PROCESS_BLOCK_ID,
   RosExportConfig,
   RosSection,
-  SELECT_TRANSFORM_BLOCK_ID,
   SelectExportConfig,
   SelectFormatSection,
   SelectInputFormat,
@@ -45,7 +44,6 @@ import {
   createRosTransformStep,
   createSelectTransformStep,
   parseExtPayload,
-  transformBlockId,
   removeAsLabelRow,
   removeEncodeRow,
   removeFormatSection,
@@ -370,23 +368,24 @@ export function builderReducer(
       return {
         ...state,
         transforms: [...state.transforms, newTransform],
-        blockOrder: appendBlockId(
-          state.blockOrder,
-          transformBlockId(action.kind),
-        ),
+        blockOrder: state.blockOrder.includes(PROCESS_BLOCK_ID)
+          ? state.blockOrder
+          : appendBlockId(state.blockOrder, PROCESS_BLOCK_ID),
       };
     }
-    case "block/removeTransform":
+    case "block/removeTransform": {
+      const transforms = state.transforms.filter(
+        (transform) => transform.kind !== action.kind,
+      );
       return {
         ...state,
-        transforms: state.transforms.filter(
-          (transform) => transform.kind !== action.kind,
-        ),
-        blockOrder: removeBlockId(
-          state.blockOrder,
-          transformBlockId(action.kind),
-        ),
+        transforms,
+        blockOrder:
+          transforms.length === 0
+            ? removeBlockId(state.blockOrder, PROCESS_BLOCK_ID)
+            : state.blockOrder,
       };
+    }
     case "block/reorder":
       return {
         ...state,
@@ -417,7 +416,7 @@ export function initialBlockOrder(
   return [
     ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
     ...steps.map((step) => step.id),
-    ...transforms.map((transform) => transformBlockId(transform.kind)),
+    ...(transforms.length > 0 ? [PROCESS_BLOCK_ID] : []),
   ];
 }
 
@@ -481,8 +480,7 @@ function reorderQueryKeys(
     const key =
       blockId === CONDITIONS_BLOCK_ID
         ? conditionsKey
-        : blockId === ROS_TRANSFORM_BLOCK_ID ||
-            blockId === SELECT_TRANSFORM_BLOCK_ID
+        : blockId === PROCESS_BLOCK_ID
           ? "#ext"
           : stepKeyById.get(blockId);
     if (key !== undefined && key in value && !orderedKeys.includes(key)) {

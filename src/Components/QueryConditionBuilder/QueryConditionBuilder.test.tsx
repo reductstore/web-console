@@ -816,10 +816,10 @@ describe("QueryConditionBuilder", () => {
       const [beforeDrag] = onChange.mock.calls.at(-1) as [string];
       expect(Object.keys(JSON.parse(beforeDrag))).toEqual(["&status", "#ext"]);
 
-      // Drag the Transform block above the Label filter block.
+      // Drag the Process block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
-          active: { id: "transform-ros" },
+          active: { id: "process" },
           over: { id: "conditions" },
         } as DragEndEvent);
       });
@@ -1101,7 +1101,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove process"));
+      fireEvent.click(screen.getByLabelText("Remove ROS processing"));
       expect(screen.queryByLabelText("Add option")).toBeNull();
     });
 
@@ -1117,7 +1117,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove process"));
+      fireEvent.click(screen.getByLabelText("Remove ROS processing"));
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
@@ -1207,7 +1207,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Process (ROS)")).toBeTruthy();
+      expect(screen.getByText("ROS")).toBeTruthy();
       expect(
         screen.getByPlaceholderText("optional ROS topic filter"),
       ).toHaveValue("/robot/odom");
@@ -1223,7 +1223,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.queryByText("Process (ROS)")).toBeNull();
+      expect(screen.queryByText("Process")).toBeNull();
 
       const value = JSON.stringify({
         "#ext": {
@@ -1244,7 +1244,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Process (ROS)")).toBeTruthy();
+      expect(screen.getByText("ROS")).toBeTruthy();
     });
   });
 
@@ -1299,7 +1299,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove select"));
+      fireEvent.click(screen.getByLabelText("Remove Select processing"));
       expect(screen.queryByPlaceholderText("SELECT * FROM ENTRY()")).toBeNull();
     });
 
@@ -1315,7 +1315,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove select"));
+      fireEvent.click(screen.getByLabelText("Remove Select processing"));
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
@@ -1451,7 +1451,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Process (Select)")).toBeTruthy();
+      expect(screen.getByText("Select")).toBeTruthy();
       expect(screen.getByTestId("monaco-editor")).toHaveValue(
         "SELECT * FROM ENTRY()",
       );
@@ -1467,7 +1467,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.queryByText("Process (Select)")).toBeNull();
+      expect(screen.queryByText("Process")).toBeNull();
 
       const value = JSON.stringify({
         "#ext": {
@@ -1486,7 +1486,7 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Process (Select)")).toBeTruthy();
+      expect(screen.getByText("Select")).toBeTruthy();
     });
 
     it("renders both Process (ROS) and Process (Select) when #ext carries both", () => {
@@ -1506,9 +1506,39 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
-      expect(screen.getByText("Process (ROS)")).toBeTruthy();
-      expect(screen.getByText("Process (Select)")).toBeTruthy();
+      expect(screen.getByText("Process")).toBeTruthy();
+      const rosHeading = screen.getByText("ROS");
+      const selectHeading = screen.getByText("Select");
+      expect(
+        rosHeading.compareDocumentPosition(selectHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(onUnrepresentable).not.toHaveBeenCalled();
+    });
+
+    it("keeps ROS above Select even when Select was added first", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      await openAddStepMenu();
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("menuitem", { name: "Process (ROS)" }),
+        );
+      });
+      const rosHeading = screen.getByText("ROS");
+      const selectHeading = screen.getByText("Select");
+      expect(
+        rosHeading.compareDocumentPosition(selectHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 });
