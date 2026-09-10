@@ -55,6 +55,15 @@ function buildInitialState(value: string): BuilderState {
   };
 }
 
+const STEP_LABELS: Record<string, string> = {
+  conditions: "Label filter",
+  sample_each_t: "Sample by time",
+  sample_each_n: "Sample every N",
+  limit: "Limit",
+  transform_ros: "Process (ROS)",
+  transform_select: "Process (Select)",
+};
+
 function buildBlocks(
   state: BuilderState,
   sourceReady: boolean,
@@ -68,7 +77,7 @@ function buildBlocks(
       return [
         {
           id: CONDITIONS_BLOCK_ID,
-          label: "Label filter",
+          label: STEP_LABELS.conditions,
           removeLabel: "Remove label filter",
           onRemove: () => dispatch({ type: "block/removeConditions" }),
           content: (
@@ -82,7 +91,9 @@ function buildBlocks(
               onRemoveCondition={(conditionId) =>
                 dispatch({ type: "condition/remove", id: conditionId })
               }
-              onAddCondition={() => dispatch({ type: "condition/add" })}
+              onAddCondition={() =>
+                dispatch({ type: "condition/add", id: crypto.randomUUID() })
+              }
             />
           ),
         },
@@ -97,7 +108,7 @@ function buildBlocks(
         return [
           {
             id,
-            label: "Process (Select)",
+            label: STEP_LABELS.transform_select,
             removeLabel: "Remove select",
             onRemove: () =>
               dispatch({ type: "block/removeTransform", kind: "select" }),
@@ -110,7 +121,7 @@ function buildBlocks(
       return [
         {
           id,
-          label: "Process (ROS)",
+          label: STEP_LABELS.transform_ros,
           removeLabel: "Remove process",
           onRemove: () =>
             dispatch({ type: "block/removeTransform", kind: "ros" }),
@@ -129,7 +140,10 @@ function buildBlocks(
       return [
         {
           id: step.id,
-          label: step.type === "each_n" ? "Sample every N" : "Sample by time",
+          label:
+            step.type === "each_n"
+              ? STEP_LABELS.sample_each_n
+              : STEP_LABELS.sample_each_t,
           removeLabel: "Remove sample step",
           onRemove: () => dispatch({ type: "step/remove", id: step.id }),
           content: (
@@ -158,7 +172,7 @@ function buildBlocks(
     return [
       {
         id: step.id,
-        label: "Limit",
+        label: STEP_LABELS.limit,
         removeLabel: "Remove limit step",
         onRemove: () => dispatch({ type: "step/remove", id: step.id }),
         content: (
@@ -173,15 +187,6 @@ function buildBlocks(
     ];
   });
 }
-
-const STEP_LABELS: Record<string, string> = {
-  conditions: "Label filter",
-  sample_each_t: "Sample by time",
-  sample_each_n: "Sample every N",
-  limit: "Limit",
-  transform_ros: "Process (ROS)",
-  transform_select: "Process (Select)",
-};
 
 function buildAddStepMenu(
   state: BuilderState,
@@ -234,13 +239,13 @@ function buildAddStepMenu(
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "conditions") {
-      dispatch({ type: "block/addConditions" });
+      dispatch({ type: "block/addConditions", id: crypto.randomUUID() });
     } else if (key === "sample_each_t") {
-      dispatch({ type: "block/addEachT" });
+      dispatch({ type: "block/addEachT", id: crypto.randomUUID() });
     } else if (key === "sample_each_n") {
-      dispatch({ type: "block/addEachN" });
+      dispatch({ type: "block/addEachN", id: crypto.randomUUID() });
     } else if (key === "limit") {
-      dispatch({ type: "block/addLimit" });
+      dispatch({ type: "block/addLimit", id: crypto.randomUUID() });
     } else if (key === "transform_ros") {
       dispatch({ type: "block/addTransform", kind: "ros" });
     } else if (key === "transform_select") {

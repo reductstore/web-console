@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { builderReducer, BuilderState } from "./builderReducer";
+import { FlatCondition } from "./conditionalQueryBuilder";
 import {
   createRosTransformStep,
   createSelectTransformStep,
@@ -9,10 +10,35 @@ function emptyState(): BuilderState {
   return { conditions: [], steps: [], transforms: [], blockOrder: [] };
 }
 
+function condition(
+  id: string,
+  overrides: Partial<Omit<FlatCondition, "id">> = {},
+): FlatCondition {
+  return {
+    id,
+    label: "foo",
+    operator: "$eq",
+    value: "1",
+    negated: false,
+    connector: "$and",
+    ...overrides,
+  };
+}
+
+function stateWithRosAndSelect(): BuilderState {
+  return {
+    ...emptyState(),
+    transforms: [createRosTransformStep(), createSelectTransformStep()],
+  };
+}
+
 describe("builderReducer", () => {
   describe("condition/add", () => {
     it("appends an empty condition", () => {
-      const state = builderReducer(emptyState(), { type: "condition/add" });
+      const state = builderReducer(emptyState(), {
+        type: "condition/add",
+        id: "new-condition",
+      });
       expect(state.conditions).toHaveLength(1);
       expect(state.conditions[0]).toMatchObject({ label: "", value: "" });
     });
@@ -22,7 +48,10 @@ describe("builderReducer", () => {
         ...emptyState(),
         blockOrder: ["conditions"],
       };
-      const state = builderReducer(initial, { type: "condition/add" });
+      const state = builderReducer(initial, {
+        type: "condition/add",
+        id: "new-condition",
+      });
       expect(state.blockOrder).toBe(initial.blockOrder);
       expect(state.steps).toBe(initial.steps);
       expect(state.transforms).toBe(initial.transforms);
@@ -34,22 +63,8 @@ describe("builderReducer", () => {
       const initial: BuilderState = {
         ...emptyState(),
         conditions: [
-          {
-            id: "a",
-            label: "foo",
-            operator: "$eq",
-            value: "1",
-            negated: false,
-            connector: "$and",
-          },
-          {
-            id: "b",
-            label: "bar",
-            operator: "$eq",
-            value: "2",
-            negated: false,
-            connector: "$and",
-          },
+          condition("a"),
+          condition("b", { label: "bar", value: "2" }),
         ],
       };
       const state = builderReducer(initial, {
@@ -64,16 +79,7 @@ describe("builderReducer", () => {
     it("merges the changes into the matching condition", () => {
       const initial: BuilderState = {
         ...emptyState(),
-        conditions: [
-          {
-            id: "a",
-            label: "foo",
-            operator: "$eq",
-            value: "1",
-            negated: false,
-            connector: "$and",
-          },
-        ],
+        conditions: [condition("a")],
       };
       const state = builderReducer(initial, {
         type: "condition/change",
@@ -151,13 +157,6 @@ describe("builderReducer", () => {
   });
 
   describe("ros actions", () => {
-    function stateWithRosAndSelect(): BuilderState {
-      return {
-        ...emptyState(),
-        transforms: [createRosTransformStep(), createSelectTransformStep()],
-      };
-    }
-
     function ros(state: BuilderState) {
       const transform = state.transforms.find((t) => t.kind === "ros");
       if (!transform || transform.kind !== "ros") {
@@ -171,6 +170,7 @@ describe("builderReducer", () => {
       const state = builderReducer(initial, {
         type: "ros/addSection",
         section: "filter",
+        rowId: "new-row",
       });
       expect(ros(state).sections).toEqual(["filter"]);
       expect(state.transforms[1]).toBe(initial.transforms[1]);
@@ -181,6 +181,7 @@ describe("builderReducer", () => {
       const withFilter = builderReducer(initial, {
         type: "ros/addSection",
         section: "filter",
+        rowId: "new-row",
       });
       const state = builderReducer(withFilter, {
         type: "ros/removeSection",
@@ -200,6 +201,7 @@ describe("builderReducer", () => {
     it("ros/addEncodeRow appends an empty row", () => {
       const state = builderReducer(stateWithRosAndSelect(), {
         type: "ros/addEncodeRow",
+        id: "new-row",
       });
       expect(ros(state).encode).toHaveLength(1);
     });
@@ -207,6 +209,7 @@ describe("builderReducer", () => {
     it("ros/changeEncodeRow and ros/removeEncodeRow update/remove the matching row", () => {
       const withRow = builderReducer(stateWithRosAndSelect(), {
         type: "ros/addEncodeRow",
+        id: "new-row",
       });
       const rowId = ros(withRow).encode[0].id;
       const changed = builderReducer(withRow, {
@@ -225,20 +228,24 @@ describe("builderReducer", () => {
       expect(ros(removed).encode).toEqual([]);
     });
 
-    it("ros/addAsLabelRow, ros/changeAsLabelRow and ros/removeAsLabelRow manage as-label rows", () => {
+    it("transform/addAsLabelRow, transform/changeAsLabelRow and transform/removeAsLabelRow manage the ros transform's as-label rows", () => {
       const withRow = builderReducer(stateWithRosAndSelect(), {
-        type: "ros/addAsLabelRow",
+        type: "transform/addAsLabelRow",
+        kind: "ros",
+        id: "new-row",
       });
       expect(ros(withRow).asLabel).toHaveLength(1);
       const rowId = ros(withRow).asLabel[0].id;
       const changed = builderReducer(withRow, {
-        type: "ros/changeAsLabelRow",
+        type: "transform/changeAsLabelRow",
+        kind: "ros",
         id: rowId,
         changes: { key: "source" },
       });
       expect(ros(changed).asLabel[0]).toMatchObject({ key: "source" });
       const removed = builderReducer(changed, {
-        type: "ros/removeAsLabelRow",
+        type: "transform/removeAsLabelRow",
+        kind: "ros",
         id: rowId,
       });
       expect(ros(removed).asLabel).toEqual([]);
@@ -254,13 +261,6 @@ describe("builderReducer", () => {
   });
 
   describe("select actions", () => {
-    function stateWithRosAndSelect(): BuilderState {
-      return {
-        ...emptyState(),
-        transforms: [createRosTransformStep(), createSelectTransformStep()],
-      };
-    }
-
     function select(state: BuilderState) {
       const transform = state.transforms.find((t) => t.kind === "select");
       if (!transform || transform.kind !== "select") {
@@ -283,6 +283,7 @@ describe("builderReducer", () => {
       const withCsv = builderReducer(stateWithRosAndSelect(), {
         type: "select/addFormatSection",
         section: "csv",
+        fieldId: "new-field",
       });
       expect(select(withCsv).formatSections).toEqual(["csv"]);
       const removed = builderReducer(withCsv, {
@@ -296,10 +297,12 @@ describe("builderReducer", () => {
       const withCsv = builderReducer(stateWithRosAndSelect(), {
         type: "select/addFormatSection",
         section: "csv",
+        fieldId: "new-field",
       });
       const state = builderReducer(withCsv, {
         type: "select/changeFormat",
         format: "json",
+        fieldId: "new-field",
       });
       expect(select(state).formatSections).toEqual(["json"]);
     });
@@ -323,6 +326,7 @@ describe("builderReducer", () => {
     it("select/addProtobufFieldRow, select/changeProtobufFieldRow and select/removeProtobufFieldRow manage protobuf field rows", () => {
       const withRow = builderReducer(stateWithRosAndSelect(), {
         type: "select/addProtobufFieldRow",
+        id: "new-field",
       });
       expect(select(withRow).protobuf.fields).toHaveLength(1);
       const rowId = select(withRow).protobuf.fields[0].id;
@@ -350,20 +354,24 @@ describe("builderReducer", () => {
       expect(select(state).export).toMatchObject({ format: "csv" });
     });
 
-    it("select/addAsLabelRow, select/changeAsLabelRow and select/removeAsLabelRow manage as-label rows", () => {
+    it("transform/addAsLabelRow, transform/changeAsLabelRow and transform/removeAsLabelRow manage the select transform's as-label rows", () => {
       const withRow = builderReducer(stateWithRosAndSelect(), {
-        type: "select/addAsLabelRow",
+        type: "transform/addAsLabelRow",
+        kind: "select",
+        id: "new-row",
       });
       expect(select(withRow).asLabel).toHaveLength(1);
       const rowId = select(withRow).asLabel[0].id;
       const changed = builderReducer(withRow, {
-        type: "select/changeAsLabelRow",
+        type: "transform/changeAsLabelRow",
+        kind: "select",
         id: rowId,
         changes: { key: "source" },
       });
       expect(select(changed).asLabel[0]).toMatchObject({ key: "source" });
       const removed = builderReducer(changed, {
-        type: "select/removeAsLabelRow",
+        type: "transform/removeAsLabelRow",
+        kind: "select",
         id: rowId,
       });
       expect(select(removed).asLabel).toEqual([]);
@@ -374,6 +382,7 @@ describe("builderReducer", () => {
     it("block/addConditions adds a condition and appends the conditions block id", () => {
       const state = builderReducer(emptyState(), {
         type: "block/addConditions",
+        id: "new-condition",
       });
       expect(state.conditions).toHaveLength(1);
       expect(state.blockOrder).toEqual(["conditions"]);
@@ -382,6 +391,7 @@ describe("builderReducer", () => {
     it("block/removeConditions clears conditions and removes the block id", () => {
       const withConditions = builderReducer(emptyState(), {
         type: "block/addConditions",
+        id: "new-condition",
       });
       const state = builderReducer(withConditions, {
         type: "block/removeConditions",
@@ -391,21 +401,30 @@ describe("builderReducer", () => {
     });
 
     it("block/addEachT appends an each_t step and its id", () => {
-      const state = builderReducer(emptyState(), { type: "block/addEachT" });
+      const state = builderReducer(emptyState(), {
+        type: "block/addEachT",
+        id: "new-step",
+      });
       expect(state.steps).toHaveLength(1);
       expect(state.steps[0].type).toBe("each_t");
       expect(state.blockOrder).toEqual([state.steps[0].id]);
     });
 
     it("block/addEachN appends an each_n step and its id", () => {
-      const state = builderReducer(emptyState(), { type: "block/addEachN" });
+      const state = builderReducer(emptyState(), {
+        type: "block/addEachN",
+        id: "new-step",
+      });
       expect(state.steps).toHaveLength(1);
       expect(state.steps[0].type).toBe("each_n");
       expect(state.blockOrder).toEqual([state.steps[0].id]);
     });
 
     it("block/addLimit appends a limit step and its id", () => {
-      const state = builderReducer(emptyState(), { type: "block/addLimit" });
+      const state = builderReducer(emptyState(), {
+        type: "block/addLimit",
+        id: "new-step",
+      });
       expect(state.steps).toHaveLength(1);
       expect(state.steps[0].type).toBe("limit");
       expect(state.blockOrder).toEqual([state.steps[0].id]);
@@ -414,6 +433,7 @@ describe("builderReducer", () => {
     it("step/remove removes the step and its block id", () => {
       const withStep = builderReducer(emptyState(), {
         type: "block/addLimit",
+        id: "new-step",
       });
       const state = builderReducer(withStep, {
         type: "step/remove",

@@ -81,11 +81,15 @@ export default function TransformStepEditor({
   const handleMenuClick = ({ key }: { key: string }) => {
     const section = key as RosSection;
     if (section === "encode" && step.sections.includes("encode")) {
-      dispatch({ type: "ros/addEncodeRow" });
+      dispatch({ type: "ros/addEncodeRow", id: crypto.randomUUID() });
     } else if (section === "label" && step.sections.includes("label")) {
-      dispatch({ type: "ros/addAsLabelRow" });
+      dispatch({
+        type: "transform/addAsLabelRow",
+        kind: "ros",
+        id: crypto.randomUUID(),
+      });
     } else {
-      dispatch({ type: "ros/addSection", section });
+      dispatch({ type: "ros/addSection", section, rowId: crypto.randomUUID() });
     }
   };
 
@@ -138,9 +142,16 @@ export default function TransformStepEditor({
             keyPlaceholder="label name (e.g. lat_x)"
             valuePlaceholder="field (e.g. latitude.x)"
             onChange={(id, changes) =>
-              dispatch({ type: "ros/changeAsLabelRow", id, changes })
+              dispatch({
+                type: "transform/changeAsLabelRow",
+                kind: "ros",
+                id,
+                changes,
+              })
             }
-            onRemove={(id) => dispatch({ type: "ros/removeAsLabelRow", id })}
+            onRemove={(id) =>
+              dispatch({ type: "transform/removeAsLabelRow", kind: "ros", id })
+            }
             removeLabel="Remove label mapping"
             onRemoveSection={() =>
               dispatch({ type: "ros/removeSection", section: "label" })

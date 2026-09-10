@@ -11,6 +11,7 @@ import {
   addLimitStep,
   moveItem,
   parseBuilderList,
+  parseQueryValue,
   removeCondition,
   removeStep,
   serializeBuilderList,
@@ -72,6 +73,14 @@ function mapTransform(
   );
 }
 
+function appendBlockId(blockOrder: string[], id: string): string[] {
+  return [...blockOrder, id];
+}
+
+function removeBlockId(blockOrder: string[], id: string): string[] {
+  return blockOrder.filter((blockId) => blockId !== id);
+}
+
 export interface BuilderState {
   conditions: FlatCondition[];
   steps: Step[];
@@ -79,8 +88,16 @@ export interface BuilderState {
   blockOrder: string[];
 }
 
+function appendStep(state: BuilderState, steps: Step[]): BuilderState {
+  return {
+    ...state,
+    steps,
+    blockOrder: appendBlockId(state.blockOrder, steps[steps.length - 1].id),
+  };
+}
+
 export type BuilderAction =
-  | { type: "condition/add" }
+  | { type: "condition/add"; id: string }
   | { type: "condition/remove"; id: string }
   | {
       type: "condition/change";
@@ -95,34 +112,31 @@ export type BuilderAction =
   | { type: "step/changeEachN"; id: string; changes: Partial<EachNStep> }
   | { type: "step/changeEachT"; id: string; changes: Partial<EachTStep> }
   | { type: "step/changeLimit"; id: string; changes: Partial<LimitStep> }
-  | { type: "ros/addSection"; section: RosSection }
+  | { type: "ros/addSection"; section: RosSection; rowId: string }
   | { type: "ros/removeSection"; section: RosSection }
   | { type: "ros/changeTopic"; topic: string }
-  | { type: "ros/addEncodeRow" }
+  | { type: "ros/addEncodeRow"; id: string }
   | {
       type: "ros/changeEncodeRow";
       id: string;
       changes: Partial<Pick<KeyValueRow, "key" | "value">>;
     }
   | { type: "ros/removeEncodeRow"; id: string }
-  | { type: "ros/addAsLabelRow" }
-  | {
-      type: "ros/changeAsLabelRow";
-      id: string;
-      changes: Partial<Pick<KeyValueRow, "key" | "value">>;
-    }
-  | { type: "ros/removeAsLabelRow"; id: string }
   | { type: "ros/changeExport"; changes: Partial<RosExportConfig> }
   | { type: "select/changeSql"; sql: string }
-  | { type: "select/addFormatSection"; section: SelectFormatSection }
+  | {
+      type: "select/addFormatSection";
+      section: SelectFormatSection;
+      fieldId: string;
+    }
   | { type: "select/removeFormatSection"; section: SelectFormatSection }
-  | { type: "select/changeFormat"; format: SelectInputFormat }
+  | { type: "select/changeFormat"; format: SelectInputFormat; fieldId: string }
   | { type: "select/changeCsv"; changes: Partial<CsvConfig> }
   | {
       type: "select/changeProtobuf";
       changes: Partial<Pick<ProtobufConfig, "messageName" | "schema">>;
     }
-  | { type: "select/addProtobufFieldRow" }
+  | { type: "select/addProtobufFieldRow"; id: string }
   | {
       type: "select/changeProtobufFieldRow";
       id: string;
@@ -132,18 +146,19 @@ export type BuilderAction =
     }
   | { type: "select/removeProtobufFieldRow"; id: string }
   | { type: "select/changeExport"; changes: Partial<SelectExportConfig> }
-  | { type: "select/addAsLabelRow" }
+  | { type: "transform/addAsLabelRow"; kind: TransformKind; id: string }
   | {
-      type: "select/changeAsLabelRow";
+      type: "transform/changeAsLabelRow";
+      kind: TransformKind;
       id: string;
       changes: Partial<Pick<KeyValueRow, "key" | "value">>;
     }
-  | { type: "select/removeAsLabelRow"; id: string }
-  | { type: "block/addConditions" }
+  | { type: "transform/removeAsLabelRow"; kind: TransformKind; id: string }
+  | { type: "block/addConditions"; id: string }
   | { type: "block/removeConditions" }
-  | { type: "block/addEachT" }
-  | { type: "block/addEachN" }
-  | { type: "block/addLimit" }
+  | { type: "block/addEachT"; id: string }
+  | { type: "block/addEachN"; id: string }
+  | { type: "block/addLimit"; id: string }
   | { type: "block/addTransform"; kind: TransformKind }
   | { type: "block/removeTransform"; kind: TransformKind }
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
@@ -156,7 +171,10 @@ export function builderReducer(
 ): BuilderState {
   switch (action.type) {
     case "condition/add":
-      return { ...state, conditions: addCondition(state.conditions) };
+      return {
+        ...state,
+        conditions: addCondition(state.conditions, action.id),
+      };
     case "condition/remove":
       return {
         ...state,
@@ -190,7 +208,7 @@ export function builderReducer(
       return {
         ...state,
         transforms: mapTransform(state.transforms, "ros", (transform) =>
-          addSection(transform, action.section),
+          addSection(transform, action.section, action.rowId),
         ),
       };
     case "ros/removeSection":
@@ -210,7 +228,9 @@ export function builderReducer(
     case "ros/addEncodeRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", addEncodeRow),
+        transforms: mapTransform(state.transforms, "ros", (transform) =>
+          addEncodeRow(transform, action.id),
+        ),
       };
     case "ros/changeEncodeRow":
       return {
@@ -224,25 +244,6 @@ export function builderReducer(
         ...state,
         transforms: mapTransform(state.transforms, "ros", (transform) =>
           removeEncodeRow(transform, action.id),
-        ),
-      };
-    case "ros/addAsLabelRow":
-      return {
-        ...state,
-        transforms: mapTransform(state.transforms, "ros", addAsLabelRow),
-      };
-    case "ros/changeAsLabelRow":
-      return {
-        ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          updateAsLabelRow(transform, action.id, action.changes),
-        ),
-      };
-    case "ros/removeAsLabelRow":
-      return {
-        ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          removeAsLabelRow(transform, action.id),
         ),
       };
     case "ros/changeExport":
@@ -263,7 +264,7 @@ export function builderReducer(
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          addFormatSection(transform, action.section),
+          addFormatSection(transform, action.section, action.fieldId),
         ),
       };
     case "select/removeFormatSection":
@@ -277,7 +278,7 @@ export function builderReducer(
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          changeFormat(transform, action.format),
+          changeFormat(transform, action.format, action.fieldId),
         ),
       };
     case "select/changeCsv":
@@ -297,10 +298,8 @@ export function builderReducer(
     case "select/addProtobufFieldRow":
       return {
         ...state,
-        transforms: mapTransform(
-          state.transforms,
-          "select",
-          addProtobufFieldRow,
+        transforms: mapTransform(state.transforms, "select", (transform) =>
+          addProtobufFieldRow(transform, action.id),
         ),
       };
     case "select/changeProtobufFieldRow":
@@ -324,61 +323,45 @@ export function builderReducer(
           updateSelectExport(transform, action.changes),
         ),
       };
-    case "select/addAsLabelRow":
+    case "transform/addAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", addAsLabelRow),
+        transforms: mapTransform(state.transforms, action.kind, (transform) =>
+          addAsLabelRow(transform, action.id),
+        ),
       };
-    case "select/changeAsLabelRow":
+    case "transform/changeAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
+        transforms: mapTransform(state.transforms, action.kind, (transform) =>
           updateAsLabelRow(transform, action.id, action.changes),
         ),
       };
-    case "select/removeAsLabelRow":
+    case "transform/removeAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
+        transforms: mapTransform(state.transforms, action.kind, (transform) =>
           removeAsLabelRow(transform, action.id),
         ),
       };
     case "block/addConditions":
       return {
         ...state,
-        conditions: addCondition(state.conditions),
-        blockOrder: [...state.blockOrder, CONDITIONS_BLOCK_ID],
+        conditions: addCondition(state.conditions, action.id),
+        blockOrder: appendBlockId(state.blockOrder, CONDITIONS_BLOCK_ID),
       };
     case "block/removeConditions":
       return {
         ...state,
         conditions: [],
-        blockOrder: state.blockOrder.filter((id) => id !== CONDITIONS_BLOCK_ID),
+        blockOrder: removeBlockId(state.blockOrder, CONDITIONS_BLOCK_ID),
       };
-    case "block/addEachT": {
-      const steps = addEachTStep(state.steps);
-      return {
-        ...state,
-        steps,
-        blockOrder: [...state.blockOrder, steps[steps.length - 1].id],
-      };
-    }
-    case "block/addEachN": {
-      const steps = addEachNStep(state.steps);
-      return {
-        ...state,
-        steps,
-        blockOrder: [...state.blockOrder, steps[steps.length - 1].id],
-      };
-    }
-    case "block/addLimit": {
-      const steps = addLimitStep(state.steps);
-      return {
-        ...state,
-        steps,
-        blockOrder: [...state.blockOrder, steps[steps.length - 1].id],
-      };
-    }
+    case "block/addEachT":
+      return appendStep(state, addEachTStep(state.steps, action.id));
+    case "block/addEachN":
+      return appendStep(state, addEachNStep(state.steps, action.id));
+    case "block/addLimit":
+      return appendStep(state, addLimitStep(state.steps, action.id));
     case "block/addTransform": {
       const newTransform =
         action.kind === "ros"
@@ -387,7 +370,10 @@ export function builderReducer(
       return {
         ...state,
         transforms: [...state.transforms, newTransform],
-        blockOrder: [...state.blockOrder, transformBlockId(action.kind)],
+        blockOrder: appendBlockId(
+          state.blockOrder,
+          transformBlockId(action.kind),
+        ),
       };
     }
     case "block/removeTransform":
@@ -396,8 +382,9 @@ export function builderReducer(
         transforms: state.transforms.filter(
           (transform) => transform.kind !== action.kind,
         ),
-        blockOrder: state.blockOrder.filter(
-          (id) => id !== transformBlockId(action.kind),
+        blockOrder: removeBlockId(
+          state.blockOrder,
+          transformBlockId(action.kind),
         ),
       };
     case "block/reorder":
@@ -413,7 +400,7 @@ export function builderReducer(
       return {
         ...state,
         steps: removeStep(state.steps, action.id),
-        blockOrder: state.blockOrder.filter((id) => id !== action.id),
+        blockOrder: removeBlockId(state.blockOrder, action.id),
       };
     case "external/sync":
       return action.state;
@@ -449,10 +436,7 @@ export function parseQueryAndTransform(
   }
   const raw = parsed.value;
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    const result = parseBuilderList(raw);
-    return result.success
-      ? { list: result.list ?? [], steps: result.steps }
-      : undefined;
+    return parseQueryValue(text);
   }
   const { "#ext": ext, ...rest } = raw as Record<string, unknown>;
   const extResult = parseExtPayload(ext);

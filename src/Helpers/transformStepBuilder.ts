@@ -69,8 +69,8 @@ export function transformBlockId(kind: TransformKind): string {
   return kind === "ros" ? ROS_TRANSFORM_BLOCK_ID : SELECT_TRANSFORM_BLOCK_ID;
 }
 
-function blankRow(): KeyValueRow {
-  return { id: crypto.randomUUID(), key: "", value: "" };
+function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
+  return { id, key: "", value: "" };
 }
 
 export function createRosTransformStep(): Extract<
@@ -117,6 +117,7 @@ export function updateSql<Entry extends TransformStepEntry>(
 export function addFormatSection<Entry extends TransformStepEntry>(
   transform: Entry,
   section: SelectFormatSection,
+  fieldId: string = crypto.randomUUID(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   if (transform.select.formatSections.includes(section)) {
@@ -129,7 +130,7 @@ export function addFormatSection<Entry extends TransformStepEntry>(
   if (section === "protobuf" && select.protobuf.fields.length === 0) {
     select.protobuf = {
       ...select.protobuf,
-      fields: [blankProtobufFieldRow()],
+      fields: [blankProtobufFieldRow(fieldId)],
     };
   }
   return { ...transform, select } as Entry;
@@ -138,6 +139,7 @@ export function addFormatSection<Entry extends TransformStepEntry>(
 export function changeFormat<Entry extends TransformStepEntry>(
   transform: Entry,
   format: SelectInputFormat,
+  fieldId: string = crypto.randomUUID(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   const formatSections = transform.select.formatSections.filter(
@@ -150,7 +152,7 @@ export function changeFormat<Entry extends TransformStepEntry>(
   if (format === "protobuf" && select.protobuf.fields.length === 0) {
     select.protobuf = {
       ...select.protobuf,
-      fields: [blankProtobufFieldRow()],
+      fields: [blankProtobufFieldRow(fieldId)],
     };
   }
   return { ...transform, select } as Entry;
@@ -200,12 +202,15 @@ export function updateProtobuf<Entry extends TransformStepEntry>(
   } as Entry;
 }
 
-function blankProtobufFieldRow(): ProtobufFieldRow {
-  return { id: crypto.randomUUID(), column: "", fieldId: "", fieldType: "" };
+function blankProtobufFieldRow(
+  id: string = crypto.randomUUID(),
+): ProtobufFieldRow {
+  return { id, column: "", fieldId: "", fieldType: "" };
 }
 
 export function addProtobufFieldRow<Entry extends TransformStepEntry>(
   transform: Entry,
+  id: string = crypto.randomUUID(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   return {
@@ -214,7 +219,10 @@ export function addProtobufFieldRow<Entry extends TransformStepEntry>(
       ...transform.select,
       protobuf: {
         ...transform.select.protobuf,
-        fields: [...transform.select.protobuf.fields, blankProtobufFieldRow()],
+        fields: [
+          ...transform.select.protobuf.fields,
+          blankProtobufFieldRow(id),
+        ],
       },
     },
   } as Entry;
@@ -274,6 +282,7 @@ export function updateSelectExport<Entry extends TransformStepEntry>(
 export function addSection<Entry extends TransformStepEntry>(
   transform: Entry,
   section: RosSection,
+  rowId: string = crypto.randomUUID(),
 ): Entry {
   if (transform.kind !== "ros") return transform;
   if (transform.ros.sections.includes(section)) {
@@ -284,10 +293,10 @@ export function addSection<Entry extends TransformStepEntry>(
     sections: [...transform.ros.sections, section],
   };
   if (section === "encode" && ros.encode.length === 0) {
-    ros.encode = [blankRow()];
+    ros.encode = [blankRow(rowId)];
   }
   if (section === "label" && ros.asLabel.length === 0) {
-    ros.asLabel = [blankRow()];
+    ros.asLabel = [blankRow(rowId)];
   }
   if (section === "export" && !ros.export.format) {
     // "mcap" is currently the only supported export format.
@@ -329,8 +338,11 @@ export function updateExport<Entry extends TransformStepEntry>(
   } as Entry;
 }
 
-function addRow(rows: KeyValueRow[]): KeyValueRow[] {
-  return [...rows, blankRow()];
+function addRow(
+  rows: KeyValueRow[],
+  id: string = crypto.randomUUID(),
+): KeyValueRow[] {
+  return [...rows, blankRow(id)];
 }
 
 function updateRow(
@@ -347,11 +359,12 @@ function removeRow(rows: KeyValueRow[], id: string): KeyValueRow[] {
 
 export function addEncodeRow<Entry extends TransformStepEntry>(
   transform: Entry,
+  id: string = crypto.randomUUID(),
 ): Entry {
   if (transform.kind !== "ros") return transform;
   return {
     ...transform,
-    ros: { ...transform.ros, encode: addRow(transform.ros.encode) },
+    ros: { ...transform.ros, encode: addRow(transform.ros.encode, id) },
   } as Entry;
 }
 
@@ -383,18 +396,22 @@ export function removeEncodeRow<Entry extends TransformStepEntry>(
 
 export function addAsLabelRow<Entry extends TransformStepEntry>(
   transform: Entry,
+  id: string = crypto.randomUUID(),
 ): Entry {
   return (
     transform.kind === "ros"
       ? {
           ...transform,
-          ros: { ...transform.ros, asLabel: addRow(transform.ros.asLabel) },
+          ros: {
+            ...transform.ros,
+            asLabel: addRow(transform.ros.asLabel, id),
+          },
         }
       : {
           ...transform,
           select: {
             ...transform.select,
-            asLabel: addRow(transform.select.asLabel),
+            asLabel: addRow(transform.select.asLabel, id),
           },
         }
   ) as Entry;

@@ -105,11 +105,23 @@ export default function SelectStepEditor({
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "asLabel") {
-      dispatch({ type: "select/addAsLabelRow" });
+      dispatch({
+        type: "transform/addAsLabelRow",
+        kind: "select",
+        id: crypto.randomUUID(),
+      });
     } else if (key === "export") {
-      dispatch({ type: "select/addFormatSection", section: "export" });
+      dispatch({
+        type: "select/addFormatSection",
+        section: "export",
+        fieldId: crypto.randomUUID(),
+      });
     } else if (key === "format") {
-      dispatch({ type: "select/addFormatSection", section: "csv" });
+      dispatch({
+        type: "select/addFormatSection",
+        section: "csv",
+        fieldId: crypto.randomUUID(),
+      });
     }
   };
 
@@ -140,6 +152,7 @@ export default function SelectStepEditor({
                   dispatch({
                     type: "select/changeFormat",
                     format: value as SelectInputFormat,
+                    fieldId: crypto.randomUUID(),
                   })
                 }
               />
@@ -211,7 +224,10 @@ export default function SelectStepEditor({
                     <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
                   }
                   onClick={() =>
-                    dispatch({ type: "select/addProtobufFieldRow" })
+                    dispatch({
+                      type: "select/addProtobufFieldRow",
+                      id: crypto.randomUUID(),
+                    })
                   }
                 />
               </>
@@ -281,13 +297,25 @@ export default function SelectStepEditor({
             keyPlaceholder="label name (e.g. lat_x)"
             valuePlaceholder="field (e.g. latitude.x)"
             onChange={(id, changes) =>
-              dispatch({ type: "select/changeAsLabelRow", id, changes })
+              dispatch({
+                type: "transform/changeAsLabelRow",
+                kind: "select",
+                id,
+                changes,
+              })
             }
-            onRemove={(id) => dispatch({ type: "select/removeAsLabelRow", id })}
+            onRemove={(id) =>
+              dispatch({
+                type: "transform/removeAsLabelRow",
+                kind: "select",
+                id,
+              })
+            }
             removeLabel="Remove label mapping"
             onRemoveSection={() =>
               dispatch({
-                type: "select/removeAsLabelRow",
+                type: "transform/removeAsLabelRow",
+                kind: "select",
                 id: step.asLabel[0].id,
               })
             }

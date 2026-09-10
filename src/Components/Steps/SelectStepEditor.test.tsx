@@ -62,12 +62,16 @@ describe("SelectStepEditor", () => {
     expect(screen.queryByText("As label")).toBeNull();
   });
 
-  it("dispatches select/addAsLabelRow when As label is picked from the add menu", () => {
+  it("dispatches transform/addAsLabelRow with kind select when As label is picked from the add menu", () => {
     const dispatch = vi.fn();
     render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Add option"));
     fireEvent.click(screen.getByText("As label"));
-    expect(dispatch).toHaveBeenCalledWith({ type: "select/addAsLabelRow" });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "transform/addAsLabelRow",
+      kind: "select",
+      id: expect.any(String),
+    });
   });
 
   it("shows As label rows and reports a changed field", () => {
@@ -82,7 +86,8 @@ describe("SelectStepEditor", () => {
       target: { value: "speed" },
     });
     expect(dispatch).toHaveBeenCalledWith({
-      type: "select/changeAsLabelRow",
+      type: "transform/changeAsLabelRow",
+      kind: "select",
       id: "l1",
       changes: { key: "speed" },
     });
@@ -100,7 +105,8 @@ describe("SelectStepEditor", () => {
     render(<SelectStepEditor step={step} dispatch={dispatch} />);
     fireEvent.click(screen.getAllByLabelText("Remove label mapping")[0]);
     expect(dispatch).toHaveBeenCalledWith({
-      type: "select/removeAsLabelRow",
+      type: "transform/removeAsLabelRow",
+      kind: "select",
       id: "l1",
     });
   });
@@ -114,7 +120,8 @@ describe("SelectStepEditor", () => {
     render(<SelectStepEditor step={step} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Remove label mapping"));
     expect(dispatch).toHaveBeenCalledWith({
-      type: "select/removeAsLabelRow",
+      type: "transform/removeAsLabelRow",
+      kind: "select",
       id: "l1",
     });
   });
@@ -137,6 +144,7 @@ describe("SelectStepEditor", () => {
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addFormatSection",
         section: "csv",
+        fieldId: expect.any(String),
       });
     });
 
@@ -224,6 +232,7 @@ describe("SelectStepEditor", () => {
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
         format: "json",
+        fieldId: expect.any(String),
       });
     });
 
@@ -238,6 +247,7 @@ describe("SelectStepEditor", () => {
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
         format: "protobuf",
+        fieldId: expect.any(String),
       });
     });
 
@@ -333,6 +343,7 @@ describe("SelectStepEditor", () => {
         fireEvent.click(screen.getByLabelText("Add protobuf field"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/addProtobufFieldRow",
+          id: expect.any(String),
         });
       });
 

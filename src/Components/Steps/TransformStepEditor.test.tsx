@@ -28,6 +28,7 @@ describe("TransformStepEditor", () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: "ros/addSection",
       section: "filter",
+      rowId: expect.any(String),
     });
   });
 
@@ -157,7 +158,10 @@ describe("TransformStepEditor", () => {
       render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
-      expect(dispatch).toHaveBeenCalledWith({ type: "ros/addEncodeRow" });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/addEncodeRow",
+        id: expect.any(String),
+      });
     });
 
     it("still allows adding another encode row even when the last row is incomplete", async () => {
@@ -170,7 +174,10 @@ describe("TransformStepEditor", () => {
       render(<TransformStepEditor step={partial} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
-      expect(dispatch).toHaveBeenCalledWith({ type: "ros/addEncodeRow" });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/addEncodeRow",
+        id: expect.any(String),
+      });
     });
   });
 
@@ -188,7 +195,8 @@ describe("TransformStepEditor", () => {
         target: { value: "velocity" },
       });
       expect(dispatch).toHaveBeenCalledWith({
-        type: "ros/changeAsLabelRow",
+        type: "transform/changeAsLabelRow",
+        kind: "ros",
         id: "l1",
         changes: { key: "velocity" },
       });
@@ -197,13 +205,14 @@ describe("TransformStepEditor", () => {
         target: { value: "data.speed" },
       });
       expect(dispatch).toHaveBeenCalledWith({
-        type: "ros/changeAsLabelRow",
+        type: "transform/changeAsLabelRow",
+        kind: "ros",
         id: "l1",
         changes: { value: "data.speed" },
       });
     });
 
-    it("calls dispatch with ros/removeAsLabelRow and the row's id", () => {
+    it("calls dispatch with transform/removeAsLabelRow, kind ros, and the row's id", () => {
       const dispatch = vi.fn();
       const twoRows: RosTransformStep = {
         ...baseStep,
@@ -217,7 +226,8 @@ describe("TransformStepEditor", () => {
       const [firstRemove] = screen.getAllByLabelText("Remove label mapping");
       fireEvent.click(firstRemove);
       expect(dispatch).toHaveBeenCalledWith({
-        type: "ros/removeAsLabelRow",
+        type: "transform/removeAsLabelRow",
+        kind: "ros",
         id: "l1",
       });
     });
