@@ -1472,12 +1472,6 @@ export default function QueryPanel({
                 </Modal>
               </div>
               <div className="fetchButton">
-                <QueryStatusLabel
-                  status={progress.status}
-                  recordCount={records.length}
-                  elapsed={progress.elapsed}
-                  eta={progress.eta}
-                />
                 <Button
                   onClick={() => {
                     if (showCancel && fetchCtrlRef.current) {
@@ -1507,6 +1501,12 @@ export default function QueryPanel({
                 >
                   {showCancel ? "Stop" : "Run Query"}
                 </Button>
+                <QueryStatusLabel
+                  status={progress.status}
+                  recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
+                />
               </div>
               <QueryProgressBar
                 status={progress.status}
