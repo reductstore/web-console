@@ -1,3 +1,4 @@
+import { Dispatch } from "react";
 import {
   Button,
   Checkbox,
@@ -9,15 +10,10 @@ import {
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import {
-  CsvConfig,
-  KeyValueRow,
-  ProtobufConfig,
-  ProtobufFieldRow,
-  SelectExportConfig,
-  SelectFormatSection,
   SelectInputFormat,
   SelectTransformStep,
 } from "../../Helpers/transformStepBuilder";
+import { BuilderAction } from "../../Helpers/builderReducer";
 import {
   ROW_GAP,
   ROW_ICON_FONT_SIZE,
@@ -83,46 +79,12 @@ function disabledReason(
 
 interface SelectStepEditorProps {
   step: SelectTransformStep;
-  onChangeSql: (sql: string) => void;
-  onAddFormatSection: (section: SelectFormatSection) => void;
-  onRemoveFormatSection: (section: SelectFormatSection) => void;
-  onChangeFormat: (format: SelectInputFormat) => void;
-  onChangeCsv: (changes: Partial<CsvConfig>) => void;
-  onChangeProtobuf: (
-    changes: Partial<Pick<ProtobufConfig, "messageName" | "schema">>,
-  ) => void;
-  onAddProtobufFieldRow: () => void;
-  onChangeProtobufFieldRow: (
-    id: string,
-    changes: Partial<
-      Pick<ProtobufFieldRow, "column" | "fieldId" | "fieldType">
-    >,
-  ) => void;
-  onRemoveProtobufFieldRow: (id: string) => void;
-  onChangeSelectExport: (changes: Partial<SelectExportConfig>) => void;
-  onAddAsLabelRow: () => void;
-  onChangeAsLabelRow: (
-    id: string,
-    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
-  ) => void;
-  onRemoveAsLabelRow: (id: string) => void;
+  dispatch: Dispatch<BuilderAction>;
 }
 
 export default function SelectStepEditor({
   step,
-  onChangeSql,
-  onAddFormatSection,
-  onRemoveFormatSection,
-  onChangeFormat,
-  onChangeCsv,
-  onChangeProtobuf,
-  onAddProtobufFieldRow,
-  onChangeProtobufFieldRow,
-  onRemoveProtobufFieldRow,
-  onChangeSelectExport,
-  onAddAsLabelRow,
-  onChangeAsLabelRow,
-  onRemoveAsLabelRow,
+  dispatch,
 }: SelectStepEditorProps) {
   const menuItems = ADD_OPTIONS.map((option) => {
     const reason = disabledReason(option, step);
@@ -143,11 +105,11 @@ export default function SelectStepEditor({
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === "asLabel") {
-      onAddAsLabelRow();
+      dispatch({ type: "select/addAsLabelRow" });
     } else if (key === "export") {
-      onAddFormatSection("export");
+      dispatch({ type: "select/addFormatSection", section: "export" });
     } else if (key === "format") {
-      onAddFormatSection("csv");
+      dispatch({ type: "select/addFormatSection", section: "csv" });
     }
   };
 
@@ -157,7 +119,11 @@ export default function SelectStepEditor({
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <SectionRow label="SQL">
         <div style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}>
-          <QueryEditor language="sql" value={step.sql} onChange={onChangeSql} />
+          <QueryEditor
+            language="sql"
+            value={step.sql}
+            onChange={(sql) => dispatch({ type: "select/changeSql", sql })}
+          />
         </div>
       </SectionRow>
 
@@ -170,13 +136,21 @@ export default function SelectStepEditor({
               <Segmented
                 value={activeFormat}
                 options={FORMAT_CHOICES}
-                onChange={(value) => onChangeFormat(value as SelectInputFormat)}
+                onChange={(value) =>
+                  dispatch({
+                    type: "select/changeFormat",
+                    format: value as SelectInputFormat,
+                  })
+                }
               />
               {activeFormat === "csv" && (
                 <Checkbox
                   checked={step.csv.hasHeaders}
                   onChange={(e) =>
-                    onChangeCsv({ hasHeaders: e.target.checked })
+                    dispatch({
+                      type: "select/changeCsv",
+                      changes: { hasHeaders: e.target.checked },
+                    })
                   }
                 >
                   Has headers
@@ -184,7 +158,12 @@ export default function SelectStepEditor({
               )}
               <RemoveSectionButton
                 label="Format"
-                onRemove={() => onRemoveFormatSection(activeFormat)}
+                onRemove={() =>
+                  dispatch({
+                    type: "select/removeFormatSection",
+                    section: activeFormat,
+                  })
+                }
               />
             </div>
             {activeFormat === "protobuf" && (
@@ -194,7 +173,10 @@ export default function SelectStepEditor({
                     placeholder="message name"
                     value={step.protobuf.messageName}
                     onChange={(e) =>
-                      onChangeProtobuf({ messageName: e.target.value })
+                      dispatch({
+                        type: "select/changeProtobuf",
+                        changes: { messageName: e.target.value },
+                      })
                     }
                     style={{ width: PROTOBUF_MESSAGE_NAME_WIDTH }}
                   />
@@ -202,22 +184,35 @@ export default function SelectStepEditor({
                     placeholder="schema (.proto content)"
                     value={step.protobuf.schema}
                     onChange={(e) =>
-                      onChangeProtobuf({ schema: e.target.value })
+                      dispatch({
+                        type: "select/changeProtobuf",
+                        changes: { schema: e.target.value },
+                      })
                     }
                     style={{ width: PROTOBUF_SCHEMA_WIDTH }}
                   />
                 </div>
                 <ProtobufFieldRowList
                   rows={step.protobuf.fields}
-                  onChange={onChangeProtobufFieldRow}
-                  onRemove={onRemoveProtobufFieldRow}
+                  onChange={(id, changes) =>
+                    dispatch({
+                      type: "select/changeProtobufFieldRow",
+                      id,
+                      changes,
+                    })
+                  }
+                  onRemove={(id) =>
+                    dispatch({ type: "select/removeProtobufFieldRow", id })
+                  }
                 />
                 <Button
                   aria-label="Add protobuf field"
                   icon={
                     <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
                   }
-                  onClick={onAddProtobufFieldRow}
+                  onClick={() =>
+                    dispatch({ type: "select/addProtobufFieldRow" })
+                  }
                 />
               </>
             )}
@@ -233,7 +228,12 @@ export default function SelectStepEditor({
               placeholder="format"
               value={step.export.format || undefined}
               options={EXPORT_FORMATS.map((f) => ({ value: f, label: f }))}
-              onChange={(value) => onChangeSelectExport({ format: value })}
+              onChange={(value) =>
+                dispatch({
+                  type: "select/changeExport",
+                  changes: { format: value },
+                })
+              }
               style={{ width: VALUE_INPUT_WIDTH }}
             />
             <InputNumber
@@ -243,8 +243,9 @@ export default function SelectStepEditor({
                 step.export.rows === "" ? undefined : Number(step.export.rows)
               }
               onChange={(value) =>
-                onChangeSelectExport({
-                  rows: value === null ? "" : String(value),
+                dispatch({
+                  type: "select/changeExport",
+                  changes: { rows: value === null ? "" : String(value) },
                 })
               }
               style={{ width: VALUE_INPUT_WIDTH }}
@@ -253,13 +254,21 @@ export default function SelectStepEditor({
               placeholder="max duration (e.g. 1m)"
               value={step.export.duration}
               onChange={(e) =>
-                onChangeSelectExport({ duration: e.target.value })
+                dispatch({
+                  type: "select/changeExport",
+                  changes: { duration: e.target.value },
+                })
               }
               style={{ width: EXPORT_DURATION_WIDTH }}
             />
             <RemoveSectionButton
               label="Export"
-              onRemove={() => onRemoveFormatSection("export")}
+              onRemove={() =>
+                dispatch({
+                  type: "select/removeFormatSection",
+                  section: "export",
+                })
+              }
             />
           </div>
         </SectionRow>
@@ -271,10 +280,17 @@ export default function SelectStepEditor({
             rows={step.asLabel}
             keyPlaceholder="label name (e.g. lat_x)"
             valuePlaceholder="field (e.g. latitude.x)"
-            onChange={onChangeAsLabelRow}
-            onRemove={onRemoveAsLabelRow}
+            onChange={(id, changes) =>
+              dispatch({ type: "select/changeAsLabelRow", id, changes })
+            }
+            onRemove={(id) => dispatch({ type: "select/removeAsLabelRow", id })}
             removeLabel="Remove label mapping"
-            onRemoveSection={() => onRemoveAsLabelRow(step.asLabel[0].id)}
+            onRemoveSection={() =>
+              dispatch({
+                type: "select/removeAsLabelRow",
+                id: step.asLabel[0].id,
+              })
+            }
             sectionRemoveLabel="Remove label mapping"
           />
         </SectionRow>

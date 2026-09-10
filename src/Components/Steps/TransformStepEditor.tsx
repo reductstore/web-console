@@ -1,10 +1,10 @@
+import { Dispatch } from "react";
 import { Input, Tooltip } from "antd";
 import {
-  KeyValueRow,
-  RosExportConfig,
   RosSection,
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
+import { BuilderAction } from "../../Helpers/builderReducer";
 import {
   ROW_INPUT_WIDTH,
   ROW_GAP,
@@ -29,22 +29,7 @@ const ALL_SECTIONS: RosSection[] = ["filter", "encode", "label", "export"];
 
 interface TransformStepEditorProps {
   step: RosTransformStep;
-  onAddSection: (section: RosSection) => void;
-  onRemoveSection: (section: RosSection) => void;
-  onChangeTopic: (topic: string) => void;
-  onAddEncodeRow: () => void;
-  onChangeEncodeRow: (
-    id: string,
-    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
-  ) => void;
-  onRemoveEncodeRow: (id: string) => void;
-  onAddAsLabelRow: () => void;
-  onChangeAsLabelRow: (
-    id: string,
-    changes: Partial<Pick<KeyValueRow, "key" | "value">>,
-  ) => void;
-  onRemoveAsLabelRow: (id: string) => void;
-  onChangeExport: (changes: Partial<RosExportConfig>) => void;
+  dispatch: Dispatch<BuilderAction>;
 }
 
 function disabledReason(
@@ -74,16 +59,7 @@ function disabledReason(
 
 export default function TransformStepEditor({
   step,
-  onAddSection,
-  onRemoveSection,
-  onChangeTopic,
-  onAddEncodeRow,
-  onChangeEncodeRow,
-  onRemoveEncodeRow,
-  onAddAsLabelRow,
-  onChangeAsLabelRow,
-  onRemoveAsLabelRow,
-  onChangeExport,
+  dispatch,
 }: TransformStepEditorProps) {
   const menuItems = ALL_SECTIONS.map((section) => {
     const reason = disabledReason(section, step);
@@ -105,11 +81,11 @@ export default function TransformStepEditor({
   const handleMenuClick = ({ key }: { key: string }) => {
     const section = key as RosSection;
     if (section === "encode" && step.sections.includes("encode")) {
-      onAddEncodeRow();
+      dispatch({ type: "ros/addEncodeRow" });
     } else if (section === "label" && step.sections.includes("label")) {
-      onAddAsLabelRow();
+      dispatch({ type: "ros/addAsLabelRow" });
     } else {
-      onAddSection(section);
+      dispatch({ type: "ros/addSection", section });
     }
   };
 
@@ -121,12 +97,16 @@ export default function TransformStepEditor({
             <Input
               placeholder="optional ROS topic filter"
               value={step.topic}
-              onChange={(e) => onChangeTopic(e.target.value)}
+              onChange={(e) =>
+                dispatch({ type: "ros/changeTopic", topic: e.target.value })
+              }
               style={{ width: ROW_GROUP_WIDTH }}
             />
             <RemoveSectionButton
               label={SECTION_LABELS.filter}
-              onRemove={() => onRemoveSection("filter")}
+              onRemove={() =>
+                dispatch({ type: "ros/removeSection", section: "filter" })
+              }
             />
           </div>
         </SectionRow>
@@ -138,10 +118,14 @@ export default function TransformStepEditor({
             rows={step.encode}
             keyPlaceholder="field (e.g. data)"
             valuePlaceholder="encoding (e.g. jpeg)"
-            onChange={onChangeEncodeRow}
-            onRemove={onRemoveEncodeRow}
+            onChange={(id, changes) =>
+              dispatch({ type: "ros/changeEncodeRow", id, changes })
+            }
+            onRemove={(id) => dispatch({ type: "ros/removeEncodeRow", id })}
             removeLabel="Remove encode mapping"
-            onRemoveSection={() => onRemoveSection("encode")}
+            onRemoveSection={() =>
+              dispatch({ type: "ros/removeSection", section: "encode" })
+            }
             sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
           />
         </SectionRow>
@@ -153,10 +137,14 @@ export default function TransformStepEditor({
             rows={step.asLabel}
             keyPlaceholder="label name (e.g. lat_x)"
             valuePlaceholder="field (e.g. latitude.x)"
-            onChange={onChangeAsLabelRow}
-            onRemove={onRemoveAsLabelRow}
+            onChange={(id, changes) =>
+              dispatch({ type: "ros/changeAsLabelRow", id, changes })
+            }
+            onRemove={(id) => dispatch({ type: "ros/removeAsLabelRow", id })}
             removeLabel="Remove label mapping"
-            onRemoveSection={() => onRemoveSection("label")}
+            onRemoveSection={() =>
+              dispatch({ type: "ros/removeSection", section: "label" })
+            }
             sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
           />
         </SectionRow>
@@ -168,24 +156,41 @@ export default function TransformStepEditor({
             <Input
               placeholder="mcap (currently the only format)"
               value={step.export.format}
-              onChange={(e) => onChangeExport({ format: e.target.value })}
+              onChange={(e) =>
+                dispatch({
+                  type: "ros/changeExport",
+                  changes: { format: e.target.value },
+                })
+              }
               style={{ width: ROW_INPUT_WIDTH }}
             />
             <Input
               placeholder="max duration (e.g. 1m)"
               value={step.export.duration}
-              onChange={(e) => onChangeExport({ duration: e.target.value })}
+              onChange={(e) =>
+                dispatch({
+                  type: "ros/changeExport",
+                  changes: { duration: e.target.value },
+                })
+              }
               style={{ width: ROW_INPUT_WIDTH }}
             />
             <Input
               placeholder="max size (e.g. 100MB)"
               value={step.export.size}
-              onChange={(e) => onChangeExport({ size: e.target.value })}
+              onChange={(e) =>
+                dispatch({
+                  type: "ros/changeExport",
+                  changes: { size: e.target.value },
+                })
+              }
               style={{ width: ROW_INPUT_WIDTH }}
             />
             <RemoveSectionButton
               label={SECTION_LABELS.export}
-              onRemove={() => onRemoveSection("export")}
+              onRemove={() =>
+                dispatch({ type: "ros/removeSection", section: "export" })
+              }
             />
           </div>
         </SectionRow>

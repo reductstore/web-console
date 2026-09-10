@@ -11,22 +11,9 @@ const baseStep: RosTransformStep = {
   export: { format: "", duration: "", size: "" },
 };
 
-const noopHandlers = {
-  onAddSection: vi.fn(),
-  onRemoveSection: vi.fn(),
-  onChangeTopic: vi.fn(),
-  onAddEncodeRow: vi.fn(),
-  onChangeEncodeRow: vi.fn(),
-  onRemoveEncodeRow: vi.fn(),
-  onAddAsLabelRow: vi.fn(),
-  onChangeAsLabelRow: vi.fn(),
-  onRemoveAsLabelRow: vi.fn(),
-  onChangeExport: vi.fn(),
-};
-
 describe("TransformStepEditor", () => {
   it("shows only the Add option menu when no section is added", () => {
-    render(<TransformStepEditor step={baseStep} {...noopHandlers} />);
+    render(<TransformStepEditor step={baseStep} dispatch={vi.fn()} />);
     expect(screen.getByLabelText("Add option")).toBeTruthy();
     expect(
       screen.queryByPlaceholderText("optional ROS topic filter"),
@@ -34,17 +21,14 @@ describe("TransformStepEditor", () => {
   });
 
   it("adds a section via the dropdown menu", async () => {
-    const onAddSection = vi.fn();
-    render(
-      <TransformStepEditor
-        step={baseStep}
-        {...noopHandlers}
-        onAddSection={onAddSection}
-      />,
-    );
+    const dispatch = vi.fn();
+    render(<TransformStepEditor step={baseStep} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Add option"));
     fireEvent.click(await screen.findByText("Filter"));
-    expect(onAddSection).toHaveBeenCalledWith("filter");
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "ros/addSection",
+      section: "filter",
+    });
   });
 
   it("greys out Export once Filter/Encode/Label is added, and vice versa, but always shows all four options", async () => {
@@ -53,7 +37,7 @@ describe("TransformStepEditor", () => {
       sections: ["filter"],
       topic: "/robot/odom",
     };
-    render(<TransformStepEditor step={withFilter} {...noopHandlers} />);
+    render(<TransformStepEditor step={withFilter} dispatch={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Add option"));
     expect(
       await screen.findByRole("menuitem", { name: "Encode" }),
@@ -70,7 +54,7 @@ describe("TransformStepEditor", () => {
       sections: ["export"],
       export: { format: "mcap", duration: "", size: "" },
     };
-    render(<TransformStepEditor step={withExport} {...noopHandlers} />);
+    render(<TransformStepEditor step={withExport} dispatch={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Add option"));
     for (const name of ["Filter", "Encode", "As label", "Export"]) {
       expect(await screen.findByRole("menuitem", { name })).toHaveAttribute(
@@ -87,7 +71,7 @@ describe("TransformStepEditor", () => {
       encode: [{ id: "e1", key: "", value: "" }],
       asLabel: [{ id: "l1", key: "", value: "" }],
     };
-    render(<TransformStepEditor step={step} {...noopHandlers} />);
+    render(<TransformStepEditor step={step} dispatch={vi.fn()} />);
     expect(screen.getByLabelText("Add option")).not.toBeDisabled();
   });
 
@@ -99,39 +83,33 @@ describe("TransformStepEditor", () => {
     };
 
     it("shows the current topic", () => {
-      render(<TransformStepEditor step={step} {...noopHandlers} />);
+      render(<TransformStepEditor step={step} dispatch={vi.fn()} />);
       expect(
         screen.getByPlaceholderText("optional ROS topic filter"),
       ).toHaveValue("/robot/odom");
     });
 
     it("reports a typed topic", () => {
-      const onChangeTopic = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeTopic={onChangeTopic}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.change(
         screen.getByPlaceholderText("optional ROS topic filter"),
         { target: { value: "/camera/image" } },
       );
-      expect(onChangeTopic).toHaveBeenCalledWith("/camera/image");
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeTopic",
+        topic: "/camera/image",
+      });
     });
 
     it("removes the section via its remove button", () => {
-      const onRemoveSection = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onRemoveSection={onRemoveSection}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Remove filter"));
-      expect(onRemoveSection).toHaveBeenCalledWith("filter");
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/removeSection",
+        section: "filter",
+      });
     });
   });
 
@@ -143,71 +121,56 @@ describe("TransformStepEditor", () => {
     };
 
     it("renders a row and reports edits", () => {
-      const onChangeEncodeRow = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeEncodeRow={onChangeEncodeRow}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.change(screen.getByPlaceholderText("field (e.g. data)"), {
         target: { value: "image" },
       });
-      expect(onChangeEncodeRow).toHaveBeenCalledWith("e1", { key: "image" });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeEncodeRow",
+        id: "e1",
+        changes: { key: "image" },
+      });
 
       fireEvent.change(screen.getByPlaceholderText("encoding (e.g. jpeg)"), {
         target: { value: "base64" },
       });
-      expect(onChangeEncodeRow).toHaveBeenCalledWith("e1", {
-        value: "base64",
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeEncodeRow",
+        id: "e1",
+        changes: { value: "base64" },
       });
     });
 
     it("removes the whole section when the only row's remove button is clicked", () => {
-      const onRemoveSection = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onRemoveSection={onRemoveSection}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Remove encode"));
-      expect(onRemoveSection).toHaveBeenCalledWith("encode");
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/removeSection",
+        section: "encode",
+      });
     });
 
     it("adds another encode row when Encode is picked again from the menu", async () => {
-      const onAddEncodeRow = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onAddEncodeRow={onAddEncodeRow}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
-      expect(onAddEncodeRow).toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledWith({ type: "ros/addEncodeRow" });
     });
 
     it("still allows adding another encode row even when the last row is incomplete", async () => {
-      const onAddEncodeRow = vi.fn();
+      const dispatch = vi.fn();
       const partial: RosTransformStep = {
         ...baseStep,
         sections: ["encode"],
         encode: [{ id: "e1", key: "data", value: "" }],
       };
-      render(
-        <TransformStepEditor
-          step={partial}
-          {...noopHandlers}
-          onAddEncodeRow={onAddEncodeRow}
-        />,
-      );
+      render(<TransformStepEditor step={partial} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
-      expect(onAddEncodeRow).toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledWith({ type: "ros/addEncodeRow" });
     });
   });
 
@@ -219,31 +182,29 @@ describe("TransformStepEditor", () => {
     };
 
     it("renders a row and reports edits", () => {
-      const onChangeAsLabelRow = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeAsLabelRow={onChangeAsLabelRow}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
         target: { value: "velocity" },
       });
-      expect(onChangeAsLabelRow).toHaveBeenCalledWith("l1", {
-        key: "velocity",
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeAsLabelRow",
+        id: "l1",
+        changes: { key: "velocity" },
       });
 
       fireEvent.change(screen.getByPlaceholderText("field (e.g. latitude.x)"), {
         target: { value: "data.speed" },
       });
-      expect(onChangeAsLabelRow).toHaveBeenCalledWith("l1", {
-        value: "data.speed",
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeAsLabelRow",
+        id: "l1",
+        changes: { value: "data.speed" },
       });
     });
 
-    it("calls onRemoveAsLabelRow with the row's id", () => {
-      const onRemoveAsLabelRow = vi.fn();
+    it("calls dispatch with ros/removeAsLabelRow and the row's id", () => {
+      const dispatch = vi.fn();
       const twoRows: RosTransformStep = {
         ...baseStep,
         sections: ["label"],
@@ -252,29 +213,23 @@ describe("TransformStepEditor", () => {
           { id: "l2", key: "accel", value: "accel" },
         ],
       };
-      render(
-        <TransformStepEditor
-          step={twoRows}
-          {...noopHandlers}
-          onRemoveAsLabelRow={onRemoveAsLabelRow}
-        />,
-      );
+      render(<TransformStepEditor step={twoRows} dispatch={dispatch} />);
       const [firstRemove] = screen.getAllByLabelText("Remove label mapping");
       fireEvent.click(firstRemove);
-      expect(onRemoveAsLabelRow).toHaveBeenCalledWith("l1");
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/removeAsLabelRow",
+        id: "l1",
+      });
     });
 
     it("removes the whole section via its remove button", () => {
-      const onRemoveSection = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onRemoveSection={onRemoveSection}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Remove as label"));
-      expect(onRemoveSection).toHaveBeenCalledWith("label");
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/removeSection",
+        section: "label",
+      });
     });
   });
 
@@ -286,7 +241,7 @@ describe("TransformStepEditor", () => {
     };
 
     it("shows the current format, duration, and size", () => {
-      render(<TransformStepEditor step={step} {...noopHandlers} />);
+      render(<TransformStepEditor step={step} dispatch={vi.fn()} />);
       expect(
         screen.getByPlaceholderText("mcap (currently the only format)"),
       ).toHaveValue("mcap");
@@ -299,18 +254,15 @@ describe("TransformStepEditor", () => {
     });
 
     it("reports edits to each field", () => {
-      const onChangeExport = vi.fn();
-      render(
-        <TransformStepEditor
-          step={step}
-          {...noopHandlers}
-          onChangeExport={onChangeExport}
-        />,
-      );
+      const dispatch = vi.fn();
+      render(<TransformStepEditor step={step} dispatch={dispatch} />);
       fireEvent.change(screen.getByPlaceholderText("max duration (e.g. 1m)"), {
         target: { value: "5m" },
       });
-      expect(onChangeExport).toHaveBeenCalledWith({ duration: "5m" });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "ros/changeExport",
+        changes: { duration: "5m" },
+      });
     });
   });
 });
