@@ -24,7 +24,7 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
 }));
 
 const baseStep: SelectTransformStep = {
-  sql: "",
+  sqlSteps: [{ id: "sql-1", sql: "" }],
   asLabel: [],
   formatSections: [],
   csv: { hasHeaders: false },
@@ -33,26 +33,52 @@ const baseStep: SelectTransformStep = {
 };
 
 describe("SelectStepEditor", () => {
-  it("shows the SQL input with the current value", () => {
+  it("shows the current SQL value as a frozen preview, not an editable input", () => {
     render(
       <SelectStepEditor
-        step={{ ...baseStep, sql: "SELECT * FROM ENTRY()" }}
+        step={{
+          ...baseStep,
+          sqlSteps: [{ id: "sql-1", sql: "SELECT * FROM ENTRY()" }],
+        }}
         dispatch={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("monaco-editor")).toHaveValue(
-      "SELECT * FROM ENTRY()",
-    );
+    expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
+    expect(screen.queryByTestId("monaco-editor")).toBeNull();
   });
 
-  it("reports a typed SQL expression", () => {
+  it("shows SELECT * FROM ENTRY() as the default when the first SQL row is blank", () => {
+    render(<SelectStepEditor step={baseStep} dispatch={vi.fn()} />);
+    expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
+    expect(screen.queryByText("No SQL yet")).toBeNull();
+  });
+
+  it("shows a placeholder when a later SQL row is blank", () => {
+    const step: SelectTransformStep = {
+      ...baseStep,
+      sqlSteps: [
+        { id: "sql-1", sql: "SELECT * FROM ENTRY()" },
+        { id: "sql-2", sql: "" },
+      ],
+    };
+    render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+    expect(screen.getByText("No SQL yet")).toBeTruthy();
+  });
+
+  it("opens the SQL Editor modal via the edit button and reports a typed expression", () => {
     const dispatch = vi.fn();
     render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
+    expect(screen.queryByTestId("monaco-editor")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Edit SQL"));
+    expect(screen.getByText("SQL Editor")).toBeTruthy();
+
     fireEvent.change(screen.getByTestId("monaco-editor"), {
       target: { value: "SELECT temp.value FROM ENTRY()" },
     });
     expect(dispatch).toHaveBeenCalledWith({
       type: "select/changeSql",
+      id: "sql-1",
       sql: "SELECT temp.value FROM ENTRY()",
     });
   });
@@ -136,6 +162,27 @@ describe("SelectStepEditor", () => {
   });
 
   describe("Add option menu", () => {
+    it("dispatches select/addSqlStep when Add SQL row is picked, and it's never disabled", () => {
+      const dispatch = vi.fn();
+      const step: SelectTransformStep = {
+        ...baseStep,
+        sqlSteps: [
+          { id: "sql-1", sql: "" },
+          { id: "sql-2", sql: "" },
+        ],
+      };
+      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      fireEvent.click(screen.getByLabelText("Add option"));
+      expect(
+        screen.getByRole("menuitem", { name: "Add SQL row" }),
+      ).not.toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(screen.getByText("Add SQL row"));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "select/addSqlStep",
+        id: expect.any(String),
+      });
+    });
+
     it("adds the format section (defaulting to CSV) via the dropdown menu", () => {
       const dispatch = vi.fn();
       render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);

@@ -1,21 +1,24 @@
-import { Dispatch } from "react";
+import { Dispatch, useState } from "react";
 import {
   Button,
   Checkbox,
   Input,
   InputNumber,
+  Modal,
   Segmented,
   Select,
   Tooltip,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
+  DEFAULT_SQL,
   SelectInputFormat,
   SelectTransformStep,
 } from "../../Helpers/transformStepBuilder";
 import { BuilderAction } from "../../Helpers/builderReducer";
 import {
   ROW_GAP,
+  ROW_GROUP_WIDTH,
   ROW_ICON_FONT_SIZE,
   WRAP_ROW_STYLE,
   VALUE_INPUT_WIDTH,
@@ -31,8 +34,6 @@ import {
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
 import { QueryEditor } from "../QueryEditor";
-
-const SQL_INPUT_MAX_WIDTH = 704;
 
 const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
   { value: "csv", label: "CSV" },
@@ -50,11 +51,12 @@ function activeFormatOf(
     ?.value;
 }
 
-type AddOption = "format" | "export" | "asLabel";
+type AddOption = "sql" | "format" | "export" | "asLabel";
 
-const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel"];
+const ADD_OPTIONS: AddOption[] = ["sql", "format", "export", "asLabel"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
+  sql: "Add SQL row",
   format: "Format",
   export: "Export",
   asLabel: "As label",
@@ -64,7 +66,7 @@ function disabledReason(
   option: AddOption,
   step: SelectTransformStep,
 ): string | undefined {
-  if (option === "asLabel") return undefined;
+  if (option === "sql" || option === "asLabel") return undefined;
 
   if (option === "export") {
     return step.formatSections.includes("export")
@@ -75,6 +77,77 @@ function disabledReason(
   return activeFormatOf(step) !== undefined
     ? "Format is already added"
     : undefined;
+}
+
+function SqlStepPreview({
+  value,
+  onChange,
+  editLabel,
+  isFirst,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  editLabel: string;
+  isFirst: boolean;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const displayValue = isFirst && !value.trim() ? DEFAULT_SQL : value;
+
+  return (
+    <>
+      <div
+        style={{
+          minWidth: ROW_GROUP_WIDTH,
+          border: "1px solid #d9d9d9",
+          borderRadius: 6,
+          padding: "6px 10px",
+          background: "#fafafa",
+          fontFamily: "monospace",
+          fontSize: 13,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}
+      >
+        {displayValue.trim() ? (
+          displayValue
+        ) : (
+          <span style={{ color: "#8c8c8c" }}>No SQL yet</span>
+        )}
+      </div>
+      <Button
+        aria-label={editLabel}
+        type="text"
+        icon={<EditOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+        onClick={() => setIsEditing(true)}
+      />
+      {isEditing && (
+        <Modal
+          open={isEditing}
+          onCancel={() => setIsEditing(false)}
+          footer={null}
+          closable
+          title="SQL Editor"
+          mask={{ closable: false }}
+          keyboard={false}
+          className="jsonQueryEditorModal"
+          width="90vw"
+          centered
+        >
+          <div
+            style={{ display: "flex", flexDirection: "column", height: "100%" }}
+          >
+            <QueryEditor
+              language="sql"
+              value={displayValue}
+              onChange={onChange}
+              height="100%"
+              containerStyle={{ flex: 1, minHeight: 0 }}
+            />
+          </div>
+        </Modal>
+      )}
+    </>
+  );
 }
 
 interface SelectStepEditorProps {
@@ -104,7 +177,9 @@ export default function SelectStepEditor({
   });
 
   const handleMenuClick = ({ key }: { key: string }) => {
-    if (key === "asLabel") {
+    if (key === "sql") {
+      dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() });
+    } else if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
         kind: "select",
@@ -129,15 +204,37 @@ export default function SelectStepEditor({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <SectionRow label="SQL">
-        <div style={{ flex: 1, minWidth: 0, maxWidth: SQL_INPUT_MAX_WIDTH }}>
-          <QueryEditor
-            language="sql"
-            value={step.sql}
-            onChange={(sql) => dispatch({ type: "select/changeSql", sql })}
-          />
-        </div>
-      </SectionRow>
+      {step.sqlSteps.map((sqlStep, index) => {
+        const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
+        return (
+          <SectionRow key={sqlStep.id} label={label}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: ROW_GAP,
+              }}
+            >
+              <SqlStepPreview
+                value={sqlStep.sql}
+                editLabel={`Edit ${label}`}
+                isFirst={index === 0}
+                onChange={(sql) =>
+                  dispatch({ type: "select/changeSql", id: sqlStep.id, sql })
+                }
+              />
+              {step.sqlSteps.length > 1 && (
+                <RemoveSectionButton
+                  label={label}
+                  onRemove={() =>
+                    dispatch({ type: "select/removeSqlStep", id: sqlStep.id })
+                  }
+                />
+              )}
+            </div>
+          </SectionRow>
+        );
+      })}
 
       {activeFormat && (
         <SectionRow label="Format">

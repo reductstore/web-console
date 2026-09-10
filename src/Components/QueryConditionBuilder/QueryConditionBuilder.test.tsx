@@ -1284,7 +1284,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      expect(screen.getByTestId("monaco-editor")).toBeTruthy();
+      expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
       expect(screen.queryByText("As label")).toBeNull();
     });
 
@@ -1338,6 +1338,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      fireEvent.click(screen.getByLabelText("Edit SQL"));
       fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT temp.value AS value FROM ENTRY()" },
       });
@@ -1351,7 +1352,7 @@ describe("QueryConditionBuilder", () => {
 
       const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
       const parsed = JSON.parse(lastValue);
-      expect(parsed["#ext"].select).toMatchObject({
+      expect(parsed["#ext"].select[0]).toMatchObject({
         sql: "SELECT temp.value AS value FROM ENTRY()",
         as_label: { value: "value" },
       });
@@ -1401,7 +1402,7 @@ describe("QueryConditionBuilder", () => {
 
       const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
       const parsed = JSON.parse(lastValue);
-      expect(parsed["#ext"].select).toMatchObject({
+      expect(parsed["#ext"].select[0]).toMatchObject({
         parquet: {},
         export: { format: "parquet", rows: 500, duration: "1m" },
       });
@@ -1452,9 +1453,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       expect(screen.getByText("Select")).toBeTruthy();
-      expect(screen.getByTestId("monaco-editor")).toHaveValue(
-        "SELECT * FROM ENTRY()",
-      );
+      expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
     });
 
     it("resyncs when the value prop's #ext key changes from outside while already in builder mode", () => {

@@ -23,7 +23,7 @@ import {
   updateProtobuf,
   updateProtobufFieldRow,
   updateSelectExport,
-  updateSql,
+  updateSqlStep,
   updateTopic,
 } from "./transformStepBuilder";
 
@@ -44,7 +44,8 @@ function expectSelect(
 }
 
 function blankSelectTransform() {
-  return updateSql(createSelectTransformStep(), "");
+  const transform = createSelectTransformStep();
+  return updateSqlStep(transform, transform.select.sqlSteps[0].id, "");
 }
 
 describe("transformStepBuilder", () => {
@@ -415,18 +416,22 @@ describe("transformStepBuilder", () => {
       it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
-        expect(transform.select.sql).toBe("SELECT * FROM ENTRY()\n");
+        expect(transform.select.sqlSteps).toEqual([
+          { id: expect.any(String), sql: "SELECT * FROM ENTRY()\n" },
+        ]);
         expect(transform.select.asLabel).toEqual([]);
       });
     });
 
-    describe("updateSql", () => {
+    describe("updateSqlStep", () => {
       it("updates the sql expression", () => {
-        const transform = updateSql(
-          createSelectTransformStep(),
+        const initial = createSelectTransformStep();
+        const transform = updateSqlStep(
+          initial,
+          initial.select.sqlSteps[0].id,
           "SELECT * FROM ENTRY()",
         );
-        expect(transform.select.sql).toBe("SELECT * FROM ENTRY()");
+        expect(transform.select.sqlSteps[0].sql).toBe("SELECT * FROM ENTRY()");
       });
     });
 
@@ -486,23 +491,25 @@ describe("transformStepBuilder", () => {
     describe("buildExtPayload", () => {
       it("includes the default sql when nothing else is filled in", () => {
         expect(buildExtPayload([createSelectTransformStep()])).toEqual({
-          select: { sql: "SELECT * FROM ENTRY()" },
+          select: [{ sql: "SELECT * FROM ENTRY()" }],
         });
       });
 
-      it("returns an empty select object when sql is also blank", () => {
+      it("returns an empty select stage when sql is also blank", () => {
         expect(buildExtPayload([blankSelectTransform()])).toEqual({
-          select: {},
+          select: [{}],
         });
       });
 
       it("includes sql only when non-blank", () => {
-        const transform = updateSql(
-          createSelectTransformStep(),
+        const initial = createSelectTransformStep();
+        const transform = updateSqlStep(
+          initial,
+          initial.select.sqlSteps[0].id,
           "  SELECT * FROM ENTRY()  ",
         );
         expect(buildExtPayload([transform])).toEqual({
-          select: { sql: "SELECT * FROM ENTRY()" },
+          select: [{ sql: "SELECT * FROM ENTRY()" }],
         });
       });
 
@@ -517,13 +524,15 @@ describe("transformStepBuilder", () => {
           },
         );
         expect(buildExtPayload([transform])).toEqual({
-          select: { as_label: { speed: "vector.x" } },
+          select: [{ as_label: { speed: "vector.x" } }],
         });
       });
 
       it("includes both sql and as_label when both are filled", () => {
-        let transform = updateSql(
-          createSelectTransformStep(),
+        const initial = createSelectTransformStep();
+        let transform = updateSqlStep(
+          initial,
+          initial.select.sqlSteps[0].id,
           "SELECT * FROM ENTRY()",
         );
         transform = addAsLabelRow(transform);
@@ -536,10 +545,12 @@ describe("transformStepBuilder", () => {
           },
         );
         expect(buildExtPayload([transform])).toEqual({
-          select: {
-            sql: "SELECT * FROM ENTRY()",
-            as_label: { speed: "vector.x" },
-          },
+          select: [
+            {
+              sql: "SELECT * FROM ENTRY()",
+              as_label: { speed: "vector.x" },
+            },
+          ],
         });
       });
     });
@@ -563,7 +574,7 @@ describe("transformStepBuilder", () => {
         const result = parseExtPayload({ select: {} });
         expect(result.success).toBe(true);
         expect(expectSelect(result.transforms).select).toEqual({
-          sql: "",
+          sqlSteps: [{ id: expect.any(String), sql: "" }],
           asLabel: [],
           formatSections: [],
           csv: { hasHeaders: false },
@@ -580,7 +591,7 @@ describe("transformStepBuilder", () => {
           },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select.sql).toBe(
+        expect(expectSelect(result.transforms).select.sqlSteps[0].sql).toBe(
           "SELECT * FROM ENTRY()",
         );
         expect(expectSelect(result.transforms).select.asLabel).toContainEqual(
@@ -592,7 +603,7 @@ describe("transformStepBuilder", () => {
         const transform: TransformStepEntry = {
           kind: "select",
           select: {
-            sql: "SELECT * FROM ENTRY()",
+            sqlSteps: [{ id: "s1", sql: "SELECT * FROM ENTRY()" }],
             asLabel: [{ id: "l1", key: "speed", value: "vector.x" }],
             formatSections: [],
             csv: { hasHeaders: false },
@@ -756,19 +767,21 @@ describe("transformStepBuilder", () => {
         let transform = addFormatSection(blankSelectTransform(), "csv");
         transform = updateCsv(transform, { hasHeaders: true });
         expect(buildExtPayload([transform])).toEqual({
-          select: { csv: { has_headers: true } },
+          select: [{ csv: { has_headers: true } }],
         });
       });
 
       it("includes an empty json object", () => {
         const transform = addFormatSection(blankSelectTransform(), "json");
-        expect(buildExtPayload([transform])).toEqual({ select: { json: {} } });
+        expect(buildExtPayload([transform])).toEqual({
+          select: [{ json: {} }],
+        });
       });
 
       it("includes an empty parquet object", () => {
         const transform = addFormatSection(blankSelectTransform(), "parquet");
         expect(buildExtPayload([transform])).toEqual({
-          select: { parquet: {} },
+          select: [{ parquet: {} }],
         });
       });
 
@@ -779,12 +792,14 @@ describe("transformStepBuilder", () => {
           schema: "base64==",
         });
         expect(buildExtPayload([transform])).toEqual({
-          select: {
-            protobuf: {
-              message_name: "pkg.SensorReading",
-              schema: "base64==",
+          select: [
+            {
+              protobuf: {
+                message_name: "pkg.SensorReading",
+                schema: "base64==",
+              },
             },
-          },
+          ],
         });
       });
 
@@ -801,9 +816,11 @@ describe("transformStepBuilder", () => {
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
         expect(buildExtPayload([transform])).toEqual({
-          select: {
-            protobuf: { fields: { device_id: { id: 1, type: "string" } } },
-          },
+          select: [
+            {
+              protobuf: { fields: { device_id: { id: 1, type: "string" } } },
+            },
+          ],
         });
       });
 
@@ -819,7 +836,7 @@ describe("transformStepBuilder", () => {
           { column: "device_id" },
         );
         expect(buildExtPayload([transform])).toEqual({
-          select: { protobuf: { message_name: "pkg.SensorReading" } },
+          select: [{ protobuf: { message_name: "pkg.SensorReading" } }],
         });
       });
 
@@ -836,7 +853,7 @@ describe("transformStepBuilder", () => {
             { column: "device_id", fieldId: badId, fieldType: "string" },
           );
           expect(buildExtPayload([transform])).toEqual({
-            select: { protobuf: { message_name: "pkg.SensorReading" } },
+            select: [{ protobuf: { message_name: "pkg.SensorReading" } }],
           });
         }
       });
@@ -846,11 +863,11 @@ describe("transformStepBuilder", () => {
           format: "parquet",
           rows: "100",
         });
-        expect(buildExtPayload([transform])).toEqual({ select: {} });
+        expect(buildExtPayload([transform])).toEqual({ select: [{}] });
 
         transform = addFormatSection(transform, "export");
         expect(buildExtPayload([transform])).toEqual({
-          select: { export: { format: "parquet", rows: 100 } },
+          select: [{ export: { format: "parquet", rows: 100 } }],
         });
       });
 
@@ -858,7 +875,7 @@ describe("transformStepBuilder", () => {
         let transform = addFormatSection(blankSelectTransform(), "export");
         transform = updateSelectExport(transform, { rows: "not-a-number" });
         expect(buildExtPayload([transform])).toEqual({
-          select: { export: {} },
+          select: [{ export: {} }],
         });
       });
     });
@@ -988,7 +1005,7 @@ describe("transformStepBuilder", () => {
       expect(result.success).toBe(true);
       expect(result.transforms).toHaveLength(2);
       expect(expectRos(result.transforms).ros.topic).toBe("/robot/odom");
-      expect(expectSelect(result.transforms).select.sql).toBe(
+      expect(expectSelect(result.transforms).select.sqlSteps[0].sql).toBe(
         "SELECT * FROM ENTRY()",
       );
     });
@@ -998,7 +1015,7 @@ describe("transformStepBuilder", () => {
         buildExtPayload([createRosTransformStep(), blankSelectTransform()]),
       ).toEqual({
         ros: { extract: {} },
-        select: {},
+        select: [{}],
       });
     });
 

@@ -56,7 +56,9 @@ import {
   updateProtobuf,
   updateProtobufFieldRow,
   updateSelectExport,
-  updateSql,
+  updateSqlStep,
+  addSqlStep,
+  removeSqlStep,
   updateTopic,
 } from "./transformStepBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "./json5Utils";
@@ -121,7 +123,9 @@ export type BuilderAction =
     }
   | { type: "ros/removeEncodeRow"; id: string }
   | { type: "ros/changeExport"; changes: Partial<RosExportConfig> }
-  | { type: "select/changeSql"; sql: string }
+  | { type: "select/changeSql"; id: string; sql: string }
+  | { type: "select/addSqlStep"; id: string }
+  | { type: "select/removeSqlStep"; id: string }
   | {
       type: "select/addFormatSection";
       section: SelectFormatSection;
@@ -255,7 +259,21 @@ export function builderReducer(
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateSql(transform, action.sql),
+          updateSqlStep(transform, action.id, action.sql),
+        ),
+      };
+    case "select/addSqlStep":
+      return {
+        ...state,
+        transforms: mapTransform(state.transforms, "select", (transform) =>
+          addSqlStep(transform, action.id),
+        ),
+      };
+    case "select/removeSqlStep":
+      return {
+        ...state,
+        transforms: mapTransform(state.transforms, "select", (transform) =>
+          removeSqlStep(transform, action.id),
         ),
       };
     case "select/addFormatSection":

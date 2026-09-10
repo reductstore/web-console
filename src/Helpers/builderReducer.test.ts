@@ -271,12 +271,40 @@ describe("builderReducer", () => {
 
     it("select/changeSql sets the sql and leaves the ros transform untouched", () => {
       const initial = stateWithRosAndSelect();
+      const sqlStepId = select(initial).sqlSteps[0].id;
       const state = builderReducer(initial, {
         type: "select/changeSql",
+        id: sqlStepId,
         sql: "SELECT temp FROM ENTRY()",
       });
-      expect(select(state).sql).toBe("SELECT temp FROM ENTRY()");
+      expect(select(state).sqlSteps[0].sql).toBe("SELECT temp FROM ENTRY()");
       expect(state.transforms[0]).toBe(initial.transforms[0]);
+    });
+
+    it("select/addSqlStep appends a new sql step", () => {
+      const initial = stateWithRosAndSelect();
+      const state = builderReducer(initial, {
+        type: "select/addSqlStep",
+        id: "new-sql-step",
+      });
+      expect(select(state).sqlSteps).toHaveLength(2);
+      expect(select(state).sqlSteps[1]).toEqual({
+        id: "new-sql-step",
+        sql: "",
+      });
+    });
+
+    it("select/removeSqlStep removes the matching sql step", () => {
+      const withTwo = builderReducer(stateWithRosAndSelect(), {
+        type: "select/addSqlStep",
+        id: "new-sql-step",
+      });
+      const firstId = select(withTwo).sqlSteps[0].id;
+      const state = builderReducer(withTwo, {
+        type: "select/removeSqlStep",
+        id: firstId,
+      });
+      expect(select(state).sqlSteps).toEqual([{ id: "new-sql-step", sql: "" }]);
     });
 
     it("select/addFormatSection and select/removeFormatSection manage the format sections", () => {

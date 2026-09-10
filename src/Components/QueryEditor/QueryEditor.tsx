@@ -49,6 +49,7 @@ interface QueryEditorProps {
   error?: string;
   readOnly?: boolean;
   validationContext?: ValidationContext;
+  containerStyle?: React.CSSProperties;
 }
 
 interface IDisposable {
@@ -89,6 +90,7 @@ export function QueryEditor({
   error,
   readOnly = false,
   validationContext,
+  containerStyle,
 }: QueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const inlineContainerRef = useRef<HTMLDivElement | null>(null);
@@ -607,7 +609,10 @@ export function QueryEditor({
   );
 
   return (
-    <div className={`jsonQueryEditor ${error ? "hasError" : ""}`}>
+    <div
+      className={`jsonQueryEditor ${error ? "hasError" : ""}`}
+      style={containerStyle}
+    >
       {isExpanded ? (
         <div
           className="jsonQueryEditorPlaceholder"

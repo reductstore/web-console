@@ -49,8 +49,15 @@ export interface SelectExportConfig {
   duration: string;
 }
 
-export interface SelectTransformStep {
+export interface SqlStep {
+  id: string;
   sql: string;
+}
+
+export const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
+
+export interface SelectTransformStep {
+  sqlSteps: SqlStep[];
   asLabel: KeyValueRow[];
   formatSections: SelectFormatSection[];
   csv: CsvConfig;
@@ -84,14 +91,13 @@ export function createRosTransformStep(): Extract<
   };
 }
 
-export function createSelectTransformStep(): Extract<
-  TransformStepEntry,
-  { kind: "select" }
-> {
+export function createSelectTransformStep(
+  id: string = crypto.randomUUID(),
+): Extract<TransformStepEntry, { kind: "select" }> {
   return {
     kind: "select",
     select: {
-      sql: "SELECT * FROM ENTRY()\n",
+      sqlSteps: [{ id, sql: DEFAULT_SQL }],
       asLabel: [],
       formatSections: [],
       csv: { hasHeaders: false },
@@ -101,12 +107,49 @@ export function createSelectTransformStep(): Extract<
   };
 }
 
-export function updateSql<Entry extends TransformStepEntry>(
+export function updateSqlStep<Entry extends TransformStepEntry>(
   transform: Entry,
+  id: string,
   sql: string,
 ): Entry {
   if (transform.kind !== "select") return transform;
-  return { ...transform, select: { ...transform.select, sql } } as Entry;
+  return {
+    ...transform,
+    select: {
+      ...transform.select,
+      sqlSteps: transform.select.sqlSteps.map((step) =>
+        step.id === id ? { ...step, sql } : step,
+      ),
+    },
+  } as Entry;
+}
+
+export function addSqlStep<Entry extends TransformStepEntry>(
+  transform: Entry,
+  id: string = crypto.randomUUID(),
+): Entry {
+  if (transform.kind !== "select") return transform;
+  return {
+    ...transform,
+    select: {
+      ...transform.select,
+      sqlSteps: [...transform.select.sqlSteps, { id, sql: "" }],
+    },
+  } as Entry;
+}
+
+export function removeSqlStep<Entry extends TransformStepEntry>(
+  transform: Entry,
+  id: string,
+): Entry {
+  if (transform.kind !== "select") return transform;
+  return {
+    ...transform,
+    select: {
+      ...transform.select,
+      sqlSteps: transform.select.sqlSteps.filter((step) => step.id !== id),
+    },
+  } as Entry;
 }
 
 export function addFormatSection<Entry extends TransformStepEntry>(
@@ -529,25 +572,27 @@ function rowsToMap(rows: KeyValueRow[]): Record<string, string> {
   );
 }
 
-function buildSelectExt(select: SelectTransformStep): Record<string, unknown> {
+function buildSelectExt(
+  select: SelectTransformStep,
+): Record<string, unknown>[] {
   const {
-    sql,
+    sqlSteps,
     asLabel,
     formatSections,
     csv,
     protobuf,
     export: exportConfig,
   } = select;
-  const payload: Record<string, unknown> = {};
+  const finalStageExtras: Record<string, unknown> = {};
 
   if (formatSections.includes("csv")) {
-    payload.csv = { has_headers: csv.hasHeaders };
+    finalStageExtras.csv = { has_headers: csv.hasHeaders };
   }
   if (formatSections.includes("json")) {
-    payload.json = {};
+    finalStageExtras.json = {};
   }
   if (formatSections.includes("parquet")) {
-    payload.parquet = {};
+    finalStageExtras.parquet = {};
   }
   if (formatSections.includes("protobuf")) {
     const completeFields = protobuf.fields.filter(
@@ -557,7 +602,7 @@ function buildSelectExt(select: SelectTransformStep): Record<string, unknown> {
         isValidProtobufFieldId(row.fieldId),
     );
     if (completeFields.length > 0) {
-      payload.protobuf = {
+      finalStageExtras.protobuf = {
         fields: Object.fromEntries(
           completeFields.map((row) => [
             row.column.trim(),
@@ -571,11 +616,9 @@ function buildSelectExt(select: SelectTransformStep): Record<string, unknown> {
         protobufConfig.message_name = protobuf.messageName.trim();
       if (protobuf.schema.trim())
         protobufConfig.schema = protobuf.schema.trim();
-      payload.protobuf = protobufConfig;
+      finalStageExtras.protobuf = protobufConfig;
     }
   }
-
-  if (sql.trim()) payload.sql = sql.trim();
 
   if (formatSections.includes("export")) {
     const exportPayload: Record<string, unknown> = {};
@@ -587,13 +630,21 @@ function buildSelectExt(select: SelectTransformStep): Record<string, unknown> {
     }
     if (exportConfig.duration.trim())
       exportPayload.duration = exportConfig.duration.trim();
-    payload.export = exportPayload;
+    finalStageExtras.export = exportPayload;
   }
 
   const asLabelMap = rowsToMap(asLabel);
-  if (Object.keys(asLabelMap).length > 0) payload.as_label = asLabelMap;
+  if (Object.keys(asLabelMap).length > 0) {
+    finalStageExtras.as_label = asLabelMap;
+  }
 
-  return payload;
+  const lastIndex = sqlSteps.length - 1;
+  return sqlSteps.map((step, index) => {
+    const stage: Record<string, unknown> = {};
+    if (step.sql.trim()) stage.sql = step.sql.trim();
+    if (index === lastIndex) Object.assign(stage, finalStageExtras);
+    return stage;
+  });
 }
 
 function buildRosExt(ros: RosTransformStep): Record<string, unknown> {
@@ -787,143 +838,168 @@ function parseSelectPayload(select: unknown): {
   success: boolean;
   transform?: TransformStepEntry;
 } {
-  if (!isPlainObject(select)) {
-    return { success: false };
-  }
-  const {
-    sql,
-    as_label: asLabelRaw,
-    csv: csvRaw,
-    json: jsonRaw,
-    parquet: parquetRaw,
-    protobuf: protobufRaw,
-    export: exportRaw,
-  } = select;
-
-  if (sql !== undefined && typeof sql !== "string") {
+  const stages = Array.isArray(select) ? select : [select];
+  if (stages.length === 0) {
     return { success: false };
   }
 
-  const presentFormats = [csvRaw, jsonRaw, parquetRaw, protobufRaw].filter(
-    (raw) => raw !== undefined,
-  ).length;
-  if (presentFormats > 1) {
-    return { success: false };
-  }
-
+  const sqlSteps: SqlStep[] = [];
   const formatSections: SelectFormatSection[] = [];
   let csv: CsvConfig = { hasHeaders: false };
   let protobuf: ProtobufConfig = { messageName: "", schema: "", fields: [] };
   let exportConfig: SelectExportConfig = { format: "", rows: "", duration: "" };
+  let asLabel: KeyValueRow[] = [];
 
-  if (csvRaw !== undefined) {
-    if (!isPlainObject(csvRaw)) {
-      return { success: false };
-    }
-    const { has_headers: hasHeadersRaw } = csvRaw;
-    if (hasHeadersRaw !== undefined && typeof hasHeadersRaw !== "boolean") {
-      return { success: false };
-    }
-    formatSections.push("csv");
-    csv = { hasHeaders: (hasHeadersRaw as boolean) ?? false };
-  }
-
-  if (jsonRaw !== undefined) {
-    if (!isPlainObject(jsonRaw)) {
-      return { success: false };
-    }
-    formatSections.push("json");
-  }
-
-  if (parquetRaw !== undefined) {
-    if (!isPlainObject(parquetRaw)) {
-      return { success: false };
-    }
-    formatSections.push("parquet");
-  }
-
-  if (protobufRaw !== undefined) {
-    if (!isPlainObject(protobufRaw)) {
+  for (let index = 0; index < stages.length; index++) {
+    const stage = stages[index];
+    if (!isPlainObject(stage)) {
       return { success: false };
     }
     const {
-      message_name: messageNameRaw,
-      schema: schemaRaw,
-      fields: fieldsRaw,
-    } = protobufRaw;
-    if (messageNameRaw !== undefined && typeof messageNameRaw !== "string") {
+      sql,
+      as_label: asLabelRaw,
+      csv: csvRaw,
+      json: jsonRaw,
+      parquet: parquetRaw,
+      protobuf: protobufRaw,
+      export: exportRaw,
+    } = stage;
+
+    if (sql !== undefined && typeof sql !== "string") {
       return { success: false };
     }
-    if (schemaRaw !== undefined && typeof schemaRaw !== "string") {
+    sqlSteps.push({ id: crypto.randomUUID(), sql: (sql as string) ?? "" });
+
+    const hasExtras =
+      csvRaw !== undefined ||
+      jsonRaw !== undefined ||
+      parquetRaw !== undefined ||
+      protobufRaw !== undefined ||
+      exportRaw !== undefined ||
+      asLabelRaw !== undefined;
+    // Format/export/as_label only ever apply to the final stage's output.
+    if (hasExtras && index !== stages.length - 1) {
       return { success: false };
     }
-    const fields: ProtobufFieldRow[] = [];
-    if (fieldsRaw !== undefined) {
-      if (!isPlainObject(fieldsRaw)) {
+    if (!hasExtras) {
+      continue;
+    }
+
+    const presentFormats = [csvRaw, jsonRaw, parquetRaw, protobufRaw].filter(
+      (raw) => raw !== undefined,
+    ).length;
+    if (presentFormats > 1) {
+      return { success: false };
+    }
+
+    if (csvRaw !== undefined) {
+      if (!isPlainObject(csvRaw)) {
         return { success: false };
       }
-      for (const [column, rawField] of Object.entries(fieldsRaw)) {
-        if (!isPlainObject(rawField)) {
-          return { success: false };
-        }
-        const { id: fieldIdRaw, type: fieldTypeRaw } = rawField;
-        if (
-          typeof fieldIdRaw !== "number" ||
-          !Number.isInteger(fieldIdRaw) ||
-          fieldIdRaw <= 0 ||
-          typeof fieldTypeRaw !== "string"
-        ) {
-          return { success: false };
-        }
-        fields.push({
-          id: crypto.randomUUID(),
-          column,
-          fieldId: String(fieldIdRaw),
-          fieldType: fieldTypeRaw,
-        });
+      const { has_headers: hasHeadersRaw } = csvRaw;
+      if (hasHeadersRaw !== undefined && typeof hasHeadersRaw !== "boolean") {
+        return { success: false };
       }
+      formatSections.push("csv");
+      csv = { hasHeaders: (hasHeadersRaw as boolean) ?? false };
     }
-    formatSections.push("protobuf");
-    protobuf = {
-      messageName: (messageNameRaw as string) ?? "",
-      schema: (schemaRaw as string) ?? "",
-      fields,
-    };
-  }
 
-  if (exportRaw !== undefined) {
-    if (!isPlainObject(exportRaw)) {
-      return { success: false };
+    if (jsonRaw !== undefined) {
+      if (!isPlainObject(jsonRaw)) {
+        return { success: false };
+      }
+      formatSections.push("json");
     }
-    const { format, rows, duration } = exportRaw;
-    if (format !== undefined && typeof format !== "string") {
-      return { success: false };
-    }
-    if (rows !== undefined && typeof rows !== "number") {
-      return { success: false };
-    }
-    if (
-      duration !== undefined &&
-      typeof duration !== "string" &&
-      typeof duration !== "number"
-    ) {
-      return { success: false };
-    }
-    formatSections.push("export");
-    exportConfig = {
-      format: (format as string) ?? "",
-      rows: rows !== undefined ? String(rows) : "",
-      duration: duration !== undefined ? String(duration) : "",
-    };
-  }
 
-  let asLabel: KeyValueRow[] = [];
-  if (asLabelRaw !== undefined) {
-    const rows = parseRowMap(asLabelRaw);
-    if (!rows) {
-      return { success: false };
+    if (parquetRaw !== undefined) {
+      if (!isPlainObject(parquetRaw)) {
+        return { success: false };
+      }
+      formatSections.push("parquet");
     }
-    asLabel = rows;
+
+    if (protobufRaw !== undefined) {
+      if (!isPlainObject(protobufRaw)) {
+        return { success: false };
+      }
+      const {
+        message_name: messageNameRaw,
+        schema: schemaRaw,
+        fields: fieldsRaw,
+      } = protobufRaw;
+      if (messageNameRaw !== undefined && typeof messageNameRaw !== "string") {
+        return { success: false };
+      }
+      if (schemaRaw !== undefined && typeof schemaRaw !== "string") {
+        return { success: false };
+      }
+      const fields: ProtobufFieldRow[] = [];
+      if (fieldsRaw !== undefined) {
+        if (!isPlainObject(fieldsRaw)) {
+          return { success: false };
+        }
+        for (const [column, rawField] of Object.entries(fieldsRaw)) {
+          if (!isPlainObject(rawField)) {
+            return { success: false };
+          }
+          const { id: fieldIdRaw, type: fieldTypeRaw } = rawField;
+          if (
+            typeof fieldIdRaw !== "number" ||
+            !Number.isInteger(fieldIdRaw) ||
+            fieldIdRaw <= 0 ||
+            typeof fieldTypeRaw !== "string"
+          ) {
+            return { success: false };
+          }
+          fields.push({
+            id: crypto.randomUUID(),
+            column,
+            fieldId: String(fieldIdRaw),
+            fieldType: fieldTypeRaw,
+          });
+        }
+      }
+      formatSections.push("protobuf");
+      protobuf = {
+        messageName: (messageNameRaw as string) ?? "",
+        schema: (schemaRaw as string) ?? "",
+        fields,
+      };
+    }
+
+    if (exportRaw !== undefined) {
+      if (!isPlainObject(exportRaw)) {
+        return { success: false };
+      }
+      const { format, rows, duration } = exportRaw;
+      if (format !== undefined && typeof format !== "string") {
+        return { success: false };
+      }
+      if (rows !== undefined && typeof rows !== "number") {
+        return { success: false };
+      }
+      if (
+        duration !== undefined &&
+        typeof duration !== "string" &&
+        typeof duration !== "number"
+      ) {
+        return { success: false };
+      }
+      formatSections.push("export");
+      exportConfig = {
+        format: (format as string) ?? "",
+        rows: rows !== undefined ? String(rows) : "",
+        duration: duration !== undefined ? String(duration) : "",
+      };
+    }
+
+    if (asLabelRaw !== undefined) {
+      const rows = parseRowMap(asLabelRaw);
+      if (!rows) {
+        return { success: false };
+      }
+      asLabel = rows;
+    }
   }
 
   return {
@@ -931,7 +1007,7 @@ function parseSelectPayload(select: unknown): {
     transform: {
       kind: "select",
       select: {
-        sql: (sql as string) ?? "",
+        sqlSteps,
         asLabel,
         formatSections,
         csv,
