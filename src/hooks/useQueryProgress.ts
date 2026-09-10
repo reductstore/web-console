@@ -15,8 +15,15 @@ const formatDuration = (ms: number): string => {
 };
 
 const matchesPattern = (entryName: string, pattern: string): boolean => {
+  if (pattern.endsWith("**")) {
+    return entryName.startsWith(pattern.slice(0, -2));
+  }
   if (pattern.endsWith("*")) {
-    return entryName.startsWith(pattern.slice(0, -1));
+    const prefix = pattern.slice(0, -1);
+    return (
+      entryName.startsWith(prefix) &&
+      !entryName.slice(prefix.length).includes("/")
+    );
   }
   return pattern === entryName;
 };

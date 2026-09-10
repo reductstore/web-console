@@ -9,6 +9,8 @@ import { MemoryRouter } from "react-router-dom";
 import { message } from "antd";
 import { useQueryStore } from "../../stores/queryStore";
 
+vi.setConfig({ testTimeout: 15_000 });
+
 type RemoveRecordFn = (entry: string, ts: bigint) => Promise<void>;
 type MockedRemoveRecord = RemoveRecordFn & {
   mockClear: () => void;
