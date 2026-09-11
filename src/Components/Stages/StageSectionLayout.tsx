@@ -1,30 +1,50 @@
-import { ReactNode } from "react";
+import { CSSProperties, ReactNode } from "react";
 import { Button, Dropdown, MenuProps, Typography } from "antd";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
-import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE } from "./stageRowLayout";
+import {
+  ROW_LABEL_WIDTH,
+  ROW_ICON_FONT_SIZE,
+  ROW_VALUE_COLUMN_WIDTH,
+  ROW_GAP,
+} from "./stageRowLayout";
 
-export function SectionRow({
+export const STAGE_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: `${ROW_LABEL_WIDTH}px ${ROW_VALUE_COLUMN_WIDTH}px max-content`,
+  rowGap: 16,
+  columnGap: ROW_GAP,
+  alignItems: "start",
+};
+
+export function GridRow({
   label,
+  actions,
   children,
 }: {
   label: string;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-      <Typography.Text
-        strong
-        style={{
-          width: ROW_LABEL_WIDTH,
-          flexShrink: 0,
-          paddingTop: 6,
-          fontSize: 12,
-        }}
-      >
+    <>
+      <Typography.Text strong style={{ fontSize: 12, paddingTop: 6 }}>
         {label}
       </Typography.Text>
-      {children}
-    </div>
+      <div>{children}</div>
+      <div style={{ display: "flex" }}>{actions}</div>
+    </>
+  );
+}
+
+export function GridFooter({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div />
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        {children}
+      </div>
+      <div />
+    </>
   );
 }
 
@@ -48,30 +68,55 @@ export function RemoveSectionButton({
 export function AddOptionFooter({
   menuItems,
   onMenuClick,
-  docHref,
-  docLabel,
+  ariaLabel = "Add option",
 }: {
   menuItems: MenuProps["items"];
   onMenuClick: MenuProps["onClick"];
-  docHref: string;
-  docLabel: string;
+  ariaLabel?: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Dropdown
-        menu={{ items: menuItems, onClick: onMenuClick }}
-        trigger={["click"]}
+    <Dropdown
+      menu={{ items: menuItems, onClick: onMenuClick }}
+      trigger={["click"]}
+    >
+      <Button
+        aria-label={ariaLabel}
+        shape="circle"
+        size="small"
+        className="addOptionCircleButton"
+        icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+      />
+    </Dropdown>
+  );
+}
+
+export function AddOptionButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  );
+}
+
+export function ExtensionsDocLink() {
+  return (
+    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <a
+        href="https://www.reduct.store/docs/extensions"
+        target="_blank"
+        rel="noopener noreferrer"
       >
-        <Button
-          aria-label="Add option"
-          icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-        />
-      </Dropdown>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        <a href={docHref} target="_blank" rel="noopener noreferrer">
-          <strong>{docLabel}</strong>
-        </a>
-      </Typography.Text>
-    </div>
+        <strong>View Extensions Documentation →</strong>
+      </a>
+    </Typography.Text>
   );
 }

@@ -1459,6 +1459,30 @@ describe("QueryConditionBuilder", () => {
       expect(onUnrepresentable).not.toHaveBeenCalled();
     });
 
+    it("shows a single Extensions documentation link, not one per extension", () => {
+      const value = JSON.stringify({
+        "#ext": {
+          ros: { extract: {} },
+          select: { sql: "SELECT * FROM ENTRY()" },
+        },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      const links = screen.getAllByText("View Extensions Documentation →");
+      expect(links).toHaveLength(1);
+      expect(links[0].closest("a")).toHaveAttribute(
+        "href",
+        "https://www.reduct.store/docs/extensions",
+      );
+    });
+
     it("keeps ROS above Select even when Select was added first", async () => {
       render(
         <QueryConditionBuilder

@@ -9,6 +9,7 @@ import {
 import {
   ROW_INPUT_WIDTH,
   ROW_ICON_FONT_SIZE,
+  OPERATOR_SELECT_WIDTH,
   WRAP_ROW_STYLE,
 } from "./stageRowLayout";
 
@@ -65,7 +66,7 @@ export default function LabelConditionEditor({
         value={condition.operator}
         options={LABEL_OPERATORS}
         onChange={handleOperatorChange}
-        style={{ width: "max-content", minWidth: 48 }}
+        style={{ width: OPERATOR_SELECT_WIDTH }}
         popupMatchSelectWidth={false}
       />
       {isMultiValue ? (

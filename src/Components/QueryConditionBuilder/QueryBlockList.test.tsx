@@ -92,6 +92,57 @@ describe("QueryBlockList", () => {
     expect(screen.getByLabelText("Add stage")).toBeTruthy();
   });
 
+  it("shows an insert button above the first block when onAddBefore is given", () => {
+    const onAddBefore = vi.fn();
+    render(
+      <QueryBlockList
+        blocks={[block("a", { onAddBefore }), block("b")]}
+        onReorderBlock={() => {}}
+        addStageMenu={null}
+      />,
+    );
+    const insertButtons = screen.getAllByLabelText("Insert stage here");
+    fireEvent.click(insertButtons[0]);
+    expect(onAddBefore).toHaveBeenCalled();
+  });
+
+  it("hides the insert-before button when the first block has no onAddBefore", () => {
+    render(
+      <QueryBlockList
+        blocks={[block("a", { onAddAfter: () => {} }), block("b")]}
+        onReorderBlock={() => {}}
+        addStageMenu={null}
+      />,
+    );
+    // Only the between-blocks button (from block "a"'s onAddAfter) shows -
+    // no leading one, since block "a" has no onAddBefore.
+    expect(screen.getAllByLabelText("Insert stage here")).toHaveLength(1);
+  });
+
+  it("shows an insert button between two blocks that calls the earlier block's onAddAfter", () => {
+    const onAddAfter = vi.fn();
+    render(
+      <QueryBlockList
+        blocks={[block("a", { onAddAfter }), block("b")]}
+        onReorderBlock={() => {}}
+        addStageMenu={null}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Insert stage here"));
+    expect(onAddAfter).toHaveBeenCalled();
+  });
+
+  it("does not render an insert button after the last block", () => {
+    render(
+      <QueryBlockList
+        blocks={[block("a", { onAddAfter: () => {} })]}
+        onReorderBlock={() => {}}
+        addStageMenu={null}
+      />,
+    );
+    expect(screen.queryByLabelText("Insert stage here")).toBeNull();
+  });
+
   it("calls onReorderBlock with the resolved from/to indexes when a block is dragged over another", () => {
     const onReorderBlock = vi.fn();
     render(

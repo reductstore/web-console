@@ -5,16 +5,13 @@ import {
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
 import { BuilderAction } from "../../Helpers/builderReducer";
+import { ROW_INPUT_WIDTH, WRAP_ROW_STYLE } from "./stageRowLayout";
 import {
-  ROW_INPUT_WIDTH,
-  ROW_GAP,
-  ROW_GROUP_WIDTH,
-  WRAP_ROW_STYLE,
-} from "./stageRowLayout";
-import {
-  SectionRow,
   RemoveSectionButton,
   AddOptionFooter,
+  GridRow,
+  GridFooter,
+  STAGE_GRID_STYLE,
 } from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
 
@@ -94,75 +91,85 @@ export default function TransformStageEditor({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={STAGE_GRID_STYLE}>
       {step.sections.includes("filter") && (
-        <SectionRow label={SECTION_LABELS.filter}>
-          <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
-            <Input
-              placeholder="optional ROS topic filter"
-              value={step.topic}
-              onChange={(e) =>
-                dispatch({ type: "ros/changeTopic", topic: e.target.value })
-              }
-              style={{ width: ROW_GROUP_WIDTH }}
-            />
+        <GridRow
+          label={SECTION_LABELS.filter}
+          actions={
             <RemoveSectionButton
               label={SECTION_LABELS.filter}
               onRemove={() =>
                 dispatch({ type: "ros/removeSection", section: "filter" })
               }
             />
-          </div>
-        </SectionRow>
+          }
+        >
+          <Input
+            placeholder="optional ROS topic filter"
+            value={step.topic}
+            onChange={(e) =>
+              dispatch({ type: "ros/changeTopic", topic: e.target.value })
+            }
+            style={{ width: "100%" }}
+          />
+        </GridRow>
       )}
 
       {step.sections.includes("encode") && (
-        <SectionRow label={SECTION_LABELS.encode}>
-          <RowList
-            rows={step.encode}
-            keyPlaceholder="field (e.g. data)"
-            valuePlaceholder="encoding (e.g. jpeg)"
-            onChange={(id, changes) =>
-              dispatch({ type: "ros/changeEncodeRow", id, changes })
-            }
-            onRemove={(id) => dispatch({ type: "ros/removeEncodeRow", id })}
-            removeLabel="Remove encode mapping"
-            onRemoveSection={() =>
-              dispatch({ type: "ros/removeSection", section: "encode" })
-            }
-            sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
-          />
-        </SectionRow>
+        <RowList
+          label={SECTION_LABELS.encode}
+          rows={step.encode}
+          keyPlaceholder="field (e.g. data)"
+          valuePlaceholder="encoding (e.g. jpeg)"
+          onChange={(id, changes) =>
+            dispatch({ type: "ros/changeEncodeRow", id, changes })
+          }
+          onRemove={(id) => dispatch({ type: "ros/removeEncodeRow", id })}
+          removeLabel="Remove encode mapping"
+          onRemoveSection={() =>
+            dispatch({ type: "ros/removeSection", section: "encode" })
+          }
+          sectionRemoveLabel={`Remove ${SECTION_LABELS.encode.toLowerCase()}`}
+        />
       )}
 
       {step.sections.includes("label") && (
-        <SectionRow label={SECTION_LABELS.label}>
-          <RowList
-            rows={step.asLabel}
-            keyPlaceholder="label name (e.g. lat_x)"
-            valuePlaceholder="field (e.g. latitude.x)"
-            onChange={(id, changes) =>
-              dispatch({
-                type: "transform/changeAsLabelRow",
-                kind: "ros",
-                id,
-                changes,
-              })
-            }
-            onRemove={(id) =>
-              dispatch({ type: "transform/removeAsLabelRow", kind: "ros", id })
-            }
-            removeLabel="Remove label mapping"
-            onRemoveSection={() =>
-              dispatch({ type: "ros/removeSection", section: "label" })
-            }
-            sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
-          />
-        </SectionRow>
+        <RowList
+          label={SECTION_LABELS.label}
+          rows={step.asLabel}
+          keyPlaceholder="label name (e.g. lat_x)"
+          valuePlaceholder="field (e.g. latitude.x)"
+          onChange={(id, changes) =>
+            dispatch({
+              type: "transform/changeAsLabelRow",
+              kind: "ros",
+              id,
+              changes,
+            })
+          }
+          onRemove={(id) =>
+            dispatch({ type: "transform/removeAsLabelRow", kind: "ros", id })
+          }
+          removeLabel="Remove label mapping"
+          onRemoveSection={() =>
+            dispatch({ type: "ros/removeSection", section: "label" })
+          }
+          sectionRemoveLabel={`Remove ${SECTION_LABELS.label.toLowerCase()}`}
+        />
       )}
 
       {step.sections.includes("export") && (
-        <SectionRow label={SECTION_LABELS.export}>
+        <GridRow
+          label={SECTION_LABELS.export}
+          actions={
+            <RemoveSectionButton
+              label={SECTION_LABELS.export}
+              onRemove={() =>
+                dispatch({ type: "ros/removeSection", section: "export" })
+              }
+            />
+          }
+        >
           <div style={WRAP_ROW_STYLE}>
             <Input
               placeholder="mcap (currently the only format)"
@@ -197,22 +204,13 @@ export default function TransformStageEditor({
               }
               style={{ width: ROW_INPUT_WIDTH }}
             />
-            <RemoveSectionButton
-              label={SECTION_LABELS.export}
-              onRemove={() =>
-                dispatch({ type: "ros/removeSection", section: "export" })
-              }
-            />
           </div>
-        </SectionRow>
+        </GridRow>
       )}
 
-      <AddOptionFooter
-        menuItems={menuItems}
-        onMenuClick={handleMenuClick}
-        docHref="https://www.reduct.store/docs/extensions/official/ros-ext"
-        docLabel="View ReductROS Documentation →"
-      />
+      <GridFooter>
+        <AddOptionFooter menuItems={menuItems} onMenuClick={handleMenuClick} />
+      </GridFooter>
     </div>
   );
 }

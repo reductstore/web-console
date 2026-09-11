@@ -18,6 +18,7 @@ import LimitStageEditor from "../Stages/LimitStageEditor";
 import TransformStageEditor from "../Stages/TransformStageEditor";
 import SelectStageEditor from "../Stages/SelectStageEditor";
 import { ROW_ICON_FONT_SIZE } from "../Stages/stageRowLayout";
+import { ExtensionsDocLink } from "../Stages/StageSectionLayout";
 import {
   CONDITIONS_BLOCK_ID,
   hasIncompleteSteps,
@@ -128,7 +129,6 @@ function StageKindSelect({
     <Select
       aria-label="Stage type"
       placeholder="Select a stage type"
-      size="small"
       style={{ width: 160 }}
       popupMatchSelectWidth={300}
       classNames={{ popup: { root: "stageKindDropdown" } }}
@@ -209,6 +209,23 @@ function buildBlocks(
   intervalValue: string | undefined,
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
+  const insertHandlers = (anchorId: string) => ({
+    onAddBefore: () =>
+      dispatch({
+        type: "stage/insert",
+        id: crypto.randomUUID(),
+        anchorId,
+        position: "before" as const,
+      }),
+    onAddAfter: () =>
+      dispatch({
+        type: "stage/insert",
+        id: crypto.randomUUID(),
+        anchorId,
+        position: "after" as const,
+      }),
+  });
+
   return state.blockOrder.flatMap((id): BuilderBlock[] => {
     if (state.pendingStages.includes(id)) {
       if (!sourceReady) return [];
@@ -219,6 +236,7 @@ function buildBlocks(
           onRemove: () => dispatch({ type: "stage/removePending", id }),
           enabled: true,
           onToggleEnabled: () => {},
+          ...insertHandlers(id),
           kindSelector: (
             <StageKindSelect
               value={null}
@@ -245,6 +263,7 @@ function buildBlocks(
           enabled: isStageEnabled(state, CONDITIONS_BLOCK_ID),
           onToggleEnabled: () =>
             dispatch({ type: "stage/toggleEnabled", id: CONDITIONS_BLOCK_ID }),
+          ...insertHandlers(CONDITIONS_BLOCK_ID),
           kindSelector: (
             <StageKindSelect
               value="conditions"
@@ -300,6 +319,7 @@ function buildBlocks(
           enabled: isStageEnabled(state, PROCESS_BLOCK_ID),
           onToggleEnabled: () =>
             dispatch({ type: "stage/toggleEnabled", id: PROCESS_BLOCK_ID }),
+          ...insertHandlers(PROCESS_BLOCK_ID),
           kindSelector: (
             <StageKindSelect
               value="ext"
@@ -341,18 +361,26 @@ function buildBlocks(
                 </ProcessSubsection>
               )}
               {(!rosTransform || !selectTransform) && (
-                <Dropdown
-                  menu={{ items: addNestedItems, onClick: handleAddNested }}
-                  trigger={["click"]}
-                >
-                  <Button
-                    aria-label="Add ROS or Select"
-                    icon={
-                      <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
-                    }
-                  />
-                </Dropdown>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <Dropdown
+                    menu={{ items: addNestedItems, onClick: handleAddNested }}
+                    trigger={["click"]}
+                  >
+                    <Button
+                      aria-label="Add ROS or Select"
+                      shape="circle"
+                      size="small"
+                      className="addOptionCircleButton"
+                      icon={
+                        <PlusOutlined
+                          style={{ fontSize: ROW_ICON_FONT_SIZE }}
+                        />
+                      }
+                    />
+                  </Dropdown>
+                </div>
               )}
+              <ExtensionsDocLink />
             </div>
           ),
         },
@@ -372,6 +400,7 @@ function buildBlocks(
           enabled: isStageEnabled(state, step.id),
           onToggleEnabled: () =>
             dispatch({ type: "stage/toggleEnabled", id: step.id }),
+          ...insertHandlers(step.id),
           kindSelector: (
             <StageKindSelect
               value={step.type === "each_n" ? "sample_each_n" : "sample_each_t"}
@@ -415,6 +444,7 @@ function buildBlocks(
         enabled: isStageEnabled(state, step.id),
         onToggleEnabled: () =>
           dispatch({ type: "stage/toggleEnabled", id: step.id }),
+        ...insertHandlers(step.id),
         kindSelector: (
           <StageKindSelect
             value="limit"

@@ -178,23 +178,13 @@ describe("SelectStageEditor", () => {
     });
   });
 
-  it("links to the ReductSelect documentation", () => {
-    render(<SelectStageEditor step={baseStep} dispatch={vi.fn()} />);
-    const link = screen.getByText("View ReductSelect Documentation →");
-    expect(link.closest("a")).toHaveAttribute(
-      "href",
-      "https://www.reduct.store/docs/extensions/official/select-ext",
-    );
-  });
-
-  describe("Add SQL row (bottom menu)", () => {
-    it("dispatches select/addSqlStep when Add SQL row is picked", () => {
+  describe("Add SQL row (bottom button)", () => {
+    it("dispatches select/addSqlStep when the Add SQL row button is clicked", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(screen.getByText("Add SQL row"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",

@@ -81,6 +81,20 @@ function removeBlockId(blockOrder: string[], id: string): string[] {
   return blockOrder.filter((blockId) => blockId !== id);
 }
 
+function insertBlockId(
+  blockOrder: string[],
+  id: string,
+  anchorId: string,
+  position: "before" | "after",
+): string[] {
+  const anchorIndex = blockOrder.indexOf(anchorId);
+  if (anchorIndex === -1) return appendBlockId(blockOrder, id);
+  const insertAt = position === "before" ? anchorIndex : anchorIndex + 1;
+  const next = [...blockOrder];
+  next.splice(insertAt, 0, id);
+  return next;
+}
+
 export interface BuilderState {
   conditions: FlatCondition[];
   steps: Step[];
@@ -237,6 +251,12 @@ export type BuilderAction =
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
   | { type: "stage/toggleEnabled"; id: string }
   | { type: "stage/add"; id: string }
+  | {
+      type: "stage/insert";
+      id: string;
+      anchorId: string;
+      position: "before" | "after";
+    }
   | { type: "stage/setKind"; id: string; kind: StageKind }
   | { type: "stage/removePending"; id: string }
   | { type: "step/remove"; id: string }
@@ -516,6 +536,17 @@ export function builderReducer(
       return {
         ...state,
         blockOrder: appendBlockId(state.blockOrder, action.id),
+        pendingStages: [...state.pendingStages, action.id],
+      };
+    case "stage/insert":
+      return {
+        ...state,
+        blockOrder: insertBlockId(
+          state.blockOrder,
+          action.id,
+          action.anchorId,
+          action.position,
+        ),
         pendingStages: [...state.pendingStages, action.id],
       };
     case "stage/removePending":

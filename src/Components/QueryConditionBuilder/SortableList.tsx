@@ -1,4 +1,5 @@
 import {
+  Fragment,
   ReactElement,
   ReactNode,
   cloneElement,
@@ -26,12 +27,14 @@ interface SortableListProps<T extends { id: string }> {
   items: T[];
   onReorder: (fromIndex: number, toIndex: number) => void;
   renderItem: (item: T, index: number) => ReactNode;
+  renderBetween?: (item: T, index: number) => ReactNode;
 }
 
 export default function SortableList<T extends { id: string }>({
   items,
   onReorder,
   renderItem,
+  renderBetween,
 }: SortableListProps<T>) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -80,7 +83,14 @@ export default function SortableList<T extends { id: string }>({
         items={items.map((item) => item.id)}
         strategy={verticalListSortingStrategy}
       >
-        {items.map((item, index) => renderItem(item, index))}
+        {items.map((item, index) => (
+          <Fragment key={item.id}>
+            {renderItem(item, index)}
+            {renderBetween && index < items.length - 1
+              ? renderBetween(item, index)
+              : null}
+          </Fragment>
+        ))}
       </SortableContext>
       {/* Renders a floating, unconstrained clone of the dragged card that
           follows the pointer - without it, the card being dragged stays

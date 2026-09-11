@@ -2,7 +2,6 @@ import { Dispatch, useState } from "react";
 import {
   Button,
   Checkbox,
-  Dropdown,
   Input,
   InputNumber,
   MenuProps,
@@ -30,9 +29,12 @@ import {
   PROTOBUF_SCHEMA_WIDTH,
 } from "./stageRowLayout";
 import {
-  SectionRow,
   RemoveSectionButton,
   AddOptionFooter,
+  AddOptionButton,
+  GridRow,
+  GridFooter,
+  STAGE_GRID_STYLE,
 } from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
@@ -76,78 +78,6 @@ function disabledReason(option: AddOption, step: SqlStep): string | undefined {
     : undefined;
 }
 
-function SqlStepPreview({
-  value,
-  onChange,
-  editLabel,
-  isFirst,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  editLabel: string;
-  isFirst: boolean;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const displayValue = isFirst && !value.trim() ? DEFAULT_SQL : value;
-
-  return (
-    <>
-      <div
-        style={{
-          minWidth: ROW_GROUP_WIDTH,
-          border: "1px solid #d9d9d9",
-          borderRadius: 6,
-          padding: "6px 10px",
-          background: "#fafafa",
-          fontFamily: "monospace",
-          fontSize: 13,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-        }}
-      >
-        {displayValue.trim() ? (
-          displayValue
-        ) : (
-          <span style={{ color: "#8c8c8c" }}>No SQL yet</span>
-        )}
-      </div>
-      <Button
-        aria-label={editLabel}
-        type="text"
-        icon={<EditOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-        onClick={() => setIsEditing(true)}
-      />
-      {isEditing && (
-        <Modal
-          open={isEditing}
-          onCancel={() => setIsEditing(false)}
-          footer={null}
-          closable
-          title="SQL Editor"
-          mask={{ closable: false }}
-          keyboard={false}
-          className="jsonQueryEditorModal"
-          width="90vw"
-          centered
-        >
-          <div
-            style={{ display: "flex", flexDirection: "column", height: "100%" }}
-          >
-            <QueryEditor
-              language="sql"
-              value={displayValue}
-              onChange={onChange}
-              height="100%"
-              containerStyle={{ flex: 1, minHeight: 0 }}
-              allowExpand={false}
-            />
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-
 function SqlStepBlock({
   step,
   label,
@@ -162,6 +92,8 @@ function SqlStepBlock({
   dispatch: Dispatch<BuilderAction>;
 }) {
   const activeFormat = activeFormatOf(step);
+  const [isEditingSql, setIsEditingSql] = useState(false);
+  const displaySql = isFirst && !step.sql.trim() ? DEFAULT_SQL : step.sql;
 
   const menuItems: MenuProps["items"] = ADD_OPTIONS.map((option) => {
     const reason = disabledReason(option, step);
@@ -206,32 +138,94 @@ function SqlStepBlock({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <SectionRow label={label}>
-        <div
-          style={{ display: "flex", alignItems: "flex-start", gap: ROW_GAP }}
-        >
-          <SqlStepPreview
-            value={step.sql}
-            editLabel={`Edit ${label}`}
-            isFirst={isFirst}
-            onChange={(sql) =>
-              dispatch({ type: "select/changeSql", id: step.id, sql })
-            }
-          />
-          {removable && (
-            <RemoveSectionButton
-              label={label}
-              onRemove={() =>
-                dispatch({ type: "select/removeSqlStep", id: step.id })
-              }
+    <>
+      <GridRow
+        label={label}
+        actions={
+          <>
+            <Button
+              aria-label={`Edit ${label}`}
+              type="text"
+              icon={<EditOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+              onClick={() => setIsEditingSql(true)}
             />
+            {removable && (
+              <RemoveSectionButton
+                label={label}
+                onRemove={() =>
+                  dispatch({ type: "select/removeSqlStep", id: step.id })
+                }
+              />
+            )}
+          </>
+        }
+      >
+        <div
+          style={{
+            minWidth: ROW_GROUP_WIDTH,
+            border: "1px solid #d9d9d9",
+            borderRadius: 6,
+            padding: "6px 10px",
+            background: "#fafafa",
+            fontFamily: "monospace",
+            fontSize: 13,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {displaySql.trim() ? (
+            displaySql
+          ) : (
+            <span style={{ color: "#8c8c8c" }}>No SQL yet</span>
           )}
         </div>
-      </SectionRow>
+      </GridRow>
+      {isEditingSql && (
+        <Modal
+          open={isEditingSql}
+          onCancel={() => setIsEditingSql(false)}
+          footer={null}
+          closable
+          title="SQL Editor"
+          mask={{ closable: false }}
+          keyboard={false}
+          className="jsonQueryEditorModal"
+          width="90vw"
+          centered
+        >
+          <div
+            style={{ display: "flex", flexDirection: "column", height: "100%" }}
+          >
+            <QueryEditor
+              language="sql"
+              value={displaySql}
+              onChange={(sql) =>
+                dispatch({ type: "select/changeSql", id: step.id, sql })
+              }
+              height="100%"
+              containerStyle={{ flex: 1, minHeight: 0 }}
+              allowExpand={false}
+            />
+          </div>
+        </Modal>
+      )}
 
       {activeFormat && (
-        <SectionRow label="Format">
+        <GridRow
+          label="Format"
+          actions={
+            <RemoveSectionButton
+              label={`${label} format`}
+              onRemove={() =>
+                dispatch({
+                  type: "select/removeFormatSection",
+                  stepId: step.id,
+                  section: activeFormat,
+                })
+              }
+            />
+          }
+        >
           <div
             style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
           >
@@ -262,16 +256,6 @@ function SqlStepBlock({
                   Has headers
                 </Checkbox>
               )}
-              <RemoveSectionButton
-                label={`${label} format`}
-                onRemove={() =>
-                  dispatch({
-                    type: "select/removeFormatSection",
-                    stepId: step.id,
-                    section: activeFormat,
-                  })
-                }
-              />
             </div>
             {activeFormat === "protobuf" && (
               <>
@@ -321,6 +305,9 @@ function SqlStepBlock({
                 />
                 <Button
                   aria-label="Add protobuf field"
+                  shape="circle"
+                  size="small"
+                  className="addOptionCircleButton"
                   icon={
                     <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
                   }
@@ -335,11 +322,25 @@ function SqlStepBlock({
               </>
             )}
           </div>
-        </SectionRow>
+        </GridRow>
       )}
 
       {step.formatSections.includes("export") && (
-        <SectionRow label="Export">
+        <GridRow
+          label="Export"
+          actions={
+            <RemoveSectionButton
+              label={`${label} export`}
+              onRemove={() =>
+                dispatch({
+                  type: "select/removeFormatSection",
+                  stepId: step.id,
+                  section: "export",
+                })
+              }
+            />
+          }
+        >
           <div style={WRAP_ROW_STYLE}>
             <Select
               aria-label="Export format"
@@ -382,67 +383,54 @@ function SqlStepBlock({
               }
               style={{ width: EXPORT_DURATION_WIDTH }}
             />
-            <RemoveSectionButton
-              label={`${label} export`}
-              onRemove={() =>
-                dispatch({
-                  type: "select/removeFormatSection",
-                  stepId: step.id,
-                  section: "export",
-                })
-              }
-            />
           </div>
-        </SectionRow>
+        </GridRow>
       )}
 
       {step.asLabel.length > 0 && (
-        <SectionRow label="As label">
-          <RowList
-            rows={step.asLabel}
-            keyPlaceholder="label name (e.g. lat_x)"
-            valuePlaceholder="field (e.g. latitude.x)"
-            onChange={(id, changes) =>
-              dispatch({
-                type: "transform/changeAsLabelRow",
-                kind: "select",
-                stepId: step.id,
-                id,
-                changes,
-              })
-            }
-            onRemove={(id) =>
-              dispatch({
-                type: "transform/removeAsLabelRow",
-                kind: "select",
-                stepId: step.id,
-                id,
-              })
-            }
-            removeLabel="Remove label mapping"
-            onRemoveSection={() =>
-              dispatch({
-                type: "transform/removeAsLabelRow",
-                kind: "select",
-                stepId: step.id,
-                id: step.asLabel[0].id,
-              })
-            }
-            sectionRemoveLabel="Remove label mapping"
-          />
-        </SectionRow>
+        <RowList
+          label="As label"
+          rows={step.asLabel}
+          keyPlaceholder="label name (e.g. lat_x)"
+          valuePlaceholder="field (e.g. latitude.x)"
+          onChange={(id, changes) =>
+            dispatch({
+              type: "transform/changeAsLabelRow",
+              kind: "select",
+              stepId: step.id,
+              id,
+              changes,
+            })
+          }
+          onRemove={(id) =>
+            dispatch({
+              type: "transform/removeAsLabelRow",
+              kind: "select",
+              stepId: step.id,
+              id,
+            })
+          }
+          removeLabel="Remove label mapping"
+          onRemoveSection={() =>
+            dispatch({
+              type: "transform/removeAsLabelRow",
+              kind: "select",
+              stepId: step.id,
+              id: step.asLabel[0].id,
+            })
+          }
+          sectionRemoveLabel="Remove label mapping"
+        />
       )}
 
-      <Dropdown
-        menu={{ items: menuItems, onClick: handleMenuClick }}
-        trigger={["click"]}
-      >
-        <Button
-          aria-label={`Add option for ${label}`}
-          icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+      <GridFooter>
+        <AddOptionFooter
+          menuItems={menuItems}
+          onMenuClick={handleMenuClick}
+          ariaLabel={`Add option for ${label}`}
         />
-      </Dropdown>
-    </div>
+      </GridFooter>
+    </>
   );
 }
 
@@ -456,7 +444,7 @@ export default function SelectStageEditor({
   dispatch,
 }: SelectStageEditorProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={STAGE_GRID_STYLE}>
       {step.sqlSteps.map((sqlStep, index) => {
         const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
         return (
@@ -471,14 +459,14 @@ export default function SelectStageEditor({
         );
       })}
 
-      <AddOptionFooter
-        menuItems={[{ key: "sql", label: "Add SQL row" }]}
-        onMenuClick={() =>
-          dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
-        }
-        docHref="https://www.reduct.store/docs/extensions/official/select-ext"
-        docLabel="View ReductSelect Documentation →"
-      />
+      <GridFooter>
+        <AddOptionButton
+          label="Add SQL row"
+          onClick={() =>
+            dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
+          }
+        />
+      </GridFooter>
     </div>
   );
 }

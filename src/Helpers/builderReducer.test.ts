@@ -600,6 +600,50 @@ describe("builderReducer", () => {
       expect(state.pendingStages).toEqual([]);
     });
 
+    it("stage/insert adds a new pending stage right before the anchor", () => {
+      const initial: BuilderState = {
+        ...emptyState(),
+        blockOrder: ["a", "b"],
+      };
+      const state = builderReducer(initial, {
+        type: "stage/insert",
+        id: "new-stage",
+        anchorId: "b",
+        position: "before",
+      });
+      expect(state.blockOrder).toEqual(["a", "new-stage", "b"]);
+      expect(state.pendingStages).toEqual(["new-stage"]);
+    });
+
+    it("stage/insert adds a new pending stage right after the anchor", () => {
+      const initial: BuilderState = {
+        ...emptyState(),
+        blockOrder: ["a", "b"],
+      };
+      const state = builderReducer(initial, {
+        type: "stage/insert",
+        id: "new-stage",
+        anchorId: "a",
+        position: "after",
+      });
+      expect(state.blockOrder).toEqual(["a", "new-stage", "b"]);
+      expect(state.pendingStages).toEqual(["new-stage"]);
+    });
+
+    it("stage/insert appends at the end when the anchor id can't be found", () => {
+      const initial: BuilderState = {
+        ...emptyState(),
+        blockOrder: ["a"],
+      };
+      const state = builderReducer(initial, {
+        type: "stage/insert",
+        id: "new-stage",
+        anchorId: "missing",
+        position: "after",
+      });
+      expect(state.blockOrder).toEqual(["a", "new-stage"]);
+    });
+
     it("stage/setKind conditions replaces the pending id with the conditions sentinel", () => {
       const withPending = builderReducer(emptyState(), {
         type: "stage/add",

@@ -1,13 +1,11 @@
 import { Button, Input } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { KeyValueRow } from "../../Helpers/transformStepBuilder";
-import {
-  ROW_INPUT_WIDTH,
-  ROW_ICON_FONT_SIZE,
-  WRAP_ROW_STYLE,
-} from "./stageRowLayout";
+import { ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
+import { GridRow } from "./StageSectionLayout";
 
 interface RowListProps {
+  label: string;
   rows: KeyValueRow[];
   keyPlaceholder: string;
   valuePlaceholder: string;
@@ -21,7 +19,13 @@ interface RowListProps {
   sectionRemoveLabel: string;
 }
 
+// Renders one GridRow per key/value pair (label shown only on the first)
+// instead of a single GridRow wrapping a flex column, so each row's remove
+// button lands in the shared actions column - aligned with every other
+// section's trailing icon (Filter, Format, Export, SQL...) instead of
+// trailing right after the two inputs.
 export default function RowList({
+  label,
   rows,
   keyPlaceholder,
   valuePlaceholder,
@@ -34,29 +38,46 @@ export default function RowList({
   const onlyRow = rows.length === 1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {rows.map((row) => (
-        <div key={row.id} style={WRAP_ROW_STYLE}>
-          <Input
-            placeholder={keyPlaceholder}
-            value={row.key}
-            onChange={(e) => onChange(row.id, { key: e.target.value })}
-            style={{ width: ROW_INPUT_WIDTH }}
-          />
-          <Input
-            placeholder={valuePlaceholder}
-            value={row.value}
-            onChange={(e) => onChange(row.id, { value: e.target.value })}
-            style={{ width: ROW_INPUT_WIDTH }}
-          />
-          <Button
-            aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
-            type="text"
-            icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-            onClick={() => (onlyRow ? onRemoveSection() : onRemove(row.id))}
-          />
-        </div>
+    <>
+      {rows.map((row, index) => (
+        <GridRow
+          key={row.id}
+          label={index === 0 ? label : ""}
+          actions={
+            <Button
+              aria-label={onlyRow ? sectionRemoveLabel : removeLabel}
+              type="text"
+              icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+              onClick={() => (onlyRow ? onRemoveSection() : onRemove(row.id))}
+            />
+          }
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: ROW_GAP,
+              width: "100%",
+            }}
+          >
+            {/* flex: 1 on both inputs so they proportionally share the full
+                row width instead of stopping short at a fixed size - the
+                row still ends flush with every other row (e.g. Where). */}
+            <Input
+              placeholder={keyPlaceholder}
+              value={row.key}
+              onChange={(e) => onChange(row.id, { key: e.target.value })}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <Input
+              placeholder={valuePlaceholder}
+              value={row.value}
+              onChange={(e) => onChange(row.id, { value: e.target.value })}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </div>
+        </GridRow>
       ))}
-    </div>
+    </>
   );
 }
