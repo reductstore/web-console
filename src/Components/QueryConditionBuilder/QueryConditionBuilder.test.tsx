@@ -1266,7 +1266,7 @@ describe("QueryConditionBuilder", () => {
 
     const addLabelMapping = async () => {
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option"));
+        fireEvent.click(screen.getByLabelText("Add option for SQL"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("As label"));
@@ -1372,7 +1372,7 @@ describe("QueryConditionBuilder", () => {
       await addTransformBlock();
 
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option"));
+        fireEvent.click(screen.getByLabelText("Add option for SQL"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("Format"));
@@ -1381,7 +1381,7 @@ describe("QueryConditionBuilder", () => {
         fireEvent.click(screen.getByText("Parquet"));
       });
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option"));
+        fireEvent.click(screen.getByLabelText("Add option for SQL"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("Export"));

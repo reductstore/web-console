@@ -159,10 +159,10 @@ describe("transformStepBuilder", () => {
       const transform = addSection(createRosTransformStep(), "label");
       const [first] = transform.ros.asLabel;
 
-      const withTwo = addAsLabelRow(transform);
+      const withTwo = addAsLabelRow(transform, undefined);
       expect(withTwo.ros.asLabel).toHaveLength(2);
 
-      const updated = updateAsLabelRow(withTwo, first.id, {
+      const updated = updateAsLabelRow(withTwo, undefined, first.id, {
         key: "speed",
         value: "data.speed",
       });
@@ -171,7 +171,7 @@ describe("transformStepBuilder", () => {
         value: "data.speed",
       });
 
-      const removed = removeAsLabelRow(updated, first.id);
+      const removed = removeAsLabelRow(updated, undefined, first.id);
       expect(removed.ros.asLabel).toHaveLength(1);
       expect(removed.ros.asLabel[0].id).not.toBe(first.id);
     });
@@ -201,9 +201,12 @@ describe("transformStepBuilder", () => {
 
     it("is true for a label row with only the value filled in", () => {
       let transform = addSection(createRosTransformStep(), "label");
-      transform = updateAsLabelRow(transform, transform.ros.asLabel[0].id, {
-        value: "data.speed",
-      });
+      transform = updateAsLabelRow(
+        transform,
+        undefined,
+        transform.ros.asLabel[0].id,
+        { value: "data.speed" },
+      );
       expect(hasIncompleteTransform([transform])).toBe(true);
     });
 
@@ -257,7 +260,7 @@ describe("transformStepBuilder", () => {
     it("builds the as_label map (label name -> path)", () => {
       let transform = addSection(createRosTransformStep(), "label");
       const [first] = transform.ros.asLabel;
-      transform = updateAsLabelRow(transform, first.id, {
+      transform = updateAsLabelRow(transform, undefined, first.id, {
         key: "speed",
         value: "data.speed",
       });
@@ -412,14 +415,21 @@ describe("transformStepBuilder", () => {
   });
 
   describe("select transform", () => {
+    function firstStepId(
+      transform: Extract<TransformStepEntry, { kind: "select" }>,
+    ): string {
+      return transform.select.sqlSteps[0].id;
+    }
+
     describe("createSelectTransformStep", () => {
       it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
-        expect(transform.select.sqlSteps).toEqual([
-          { id: expect.any(String), sql: "SELECT * FROM ENTRY()\n" },
-        ]);
-        expect(transform.select.asLabel).toEqual([]);
+        expect(transform.select.sqlSteps).toHaveLength(1);
+        expect(transform.select.sqlSteps[0]).toMatchObject({
+          sql: "SELECT * FROM ENTRY()\n",
+          asLabel: [],
+        });
       });
     });
 
@@ -437,21 +447,28 @@ describe("transformStepBuilder", () => {
 
     describe("as_label rows", () => {
       it("adds, updates, and removes rows", () => {
-        const transform = addAsLabelRow(createSelectTransformStep());
-        expect(transform.select.asLabel).toHaveLength(1);
-        const [first] = transform.select.asLabel;
+        const initial = createSelectTransformStep();
+        const transform = addAsLabelRow(initial, firstStepId(initial));
+        expect(transform.select.sqlSteps[0].asLabel).toHaveLength(1);
+        const [first] = transform.select.sqlSteps[0].asLabel;
 
-        const updated = updateAsLabelRow(transform, first.id, {
+        const updated = updateAsLabelRow(
+          transform,
+          firstStepId(transform),
+          first.id,
+          { key: "speed", value: "vector.x" },
+        );
+        expect(updated.select.sqlSteps[0].asLabel[0]).toMatchObject({
           key: "speed",
           value: "vector.x",
         });
-        expect(updated.select.asLabel[0]).toMatchObject({
-          key: "speed",
-          value: "vector.x",
-        });
 
-        const removed = removeAsLabelRow(updated, first.id);
-        expect(removed.select.asLabel).toHaveLength(0);
+        const removed = removeAsLabelRow(
+          updated,
+          firstStepId(updated),
+          first.id,
+        );
+        expect(removed.select.sqlSteps[0].asLabel).toHaveLength(0);
       });
     });
 
@@ -463,26 +480,25 @@ describe("transformStepBuilder", () => {
       });
 
       it("is true for a partially filled as_label row", () => {
-        let transform = addAsLabelRow(createSelectTransformStep());
+        const initial = createSelectTransformStep();
+        let transform = addAsLabelRow(initial, firstStepId(initial));
         transform = updateAsLabelRow(
           transform,
-          transform.select.asLabel[0].id,
-          {
-            key: "speed",
-          },
+          firstStepId(transform),
+          transform.select.sqlSteps[0].asLabel[0].id,
+          { key: "speed" },
         );
         expect(hasIncompleteTransform([transform])).toBe(true);
       });
 
       it("is false once the as_label row is complete", () => {
-        let transform = addAsLabelRow(createSelectTransformStep());
+        const initial = createSelectTransformStep();
+        let transform = addAsLabelRow(initial, firstStepId(initial));
         transform = updateAsLabelRow(
           transform,
-          transform.select.asLabel[0].id,
-          {
-            key: "speed",
-            value: "vector.x",
-          },
+          firstStepId(transform),
+          transform.select.sqlSteps[0].asLabel[0].id,
+          { key: "speed", value: "vector.x" },
         );
         expect(hasIncompleteTransform([transform])).toBe(false);
       });
@@ -514,14 +530,13 @@ describe("transformStepBuilder", () => {
       });
 
       it("builds the as_label map, dropping incomplete rows", () => {
-        let transform = addAsLabelRow(blankSelectTransform());
+        const initial = blankSelectTransform();
+        let transform = addAsLabelRow(initial, firstStepId(initial));
         transform = updateAsLabelRow(
           transform,
-          transform.select.asLabel[0].id,
-          {
-            key: "speed",
-            value: "vector.x",
-          },
+          firstStepId(transform),
+          transform.select.sqlSteps[0].asLabel[0].id,
+          { key: "speed", value: "vector.x" },
         );
         expect(buildExtPayload([transform])).toEqual([
           { select: { as_label: { speed: "vector.x" } } },
@@ -535,14 +550,12 @@ describe("transformStepBuilder", () => {
           initial.select.sqlSteps[0].id,
           "SELECT * FROM ENTRY()",
         );
-        transform = addAsLabelRow(transform);
+        transform = addAsLabelRow(transform, firstStepId(transform));
         transform = updateAsLabelRow(
           transform,
-          transform.select.asLabel[0].id,
-          {
-            key: "speed",
-            value: "vector.x",
-          },
+          firstStepId(transform),
+          transform.select.sqlSteps[0].asLabel[0].id,
+          { key: "speed", value: "vector.x" },
         );
         expect(buildExtPayload([transform])).toEqual([
           {
@@ -573,14 +586,17 @@ describe("transformStepBuilder", () => {
       it("succeeds with an empty select object", () => {
         const result = parseExtPayload({ select: {} });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select).toEqual({
-          sqlSteps: [{ id: expect.any(String), sql: "" }],
-          asLabel: [],
-          formatSections: [],
-          csv: { hasHeaders: false },
-          protobuf: { messageName: "", schema: "", fields: [] },
-          export: { format: "", rows: "", duration: "" },
-        });
+        expect(expectSelect(result.transforms).select.sqlSteps).toEqual([
+          {
+            id: expect.any(String),
+            sql: "",
+            asLabel: [],
+            formatSections: [],
+            csv: { hasHeaders: false },
+            protobuf: { messageName: "", schema: "", fields: [] },
+            export: { format: "", rows: "", duration: "" },
+          },
+        ]);
       });
 
       it("parses sql and as_label", () => {
@@ -591,10 +607,9 @@ describe("transformStepBuilder", () => {
           },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select.sqlSteps[0].sql).toBe(
-          "SELECT * FROM ENTRY()",
-        );
-        expect(expectSelect(result.transforms).select.asLabel).toContainEqual(
+        const [step] = expectSelect(result.transforms).select.sqlSteps;
+        expect(step.sql).toBe("SELECT * FROM ENTRY()");
+        expect(step.asLabel).toContainEqual(
           expect.objectContaining({ key: "speed", value: "vector.x" }),
         );
       });
@@ -603,12 +618,17 @@ describe("transformStepBuilder", () => {
         const transform: TransformStepEntry = {
           kind: "select",
           select: {
-            sqlSteps: [{ id: "s1", sql: "SELECT * FROM ENTRY()" }],
-            asLabel: [{ id: "l1", key: "speed", value: "vector.x" }],
-            formatSections: [],
-            csv: { hasHeaders: false },
-            protobuf: { messageName: "", schema: "", fields: [] },
-            export: { format: "", rows: "", duration: "" },
+            sqlSteps: [
+              {
+                id: "s1",
+                sql: "SELECT * FROM ENTRY()",
+                asLabel: [{ id: "l1", key: "speed", value: "vector.x" }],
+                formatSections: [],
+                csv: { hasHeaders: false },
+                protobuf: { messageName: "", schema: "", fields: [] },
+                export: { format: "", rows: "", duration: "" },
+              },
+            ],
           },
         };
         const payload = buildExtPayload([transform]);
@@ -620,101 +640,147 @@ describe("transformStepBuilder", () => {
 
     describe("format sections", () => {
       it("adds and removes a format section", () => {
-        const transform = addFormatSection(createSelectTransformStep(), "csv");
-        expect(transform.select.formatSections).toEqual(["csv"]);
-        const removed = removeFormatSection(transform, "csv");
-        expect(removed.select.formatSections).toEqual([]);
+        const initial = createSelectTransformStep();
+        const transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "csv",
+        );
+        expect(transform.select.sqlSteps[0].formatSections).toEqual(["csv"]);
+        const removed = removeFormatSection(
+          transform,
+          firstStepId(transform),
+          "csv",
+        );
+        expect(removed.select.sqlSteps[0].formatSections).toEqual([]);
       });
 
       it("is a no-op if the section is already present", () => {
-        const transform = addFormatSection(createSelectTransformStep(), "json");
-        const again = addFormatSection(transform, "json");
+        const initial = createSelectTransformStep();
+        const transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "json",
+        );
+        const again = addFormatSection(
+          transform,
+          firstStepId(transform),
+          "json",
+        );
         expect(again).toBe(transform);
       });
     });
 
     describe("changeFormat", () => {
       it("replaces the active csv/json/parquet format in a single call", () => {
-        const withCsv = addFormatSection(createSelectTransformStep(), "csv");
-        const withJson = changeFormat(withCsv, "json");
-        expect(withJson.select.formatSections).toEqual(["json"]);
+        const initial = createSelectTransformStep();
+        const withCsv = addFormatSection(initial, firstStepId(initial), "csv");
+        const withJson = changeFormat(withCsv, firstStepId(withCsv), "json");
+        expect(withJson.select.sqlSteps[0].formatSections).toEqual(["json"]);
       });
 
       it("leaves export untouched but replaces protobuf", () => {
+        const initial = createSelectTransformStep();
         const withProtobuf = addFormatSection(
-          createSelectTransformStep(),
+          initial,
+          firstStepId(initial),
           "protobuf",
         );
-        const withExport = addFormatSection(withProtobuf, "export");
-        const changed = changeFormat(withExport, "parquet");
-        expect(changed.select.formatSections).toEqual(["export", "parquet"]);
+        const withExport = addFormatSection(
+          withProtobuf,
+          firstStepId(withProtobuf),
+          "export",
+        );
+        const changed = changeFormat(
+          withExport,
+          firstStepId(withExport),
+          "parquet",
+        );
+        expect(changed.select.sqlSteps[0].formatSections).toEqual([
+          "export",
+          "parquet",
+        ]);
       });
 
       it("is a single mutation even when no format was active yet", () => {
-        const changed = changeFormat(createSelectTransformStep(), "csv");
-        expect(changed.select.formatSections).toEqual(["csv"]);
+        const initial = createSelectTransformStep();
+        const changed = changeFormat(initial, firstStepId(initial), "csv");
+        expect(changed.select.sqlSteps[0].formatSections).toEqual(["csv"]);
       });
 
       it("seeds a blank field row when switching to protobuf with none yet", () => {
-        const changed = changeFormat(createSelectTransformStep(), "protobuf");
-        expect(changed.select.protobuf.fields).toHaveLength(1);
+        const initial = createSelectTransformStep();
+        const changed = changeFormat(initial, firstStepId(initial), "protobuf");
+        expect(changed.select.sqlSteps[0].protobuf.fields).toHaveLength(1);
       });
 
       it("does not duplicate existing protobuf field rows when switching back", () => {
-        let transform = changeFormat(createSelectTransformStep(), "protobuf");
-        transform = addProtobufFieldRow(transform);
-        transform = changeFormat(transform, "csv");
-        transform = changeFormat(transform, "protobuf");
-        expect(transform.select.protobuf.fields).toHaveLength(2);
+        const initial = createSelectTransformStep();
+        let transform = changeFormat(initial, firstStepId(initial), "protobuf");
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
+        transform = changeFormat(transform, firstStepId(transform), "csv");
+        transform = changeFormat(transform, firstStepId(transform), "protobuf");
+        expect(transform.select.sqlSteps[0].protobuf.fields).toHaveLength(2);
       });
     });
 
     describe("updateCsv", () => {
       it("updates hasHeaders", () => {
-        const transform = updateCsv(createSelectTransformStep(), {
+        const initial = createSelectTransformStep();
+        const transform = updateCsv(initial, firstStepId(initial), {
           hasHeaders: true,
         });
-        expect(transform.select.csv.hasHeaders).toBe(true);
+        expect(transform.select.sqlSteps[0].csv.hasHeaders).toBe(true);
       });
     });
 
     describe("protobuf config", () => {
       it("updates messageName and schema", () => {
-        const transform = updateProtobuf(createSelectTransformStep(), {
+        const initial = createSelectTransformStep();
+        const transform = updateProtobuf(initial, firstStepId(initial), {
           messageName: "pkg.SensorReading",
           schema: "base64==",
         });
-        expect(transform.select.protobuf.messageName).toBe("pkg.SensorReading");
-        expect(transform.select.protobuf.schema).toBe("base64==");
+        expect(transform.select.sqlSteps[0].protobuf.messageName).toBe(
+          "pkg.SensorReading",
+        );
+        expect(transform.select.sqlSteps[0].protobuf.schema).toBe("base64==");
       });
 
       it("adds, updates, and removes field rows", () => {
-        const transform = addProtobufFieldRow(createSelectTransformStep());
-        expect(transform.select.protobuf.fields).toHaveLength(1);
-        const [first] = transform.select.protobuf.fields;
+        const initial = createSelectTransformStep();
+        const transform = addProtobufFieldRow(initial, firstStepId(initial));
+        expect(transform.select.sqlSteps[0].protobuf.fields).toHaveLength(1);
+        const [first] = transform.select.sqlSteps[0].protobuf.fields;
 
-        const updated = updateProtobufFieldRow(transform, first.id, {
+        const updated = updateProtobufFieldRow(
+          transform,
+          firstStepId(transform),
+          first.id,
+          { column: "device_id", fieldId: "1", fieldType: "string" },
+        );
+        expect(updated.select.sqlSteps[0].protobuf.fields[0]).toMatchObject({
           column: "device_id",
           fieldId: "1",
           fieldType: "string",
         });
-        expect(updated.select.protobuf.fields[0]).toMatchObject({
-          column: "device_id",
-          fieldId: "1",
-          fieldType: "string",
-        });
 
-        const removed = removeProtobufFieldRow(updated, first.id);
-        expect(removed.select.protobuf.fields).toHaveLength(0);
+        const removed = removeProtobufFieldRow(
+          updated,
+          firstStepId(updated),
+          first.id,
+        );
+        expect(removed.select.sqlSteps[0].protobuf.fields).toHaveLength(0);
       });
     });
 
     describe("updateSelectExport", () => {
       it("merges partial changes into the export config", () => {
-        const transform = updateSelectExport(createSelectTransformStep(), {
+        const initial = createSelectTransformStep();
+        const transform = updateSelectExport(initial, firstStepId(initial), {
           format: "parquet",
         });
-        expect(transform.select.export).toEqual({
+        expect(transform.select.sqlSteps[0].export).toEqual({
           format: "parquet",
           rows: "",
           duration: "",
@@ -724,38 +790,46 @@ describe("transformStepBuilder", () => {
 
     describe("hasIncompleteTransform (protobuf fields)", () => {
       it("is false when protobuf isn't an active format section", () => {
-        let transform = addProtobufFieldRow(createSelectTransformStep());
+        const initial = createSelectTransformStep();
+        let transform = addProtobufFieldRow(initial, firstStepId(initial));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id" },
         );
         expect(hasIncompleteTransform([transform])).toBe(false);
       });
 
       it("is true for a partially filled field row once protobuf is active", () => {
+        const initial = createSelectTransformStep();
         let transform = addFormatSection(
-          createSelectTransformStep(),
+          initial,
+          firstStepId(initial),
           "protobuf",
         );
-        transform = addProtobufFieldRow(transform);
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id" },
         );
         expect(hasIncompleteTransform([transform])).toBe(true);
       });
 
       it("is false once the field row is fully filled", () => {
+        const initial = createSelectTransformStep();
         let transform = addFormatSection(
-          createSelectTransformStep(),
+          initial,
+          firstStepId(initial),
           "protobuf",
         );
-        transform = addProtobufFieldRow(transform);
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
         expect(hasIncompleteTransform([transform])).toBe(false);
@@ -764,30 +838,48 @@ describe("transformStepBuilder", () => {
 
     describe("buildExtPayload (input formats and export)", () => {
       it("includes csv with has_headers", () => {
-        let transform = addFormatSection(blankSelectTransform(), "csv");
-        transform = updateCsv(transform, { hasHeaders: true });
+        const initial = blankSelectTransform();
+        let transform = addFormatSection(initial, firstStepId(initial), "csv");
+        transform = updateCsv(transform, firstStepId(transform), {
+          hasHeaders: true,
+        });
         expect(buildExtPayload([transform])).toEqual([
           { select: { csv: { has_headers: true } } },
         ]);
       });
 
       it("includes an empty json object", () => {
-        const transform = addFormatSection(blankSelectTransform(), "json");
+        const initial = blankSelectTransform();
+        const transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "json",
+        );
         expect(buildExtPayload([transform])).toEqual([
           { select: { json: {} } },
         ]);
       });
 
       it("includes an empty parquet object", () => {
-        const transform = addFormatSection(blankSelectTransform(), "parquet");
+        const initial = blankSelectTransform();
+        const transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "parquet",
+        );
         expect(buildExtPayload([transform])).toEqual([
           { select: { parquet: {} } },
         ]);
       });
 
       it("builds protobuf from message_name/schema when no field rows are complete", () => {
-        let transform = addFormatSection(blankSelectTransform(), "protobuf");
-        transform = updateProtobuf(transform, {
+        const initial = blankSelectTransform();
+        let transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "protobuf",
+        );
+        transform = updateProtobuf(transform, firstStepId(transform), {
           messageName: "pkg.SensorReading",
           schema: "base64==",
         });
@@ -804,15 +896,21 @@ describe("transformStepBuilder", () => {
       });
 
       it("prefers complete field rows over message_name/schema", () => {
-        let transform = addFormatSection(blankSelectTransform(), "protobuf");
-        transform = updateProtobuf(transform, {
+        const initial = blankSelectTransform();
+        let transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "protobuf",
+        );
+        transform = updateProtobuf(transform, firstStepId(transform), {
           messageName: "pkg.SensorReading",
           schema: "base64==",
         });
-        transform = addProtobufFieldRow(transform);
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
         expect(buildExtPayload([transform])).toEqual([
@@ -825,14 +923,20 @@ describe("transformStepBuilder", () => {
       });
 
       it("drops an incomplete field row and falls back to message_name/schema", () => {
-        let transform = addFormatSection(blankSelectTransform(), "protobuf");
-        transform = updateProtobuf(transform, {
+        const initial = blankSelectTransform();
+        let transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "protobuf",
+        );
+        transform = updateProtobuf(transform, firstStepId(transform), {
           messageName: "pkg.SensorReading",
         });
-        transform = addProtobufFieldRow(transform);
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id" },
         );
         expect(buildExtPayload([transform])).toEqual([
@@ -842,14 +946,20 @@ describe("transformStepBuilder", () => {
 
       it("treats a negative, zero, or non-integer field id as incomplete", () => {
         for (const badId of ["-1", "0", "1.5"]) {
-          let transform = addFormatSection(blankSelectTransform(), "protobuf");
-          transform = updateProtobuf(transform, {
+          const initial = blankSelectTransform();
+          let transform = addFormatSection(
+            initial,
+            firstStepId(initial),
+            "protobuf",
+          );
+          transform = updateProtobuf(transform, firstStepId(transform), {
             messageName: "pkg.SensorReading",
           });
-          transform = addProtobufFieldRow(transform);
+          transform = addProtobufFieldRow(transform, firstStepId(transform));
           transform = updateProtobufFieldRow(
             transform,
-            transform.select.protobuf.fields[0].id,
+            firstStepId(transform),
+            transform.select.sqlSteps[0].protobuf.fields[0].id,
             { column: "device_id", fieldId: badId, fieldType: "string" },
           );
           expect(buildExtPayload([transform])).toEqual([
@@ -859,21 +969,33 @@ describe("transformStepBuilder", () => {
       });
 
       it("includes export fields only when the export section is added", () => {
-        let transform = updateSelectExport(blankSelectTransform(), {
+        const initial = blankSelectTransform();
+        let transform = updateSelectExport(initial, firstStepId(initial), {
           format: "parquet",
           rows: "100",
         });
         expect(buildExtPayload([transform])).toEqual([{ select: {} }]);
 
-        transform = addFormatSection(transform, "export");
+        transform = addFormatSection(
+          transform,
+          firstStepId(transform),
+          "export",
+        );
         expect(buildExtPayload([transform])).toEqual([
           { select: { export: { format: "parquet", rows: 100 } } },
         ]);
       });
 
       it("omits a non-numeric rows value", () => {
-        let transform = addFormatSection(blankSelectTransform(), "export");
-        transform = updateSelectExport(transform, { rows: "not-a-number" });
+        const initial = blankSelectTransform();
+        let transform = addFormatSection(
+          initial,
+          firstStepId(initial),
+          "export",
+        );
+        transform = updateSelectExport(transform, firstStepId(transform), {
+          rows: "not-a-number",
+        });
         expect(buildExtPayload([transform])).toEqual([
           { select: { export: {} } },
         ]);
@@ -886,12 +1008,9 @@ describe("transformStepBuilder", () => {
           select: { csv: { has_headers: true } },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select.formatSections).toEqual([
-          "csv",
-        ]);
-        expect(expectSelect(result.transforms).select.csv).toEqual({
-          hasHeaders: true,
-        });
+        const [step] = expectSelect(result.transforms).select.sqlSteps;
+        expect(step.formatSections).toEqual(["csv"]);
+        expect(step.csv).toEqual({ hasHeaders: true });
       });
 
       it("rejects a non-boolean has_headers", () => {
@@ -910,7 +1029,7 @@ describe("transformStepBuilder", () => {
         });
         expect(result.success).toBe(true);
         expect(
-          expectSelect(result.transforms).select.protobuf.fields,
+          expectSelect(result.transforms).select.sqlSteps[0].protobuf.fields,
         ).toContainEqual(
           expect.objectContaining({
             column: "device_id",
@@ -958,7 +1077,9 @@ describe("transformStepBuilder", () => {
           select: { export: { format: "parquet", rows: 100, duration: "1m" } },
         });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select.export).toEqual({
+        expect(
+          expectSelect(result.transforms).select.sqlSteps[0].export,
+        ).toEqual({
           format: "parquet",
           rows: "100",
           duration: "1m",
@@ -972,18 +1093,25 @@ describe("transformStepBuilder", () => {
       });
 
       it("round-trips csv + protobuf fields + export through buildExtPayload", () => {
+        const initial = createSelectTransformStep();
         let transform = addFormatSection(
-          createSelectTransformStep(),
+          initial,
+          firstStepId(initial),
           "protobuf",
         );
-        transform = addProtobufFieldRow(transform);
+        transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = updateProtobufFieldRow(
           transform,
-          transform.select.protobuf.fields[0].id,
+          firstStepId(transform),
+          transform.select.sqlSteps[0].protobuf.fields[0].id,
           { column: "device_id", fieldId: "1", fieldType: "string" },
         );
-        transform = addFormatSection(transform, "export");
-        transform = updateSelectExport(transform, {
+        transform = addFormatSection(
+          transform,
+          firstStepId(transform),
+          "export",
+        );
+        transform = updateSelectExport(transform, firstStepId(transform), {
           format: "json",
           rows: "50",
         });

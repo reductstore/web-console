@@ -1,7 +1,10 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import SelectStepEditor from "./SelectStepEditor";
-import { SelectTransformStep } from "../../Helpers/transformStepBuilder";
+import {
+  SelectTransformStep,
+  SqlStep,
+} from "../../Helpers/transformStepBuilder";
 
 vi.mock("@monaco-editor/react", () => ({
   __esModule: true,
@@ -23,13 +26,20 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
   getSqlCompletionProvider: () => ({}),
 }));
 
+function makeSqlStep(overrides: Partial<SqlStep> & { id: string }): SqlStep {
+  return {
+    sql: "",
+    asLabel: [],
+    formatSections: [],
+    csv: { hasHeaders: false },
+    protobuf: { messageName: "", schema: "", fields: [] },
+    export: { format: "", rows: "", duration: "" },
+    ...overrides,
+  };
+}
+
 const baseStep: SelectTransformStep = {
-  sqlSteps: [{ id: "sql-1", sql: "" }],
-  asLabel: [],
-  formatSections: [],
-  csv: { hasHeaders: false },
-  protobuf: { messageName: "", schema: "", fields: [] },
-  export: { format: "", rows: "", duration: "" },
+  sqlSteps: [makeSqlStep({ id: "sql-1" })],
 };
 
 describe("SelectStepEditor", () => {
@@ -37,8 +47,9 @@ describe("SelectStepEditor", () => {
     render(
       <SelectStepEditor
         step={{
-          ...baseStep,
-          sqlSteps: [{ id: "sql-1", sql: "SELECT * FROM ENTRY()" }],
+          sqlSteps: [
+            makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" }),
+          ],
         }}
         dispatch={vi.fn()}
       />,
@@ -55,10 +66,9 @@ describe("SelectStepEditor", () => {
 
   it("shows a placeholder when a later SQL row is blank", () => {
     const step: SelectTransformStep = {
-      ...baseStep,
       sqlSteps: [
-        { id: "sql-1", sql: "SELECT * FROM ENTRY()" },
-        { id: "sql-2", sql: "" },
+        makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" }),
+        makeSqlStep({ id: "sql-2", sql: "" }),
       ],
     };
     render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
@@ -91,11 +101,12 @@ describe("SelectStepEditor", () => {
   it("dispatches transform/addAsLabelRow with kind select when As label is picked from the add menu", () => {
     const dispatch = vi.fn();
     render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
-    fireEvent.click(screen.getByLabelText("Add option"));
+    fireEvent.click(screen.getByLabelText("Add option for SQL"));
     fireEvent.click(screen.getByText("As label"));
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/addAsLabelRow",
       kind: "select",
+      stepId: "sql-1",
       id: expect.any(String),
     });
   });
@@ -103,8 +114,12 @@ describe("SelectStepEditor", () => {
   it("shows As label rows and reports a changed field", () => {
     const dispatch = vi.fn();
     const step: SelectTransformStep = {
-      ...baseStep,
-      asLabel: [{ id: "l1", key: "", value: "" }],
+      sqlSteps: [
+        makeSqlStep({
+          id: "sql-1",
+          asLabel: [{ id: "l1", key: "", value: "" }],
+        }),
+      ],
     };
     render(<SelectStepEditor step={step} dispatch={dispatch} />);
     expect(screen.getByText("As label")).toBeTruthy();
@@ -114,6 +129,7 @@ describe("SelectStepEditor", () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/changeAsLabelRow",
       kind: "select",
+      stepId: "sql-1",
       id: "l1",
       changes: { key: "speed" },
     });
@@ -122,10 +138,14 @@ describe("SelectStepEditor", () => {
   it("removes a row directly when other rows remain", () => {
     const dispatch = vi.fn();
     const step: SelectTransformStep = {
-      ...baseStep,
-      asLabel: [
-        { id: "l1", key: "speed", value: "vector.x" },
-        { id: "l2", key: "heading", value: "vector.y" },
+      sqlSteps: [
+        makeSqlStep({
+          id: "sql-1",
+          asLabel: [
+            { id: "l1", key: "speed", value: "vector.x" },
+            { id: "l2", key: "heading", value: "vector.y" },
+          ],
+        }),
       ],
     };
     render(<SelectStepEditor step={step} dispatch={dispatch} />);
@@ -133,6 +153,7 @@ describe("SelectStepEditor", () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/removeAsLabelRow",
       kind: "select",
+      stepId: "sql-1",
       id: "l1",
     });
   });
@@ -140,14 +161,19 @@ describe("SelectStepEditor", () => {
   it("removes the only row through the same handler", () => {
     const dispatch = vi.fn();
     const step: SelectTransformStep = {
-      ...baseStep,
-      asLabel: [{ id: "l1", key: "speed", value: "vector.x" }],
+      sqlSteps: [
+        makeSqlStep({
+          id: "sql-1",
+          asLabel: [{ id: "l1", key: "speed", value: "vector.x" }],
+        }),
+      ],
     };
     render(<SelectStepEditor step={step} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Remove label mapping"));
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/removeAsLabelRow",
       kind: "select",
+      stepId: "sql-1",
       id: "l1",
     });
   });
@@ -161,35 +187,31 @@ describe("SelectStepEditor", () => {
     );
   });
 
-  describe("Add option menu", () => {
-    it("dispatches select/addSqlStep when Add SQL row is picked, and it's never disabled", () => {
+  describe("Add SQL row (bottom menu)", () => {
+    it("dispatches select/addSqlStep when Add SQL row is picked", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        ...baseStep,
-        sqlSteps: [
-          { id: "sql-1", sql: "" },
-          { id: "sql-2", sql: "" },
-        ],
+        sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
       };
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
-      expect(
-        screen.getByRole("menuitem", { name: "Add SQL row" }),
-      ).not.toHaveAttribute("aria-disabled", "true");
       fireEvent.click(screen.getByText("Add SQL row"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),
       });
     });
+  });
 
+  describe("Per-block add option menu", () => {
     it("adds the format section (defaulting to CSV) via the dropdown menu", () => {
       const dispatch = vi.fn();
       render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Add option"));
+      fireEvent.click(screen.getByLabelText("Add option for SQL"));
       fireEvent.click(screen.getByText("Format"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addFormatSection",
+        stepId: "sql-1",
         section: "csv",
         fieldId: expect.any(String),
       });
@@ -197,11 +219,10 @@ describe("SelectStepEditor", () => {
 
     it("greys out Format once a format is already added", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
-      fireEvent.click(screen.getByLabelText("Add option"));
+      fireEvent.click(screen.getByLabelText("Add option for SQL"));
       expect(screen.getByRole("menuitem", { name: "Format" })).toHaveAttribute(
         "aria-disabled",
         "true",
@@ -210,11 +231,10 @@ describe("SelectStepEditor", () => {
 
     it("keeps Export and As label enabled regardless of which input format is active", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
-      fireEvent.click(screen.getByLabelText("Add option"));
+      fireEvent.click(screen.getByLabelText("Add option for SQL"));
       expect(
         screen.getByRole("menuitem", { name: "Export" }),
       ).not.toHaveAttribute("aria-disabled", "true");
@@ -225,20 +245,28 @@ describe("SelectStepEditor", () => {
 
     it("keeps Add option enabled even when a format and Export are both already added", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["parquet", "export"],
+        sqlSteps: [
+          makeSqlStep({
+            id: "sql-1",
+            formatSections: ["parquet", "export"],
+          }),
+        ],
       };
       render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
-      expect(screen.getByLabelText("Add option")).not.toBeDisabled();
+      expect(screen.getByLabelText("Add option for SQL")).not.toBeDisabled();
     });
   });
 
   describe("Format section", () => {
     it("shows CSV's has-headers checkbox only when CSV is the active format", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
-        csv: { hasHeaders: true },
+        sqlSteps: [
+          makeSqlStep({
+            id: "sql-1",
+            formatSections: ["csv"],
+            csv: { hasHeaders: true },
+          }),
+        ],
       };
       render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
       expect(screen.getByRole("checkbox")).toBeChecked();
@@ -246,8 +274,7 @@ describe("SelectStepEditor", () => {
 
     it("hides the has-headers checkbox when JSON or Parquet is active", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["parquet"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["parquet"] })],
       };
       render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
       expect(screen.queryByRole("checkbox")).toBeNull();
@@ -256,14 +283,19 @@ describe("SelectStepEditor", () => {
     it("reports toggling the has-headers checkbox", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
-        csv: { hasHeaders: true },
+        sqlSteps: [
+          makeSqlStep({
+            id: "sql-1",
+            formatSections: ["csv"],
+            csv: { hasHeaders: true },
+          }),
+        ],
       };
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByRole("checkbox"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeCsv",
+        stepId: "sql-1",
         changes: { hasHeaders: false },
       });
     });
@@ -271,13 +303,13 @@ describe("SelectStepEditor", () => {
     it("switches from CSV to JSON via the segmented control", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByText("JSON"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
+        stepId: "sql-1",
         format: "json",
         fieldId: expect.any(String),
       });
@@ -286,13 +318,13 @@ describe("SelectStepEditor", () => {
     it("switches to Protobuf via the segmented control", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["csv"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByText("Protobuf"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
+        stepId: "sql-1",
         format: "protobuf",
         fieldId: expect.any(String),
       });
@@ -301,33 +333,37 @@ describe("SelectStepEditor", () => {
     it("removes the section via its remove button", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["parquet"],
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["parquet"] })],
       };
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Remove format"));
+      fireEvent.click(screen.getByLabelText("Remove sql format"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",
+        stepId: "sql-1",
         section: "parquet",
       });
     });
 
     describe("when Protobuf is the active format", () => {
       const step: SelectTransformStep = {
-        ...baseStep,
-        formatSections: ["protobuf"],
-        protobuf: {
-          messageName: "Telemetry",
-          schema: "message Telemetry { double temp = 1; }",
-          fields: [
-            {
-              id: "f1",
-              column: "temperature",
-              fieldId: "1",
-              fieldType: "double",
+        sqlSteps: [
+          makeSqlStep({
+            id: "sql-1",
+            formatSections: ["protobuf"],
+            protobuf: {
+              messageName: "Telemetry",
+              schema: "message Telemetry { double temp = 1; }",
+              fields: [
+                {
+                  id: "f1",
+                  column: "temperature",
+                  fieldId: "1",
+                  fieldType: "double",
+                },
+              ],
             },
-          ],
-        },
+          }),
+        ],
       };
 
       it("hides the has-headers checkbox", () => {
@@ -353,6 +389,7 @@ describe("SelectStepEditor", () => {
         });
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/changeProtobuf",
+          stepId: "sql-1",
           changes: { messageName: "Reading" },
         });
 
@@ -364,6 +401,7 @@ describe("SelectStepEditor", () => {
         );
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/changeProtobuf",
+          stepId: "sql-1",
           changes: { schema: "message Reading {}" },
         });
       });
@@ -379,6 +417,7 @@ describe("SelectStepEditor", () => {
         });
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/changeProtobufFieldRow",
+          stepId: "sql-1",
           id: "f1",
           changes: { column: "humidity" },
         });
@@ -390,6 +429,7 @@ describe("SelectStepEditor", () => {
         fireEvent.click(screen.getByLabelText("Add protobuf field"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/addProtobufFieldRow",
+          stepId: "sql-1",
           id: expect.any(String),
         });
       });
@@ -400,6 +440,7 @@ describe("SelectStepEditor", () => {
         fireEvent.click(screen.getByLabelText("Remove protobuf field"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/removeProtobufFieldRow",
+          stepId: "sql-1",
           id: "f1",
         });
       });
@@ -407,9 +448,10 @@ describe("SelectStepEditor", () => {
       it("removes the whole section via its remove button", () => {
         const dispatch = vi.fn();
         render(<SelectStepEditor step={step} dispatch={dispatch} />);
-        fireEvent.click(screen.getByLabelText("Remove format"));
+        fireEvent.click(screen.getByLabelText("Remove sql format"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/removeFormatSection",
+          stepId: "sql-1",
           section: "protobuf",
         });
       });
@@ -418,9 +460,13 @@ describe("SelectStepEditor", () => {
 
   describe("Export section", () => {
     const step: SelectTransformStep = {
-      ...baseStep,
-      formatSections: ["export"],
-      export: { format: "parquet", rows: "1000", duration: "1m" },
+      sqlSteps: [
+        makeSqlStep({
+          id: "sql-1",
+          formatSections: ["export"],
+          export: { format: "parquet", rows: "1000", duration: "1m" },
+        }),
+      ],
     };
 
     it("shows the current format, rows, and duration", () => {
@@ -440,6 +486,7 @@ describe("SelectStepEditor", () => {
       });
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeExport",
+        stepId: "sql-1",
         changes: { duration: "5m" },
       });
     });
@@ -452,6 +499,7 @@ describe("SelectStepEditor", () => {
       });
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeExport",
+        stepId: "sql-1",
         changes: { rows: "500" },
       });
     });
@@ -459,9 +507,10 @@ describe("SelectStepEditor", () => {
     it("removes the section via its remove button", () => {
       const dispatch = vi.fn();
       render(<SelectStepEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Remove export"));
+      fireEvent.click(screen.getByLabelText("Remove sql export"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",
+        stepId: "sql-1",
         section: "export",
       });
     });

@@ -128,34 +128,61 @@ export type BuilderAction =
   | { type: "select/removeSqlStep"; id: string }
   | {
       type: "select/addFormatSection";
+      stepId: string;
       section: SelectFormatSection;
       fieldId: string;
     }
-  | { type: "select/removeFormatSection"; section: SelectFormatSection }
-  | { type: "select/changeFormat"; format: SelectInputFormat; fieldId: string }
-  | { type: "select/changeCsv"; changes: Partial<CsvConfig> }
+  | {
+      type: "select/removeFormatSection";
+      stepId: string;
+      section: SelectFormatSection;
+    }
+  | {
+      type: "select/changeFormat";
+      stepId: string;
+      format: SelectInputFormat;
+      fieldId: string;
+    }
+  | { type: "select/changeCsv"; stepId: string; changes: Partial<CsvConfig> }
   | {
       type: "select/changeProtobuf";
+      stepId: string;
       changes: Partial<Pick<ProtobufConfig, "messageName" | "schema">>;
     }
-  | { type: "select/addProtobufFieldRow"; id: string }
+  | { type: "select/addProtobufFieldRow"; stepId: string; id: string }
   | {
       type: "select/changeProtobufFieldRow";
+      stepId: string;
       id: string;
       changes: Partial<
         Pick<ProtobufFieldRow, "column" | "fieldId" | "fieldType">
       >;
     }
-  | { type: "select/removeProtobufFieldRow"; id: string }
-  | { type: "select/changeExport"; changes: Partial<SelectExportConfig> }
-  | { type: "transform/addAsLabelRow"; kind: TransformKind; id: string }
+  | { type: "select/removeProtobufFieldRow"; stepId: string; id: string }
+  | {
+      type: "select/changeExport";
+      stepId: string;
+      changes: Partial<SelectExportConfig>;
+    }
+  | {
+      type: "transform/addAsLabelRow";
+      kind: TransformKind;
+      stepId?: string;
+      id: string;
+    }
   | {
       type: "transform/changeAsLabelRow";
       kind: TransformKind;
+      stepId?: string;
       id: string;
       changes: Partial<Pick<KeyValueRow, "key" | "value">>;
     }
-  | { type: "transform/removeAsLabelRow"; kind: TransformKind; id: string }
+  | {
+      type: "transform/removeAsLabelRow";
+      kind: TransformKind;
+      stepId?: string;
+      id: string;
+    }
   | { type: "block/addConditions"; id: string }
   | { type: "block/removeConditions" }
   | { type: "block/addEachT"; id: string }
@@ -280,84 +307,94 @@ export function builderReducer(
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          addFormatSection(transform, action.section, action.fieldId),
+          addFormatSection(
+            transform,
+            action.stepId,
+            action.section,
+            action.fieldId,
+          ),
         ),
       };
     case "select/removeFormatSection":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          removeFormatSection(transform, action.section),
+          removeFormatSection(transform, action.stepId, action.section),
         ),
       };
     case "select/changeFormat":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          changeFormat(transform, action.format, action.fieldId),
+          changeFormat(transform, action.stepId, action.format, action.fieldId),
         ),
       };
     case "select/changeCsv":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateCsv(transform, action.changes),
+          updateCsv(transform, action.stepId, action.changes),
         ),
       };
     case "select/changeProtobuf":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateProtobuf(transform, action.changes),
+          updateProtobuf(transform, action.stepId, action.changes),
         ),
       };
     case "select/addProtobufFieldRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          addProtobufFieldRow(transform, action.id),
+          addProtobufFieldRow(transform, action.stepId, action.id),
         ),
       };
     case "select/changeProtobufFieldRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateProtobufFieldRow(transform, action.id, action.changes),
+          updateProtobufFieldRow(
+            transform,
+            action.stepId,
+            action.id,
+            action.changes,
+          ),
         ),
       };
     case "select/removeProtobufFieldRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          removeProtobufFieldRow(transform, action.id),
+          removeProtobufFieldRow(transform, action.stepId, action.id),
         ),
       };
     case "select/changeExport":
       return {
         ...state,
         transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateSelectExport(transform, action.changes),
+          updateSelectExport(transform, action.stepId, action.changes),
         ),
       };
     case "transform/addAsLabelRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          addAsLabelRow(transform, action.id),
+          addAsLabelRow(transform, action.stepId, action.id),
         ),
       };
     case "transform/changeAsLabelRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          updateAsLabelRow(transform, action.id, action.changes),
+          updateAsLabelRow(transform, action.stepId, action.id, action.changes),
         ),
       };
     case "transform/removeAsLabelRow":
       return {
         ...state,
         transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          removeAsLabelRow(transform, action.id),
+          removeAsLabelRow(transform, action.stepId, action.id),
         ),
       };
     case "block/addConditions":

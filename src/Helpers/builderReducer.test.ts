@@ -288,7 +288,7 @@ describe("builderReducer", () => {
         id: "new-sql-step",
       });
       expect(select(state).sqlSteps).toHaveLength(2);
-      expect(select(state).sqlSteps[1]).toEqual({
+      expect(select(state).sqlSteps[1]).toMatchObject({
         id: "new-sql-step",
         sql: "",
       });
@@ -304,105 +304,144 @@ describe("builderReducer", () => {
         type: "select/removeSqlStep",
         id: firstId,
       });
-      expect(select(state).sqlSteps).toEqual([{ id: "new-sql-step", sql: "" }]);
+      expect(select(state).sqlSteps).toHaveLength(1);
+      expect(select(state).sqlSteps[0]).toMatchObject({
+        id: "new-sql-step",
+        sql: "",
+      });
     });
 
     it("select/addFormatSection and select/removeFormatSection manage the format sections", () => {
-      const withCsv = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const withCsv = builderReducer(initial, {
         type: "select/addFormatSection",
+        stepId,
         section: "csv",
         fieldId: "new-field",
       });
-      expect(select(withCsv).formatSections).toEqual(["csv"]);
+      expect(select(withCsv).sqlSteps[0].formatSections).toEqual(["csv"]);
       const removed = builderReducer(withCsv, {
         type: "select/removeFormatSection",
+        stepId,
         section: "csv",
       });
-      expect(select(removed).formatSections).toEqual([]);
+      expect(select(removed).sqlSteps[0].formatSections).toEqual([]);
     });
 
     it("select/changeFormat switches the active input format", () => {
-      const withCsv = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const withCsv = builderReducer(initial, {
         type: "select/addFormatSection",
+        stepId,
         section: "csv",
         fieldId: "new-field",
       });
       const state = builderReducer(withCsv, {
         type: "select/changeFormat",
+        stepId,
         format: "json",
         fieldId: "new-field",
       });
-      expect(select(state).formatSections).toEqual(["json"]);
+      expect(select(state).sqlSteps[0].formatSections).toEqual(["json"]);
     });
 
     it("select/changeCsv merges the csv config", () => {
-      const state = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const state = builderReducer(initial, {
         type: "select/changeCsv",
+        stepId,
         changes: { hasHeaders: true },
       });
-      expect(select(state).csv).toMatchObject({ hasHeaders: true });
+      expect(select(state).sqlSteps[0].csv).toMatchObject({
+        hasHeaders: true,
+      });
     });
 
     it("select/changeProtobuf merges the protobuf message name and schema", () => {
-      const state = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const state = builderReducer(initial, {
         type: "select/changeProtobuf",
+        stepId,
         changes: { messageName: "Msg" },
       });
-      expect(select(state).protobuf).toMatchObject({ messageName: "Msg" });
+      expect(select(state).sqlSteps[0].protobuf).toMatchObject({
+        messageName: "Msg",
+      });
     });
 
     it("select/addProtobufFieldRow, select/changeProtobufFieldRow and select/removeProtobufFieldRow manage protobuf field rows", () => {
-      const withRow = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const withRow = builderReducer(initial, {
         type: "select/addProtobufFieldRow",
+        stepId,
         id: "new-field",
       });
-      expect(select(withRow).protobuf.fields).toHaveLength(1);
-      const rowId = select(withRow).protobuf.fields[0].id;
+      expect(select(withRow).sqlSteps[0].protobuf.fields).toHaveLength(1);
+      const rowId = select(withRow).sqlSteps[0].protobuf.fields[0].id;
       const changed = builderReducer(withRow, {
         type: "select/changeProtobufFieldRow",
+        stepId,
         id: rowId,
         changes: { column: "temp", fieldId: "1" },
       });
-      expect(select(changed).protobuf.fields[0]).toMatchObject({
+      expect(select(changed).sqlSteps[0].protobuf.fields[0]).toMatchObject({
         column: "temp",
         fieldId: "1",
       });
       const removed = builderReducer(changed, {
         type: "select/removeProtobufFieldRow",
+        stepId,
         id: rowId,
       });
-      expect(select(removed).protobuf.fields).toEqual([]);
+      expect(select(removed).sqlSteps[0].protobuf.fields).toEqual([]);
     });
 
     it("select/changeExport merges the export config", () => {
-      const state = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const state = builderReducer(initial, {
         type: "select/changeExport",
+        stepId,
         changes: { format: "csv" },
       });
-      expect(select(state).export).toMatchObject({ format: "csv" });
+      expect(select(state).sqlSteps[0].export).toMatchObject({
+        format: "csv",
+      });
     });
 
     it("transform/addAsLabelRow, transform/changeAsLabelRow and transform/removeAsLabelRow manage the select transform's as-label rows", () => {
-      const withRow = builderReducer(stateWithRosAndSelect(), {
+      const initial = stateWithRosAndSelect();
+      const stepId = select(initial).sqlSteps[0].id;
+      const withRow = builderReducer(initial, {
         type: "transform/addAsLabelRow",
         kind: "select",
+        stepId,
         id: "new-row",
       });
-      expect(select(withRow).asLabel).toHaveLength(1);
-      const rowId = select(withRow).asLabel[0].id;
+      expect(select(withRow).sqlSteps[0].asLabel).toHaveLength(1);
+      const rowId = select(withRow).sqlSteps[0].asLabel[0].id;
       const changed = builderReducer(withRow, {
         type: "transform/changeAsLabelRow",
         kind: "select",
+        stepId,
         id: rowId,
         changes: { key: "source" },
       });
-      expect(select(changed).asLabel[0]).toMatchObject({ key: "source" });
+      expect(select(changed).sqlSteps[0].asLabel[0]).toMatchObject({
+        key: "source",
+      });
       const removed = builderReducer(changed, {
         type: "transform/removeAsLabelRow",
         kind: "select",
+        stepId,
         id: rowId,
       });
-      expect(select(removed).asLabel).toEqual([]);
+      expect(select(removed).sqlSteps[0].asLabel).toEqual([]);
     });
   });
 

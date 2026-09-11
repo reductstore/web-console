@@ -2,8 +2,10 @@ import { Dispatch, useState } from "react";
 import {
   Button,
   Checkbox,
+  Dropdown,
   Input,
   InputNumber,
+  MenuProps,
   Modal,
   Segmented,
   Select,
@@ -14,6 +16,7 @@ import {
   DEFAULT_SQL,
   SelectInputFormat,
   SelectTransformStep,
+  SqlStep,
 } from "../../Helpers/transformStepBuilder";
 import { BuilderAction } from "../../Helpers/builderReducer";
 import {
@@ -44,29 +47,23 @@ const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
 
 const EXPORT_FORMATS = ["csv", "json", "parquet"];
 
-function activeFormatOf(
-  step: SelectTransformStep,
-): SelectInputFormat | undefined {
+function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
   return FORMAT_CHOICES.find((f) => step.formatSections.includes(f.value))
     ?.value;
 }
 
-type AddOption = "sql" | "format" | "export" | "asLabel";
+type AddOption = "format" | "export" | "asLabel";
 
-const ADD_OPTIONS: AddOption[] = ["sql", "format", "export", "asLabel"];
+const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
-  sql: "Add SQL row",
   format: "Format",
   export: "Export",
   asLabel: "As label",
 };
 
-function disabledReason(
-  option: AddOption,
-  step: SelectTransformStep,
-): string | undefined {
-  if (option === "sql" || option === "asLabel") return undefined;
+function disabledReason(option: AddOption, step: SqlStep): string | undefined {
+  if (option === "asLabel") return undefined;
 
   if (option === "export") {
     return step.formatSections.includes("export")
@@ -150,16 +147,22 @@ function SqlStepPreview({
   );
 }
 
-interface SelectStepEditorProps {
-  step: SelectTransformStep;
-  dispatch: Dispatch<BuilderAction>;
-}
-
-export default function SelectStepEditor({
+function SqlStepBlock({
   step,
+  label,
+  isFirst,
+  removable,
   dispatch,
-}: SelectStepEditorProps) {
-  const menuItems = ADD_OPTIONS.map((option) => {
+}: {
+  step: SqlStep;
+  label: string;
+  isFirst: boolean;
+  removable: boolean;
+  dispatch: Dispatch<BuilderAction>;
+}) {
+  const activeFormat = activeFormatOf(step);
+
+  const menuItems: MenuProps["items"] = ADD_OPTIONS.map((option) => {
     const reason = disabledReason(option, step);
     return {
       key: option,
@@ -176,65 +179,55 @@ export default function SelectStepEditor({
     };
   });
 
-  const handleMenuClick = ({ key }: { key: string }) => {
-    if (key === "sql") {
-      dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() });
-    } else if (key === "asLabel") {
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
         kind: "select",
+        stepId: step.id,
         id: crypto.randomUUID(),
       });
     } else if (key === "export") {
       dispatch({
         type: "select/addFormatSection",
+        stepId: step.id,
         section: "export",
         fieldId: crypto.randomUUID(),
       });
     } else if (key === "format") {
       dispatch({
         type: "select/addFormatSection",
+        stepId: step.id,
         section: "csv",
         fieldId: crypto.randomUUID(),
       });
     }
   };
 
-  const activeFormat = activeFormatOf(step);
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {step.sqlSteps.map((sqlStep, index) => {
-        const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
-        return (
-          <SectionRow key={sqlStep.id} label={label}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: ROW_GAP,
-              }}
-            >
-              <SqlStepPreview
-                value={sqlStep.sql}
-                editLabel={`Edit ${label}`}
-                isFirst={index === 0}
-                onChange={(sql) =>
-                  dispatch({ type: "select/changeSql", id: sqlStep.id, sql })
-                }
-              />
-              {step.sqlSteps.length > 1 && (
-                <RemoveSectionButton
-                  label={label}
-                  onRemove={() =>
-                    dispatch({ type: "select/removeSqlStep", id: sqlStep.id })
-                  }
-                />
-              )}
-            </div>
-          </SectionRow>
-        );
-      })}
+      <SectionRow label={label}>
+        <div
+          style={{ display: "flex", alignItems: "flex-start", gap: ROW_GAP }}
+        >
+          <SqlStepPreview
+            value={step.sql}
+            editLabel={`Edit ${label}`}
+            isFirst={isFirst}
+            onChange={(sql) =>
+              dispatch({ type: "select/changeSql", id: step.id, sql })
+            }
+          />
+          {removable && (
+            <RemoveSectionButton
+              label={label}
+              onRemove={() =>
+                dispatch({ type: "select/removeSqlStep", id: step.id })
+              }
+            />
+          )}
+        </div>
+      </SectionRow>
 
       {activeFormat && (
         <SectionRow label="Format">
@@ -248,6 +241,7 @@ export default function SelectStepEditor({
                 onChange={(value) =>
                   dispatch({
                     type: "select/changeFormat",
+                    stepId: step.id,
                     format: value as SelectInputFormat,
                     fieldId: crypto.randomUUID(),
                   })
@@ -259,6 +253,7 @@ export default function SelectStepEditor({
                   onChange={(e) =>
                     dispatch({
                       type: "select/changeCsv",
+                      stepId: step.id,
                       changes: { hasHeaders: e.target.checked },
                     })
                   }
@@ -267,10 +262,11 @@ export default function SelectStepEditor({
                 </Checkbox>
               )}
               <RemoveSectionButton
-                label="Format"
+                label={`${label} format`}
                 onRemove={() =>
                   dispatch({
                     type: "select/removeFormatSection",
+                    stepId: step.id,
                     section: activeFormat,
                   })
                 }
@@ -285,6 +281,7 @@ export default function SelectStepEditor({
                     onChange={(e) =>
                       dispatch({
                         type: "select/changeProtobuf",
+                        stepId: step.id,
                         changes: { messageName: e.target.value },
                       })
                     }
@@ -296,6 +293,7 @@ export default function SelectStepEditor({
                     onChange={(e) =>
                       dispatch({
                         type: "select/changeProtobuf",
+                        stepId: step.id,
                         changes: { schema: e.target.value },
                       })
                     }
@@ -307,12 +305,17 @@ export default function SelectStepEditor({
                   onChange={(id, changes) =>
                     dispatch({
                       type: "select/changeProtobufFieldRow",
+                      stepId: step.id,
                       id,
                       changes,
                     })
                   }
                   onRemove={(id) =>
-                    dispatch({ type: "select/removeProtobufFieldRow", id })
+                    dispatch({
+                      type: "select/removeProtobufFieldRow",
+                      stepId: step.id,
+                      id,
+                    })
                   }
                 />
                 <Button
@@ -323,6 +326,7 @@ export default function SelectStepEditor({
                   onClick={() =>
                     dispatch({
                       type: "select/addProtobufFieldRow",
+                      stepId: step.id,
                       id: crypto.randomUUID(),
                     })
                   }
@@ -344,6 +348,7 @@ export default function SelectStepEditor({
               onChange={(value) =>
                 dispatch({
                   type: "select/changeExport",
+                  stepId: step.id,
                   changes: { format: value },
                 })
               }
@@ -358,6 +363,7 @@ export default function SelectStepEditor({
               onChange={(value) =>
                 dispatch({
                   type: "select/changeExport",
+                  stepId: step.id,
                   changes: { rows: value === null ? "" : String(value) },
                 })
               }
@@ -369,16 +375,18 @@ export default function SelectStepEditor({
               onChange={(e) =>
                 dispatch({
                   type: "select/changeExport",
+                  stepId: step.id,
                   changes: { duration: e.target.value },
                 })
               }
               style={{ width: EXPORT_DURATION_WIDTH }}
             />
             <RemoveSectionButton
-              label="Export"
+              label={`${label} export`}
               onRemove={() =>
                 dispatch({
                   type: "select/removeFormatSection",
+                  stepId: step.id,
                   section: "export",
                 })
               }
@@ -397,6 +405,7 @@ export default function SelectStepEditor({
               dispatch({
                 type: "transform/changeAsLabelRow",
                 kind: "select",
+                stepId: step.id,
                 id,
                 changes,
               })
@@ -405,6 +414,7 @@ export default function SelectStepEditor({
               dispatch({
                 type: "transform/removeAsLabelRow",
                 kind: "select",
+                stepId: step.id,
                 id,
               })
             }
@@ -413,6 +423,7 @@ export default function SelectStepEditor({
               dispatch({
                 type: "transform/removeAsLabelRow",
                 kind: "select",
+                stepId: step.id,
                 id: step.asLabel[0].id,
               })
             }
@@ -421,9 +432,49 @@ export default function SelectStepEditor({
         </SectionRow>
       )}
 
+      <Dropdown
+        menu={{ items: menuItems, onClick: handleMenuClick }}
+        trigger={["click"]}
+      >
+        <Button
+          aria-label={`Add option for ${label}`}
+          icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+        />
+      </Dropdown>
+    </div>
+  );
+}
+
+interface SelectStepEditorProps {
+  step: SelectTransformStep;
+  dispatch: Dispatch<BuilderAction>;
+}
+
+export default function SelectStepEditor({
+  step,
+  dispatch,
+}: SelectStepEditorProps) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {step.sqlSteps.map((sqlStep, index) => {
+        const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
+        return (
+          <SqlStepBlock
+            key={sqlStep.id}
+            step={sqlStep}
+            label={label}
+            isFirst={index === 0}
+            removable={step.sqlSteps.length > 1}
+            dispatch={dispatch}
+          />
+        );
+      })}
+
       <AddOptionFooter
-        menuItems={menuItems}
-        onMenuClick={handleMenuClick}
+        menuItems={[{ key: "sql", label: "Add SQL row" }]}
+        onMenuClick={() =>
+          dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
+        }
         docHref="https://www.reduct.store/docs/extensions/official/select-ext"
         docLabel="View ReductSelect Documentation →"
       />
