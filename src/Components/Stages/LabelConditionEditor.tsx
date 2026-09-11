@@ -10,7 +10,7 @@ import {
   ROW_INPUT_WIDTH,
   ROW_ICON_FONT_SIZE,
   WRAP_ROW_STYLE,
-} from "./stepRowLayout";
+} from "./stageRowLayout";
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;

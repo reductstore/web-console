@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import SelectStepEditor from "./SelectStepEditor";
+import SelectStageEditor from "./SelectStageEditor";
 import {
   SelectTransformStep,
   SqlStep,
@@ -42,10 +42,10 @@ const baseStep: SelectTransformStep = {
   sqlSteps: [makeSqlStep({ id: "sql-1" })],
 };
 
-describe("SelectStepEditor", () => {
+describe("SelectStageEditor", () => {
   it("shows the current SQL value as a frozen preview, not an editable input", () => {
     render(
-      <SelectStepEditor
+      <SelectStageEditor
         step={{
           sqlSteps: [
             makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" }),
@@ -59,7 +59,7 @@ describe("SelectStepEditor", () => {
   });
 
   it("shows SELECT * FROM ENTRY() as the default when the first SQL row is blank", () => {
-    render(<SelectStepEditor step={baseStep} dispatch={vi.fn()} />);
+    render(<SelectStageEditor step={baseStep} dispatch={vi.fn()} />);
     expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
     expect(screen.queryByText("No SQL yet")).toBeNull();
   });
@@ -71,13 +71,13 @@ describe("SelectStepEditor", () => {
         makeSqlStep({ id: "sql-2", sql: "" }),
       ],
     };
-    render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+    render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
     expect(screen.getByText("No SQL yet")).toBeTruthy();
   });
 
   it("opens the SQL Editor modal via the edit button and reports a typed expression", () => {
     const dispatch = vi.fn();
-    render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
+    render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
     expect(screen.queryByTestId("monaco-editor")).toBeNull();
 
     fireEvent.click(screen.getByLabelText("Edit SQL"));
@@ -94,13 +94,13 @@ describe("SelectStepEditor", () => {
   });
 
   it("hides the As label section when there are no rows", () => {
-    render(<SelectStepEditor step={baseStep} dispatch={vi.fn()} />);
+    render(<SelectStageEditor step={baseStep} dispatch={vi.fn()} />);
     expect(screen.queryByText("As label")).toBeNull();
   });
 
   it("dispatches transform/addAsLabelRow with kind select when As label is picked from the add menu", () => {
     const dispatch = vi.fn();
-    render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
+    render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Add option for SQL"));
     fireEvent.click(screen.getByText("As label"));
     expect(dispatch).toHaveBeenCalledWith({
@@ -121,7 +121,7 @@ describe("SelectStepEditor", () => {
         }),
       ],
     };
-    render(<SelectStepEditor step={step} dispatch={dispatch} />);
+    render(<SelectStageEditor step={step} dispatch={dispatch} />);
     expect(screen.getByText("As label")).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
       target: { value: "speed" },
@@ -148,7 +148,7 @@ describe("SelectStepEditor", () => {
         }),
       ],
     };
-    render(<SelectStepEditor step={step} dispatch={dispatch} />);
+    render(<SelectStageEditor step={step} dispatch={dispatch} />);
     fireEvent.click(screen.getAllByLabelText("Remove label mapping")[0]);
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/removeAsLabelRow",
@@ -168,7 +168,7 @@ describe("SelectStepEditor", () => {
         }),
       ],
     };
-    render(<SelectStepEditor step={step} dispatch={dispatch} />);
+    render(<SelectStageEditor step={step} dispatch={dispatch} />);
     fireEvent.click(screen.getByLabelText("Remove label mapping"));
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/removeAsLabelRow",
@@ -179,7 +179,7 @@ describe("SelectStepEditor", () => {
   });
 
   it("links to the ReductSelect documentation", () => {
-    render(<SelectStepEditor step={baseStep} dispatch={vi.fn()} />);
+    render(<SelectStageEditor step={baseStep} dispatch={vi.fn()} />);
     const link = screen.getByText("View ReductSelect Documentation →");
     expect(link.closest("a")).toHaveAttribute(
       "href",
@@ -193,7 +193,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
       };
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(screen.getByText("Add SQL row"));
       expect(dispatch).toHaveBeenCalledWith({
@@ -206,7 +206,7 @@ describe("SelectStepEditor", () => {
   describe("Per-block add option menu", () => {
     it("adds the format section (defaulting to CSV) via the dropdown menu", () => {
       const dispatch = vi.fn();
-      render(<SelectStepEditor step={baseStep} dispatch={dispatch} />);
+      render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for SQL"));
       fireEvent.click(screen.getByText("Format"));
       expect(dispatch).toHaveBeenCalledWith({
@@ -221,7 +221,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       fireEvent.click(screen.getByLabelText("Add option for SQL"));
       expect(screen.getByRole("menuitem", { name: "Format" })).toHaveAttribute(
         "aria-disabled",
@@ -233,7 +233,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       fireEvent.click(screen.getByLabelText("Add option for SQL"));
       expect(
         screen.getByRole("menuitem", { name: "Export" }),
@@ -252,7 +252,7 @@ describe("SelectStepEditor", () => {
           }),
         ],
       };
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       expect(screen.getByLabelText("Add option for SQL")).not.toBeDisabled();
     });
   });
@@ -268,7 +268,7 @@ describe("SelectStepEditor", () => {
           }),
         ],
       };
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       expect(screen.getByRole("checkbox")).toBeChecked();
     });
 
@@ -276,7 +276,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["parquet"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       expect(screen.queryByRole("checkbox")).toBeNull();
     });
 
@@ -291,7 +291,7 @@ describe("SelectStepEditor", () => {
           }),
         ],
       };
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByRole("checkbox"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeCsv",
@@ -305,7 +305,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByText("JSON"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
@@ -320,7 +320,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByText("Protobuf"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/changeFormat",
@@ -335,7 +335,7 @@ describe("SelectStepEditor", () => {
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["parquet"] })],
       };
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Remove sql format"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",
@@ -367,12 +367,12 @@ describe("SelectStepEditor", () => {
       };
 
       it("hides the has-headers checkbox", () => {
-        render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+        render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
         expect(screen.queryByRole("checkbox")).toBeNull();
       });
 
       it("shows the current message name and schema", () => {
-        render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+        render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
         expect(screen.getByPlaceholderText("message name")).toHaveValue(
           "Telemetry",
         );
@@ -383,7 +383,7 @@ describe("SelectStepEditor", () => {
 
       it("reports edits to the message name and schema", () => {
         const dispatch = vi.fn();
-        render(<SelectStepEditor step={step} dispatch={dispatch} />);
+        render(<SelectStageEditor step={step} dispatch={dispatch} />);
         fireEvent.change(screen.getByPlaceholderText("message name"), {
           target: { value: "Reading" },
         });
@@ -408,7 +408,7 @@ describe("SelectStepEditor", () => {
 
       it("shows the current field row and reports a column edit", () => {
         const dispatch = vi.fn();
-        render(<SelectStepEditor step={step} dispatch={dispatch} />);
+        render(<SelectStageEditor step={step} dispatch={dispatch} />);
         expect(screen.getByPlaceholderText("column")).toHaveValue(
           "temperature",
         );
@@ -425,7 +425,7 @@ describe("SelectStepEditor", () => {
 
       it("adds another field row via the dedicated add button", () => {
         const dispatch = vi.fn();
-        render(<SelectStepEditor step={step} dispatch={dispatch} />);
+        render(<SelectStageEditor step={step} dispatch={dispatch} />);
         fireEvent.click(screen.getByLabelText("Add protobuf field"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/addProtobufFieldRow",
@@ -436,7 +436,7 @@ describe("SelectStepEditor", () => {
 
       it("removes a field row directly", () => {
         const dispatch = vi.fn();
-        render(<SelectStepEditor step={step} dispatch={dispatch} />);
+        render(<SelectStageEditor step={step} dispatch={dispatch} />);
         fireEvent.click(screen.getByLabelText("Remove protobuf field"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/removeProtobufFieldRow",
@@ -447,7 +447,7 @@ describe("SelectStepEditor", () => {
 
       it("removes the whole section via its remove button", () => {
         const dispatch = vi.fn();
-        render(<SelectStepEditor step={step} dispatch={dispatch} />);
+        render(<SelectStageEditor step={step} dispatch={dispatch} />);
         fireEvent.click(screen.getByLabelText("Remove sql format"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/removeFormatSection",
@@ -470,7 +470,7 @@ describe("SelectStepEditor", () => {
     };
 
     it("shows the current format, rows, and duration", () => {
-      render(<SelectStepEditor step={step} dispatch={vi.fn()} />);
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
       expect(screen.getByText("parquet")).toBeTruthy();
       expect(screen.getByPlaceholderText("max rows")).toHaveValue("1000");
       expect(screen.getByPlaceholderText("max duration (e.g. 1m)")).toHaveValue(
@@ -480,7 +480,7 @@ describe("SelectStepEditor", () => {
 
     it("reports a changed duration", () => {
       const dispatch = vi.fn();
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.change(screen.getByPlaceholderText("max duration (e.g. 1m)"), {
         target: { value: "5m" },
       });
@@ -493,7 +493,7 @@ describe("SelectStepEditor", () => {
 
     it("reports a changed row count", () => {
       const dispatch = vi.fn();
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.change(screen.getByPlaceholderText("max rows"), {
         target: { value: "500" },
       });
@@ -506,7 +506,7 @@ describe("SelectStepEditor", () => {
 
     it("removes the section via its remove button", () => {
       const dispatch = vi.fn();
-      render(<SelectStepEditor step={step} dispatch={dispatch} />);
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Remove sql export"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",

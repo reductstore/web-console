@@ -7,7 +7,14 @@ import {
 } from "./transformStepBuilder";
 
 function emptyState(): BuilderState {
-  return { conditions: [], steps: [], transforms: [], blockOrder: [] };
+  return {
+    conditions: [],
+    steps: [],
+    transforms: [],
+    blockOrder: [],
+    enabled: {},
+    pendingStages: [],
+  };
 }
 
 function condition(
@@ -571,6 +578,76 @@ describe("builderReducer", () => {
       expect(state.blockOrder).toEqual([]);
     });
 
+    it("stage/add appends a pending stage with no kind chosen yet", () => {
+      const state = builderReducer(emptyState(), {
+        type: "stage/add",
+        id: "new-stage",
+      });
+      expect(state.blockOrder).toEqual(["new-stage"]);
+      expect(state.pendingStages).toEqual(["new-stage"]);
+    });
+
+    it("stage/removePending drops a pending stage before a kind is chosen", () => {
+      const withPending = builderReducer(emptyState(), {
+        type: "stage/add",
+        id: "new-stage",
+      });
+      const state = builderReducer(withPending, {
+        type: "stage/removePending",
+        id: "new-stage",
+      });
+      expect(state.blockOrder).toEqual([]);
+      expect(state.pendingStages).toEqual([]);
+    });
+
+    it("stage/setKind conditions replaces the pending id with the conditions sentinel", () => {
+      const withPending = builderReducer(emptyState(), {
+        type: "stage/add",
+        id: "new-stage",
+      });
+      const state = builderReducer(withPending, {
+        type: "stage/setKind",
+        id: "new-stage",
+        kind: "conditions",
+      });
+      expect(state.blockOrder).toEqual(["conditions"]);
+      expect(state.pendingStages).toEqual([]);
+      expect(state.conditions).toHaveLength(1);
+    });
+
+    it("stage/setKind ext replaces the pending id with the process sentinel and adds no transform yet", () => {
+      const withPending = builderReducer(emptyState(), {
+        type: "stage/add",
+        id: "new-stage",
+      });
+      const state = builderReducer(withPending, {
+        type: "stage/setKind",
+        id: "new-stage",
+        kind: "ext",
+      });
+      expect(state.blockOrder).toEqual(["process"]);
+      expect(state.pendingStages).toEqual([]);
+      expect(state.transforms).toEqual([]);
+    });
+
+    it("stage/setKind sample_each_n/sample_each_t/limit reuse the pending id as the step id", () => {
+      for (const kind of ["sample_each_n", "sample_each_t", "limit"] as const) {
+        const withPending = builderReducer(emptyState(), {
+          type: "stage/add",
+          id: "new-stage",
+        });
+        const state = builderReducer(withPending, {
+          type: "stage/setKind",
+          id: "new-stage",
+          kind,
+        });
+        expect(state.blockOrder).toEqual(["new-stage"]);
+        expect(state.pendingStages).toEqual([]);
+        expect(state.steps).toHaveLength(1);
+        expect(state.steps[0].id).toBe("new-stage");
+      }
+    });
+
     it("block/reorder moves the block id from one index to another", () => {
       const initial: BuilderState = {
         ...emptyState(),
@@ -590,6 +667,8 @@ describe("builderReducer", () => {
         steps: [],
         transforms: [],
         blockOrder: ["x"],
+        enabled: {},
+        pendingStages: [],
       };
       const state = builderReducer(emptyState(), {
         type: "external/sync",

@@ -10,12 +10,12 @@ import {
   ROW_GAP,
   ROW_GROUP_WIDTH,
   WRAP_ROW_STYLE,
-} from "./stepRowLayout";
+} from "./stageRowLayout";
 import {
   SectionRow,
   RemoveSectionButton,
   AddOptionFooter,
-} from "./StepSectionLayout";
+} from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
 
 const SECTION_LABELS: Record<RosSection, string> = {
@@ -27,7 +27,7 @@ const SECTION_LABELS: Record<RosSection, string> = {
 
 const ALL_SECTIONS: RosSection[] = ["filter", "encode", "label", "export"];
 
-interface TransformStepEditorProps {
+interface TransformStageEditorProps {
   step: RosTransformStep;
   dispatch: Dispatch<BuilderAction>;
 }
@@ -57,10 +57,10 @@ function disabledReason(
   return undefined;
 }
 
-export default function TransformStepEditor({
+export default function TransformStageEditor({
   step,
   dispatch,
-}: TransformStepEditorProps) {
+}: TransformStageEditorProps) {
   const menuItems = ALL_SECTIONS.map((section) => {
     const reason = disabledReason(section, step);
     return {

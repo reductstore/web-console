@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Button, Dropdown, MenuProps, Typography } from "antd";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
-import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE } from "./stageRowLayout";
 
 export function SectionRow({
   label,

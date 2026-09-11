@@ -86,6 +86,50 @@ export interface BuilderState {
   steps: Step[];
   transforms: TransformStepEntry[];
   blockOrder: string[];
+  enabled: Record<string, boolean>;
+  pendingStages: string[];
+}
+
+export function isStageEnabled(state: BuilderState, id: string): boolean {
+  return state.enabled[id] ?? true;
+}
+
+// A stage created via "+ Add stage" before its type has been chosen from the
+// dropdown - it has an id and a place in blockOrder, but no backing
+// condition/step/transform data yet.
+export type StageKind =
+  | "conditions"
+  | "ext"
+  | "sample_each_n"
+  | "sample_each_t"
+  | "limit";
+
+function replaceBlockId(
+  blockOrder: string[],
+  oldId: string,
+  newId: string,
+): string[] {
+  return blockOrder.map((id) => (id === oldId ? newId : id));
+}
+
+export function currentStageKind(
+  state: BuilderState,
+  id: string,
+): StageKind | null {
+  if (state.pendingStages.includes(id)) return null;
+  if (id === CONDITIONS_BLOCK_ID) return "conditions";
+  if (id === PROCESS_BLOCK_ID) return "ext";
+  const step = state.steps.find((s) => s.id === id);
+  if (step?.type === "each_n") return "sample_each_n";
+  if (step?.type === "each_t") return "sample_each_t";
+  if (step?.type === "limit") return "limit";
+  return null;
+}
+
+function sentinelForKind(kind: StageKind): string | null {
+  if (kind === "conditions") return CONDITIONS_BLOCK_ID;
+  if (kind === "ext") return PROCESS_BLOCK_ID;
+  return null;
 }
 
 function appendStep(state: BuilderState, steps: Step[]): BuilderState {
@@ -191,6 +235,10 @@ export type BuilderAction =
   | { type: "block/addTransform"; kind: TransformKind }
   | { type: "block/removeTransform"; kind: TransformKind }
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
+  | { type: "stage/toggleEnabled"; id: string }
+  | { type: "stage/add"; id: string }
+  | { type: "stage/setKind"; id: string; kind: StageKind }
+  | { type: "stage/removePending"; id: string }
   | { type: "step/remove"; id: string }
   | { type: "external/sync"; state: BuilderState };
 
@@ -456,6 +504,70 @@ export function builderReducer(
         steps: removeStep(state.steps, action.id),
         blockOrder: removeBlockId(state.blockOrder, action.id),
       };
+    case "stage/toggleEnabled":
+      return {
+        ...state,
+        enabled: {
+          ...state.enabled,
+          [action.id]: !isStageEnabled(state, action.id),
+        },
+      };
+    case "stage/add":
+      return {
+        ...state,
+        blockOrder: appendBlockId(state.blockOrder, action.id),
+        pendingStages: [...state.pendingStages, action.id],
+      };
+    case "stage/removePending":
+      return {
+        ...state,
+        blockOrder: removeBlockId(state.blockOrder, action.id),
+        pendingStages: state.pendingStages.filter((id) => id !== action.id),
+      };
+    case "stage/setKind": {
+      const { id, kind } = action;
+      const previousKind = currentStageKind(state, id);
+      if (previousKind === kind) {
+        return state;
+      }
+
+      // Tear down whatever this id previously represented.
+      let { conditions, steps, transforms } = state;
+      if (previousKind === "conditions") conditions = [];
+      else if (previousKind === "ext") transforms = [];
+      else if (previousKind !== null) steps = removeStep(steps, id);
+
+      // Sentinel-based kinds (conditions/ext) always live at their fixed id;
+      // everything else needs a fresh id when moving off a sentinel slot,
+      // or can keep reusing its own id otherwise.
+      const newSentinel = sentinelForKind(kind);
+      const previousSentinel = previousKind
+        ? sentinelForKind(previousKind)
+        : null;
+      const newId =
+        newSentinel ?? (previousSentinel ? crypto.randomUUID() : id);
+
+      if (kind === "conditions") {
+        conditions = addCondition(conditions, crypto.randomUUID());
+      } else if (kind === "sample_each_n") {
+        steps = addEachNStep(steps, newId);
+      } else if (kind === "sample_each_t") {
+        steps = addEachTStep(steps, newId);
+      } else if (kind === "limit") {
+        steps = addLimitStep(steps, newId);
+      }
+      // kind === "ext": no transform created yet - ROS/Select are added from
+      // within the stage itself once #ext is chosen.
+
+      return {
+        ...state,
+        conditions,
+        steps,
+        transforms,
+        blockOrder: replaceBlockId(state.blockOrder, id, newId),
+        pendingStages: state.pendingStages.filter((pid) => pid !== id),
+      };
+    }
     case "external/sync":
       return action.state;
     default:
@@ -554,10 +666,20 @@ function reorderQueryKeys(
 }
 
 export function serialize(state: BuilderState): string {
-  const extPayload = buildExtPayload(state.transforms);
+  const effectiveConditions = isStageEnabled(state, CONDITIONS_BLOCK_ID)
+    ? state.conditions
+    : [];
+  const effectiveSteps = state.steps.filter((step) =>
+    isStageEnabled(state, step.id),
+  );
+  const effectiveTransforms = isStageEnabled(state, PROCESS_BLOCK_ID)
+    ? state.transforms
+    : [];
+
+  const extPayload = buildExtPayload(effectiveTransforms);
   const merged = {
-    ...serializeBuilderList(state.conditions),
-    ...serializeSteps(state.steps),
+    ...serializeBuilderList(effectiveConditions),
+    ...serializeSteps(effectiveSteps),
     ...(extPayload ? { "#ext": extPayload } : {}),
   };
   const ordered = reorderQueryKeys(merged, state.blockOrder, state.steps);

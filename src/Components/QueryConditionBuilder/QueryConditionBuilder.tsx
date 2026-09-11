@@ -7,17 +7,17 @@ import {
   useState,
   ComponentProps,
 } from "react";
-import { Button, Dropdown, Tooltip, Typography } from "antd";
+import { Button, Dropdown, Select, Tooltip, Typography } from "antd";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import BuilderErrorBoundary from "./BuilderErrorBoundary";
-import ConditionListEditor from "../Steps/ConditionListEditor";
-import SampleStepEditor from "../Steps/SampleStepEditor";
-import LimitStepEditor from "../Steps/LimitStepEditor";
-import TransformStepEditor from "../Steps/TransformStepEditor";
-import SelectStepEditor from "../Steps/SelectStepEditor";
-import { ROW_ICON_FONT_SIZE } from "../Steps/stepRowLayout";
+import ConditionListEditor from "../Stages/ConditionListEditor";
+import SampleStageEditor from "../Stages/SampleStageEditor";
+import LimitStageEditor from "../Stages/LimitStageEditor";
+import TransformStageEditor from "../Stages/TransformStageEditor";
+import SelectStageEditor from "../Stages/SelectStageEditor";
+import { ROW_ICON_FONT_SIZE } from "../Stages/stageRowLayout";
 import {
   CONDITIONS_BLOCK_ID,
   hasIncompleteSteps,
@@ -30,8 +30,10 @@ import {
 import {
   BuilderAction,
   BuilderState,
+  StageKind,
   builderReducer,
   initialBlockOrder,
+  isStageEnabled,
   parseQueryAndTransform,
   serialize,
 } from "../../Helpers/builderReducer";
@@ -50,18 +52,115 @@ function buildInitialState(value: string): BuilderState {
     conditions,
     steps,
     transforms,
+    enabled: {},
+    pendingStages: [],
     blockOrder: initialBlockOrder(conditions, steps, transforms),
   };
 }
 
-const STEP_LABELS: Record<string, string> = {
-  conditions: "Label filter",
-  sample_each_t: "Sample by time",
-  sample_each_n: "Sample every N",
-  limit: "Limit",
-  transform_ros: "Process (ROS)",
-  transform_select: "Process (Select)",
-};
+const STAGE_KIND_OPTIONS: {
+  kind: StageKind;
+  label: string;
+  description: string;
+}[] = [
+  {
+    kind: "conditions",
+    label: "&label",
+    description: "Filter records by a label's value.",
+  },
+  {
+    kind: "ext",
+    label: "#ext",
+    description:
+      "Process records with ReductROS and/or ReductSelect (SQL). ROS always runs first.",
+  },
+  {
+    kind: "sample_each_n",
+    label: "$each_n",
+    description: "Keep only every Nth record.",
+  },
+  {
+    kind: "sample_each_t",
+    label: "$each_t",
+    description: "Keep at most one record per time interval.",
+  },
+  {
+    kind: "limit",
+    label: "$limit",
+    description: "Cap the number of records returned.",
+  },
+];
+
+function usedStageKinds(state: BuilderState): Set<StageKind> {
+  const used = new Set<StageKind>();
+  if (state.blockOrder.includes(CONDITIONS_BLOCK_ID)) used.add("conditions");
+  if (state.blockOrder.includes(PROCESS_BLOCK_ID)) used.add("ext");
+  if (state.steps.some((step) => step.type === "each_n"))
+    used.add("sample_each_n");
+  if (state.steps.some((step) => step.type === "each_t"))
+    used.add("sample_each_t");
+  if (state.steps.some((step) => step.type === "limit")) used.add("limit");
+  return used;
+}
+
+// A stage can always be reassigned to any kind that isn't already taken by
+// a *different* stage - its own current kind must stay selectable so the
+// dropdown still shows it as the active choice.
+function disabledKindsFor(
+  state: BuilderState,
+  ownKind: StageKind | null,
+): Set<StageKind> {
+  const used = usedStageKinds(state);
+  if (ownKind) used.delete(ownKind);
+  return used;
+}
+
+function StageKindSelect({
+  value,
+  disabledKinds,
+  onChange,
+}: {
+  value: StageKind | null;
+  disabledKinds: Set<StageKind>;
+  onChange: (kind: StageKind) => void;
+}) {
+  return (
+    <Select
+      aria-label="Stage type"
+      placeholder="Select a stage type"
+      size="small"
+      style={{ width: 160 }}
+      popupMatchSelectWidth={300}
+      classNames={{ popup: { root: "stageKindDropdown" } }}
+      value={value ?? undefined}
+      onChange={onChange}
+      options={STAGE_KIND_OPTIONS.map((option) => ({
+        value: option.kind,
+        label: option.label,
+        disabled: disabledKinds.has(option.kind),
+      }))}
+      virtual={false}
+      optionRender={(option) => {
+        const meta = STAGE_KIND_OPTIONS.find((o) => o.kind === option.value);
+        const content = (
+          <div style={{ whiteSpace: "normal" }}>
+            <div>{meta?.label}</div>
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              {meta?.description}
+            </Typography.Text>
+          </div>
+        );
+        return disabledKinds.has(option.value as StageKind) ? (
+          <Tooltip title="Already used by another stage" placement="right">
+            {content}
+          </Tooltip>
+        ) : (
+          content
+        );
+      }}
+    />
+  );
+}
 
 function ProcessSubsection({
   title,
@@ -111,14 +210,54 @@ function buildBlocks(
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
   return state.blockOrder.flatMap((id): BuilderBlock[] => {
+    if (state.pendingStages.includes(id)) {
+      if (!sourceReady) return [];
+      return [
+        {
+          id,
+          removeLabel: "Remove stage",
+          onRemove: () => dispatch({ type: "stage/removePending", id }),
+          enabled: true,
+          onToggleEnabled: () => {},
+          kindSelector: (
+            <StageKindSelect
+              value={null}
+              disabledKinds={disabledKindsFor(state, null)}
+              onChange={(kind) => dispatch({ type: "stage/setKind", id, kind })}
+            />
+          ),
+          content: (
+            <Typography.Text type="secondary">
+              Choose a stage type above to configure it.
+            </Typography.Text>
+          ),
+        },
+      ];
+    }
+
     if (id === CONDITIONS_BLOCK_ID) {
       if (!sourceReady) return [];
       return [
         {
           id: CONDITIONS_BLOCK_ID,
-          label: STEP_LABELS.conditions,
           removeLabel: "Remove label filter",
           onRemove: () => dispatch({ type: "block/removeConditions" }),
+          enabled: isStageEnabled(state, CONDITIONS_BLOCK_ID),
+          onToggleEnabled: () =>
+            dispatch({ type: "stage/toggleEnabled", id: CONDITIONS_BLOCK_ID }),
+          kindSelector: (
+            <StageKindSelect
+              value="conditions"
+              disabledKinds={disabledKindsFor(state, "conditions")}
+              onChange={(kind) =>
+                dispatch({
+                  type: "stage/setKind",
+                  id: CONDITIONS_BLOCK_ID,
+                  kind,
+                })
+              }
+            />
+          ),
           content: (
             <ConditionListEditor
               conditions={state.conditions}
@@ -142,12 +281,34 @@ function buildBlocks(
     if (id === PROCESS_BLOCK_ID) {
       const rosTransform = state.transforms.find((t) => t.kind === "ros");
       const selectTransform = state.transforms.find((t) => t.kind === "select");
-      if (!sourceReady || (!rosTransform && !selectTransform)) return [];
+      if (!sourceReady) return [];
+
+      const addNestedItems = [
+        { key: "ros", label: "ROS", disabled: !!rosTransform },
+        { key: "select", label: "Select", disabled: !!selectTransform },
+      ];
+      const handleAddNested = ({ key }: { key: string }) => {
+        if (key === "ros" || key === "select") {
+          dispatch({ type: "block/addTransform", kind: key });
+        }
+      };
+
       return [
         {
           id: PROCESS_BLOCK_ID,
-          label: "Process",
           removable: false,
+          enabled: isStageEnabled(state, PROCESS_BLOCK_ID),
+          onToggleEnabled: () =>
+            dispatch({ type: "stage/toggleEnabled", id: PROCESS_BLOCK_ID }),
+          kindSelector: (
+            <StageKindSelect
+              value="ext"
+              disabledKinds={disabledKindsFor(state, "ext")}
+              onChange={(kind) =>
+                dispatch({ type: "stage/setKind", id: PROCESS_BLOCK_ID, kind })
+              }
+            />
+          ),
           content: (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {rosTransform && (
@@ -158,7 +319,7 @@ function buildBlocks(
                     dispatch({ type: "block/removeTransform", kind: "ros" })
                   }
                 >
-                  <TransformStepEditor
+                  <TransformStageEditor
                     step={rosTransform.ros}
                     dispatch={dispatch}
                   />
@@ -173,11 +334,24 @@ function buildBlocks(
                     dispatch({ type: "block/removeTransform", kind: "select" })
                   }
                 >
-                  <SelectStepEditor
+                  <SelectStageEditor
                     step={selectTransform.select}
                     dispatch={dispatch}
                   />
                 </ProcessSubsection>
+              )}
+              {(!rosTransform || !selectTransform) && (
+                <Dropdown
+                  menu={{ items: addNestedItems, onClick: handleAddNested }}
+                  trigger={["click"]}
+                >
+                  <Button
+                    aria-label="Add ROS or Select"
+                    icon={
+                      <PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />
+                    }
+                  />
+                </Dropdown>
               )}
             </div>
           ),
@@ -193,14 +367,25 @@ function buildBlocks(
       return [
         {
           id: step.id,
-          label:
-            step.type === "each_n"
-              ? STEP_LABELS.sample_each_n
-              : STEP_LABELS.sample_each_t,
-          removeLabel: "Remove sample step",
+          removeLabel: "Remove sample stage",
           onRemove: () => dispatch({ type: "step/remove", id: step.id }),
+          enabled: isStageEnabled(state, step.id),
+          onToggleEnabled: () =>
+            dispatch({ type: "stage/toggleEnabled", id: step.id }),
+          kindSelector: (
+            <StageKindSelect
+              value={step.type === "each_n" ? "sample_each_n" : "sample_each_t"}
+              disabledKinds={disabledKindsFor(
+                state,
+                step.type === "each_n" ? "sample_each_n" : "sample_each_t",
+              )}
+              onChange={(kind) =>
+                dispatch({ type: "stage/setKind", id: step.id, kind })
+              }
+            />
+          ),
           content: (
-            <SampleStepEditor
+            <SampleStageEditor
               kind={step.type}
               everyNth={
                 step.type === "each_n" ? step.eachN.everyNth : undefined
@@ -225,11 +410,22 @@ function buildBlocks(
     return [
       {
         id: step.id,
-        label: STEP_LABELS.limit,
-        removeLabel: "Remove limit step",
+        removeLabel: "Remove limit stage",
         onRemove: () => dispatch({ type: "step/remove", id: step.id }),
+        enabled: isStageEnabled(state, step.id),
+        onToggleEnabled: () =>
+          dispatch({ type: "stage/toggleEnabled", id: step.id }),
+        kindSelector: (
+          <StageKindSelect
+            value="limit"
+            disabledKinds={disabledKindsFor(state, "limit")}
+            onChange={(kind) =>
+              dispatch({ type: "stage/setKind", id: step.id, kind })
+            }
+          />
+        ),
         content: (
-          <LimitStepEditor
+          <LimitStageEditor
             step={step.limit}
             onChange={(changes) =>
               dispatch({ type: "step/changeLimit", id: step.id, changes })
@@ -241,83 +437,19 @@ function buildBlocks(
   });
 }
 
-function buildAddStepMenu(
-  state: BuilderState,
+function buildAddStageButton(
   sourceReady: boolean,
   dispatch: Dispatch<BuilderAction>,
 ): ReactNode {
-  const hasConditionsBlock = state.blockOrder.includes(CONDITIONS_BLOCK_ID);
-  const hasEachN = state.steps.some((step) => step.type === "each_n");
-  const hasEachT = state.steps.some((step) => step.type === "each_t");
-  const hasLimit = state.steps.some((step) => step.type === "limit");
-  const hasRos = state.transforms.some((transform) => transform.kind === "ros");
-  const hasSelect = state.transforms.some(
-    (transform) => transform.kind === "select",
-  );
-
-  const disabledStepReason = (key: string): string | undefined => {
-    if (!sourceReady) return "Select a bucket and entries first";
-    if (key === "conditions" && hasConditionsBlock)
-      return "Label filter is already added";
-    if (key === "sample_each_t" && hasEachT)
-      return "Sample by time is already added";
-    if (key === "sample_each_n" && hasEachN)
-      return "Sample every N is already added";
-    if (key === "limit" && hasLimit) return "Limit is already added";
-    if (key === "transform_ros" && hasRos) {
-      return "Process (ROS) is already added";
-    }
-    if (key === "transform_select" && hasSelect) {
-      return "Process (Select) is already added";
-    }
-    return undefined;
-  };
-
-  const menuItems = Object.keys(STEP_LABELS).map((key) => {
-    const reason = disabledStepReason(key);
-    return {
-      key,
-      disabled: !!reason,
-      label: reason ? (
-        <Tooltip title={reason} placement="right">
-          <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>
-            {STEP_LABELS[key]}
-          </span>
-        </Tooltip>
-      ) : (
-        STEP_LABELS[key]
-      ),
-    };
-  });
-
-  const handleMenuClick = ({ key }: { key: string }) => {
-    if (key === "conditions") {
-      dispatch({ type: "block/addConditions", id: crypto.randomUUID() });
-    } else if (key === "sample_each_t") {
-      dispatch({ type: "block/addEachT", id: crypto.randomUUID() });
-    } else if (key === "sample_each_n") {
-      dispatch({ type: "block/addEachN", id: crypto.randomUUID() });
-    } else if (key === "limit") {
-      dispatch({ type: "block/addLimit", id: crypto.randomUUID() });
-    } else if (key === "transform_ros") {
-      dispatch({ type: "block/addTransform", kind: "ros" });
-    } else if (key === "transform_select") {
-      dispatch({ type: "block/addTransform", kind: "select" });
-    }
-  };
-
   return (
-    <Dropdown
-      menu={{ items: menuItems, onClick: handleMenuClick }}
-      trigger={["click"]}
+    <Button
+      aria-label="Add stage"
+      disabled={!sourceReady}
+      icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+      onClick={() => dispatch({ type: "stage/add", id: crypto.randomUUID() })}
     >
-      <Button
-        aria-label="Add step"
-        icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      >
-        Add step
-      </Button>
-    </Dropdown>
+      Add stage
+    </Button>
   );
 }
 
@@ -432,6 +564,8 @@ export default function QueryConditionBuilder({
       conditions: parsed.list,
       steps: nextSteps,
       transforms: nextTransforms,
+      enabled: {},
+      pendingStages: [],
       blockOrder: initialBlockOrder(parsed.list, nextSteps, nextTransforms),
     };
     skipNextNotifyRef.current = true;
@@ -489,7 +623,7 @@ export default function QueryConditionBuilder({
           onReorderBlock={(fromIndex, toIndex) =>
             dispatch({ type: "block/reorder", fromIndex, toIndex })
           }
-          addStepMenu={buildAddStepMenu(state, sourceReady, dispatch)}
+          addStageMenu={buildAddStageButton(sourceReady, dispatch)}
         />
       </BuilderErrorBoundary>
       {error && (

@@ -28,12 +28,12 @@ import {
   EXPORT_DURATION_WIDTH,
   PROTOBUF_MESSAGE_NAME_WIDTH,
   PROTOBUF_SCHEMA_WIDTH,
-} from "./stepRowLayout";
+} from "./stageRowLayout";
 import {
   SectionRow,
   RemoveSectionButton,
   AddOptionFooter,
-} from "./StepSectionLayout";
+} from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
 import ProtobufFieldRowList from "./ProtobufFieldRowList";
 import { QueryEditor } from "../QueryEditor";
@@ -446,15 +446,15 @@ function SqlStepBlock({
   );
 }
 
-interface SelectStepEditorProps {
+interface SelectStageEditorProps {
   step: SelectTransformStep;
   dispatch: Dispatch<BuilderAction>;
 }
 
-export default function SelectStepEditor({
+export default function SelectStageEditor({
   step,
   dispatch,
-}: SelectStepEditorProps) {
+}: SelectStageEditorProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {step.sqlSteps.map((sqlStep, index) => {

@@ -1,16 +1,16 @@
 import { InputNumber, Typography } from "antd";
 import { LimitStep } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stageRowLayout";
 
-interface LimitStepEditorProps {
+interface LimitStageEditorProps {
   step: LimitStep;
   onChange: (changes: Partial<LimitStep>) => void;
 }
 
-export default function LimitStepEditor({
+export default function LimitStageEditor({
   step,
   onChange,
-}: LimitStepEditorProps) {
+}: LimitStageEditorProps) {
   return (
     <div
       style={{

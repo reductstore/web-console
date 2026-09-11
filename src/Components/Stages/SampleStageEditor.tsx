@@ -4,7 +4,7 @@ import {
   EachTStep,
   SampleKind,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stageRowLayout";
 
 const DURATION_SUGGESTIONS = [
   "$__interval",
@@ -20,7 +20,7 @@ const DURATION_SUGGESTIONS = [
   "1h",
 ].map((value) => ({ value }));
 
-interface SampleStepEditorProps {
+interface SampleStageEditorProps {
   kind: SampleKind;
   everyNth?: number;
   duration: string;
@@ -30,7 +30,7 @@ interface SampleStepEditorProps {
   intervalValue?: string;
 }
 
-export default function SampleStepEditor({
+export default function SampleStageEditor({
   kind,
   everyNth,
   duration,
@@ -38,7 +38,7 @@ export default function SampleStepEditor({
   onChangeEachN,
   onChangeEachT,
   intervalValue,
-}: SampleStepEditorProps) {
+}: SampleStageEditorProps) {
   return (
     <div
       style={{

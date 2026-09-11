@@ -54,19 +54,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.queryCardHandle {
   cursor: grab;
-  color: #8c8c8c;
-  display: flex;
-  align-items: center;
   touch-action: none;
 }
 
+.queryCardHeader:active {
+  cursor: grabbing;
+}
+
 .queryCardLabel {
-  flex: 1;
+  flex-shrink: 0;
   font-size: 12px;
+}
+
+.queryCardHeaderSpacer {
+  flex: 1;
+}
+
+.stageKindDropdown .ant-select-item-option-content {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .queryCardBody {

@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import SampleStepEditor from "./SampleStepEditor";
+import SampleStageEditor from "./SampleStageEditor";
 
 const eachTProps = {
   kind: "each_t" as const,
@@ -17,9 +17,9 @@ const eachNProps = {
   everyNth: undefined,
 };
 
-describe("SampleStepEditor", () => {
+describe("SampleStageEditor", () => {
   it("shows the current duration", () => {
-    render(<SampleStepEditor {...eachTProps} duration="30s" />);
+    render(<SampleStageEditor {...eachTProps} duration="30s" />);
     expect(screen.getByRole("combobox", { name: "Interval" })).toHaveValue(
       "30s",
     );
@@ -27,7 +27,7 @@ describe("SampleStepEditor", () => {
 
   it("shows the literal $__interval macro in the duration field while using the macro", () => {
     render(
-      <SampleStepEditor
+      <SampleStageEditor
         {...eachTProps}
         useIntervalMacro={true}
         intervalValue="30s"
@@ -40,7 +40,7 @@ describe("SampleStepEditor", () => {
 
   it("shows the resolved interval value next to the input while using the macro", () => {
     render(
-      <SampleStepEditor
+      <SampleStageEditor
         {...eachTProps}
         useIntervalMacro={true}
         intervalValue="30s"
@@ -51,14 +51,14 @@ describe("SampleStepEditor", () => {
 
   it("does not show the resolved interval value when not using the macro", () => {
     render(
-      <SampleStepEditor {...eachTProps} duration="30s" intervalValue="30s" />,
+      <SampleStageEditor {...eachTProps} duration="30s" intervalValue="30s" />,
     );
     expect(screen.queryByText(/resolves to/)).toBeNull();
   });
 
   it("reports a typed duration and switches off the interval macro", () => {
     const onChangeEachT = vi.fn();
-    render(<SampleStepEditor {...eachTProps} onChangeEachT={onChangeEachT} />);
+    render(<SampleStageEditor {...eachTProps} onChangeEachT={onChangeEachT} />);
     fireEvent.change(screen.getByRole("combobox", { name: "Interval" }), {
       target: { value: "1m" },
     });
@@ -71,7 +71,7 @@ describe("SampleStepEditor", () => {
   it("re-enables the interval macro when $__interval is typed back in", () => {
     const onChangeEachT = vi.fn();
     render(
-      <SampleStepEditor
+      <SampleStageEditor
         {...eachTProps}
         duration="1m"
         onChangeEachT={onChangeEachT}
@@ -85,7 +85,7 @@ describe("SampleStepEditor", () => {
 
   it("shows a plain number field for each_n and reports a typed count", () => {
     const onChangeEachN = vi.fn();
-    render(<SampleStepEditor {...eachNProps} onChangeEachN={onChangeEachN} />);
+    render(<SampleStageEditor {...eachNProps} onChangeEachN={onChangeEachN} />);
     fireEvent.change(screen.getByPlaceholderText("every Nth record"), {
       target: { value: "5" },
     });

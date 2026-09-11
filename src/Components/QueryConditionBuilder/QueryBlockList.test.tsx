@@ -33,9 +33,10 @@ const block = (
   overrides: Partial<BuilderBlock> = {},
 ): BuilderBlock => ({
   id,
-  label: `Block ${id}`,
   removeLabel: `Remove ${id}`,
   onRemove: () => {},
+  enabled: true,
+  onToggleEnabled: () => {},
   content: <div>Content {id}</div>,
   ...overrides,
 });
@@ -46,23 +47,23 @@ describe("QueryBlockList", () => {
       <QueryBlockList
         blocks={[]}
         onReorderBlock={() => {}}
-        addStepMenu={null}
+        addStageMenu={null}
       />,
     );
     expect(screen.queryByLabelText("Drag to reorder")).toBeNull();
   });
 
-  it("renders each block's label, content, and drag handle", () => {
+  it("renders each block's position-based stage label, content, and drag handle", () => {
     render(
       <QueryBlockList
         blocks={[block("a"), block("b")]}
         onReorderBlock={() => {}}
-        addStepMenu={null}
+        addStageMenu={null}
       />,
     );
-    expect(screen.getByText("Block a")).toBeTruthy();
+    expect(screen.getByText("Stage 1")).toBeTruthy();
     expect(screen.getByText("Content a")).toBeTruthy();
-    expect(screen.getByText("Block b")).toBeTruthy();
+    expect(screen.getByText("Stage 2")).toBeTruthy();
     expect(screen.getByText("Content b")).toBeTruthy();
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(2);
   });
@@ -73,22 +74,22 @@ describe("QueryBlockList", () => {
       <QueryBlockList
         blocks={[block("a", { onRemove })]}
         onReorderBlock={() => {}}
-        addStepMenu={null}
+        addStageMenu={null}
       />,
     );
     fireEvent.click(screen.getByLabelText("Remove a"));
     expect(onRemove).toHaveBeenCalled();
   });
 
-  it("renders the addStepMenu slot", () => {
+  it("renders the addStageMenu slot", () => {
     render(
       <QueryBlockList
         blocks={[]}
         onReorderBlock={() => {}}
-        addStepMenu={<button aria-label="Add step">Add step</button>}
+        addStageMenu={<button aria-label="Add stage">Add stage</button>}
       />,
     );
-    expect(screen.getByLabelText("Add step")).toBeTruthy();
+    expect(screen.getByLabelText("Add stage")).toBeTruthy();
   });
 
   it("calls onReorderBlock with the resolved from/to indexes when a block is dragged over another", () => {
@@ -97,7 +98,7 @@ describe("QueryBlockList", () => {
       <QueryBlockList
         blocks={[block("a"), block("b"), block("c")]}
         onReorderBlock={onReorderBlock}
-        addStepMenu={null}
+        addStageMenu={null}
       />,
     );
     capturedOnDragEnd?.({

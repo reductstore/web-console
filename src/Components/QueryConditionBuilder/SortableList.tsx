@@ -25,7 +25,7 @@ import {
 interface SortableListProps<T extends { id: string }> {
   items: T[];
   onReorder: (fromIndex: number, toIndex: number) => void;
-  renderItem: (item: T) => ReactNode;
+  renderItem: (item: T, index: number) => ReactNode;
 }
 
 export default function SortableList<T extends { id: string }>({
@@ -36,7 +36,9 @@ export default function SortableList<T extends { id: string }>({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -60,8 +62,11 @@ export default function SortableList<T extends { id: string }>({
     onReorder(fromIndex, toIndex);
   };
 
-  const activeItem = items.find((item) => item.id === activeId);
-  const overlayElement = activeItem ? renderItem(activeItem) : null;
+  const activeIndex = items.findIndex((item) => item.id === activeId);
+  const activeItem = activeIndex === -1 ? undefined : items[activeIndex];
+  const overlayElement = activeItem
+    ? renderItem(activeItem, activeIndex)
+    : null;
 
   return (
     <DndContext
@@ -75,7 +80,7 @@ export default function SortableList<T extends { id: string }>({
         items={items.map((item) => item.id)}
         strategy={verticalListSortingStrategy}
       >
-        {items.map((item) => renderItem(item))}
+        {items.map((item, index) => renderItem(item, index))}
       </SortableContext>
       {/* Renders a floating, unconstrained clone of the dragged card that
           follows the pointer - without it, the card being dragged stays

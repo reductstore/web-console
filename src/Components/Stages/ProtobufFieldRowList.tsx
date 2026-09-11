@@ -8,7 +8,7 @@ import {
   PROTOBUF_COLUMN_WIDTH,
   PROTOBUF_FIELD_ID_WIDTH,
   PROTOBUF_TYPE_WIDTH,
-} from "./stepRowLayout";
+} from "./stageRowLayout";
 
 const PROTOBUF_FIELD_TYPES = [
   "string",
