@@ -139,6 +139,7 @@ function SqlStepPreview({
               onChange={onChange}
               height="100%"
               containerStyle={{ flex: 1, minHeight: 0 }}
+              allowExpand={false}
             />
           </div>
         </Modal>

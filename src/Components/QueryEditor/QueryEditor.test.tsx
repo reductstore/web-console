@@ -329,5 +329,17 @@ describe("QueryEditor", () => {
       expect(screen.getByLabelText("Format SQL")).toBeInTheDocument();
       expect(screen.getByLabelText("Expand editor")).toBeInTheDocument();
     });
+
+    it("hides the expand button when allowExpand is false", () => {
+      render(
+        <QueryEditor
+          language="sql"
+          value=""
+          onChange={() => {}}
+          allowExpand={false}
+        />,
+      );
+      expect(screen.queryByLabelText("Expand editor")).not.toBeInTheDocument();
+    });
   });
 });

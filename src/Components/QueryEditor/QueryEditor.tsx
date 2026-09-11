@@ -50,6 +50,7 @@ interface QueryEditorProps {
   readOnly?: boolean;
   validationContext?: ValidationContext;
   containerStyle?: React.CSSProperties;
+  allowExpand?: boolean;
 }
 
 interface IDisposable {
@@ -91,6 +92,7 @@ export function QueryEditor({
   readOnly = false,
   validationContext,
   containerStyle,
+  allowExpand = true,
 }: QueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const inlineContainerRef = useRef<HTMLDivElement | null>(null);
@@ -578,15 +580,17 @@ export function QueryEditor({
               disabled={readOnly}
             />
           </Tooltip>
-          <Tooltip title={isExpanded ? "Collapse editor" : "Expand editor"}>
-            <Button
-              aria-label={isExpanded ? "Collapse editor" : "Expand editor"}
-              type="text"
-              size="small"
-              icon={isExpanded ? <CompressOutlined /> : <ExpandOutlined />}
-              onClick={handleToggleExpand}
-            />
-          </Tooltip>
+          {allowExpand && (
+            <Tooltip title={isExpanded ? "Collapse editor" : "Expand editor"}>
+              <Button
+                aria-label={isExpanded ? "Collapse editor" : "Expand editor"}
+                type="text"
+                size="small"
+                icon={isExpanded ? <CompressOutlined /> : <ExpandOutlined />}
+                onClick={handleToggleExpand}
+              />
+            </Tooltip>
+          )}
         </div>
       </div>
       {resizable && (
