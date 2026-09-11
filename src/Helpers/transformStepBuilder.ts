@@ -694,16 +694,10 @@ function buildRosExt(ros: RosTransformStep): Record<string, unknown> {
 
 export function buildExtPayload(
   transforms: TransformStepEntry[],
-): Record<string, unknown> | undefined {
+): Record<string, unknown>[] | undefined {
   if (transforms.length === 0) {
     return undefined;
   }
-  // The server applies extensions in the order their keys appear in the
-  // payload, and ROS must run before Select (Select otherwise receives the
-  // raw, not-yet-extracted record). This is fixed regardless of how the
-  // blocks are arranged in the builder, since that ordering is purely
-  // visual and unrelated to this pipeline requirement.
-  const payload: Record<string, unknown> = {};
   const ros = transforms.find(
     (transform): transform is Extract<TransformStepEntry, { kind: "ros" }> =>
       transform.kind === "ros",
@@ -712,9 +706,15 @@ export function buildExtPayload(
     (transform): transform is Extract<TransformStepEntry, { kind: "select" }> =>
       transform.kind === "select",
   );
-  if (ros) payload.ros = buildRosExt(ros.ros);
-  if (select) payload.select = buildSelectExt(select.select);
-  return payload;
+
+  const payload: Record<string, unknown>[] = [];
+  if (ros) payload.push({ ros: buildRosExt(ros.ros) });
+  if (select) {
+    for (const stage of buildSelectExt(select.select)) {
+      payload.push({ select: stage });
+    }
+  }
+  return payload.length > 0 ? payload : undefined;
 }
 
 export function parseExtPayload(ext: unknown): {
@@ -724,6 +724,41 @@ export function parseExtPayload(ext: unknown): {
   if (ext === undefined) {
     return { success: true, transforms: [] };
   }
+
+  if (Array.isArray(ext)) {
+    const transforms: TransformStepEntry[] = [];
+    const selectStages: unknown[] = [];
+    for (const entry of ext) {
+      if (!isPlainObject(entry)) {
+        return { success: false };
+      }
+      const keys = Object.keys(entry);
+      if (keys.length !== 1) {
+        return { success: false };
+      }
+      const [key] = keys;
+      if (key === "ros") {
+        const result = parseRosPayload(entry.ros);
+        if (!result.success || !result.transform) {
+          return { success: false };
+        }
+        transforms.push(result.transform);
+      } else if (key === "select") {
+        selectStages.push(entry.select);
+      } else {
+        return { success: false };
+      }
+    }
+    if (selectStages.length > 0) {
+      const result = parseSelectPayload(selectStages);
+      if (!result.success || !result.transform) {
+        return { success: false };
+      }
+      transforms.push(result.transform);
+    }
+    return { success: true, transforms };
+  }
+
   if (!isPlainObject(ext)) {
     return { success: false };
   }

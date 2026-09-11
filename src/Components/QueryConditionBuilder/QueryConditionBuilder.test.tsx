@@ -1155,7 +1155,7 @@ describe("QueryConditionBuilder", () => {
 
       const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
       const parsed = JSON.parse(lastValue);
-      expect(parsed["#ext"].ros.extract).toMatchObject({
+      expect(parsed["#ext"][0].ros.extract).toMatchObject({
         topic: "/robot/odom",
         as_label: { speed: "data.speed" },
       });
@@ -1352,7 +1352,7 @@ describe("QueryConditionBuilder", () => {
 
       const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
       const parsed = JSON.parse(lastValue);
-      expect(parsed["#ext"].select[0]).toMatchObject({
+      expect(parsed["#ext"][0].select).toMatchObject({
         sql: "SELECT temp.value AS value FROM ENTRY()",
         as_label: { value: "value" },
       });
@@ -1402,7 +1402,7 @@ describe("QueryConditionBuilder", () => {
 
       const lastValue = onChange.mock.calls.at(-1)?.[0] as string;
       const parsed = JSON.parse(lastValue);
-      expect(parsed["#ext"].select[0]).toMatchObject({
+      expect(parsed["#ext"][0].select).toMatchObject({
         parquet: {},
         export: { format: "parquet", rows: 500, duration: "1m" },
       });
