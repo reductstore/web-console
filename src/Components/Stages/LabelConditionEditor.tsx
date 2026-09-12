@@ -9,6 +9,7 @@ import {
 import {
   ROW_INPUT_WIDTH,
   ROW_ICON_FONT_SIZE,
+  ROW_ICON_BUTTON_WIDTH,
   OPERATOR_SELECT_WIDTH,
   WRAP_ROW_STYLE,
 } from "./stageRowLayout";
@@ -95,7 +96,7 @@ export default function LabelConditionEditor({
           onClick={() => onRemove(condition.id)}
         />
       ) : (
-        <div style={{ width: 32, flexShrink: 0 }} />
+        <div style={{ width: ROW_ICON_BUTTON_WIDTH, flexShrink: 0 }} />
       )}
     </div>
   );

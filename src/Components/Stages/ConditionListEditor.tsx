@@ -2,7 +2,12 @@ import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE } from "./stageRowLayout";
+import {
+  ROW_LABEL_WIDTH,
+  ROW_ICON_FONT_SIZE,
+  ROW_GAP,
+  ROW_VALUE_COLUMN_WIDTH,
+} from "./stageRowLayout";
 
 type ConnectorChoice = "$and" | "$or" | "not";
 
@@ -99,28 +104,37 @@ export default function ConditionListEditor({
           </div>
         ))}
 
-      <Tooltip title={addConditionHint}>
-        {/* A disabled Button doesn't receive pointer events, so wrapping it
-            directly stops the Tooltip's hover trigger from ever firing -
-            this extra span still does. */}
-        <span
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginTop: 8,
-          }}
-        >
-          <Button
-            aria-label="Add condition"
-            disabled={!canAddCondition}
-            shape="circle"
-            size="small"
-            className="addOptionCircleButton"
-            icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-            onClick={onAddCondition}
-          />
-        </span>
-      </Tooltip>
+      {/* Offsets past the "Where"/connector column so the button below
+          centers under the condition's label/operator/value inputs
+          themselves - not under the whole row (which would skew it right)
+          and not under the trailing remove-button column either (which is
+          usually an invisible spacer, not something visually part of the
+          bar), so it lines up with what's actually visible. */}
+      <div style={{ display: "flex", marginTop: 8 }}>
+        <div style={{ width: ROW_LABEL_WIDTH + ROW_GAP, flexShrink: 0 }} />
+        <Tooltip title={addConditionHint}>
+          {/* A disabled Button doesn't receive pointer events, so wrapping it
+              directly stops the Tooltip's hover trigger from ever firing -
+              this extra span still does. */}
+          <span
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              width: ROW_VALUE_COLUMN_WIDTH,
+            }}
+          >
+            <Button
+              aria-label="Add condition"
+              disabled={!canAddCondition}
+              shape="circle"
+              size="small"
+              className="addOptionCircleButton"
+              icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+              onClick={onAddCondition}
+            />
+          </span>
+        </Tooltip>
+      </div>
     </div>
   );
 }

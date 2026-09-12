@@ -1,6 +1,7 @@
-import { InputNumber, Typography } from "antd";
+import { InputNumber } from "antd";
 import { LimitStep } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stageRowLayout";
+import { VALUE_INPUT_WIDTH } from "./stageRowLayout";
+import { SingleRowStageContent } from "./StageSectionLayout";
 
 interface LimitStageEditorProps {
   step: LimitStep;
@@ -12,21 +13,7 @@ export default function LimitStageEditor({
   onChange,
 }: LimitStageEditorProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        flex: 1,
-        minWidth: 0,
-      }}
-    >
-      <Typography.Text
-        strong
-        style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
-      >
-        Count
-      </Typography.Text>
+    <SingleRowStageContent label="Count">
       <InputNumber
         min={1}
         placeholder="max records"
@@ -34,6 +21,6 @@ export default function LimitStageEditor({
         onChange={(value) => onChange({ count: value ?? undefined })}
         style={{ width: VALUE_INPUT_WIDTH }}
       />
-    </div>
+    </SingleRowStageContent>
   );
 }

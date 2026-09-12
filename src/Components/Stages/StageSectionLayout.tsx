@@ -36,6 +36,38 @@ export function GridRow({
   );
 }
 
+// Shared single-row layout for stages that have exactly one field (Limit,
+// Sample) - a bold, fixed-width label followed by the field itself, both on
+// one line. These stages render straight into the card body instead of into
+// a STAGE_GRID_STYLE grid, so this can't reuse GridRow.
+export function SingleRowStageContent({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: ROW_GAP,
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
+      <Typography.Text
+        strong
+        style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
+      >
+        {label}
+      </Typography.Text>
+      {children}
+    </div>
+  );
+}
+
 export function GridFooter({ children }: { children: ReactNode }) {
   return (
     <>

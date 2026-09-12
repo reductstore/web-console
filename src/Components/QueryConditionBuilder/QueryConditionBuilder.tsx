@@ -209,22 +209,30 @@ function buildBlocks(
   intervalValue: string | undefined,
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
-  const insertHandlers = (anchorId: string) => ({
-    onAddBefore: () =>
-      dispatch({
-        type: "stage/insert",
-        id: crypto.randomUUID(),
-        anchorId,
-        position: "before" as const,
-      }),
-    onAddAfter: () =>
-      dispatch({
-        type: "stage/insert",
-        id: crypto.randomUUID(),
-        anchorId,
-        position: "after" as const,
-      }),
-  });
+  // The default $each_t sample stage renders even before a bucket/entry is
+  // selected (see below), so its insert-stage buttons must be withheld here
+  // too - otherwise clicking "+" while !sourceReady silently pushes a stage
+  // into blockOrder/pendingStages that only becomes visible once a source is
+  // picked, "discovering" stages the user never meant to add.
+  const insertHandlers = (anchorId: string) =>
+    sourceReady
+      ? {
+          onAddBefore: () =>
+            dispatch({
+              type: "stage/insert",
+              id: crypto.randomUUID(),
+              anchorId,
+              position: "before" as const,
+            }),
+          onAddAfter: () =>
+            dispatch({
+              type: "stage/insert",
+              id: crypto.randomUUID(),
+              anchorId,
+              position: "after" as const,
+            }),
+        }
+      : {};
 
   return state.blockOrder.flatMap((id): BuilderBlock[] => {
     if (state.pendingStages.includes(id)) {
@@ -476,7 +484,12 @@ function buildAddStageButton(
       aria-label="Add stage"
       disabled={!sourceReady}
       icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      onClick={() => dispatch({ type: "stage/add", id: crypto.randomUUID() })}
+      onClick={() => {
+        // Belt-and-suspenders: `disabled` already blocks native clicks, but
+        // never dispatch a stage/add while no bucket/entry is selected.
+        if (!sourceReady) return;
+        dispatch({ type: "stage/add", id: crypto.randomUUID() });
+      }}
     >
       Add stage
     </Button>

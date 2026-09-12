@@ -154,6 +154,44 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByLabelText("Add stage")).toBeDisabled();
   });
 
+  it("does not offer insert-stage-here buttons before a bucket and entry are selected, and does not silently queue stages that appear once ready", () => {
+    // The Data Explorer page defaults the query to a bare $each_t sample
+    // stage before any bucket/entry is chosen, so it (and its header
+    // buttons) render even while !sourceReady.
+    const { rerender } = render(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
+    );
+
+    // The default $each_t sample stage renders even without a source, but
+    // its insert-stage-here "+" buttons must not - clicking them while no
+    // bucket/entry is selected used to silently queue pending stages that
+    // only became visible once a source was picked.
+    expect(screen.getByText("Stage 1")).toBeTruthy();
+    expect(screen.queryAllByLabelText("Insert stage here")).toHaveLength(0);
+
+    rerender(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={noop}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+
+    // Once ready, only the single default sample stage should be present -
+    // no stages silently added while the source wasn't picked yet.
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
+    expect(
+      screen.getAllByLabelText("Insert stage here").length,
+    ).toBeGreaterThan(0);
+  });
+
   it("shows the JSON editor with the current value in json mode", () => {
     render(
       <QueryConditionBuilder

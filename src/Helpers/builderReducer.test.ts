@@ -453,20 +453,12 @@ describe("builderReducer", () => {
   });
 
   describe("block actions", () => {
-    it("block/addConditions adds a condition and appends the conditions block id", () => {
-      const state = builderReducer(emptyState(), {
-        type: "block/addConditions",
-        id: "new-condition",
-      });
-      expect(state.conditions).toHaveLength(1);
-      expect(state.blockOrder).toEqual(["conditions"]);
-    });
-
     it("block/removeConditions clears conditions and removes the block id", () => {
-      const withConditions = builderReducer(emptyState(), {
-        type: "block/addConditions",
-        id: "new-condition",
-      });
+      const withConditions: BuilderState = {
+        ...emptyState(),
+        conditions: [condition("new-condition")],
+        blockOrder: ["conditions"],
+      };
       const state = builderReducer(withConditions, {
         type: "block/removeConditions",
       });
@@ -474,44 +466,15 @@ describe("builderReducer", () => {
       expect(state.blockOrder).toEqual([]);
     });
 
-    it("block/addEachT appends an each_t step and its id", () => {
-      const state = builderReducer(emptyState(), {
-        type: "block/addEachT",
-        id: "new-step",
-      });
-      expect(state.steps).toHaveLength(1);
-      expect(state.steps[0].type).toBe("each_t");
-      expect(state.blockOrder).toEqual([state.steps[0].id]);
-    });
-
-    it("block/addEachN appends an each_n step and its id", () => {
-      const state = builderReducer(emptyState(), {
-        type: "block/addEachN",
-        id: "new-step",
-      });
-      expect(state.steps).toHaveLength(1);
-      expect(state.steps[0].type).toBe("each_n");
-      expect(state.blockOrder).toEqual([state.steps[0].id]);
-    });
-
-    it("block/addLimit appends a limit step and its id", () => {
-      const state = builderReducer(emptyState(), {
-        type: "block/addLimit",
-        id: "new-step",
-      });
-      expect(state.steps).toHaveLength(1);
-      expect(state.steps[0].type).toBe("limit");
-      expect(state.blockOrder).toEqual([state.steps[0].id]);
-    });
-
     it("step/remove removes the step and its block id", () => {
-      const withStep = builderReducer(emptyState(), {
-        type: "block/addLimit",
-        id: "new-step",
-      });
+      const withStep: BuilderState = {
+        ...emptyState(),
+        steps: [{ id: "new-step", type: "limit", limit: { count: 1000 } }],
+        blockOrder: ["new-step"],
+      };
       const state = builderReducer(withStep, {
         type: "step/remove",
-        id: withStep.steps[0].id,
+        id: "new-step",
       });
       expect(state.steps).toEqual([]);
       expect(state.blockOrder).toEqual([]);

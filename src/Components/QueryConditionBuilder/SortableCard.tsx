@@ -9,6 +9,7 @@ import {
   PlusCircleOutlined,
   RightOutlined,
 } from "@ant-design/icons";
+import { ROW_ICON_BUTTON_WIDTH } from "../Stages/stageRowLayout";
 
 interface SortableCardProps {
   id: string;
@@ -66,7 +67,7 @@ export default function SortableCard({
       onPointerDown={(e) => e.stopPropagation()}
     />
   ) : (
-    <div style={{ width: 32, flexShrink: 0 }} />
+    <div style={{ width: ROW_ICON_BUTTON_WIDTH, flexShrink: 0 }} />
   );
 
   const menuItems: MenuProps["items"] = [

@@ -146,14 +146,6 @@ function sentinelForKind(kind: StageKind): string | null {
   return null;
 }
 
-function appendStep(state: BuilderState, steps: Step[]): BuilderState {
-  return {
-    ...state,
-    steps,
-    blockOrder: appendBlockId(state.blockOrder, steps[steps.length - 1].id),
-  };
-}
-
 export type BuilderAction =
   | { type: "condition/add"; id: string }
   | { type: "condition/remove"; id: string }
@@ -241,11 +233,7 @@ export type BuilderAction =
       stepId?: string;
       id: string;
     }
-  | { type: "block/addConditions"; id: string }
   | { type: "block/removeConditions" }
-  | { type: "block/addEachT"; id: string }
-  | { type: "block/addEachN"; id: string }
-  | { type: "block/addLimit"; id: string }
   | { type: "block/addTransform"; kind: TransformKind }
   | { type: "block/removeTransform"; kind: TransformKind }
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
@@ -465,24 +453,12 @@ export function builderReducer(
           removeAsLabelRow(transform, action.stepId, action.id),
         ),
       };
-    case "block/addConditions":
-      return {
-        ...state,
-        conditions: addCondition(state.conditions, action.id),
-        blockOrder: appendBlockId(state.blockOrder, CONDITIONS_BLOCK_ID),
-      };
     case "block/removeConditions":
       return {
         ...state,
         conditions: [],
         blockOrder: removeBlockId(state.blockOrder, CONDITIONS_BLOCK_ID),
       };
-    case "block/addEachT":
-      return appendStep(state, addEachTStep(state.steps, action.id));
-    case "block/addEachN":
-      return appendStep(state, addEachNStep(state.steps, action.id));
-    case "block/addLimit":
-      return appendStep(state, addLimitStep(state.steps, action.id));
     case "block/addTransform": {
       const newTransform =
         action.kind === "ros"
