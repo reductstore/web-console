@@ -20,6 +20,11 @@ interface SortableCardProps {
   isOverlay?: boolean;
   onAddBefore?: () => void;
   onAddAfter?: () => void;
+  // Whether the "Add stage before/after" menu items should be enabled -
+  // separate from onAddBefore/onAddAfter being defined, since those are
+  // always wired up (and internally guarded) so the insert-here buttons can
+  // stay visible-but-disabled instead of disappearing.
+  canInsert?: boolean;
   enabled?: boolean;
   onToggleEnabled?: () => void;
   kindSelector?: ReactNode;
@@ -35,6 +40,7 @@ export default function SortableCard({
   isOverlay = false,
   onAddBefore,
   onAddAfter,
+  canInsert = true,
   enabled = true,
   onToggleEnabled,
   kindSelector,
@@ -75,13 +81,13 @@ export default function SortableCard({
       key: "addAfter",
       icon: <PlusCircleOutlined />,
       label: "Add stage after",
-      disabled: !onAddAfter,
+      disabled: !onAddAfter || !canInsert,
     },
     {
       key: "addBefore",
       icon: <PlusCircleOutlined />,
       label: "Add stage before",
-      disabled: !onAddBefore,
+      disabled: !onAddBefore || !canInsert,
     },
     {
       key: "delete",

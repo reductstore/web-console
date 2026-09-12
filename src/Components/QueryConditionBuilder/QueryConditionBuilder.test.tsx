@@ -154,7 +154,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByLabelText("Add stage")).toBeDisabled();
   });
 
-  it("does not offer insert-stage-here buttons before a bucket and entry are selected, and does not silently queue stages that appear once ready", () => {
+  it("keeps insert-stage-here buttons visible but disabled before a bucket and entry are selected, and never silently queues stages", () => {
     // The Data Explorer page defaults the query to a bare $each_t sample
     // stage before any bucket/entry is chosen, so it (and its header
     // buttons) render even while !sourceReady.
@@ -167,12 +167,16 @@ describe("QueryConditionBuilder", () => {
       />,
     );
 
-    // The default $each_t sample stage renders even without a source, but
-    // its insert-stage-here "+" buttons must not - clicking them while no
-    // bucket/entry is selected used to silently queue pending stages that
-    // only became visible once a source was picked.
+    // The default $each_t sample stage renders even without a source, and
+    // its insert-stage-here "+" buttons stay visible too (so the layout
+    // doesn't shift once a source is picked) but disabled - clicking one
+    // while no bucket/entry is selected must not silently queue a pending
+    // stage that only becomes visible once a source is picked.
     expect(screen.getByText("Stage 1")).toBeTruthy();
-    expect(screen.queryAllByLabelText("Insert stage here")).toHaveLength(0);
+    const insertButtonsBefore = screen.getAllByLabelText("Insert stage here");
+    expect(insertButtonsBefore.length).toBeGreaterThan(0);
+    insertButtonsBefore.forEach((button) => expect(button).toBeDisabled());
+    insertButtonsBefore.forEach((button) => fireEvent.click(button));
 
     rerender(
       <QueryConditionBuilder
@@ -185,11 +189,57 @@ describe("QueryConditionBuilder", () => {
     );
 
     // Once ready, only the single default sample stage should be present -
-    // no stages silently added while the source wasn't picked yet.
+    // no stages silently added while the source wasn't picked yet - and the
+    // insert buttons are now enabled.
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
-    expect(
-      screen.getAllByLabelText("Insert stage here").length,
-    ).toBeGreaterThan(0);
+    const insertButtonsAfter = screen.getAllByLabelText("Insert stage here");
+    expect(insertButtonsAfter.length).toBeGreaterThan(0);
+    insertButtonsAfter.forEach((button) => expect(button).toBeEnabled());
+  });
+
+  it("resets to just the default stage when the bucket/entry selection is lost", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+
+    // Add an extra stage while a source is selected.
+    fireEvent.click(screen.getByLabelText("Add stage"));
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(2);
+
+    // Losing the bucket/entry selection should clear everything back down
+    // to just the default sample stage - not merely hide the extra stage
+    // until a source is picked again.
+    rerender(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+      />,
+    );
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+    expect(JSON.parse(lastCall)).toEqual({ $each_t: "$__interval" });
+
+    // Picking a (possibly new) source again shouldn't bring the old stage
+    // back from the dead.
+    rerender(
+      <QueryConditionBuilder
+        value={'{"$each_t": "$__interval"}'}
+        onChange={onChange}
+        mode="builder"
+        onUnrepresentable={noop}
+        validationContext={readyValidationContext}
+      />,
+    );
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
   });
 
   it("shows the JSON editor with the current value in json mode", () => {

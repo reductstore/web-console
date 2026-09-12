@@ -210,29 +210,32 @@ function buildBlocks(
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
   // The default $each_t sample stage renders even before a bucket/entry is
-  // selected (see below), so its insert-stage buttons must be withheld here
-  // too - otherwise clicking "+" while !sourceReady silently pushes a stage
-  // into blockOrder/pendingStages that only becomes visible once a source is
-  // picked, "discovering" stages the user never meant to add.
-  const insertHandlers = (anchorId: string) =>
-    sourceReady
-      ? {
-          onAddBefore: () =>
-            dispatch({
-              type: "stage/insert",
-              id: crypto.randomUUID(),
-              anchorId,
-              position: "before" as const,
-            }),
-          onAddAfter: () =>
-            dispatch({
-              type: "stage/insert",
-              id: crypto.randomUUID(),
-              anchorId,
-              position: "after" as const,
-            }),
-        }
-      : {};
+  // selected (see below), so its insert-stage buttons are always wired up
+  // too - QueryBlockList keeps them visible but disabled while !sourceReady
+  // (so the layout stays static instead of buttons popping in and out), and
+  // this guard is belt-and-suspenders: never dispatch a stage/insert while
+  // no bucket/entry is selected, even if a disabled button is somehow
+  // triggered.
+  const insertHandlers = (anchorId: string) => ({
+    onAddBefore: () => {
+      if (!sourceReady) return;
+      dispatch({
+        type: "stage/insert",
+        id: crypto.randomUUID(),
+        anchorId,
+        position: "before" as const,
+      });
+    },
+    onAddAfter: () => {
+      if (!sourceReady) return;
+      dispatch({
+        type: "stage/insert",
+        id: crypto.randomUUID(),
+        anchorId,
+        position: "after" as const,
+      });
+    },
+  });
 
   return state.blockOrder.flatMap((id): BuilderBlock[] => {
     if (state.pendingStages.includes(id)) {
@@ -475,24 +478,36 @@ function buildBlocks(
   });
 }
 
+// Kept in sync with ConditionListEditor's own "Select a bucket and entries
+// first" hint, so every !sourceReady tooltip in the builder reads the same.
+const SELECT_SOURCE_HINT = "Select a bucket and entries first";
+
 function buildAddStageButton(
   sourceReady: boolean,
   dispatch: Dispatch<BuilderAction>,
 ): ReactNode {
   return (
-    <Button
-      aria-label="Add stage"
-      disabled={!sourceReady}
-      icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      onClick={() => {
-        // Belt-and-suspenders: `disabled` already blocks native clicks, but
-        // never dispatch a stage/add while no bucket/entry is selected.
-        if (!sourceReady) return;
-        dispatch({ type: "stage/add", id: crypto.randomUUID() });
-      }}
-    >
-      Add stage
-    </Button>
+    <Tooltip title={sourceReady ? "" : SELECT_SOURCE_HINT}>
+      {/* A disabled Button doesn't receive pointer events, so wrapping it
+          directly stops the Tooltip's hover trigger from ever firing -
+          this extra span still does. */}
+      <span>
+        <Button
+          aria-label="Add stage"
+          disabled={!sourceReady}
+          icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+          onClick={() => {
+            // Belt-and-suspenders: `disabled` already blocks native clicks,
+            // but never dispatch a stage/add while no bucket/entry is
+            // selected.
+            if (!sourceReady) return;
+            dispatch({ type: "stage/add", id: crypto.randomUUID() });
+          }}
+        >
+          Add stage
+        </Button>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -534,6 +549,25 @@ export default function QueryConditionBuilder({
     lastEmittedValueRef.current = formatted;
     onChange(formatted);
   }, [state]);
+
+  const sourceReady =
+    !!validationContext?.bucket &&
+    ((validationContext?.entries?.length ?? 0) > 0 ||
+      !!validationContext?.entry);
+
+  // Losing the bucket/entry selection should feel like starting over, not
+  // like everything's still there but hidden: stages added while a source
+  // was picked shouldn't silently reappear if a (possibly different) source
+  // is picked again later. Only resets on an actual ready -> not-ready
+  // transition, and only in builder mode (switching bucket/entry while
+  // looking at raw JSON shouldn't blow away what's being typed there).
+  const wasSourceReadyRef = useRef(sourceReady);
+  useEffect(() => {
+    if (mode === "builder" && wasSourceReadyRef.current && !sourceReady) {
+      dispatch({ type: "builder/resetToDefault" });
+    }
+    wasSourceReadyRef.current = sourceReady;
+  }, [sourceReady, mode]);
 
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
 
@@ -630,11 +664,6 @@ export default function QueryConditionBuilder({
     onIncompleteConditionChange?.(hasIncomplete);
   }, [state.conditions, state.steps, state.transforms, mode]);
 
-  const sourceReady =
-    !!validationContext?.bucket &&
-    ((validationContext?.entries?.length ?? 0) > 0 ||
-      !!validationContext?.entry);
-
   if (mode === "json") {
     return (
       <QueryEditor
@@ -663,6 +692,7 @@ export default function QueryConditionBuilder({
             validationContext?.intervalValue ?? undefined,
             dispatch,
           )}
+          sourceReady={sourceReady}
           onReorderBlock={(fromIndex, toIndex) =>
             dispatch({ type: "block/reorder", fromIndex, toIndex })
           }

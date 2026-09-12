@@ -85,6 +85,26 @@ describe("SortableCard", () => {
     );
   });
 
+  it("disables Add stage before/after when canInsert is false, even with handlers given", async () => {
+    renderCard({
+      onAddBefore: () => {},
+      onAddAfter: () => {},
+      canInsert: false,
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Stage actions"));
+    });
+    const menu = within(openActionsMenu()!);
+    expect(menu.getByText("Add stage before").closest("li")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(menu.getByText("Add stage after").closest("li")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
   it("calls onAddBefore/onAddAfter from the actions menu when provided", async () => {
     const onAddBefore = vi.fn();
     const onAddAfter = vi.fn();
