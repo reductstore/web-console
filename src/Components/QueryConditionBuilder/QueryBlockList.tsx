@@ -83,7 +83,10 @@ export default function QueryBlockList({
             id={block.id}
             label={`Stage ${index + 1}`}
             removeLabel={block.removeLabel}
-            removable={block.removable}
+            // Defaults to whether a real onRemove was actually given, so a
+            // block that forgets to set removable: false never ends up with
+            // a remove button that has no label and does nothing.
+            removable={block.removable ?? Boolean(block.onRemove)}
             onRemove={block.onRemove ?? (() => {})}
             enabled={block.enabled}
             onToggleEnabled={block.onToggleEnabled}
