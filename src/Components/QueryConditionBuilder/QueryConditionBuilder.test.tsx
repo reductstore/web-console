@@ -812,7 +812,10 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
+      const callsBeforeLabel = uuidMock.mock.results.length;
       await addStageOfKind("&label");
+      const conditionBlockId = uuidMock.mock.results[callsBeforeLabel]
+        .value as string;
       const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
@@ -837,7 +840,7 @@ describe("QueryConditionBuilder", () => {
       act(() => {
         capturedOnDragEnd?.({
           active: { id: limitStepId },
-          over: { id: "conditions" },
+          over: { id: conditionBlockId },
         } as DragEndEvent);
       });
 
@@ -848,6 +851,7 @@ describe("QueryConditionBuilder", () => {
     });
 
     it("reorders the JSON's ext key to match a drag-and-drop reorder involving the Transform block", async () => {
+      const uuidMock = vi.spyOn(crypto, "randomUUID");
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -858,14 +862,19 @@ describe("QueryConditionBuilder", () => {
           validationContext={readyValidationContext}
         />,
       );
+      const callsBeforeLabel = uuidMock.mock.results.length;
       await addStageOfKind("&label");
+      const conditionBlockId = uuidMock.mock.results[callsBeforeLabel]
+        .value as string;
       const labelInput = screen.getByRole("combobox", { name: "Label" });
       fireEvent.change(labelInput, { target: { value: "status" } });
       fireEvent.change(screen.getByPlaceholderText("value"), {
         target: { value: "active" },
       });
 
+      const callsBeforeExt = uuidMock.mock.results.length;
       await addStageOfKind("#ext");
+      const extBlockId = uuidMock.mock.results[callsBeforeExt].value as string;
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add ROS or Select"));
       });
@@ -889,13 +898,15 @@ describe("QueryConditionBuilder", () => {
       // Drag the Process block above the Label filter block.
       act(() => {
         capturedOnDragEnd?.({
-          active: { id: "process" },
-          over: { id: "conditions" },
+          active: { id: extBlockId },
+          over: { id: conditionBlockId },
         } as DragEndEvent);
       });
 
       const [afterDrag] = onChange.mock.calls.at(-1) as [string];
       expect(Object.keys(JSON.parse(afterDrag))).toEqual(["#ext", "&status"]);
+
+      uuidMock.mockRestore();
     });
 
     it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
@@ -988,7 +999,7 @@ describe("QueryConditionBuilder", () => {
       expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
     });
 
-    it("still disables &label/#ext in the stage type dropdown once already present, since duplicating them would collide in the pipeline", async () => {
+    it("still allows adding another &label/#ext once one of each is already present, since the server decides what's valid", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1012,8 +1023,8 @@ describe("QueryConditionBuilder", () => {
 
       const labelOption = stageTypeOption("&label");
       const extOption = stageTypeOption("#ext");
-      expect(labelOption).toHaveClass("ant-select-item-option-disabled");
-      expect(extOption).toHaveClass("ant-select-item-option-disabled");
+      expect(labelOption).not.toHaveClass("ant-select-item-option-disabled");
+      expect(extOption).not.toHaveClass("ant-select-item-option-disabled");
     });
 
     describe("default Sample step", () => {

@@ -1,5 +1,4 @@
 import {
-  CONDITIONS_BLOCK_ID,
   EachNStep,
   EachTStep,
   FlatCondition,
@@ -26,7 +25,6 @@ import {
   KeyValueRow,
   ProtobufConfig,
   ProtobufFieldRow,
-  PROCESS_BLOCK_ID,
   RosExportConfig,
   RosSection,
   SelectExportConfig,
@@ -63,13 +61,43 @@ import {
 } from "./transformStepBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "./json5Utils";
 
-function mapTransform(
-  transforms: TransformStepEntry[],
+export interface ExtBlock {
+  id: string;
+  transforms: TransformStepEntry[];
+}
+
+export interface ConditionBlock {
+  id: string;
+  conditions: FlatCondition[];
+}
+
+function mapConditionsInBlock(
+  conditionBlocks: ConditionBlock[],
+  blockId: string,
+  mutate: (conditions: FlatCondition[]) => FlatCondition[],
+): ConditionBlock[] {
+  return conditionBlocks.map((block) =>
+    block.id === blockId
+      ? { ...block, conditions: mutate(block.conditions) }
+      : block,
+  );
+}
+
+function mapTransformInBlock(
+  extBlocks: ExtBlock[],
+  blockId: string,
   kind: TransformStepEntry["kind"],
   mutate: (transform: TransformStepEntry) => TransformStepEntry,
-): TransformStepEntry[] {
-  return transforms.map((transform) =>
-    transform.kind === kind ? mutate(transform) : transform,
+): ExtBlock[] {
+  return extBlocks.map((block) =>
+    block.id === blockId
+      ? {
+          ...block,
+          transforms: block.transforms.map((transform) =>
+            transform.kind === kind ? mutate(transform) : transform,
+          ),
+        }
+      : block,
   );
 }
 
@@ -96,9 +124,9 @@ function insertBlockId(
 }
 
 export interface BuilderState {
-  conditions: FlatCondition[];
+  conditionBlocks: ConditionBlock[];
   steps: Step[];
-  transforms: TransformStepEntry[];
+  extBlocks: ExtBlock[];
   blockOrder: string[];
   enabled: Record<string, boolean>;
   pendingStages: string[];
@@ -131,8 +159,10 @@ export function currentStageKind(
   id: string,
 ): StageKind | null {
   if (state.pendingStages.includes(id)) return null;
-  if (id === CONDITIONS_BLOCK_ID) return "conditions";
-  if (id === PROCESS_BLOCK_ID) return "ext";
+  if (state.conditionBlocks.some((block) => block.id === id)) {
+    return "conditions";
+  }
+  if (state.extBlocks.some((block) => block.id === id)) return "ext";
   const step = state.steps.find((s) => s.id === id);
   if (step?.type === "each_n") return "sample_each_n";
   if (step?.type === "each_t") return "sample_each_t";
@@ -140,17 +170,12 @@ export function currentStageKind(
   return null;
 }
 
-function sentinelForKind(kind: StageKind): string | null {
-  if (kind === "conditions") return CONDITIONS_BLOCK_ID;
-  if (kind === "ext") return PROCESS_BLOCK_ID;
-  return null;
-}
-
 export type BuilderAction =
-  | { type: "condition/add"; id: string }
-  | { type: "condition/remove"; id: string }
+  | { type: "condition/add"; blockId: string; id: string }
+  | { type: "condition/remove"; blockId: string; id: string }
   | {
       type: "condition/change";
+      blockId: string;
       id: string;
       changes: Partial<
         Pick<
@@ -162,66 +187,99 @@ export type BuilderAction =
   | { type: "step/changeEachN"; id: string; changes: Partial<EachNStep> }
   | { type: "step/changeEachT"; id: string; changes: Partial<EachTStep> }
   | { type: "step/changeLimit"; id: string; changes: Partial<LimitStep> }
-  | { type: "ros/addSection"; section: RosSection; rowId: string }
-  | { type: "ros/removeSection"; section: RosSection }
-  | { type: "ros/changeTopic"; topic: string }
-  | { type: "ros/addEncodeRow"; id: string }
+  | {
+      type: "ros/addSection";
+      blockId: string;
+      section: RosSection;
+      rowId: string;
+    }
+  | { type: "ros/removeSection"; blockId: string; section: RosSection }
+  | { type: "ros/changeTopic"; blockId: string; topic: string }
+  | { type: "ros/addEncodeRow"; blockId: string; id: string }
   | {
       type: "ros/changeEncodeRow";
+      blockId: string;
       id: string;
       changes: Partial<Pick<KeyValueRow, "key" | "value">>;
     }
-  | { type: "ros/removeEncodeRow"; id: string }
-  | { type: "ros/changeExport"; changes: Partial<RosExportConfig> }
-  | { type: "select/changeSql"; id: string; sql: string }
-  | { type: "select/addSqlStep"; id: string }
-  | { type: "select/removeSqlStep"; id: string }
+  | { type: "ros/removeEncodeRow"; blockId: string; id: string }
+  | {
+      type: "ros/changeExport";
+      blockId: string;
+      changes: Partial<RosExportConfig>;
+    }
+  | { type: "select/changeSql"; blockId: string; id: string; sql: string }
+  | { type: "select/addSqlStep"; blockId: string; id: string }
+  | { type: "select/removeSqlStep"; blockId: string; id: string }
   | {
       type: "select/addFormatSection";
+      blockId: string;
       stepId: string;
       section: SelectFormatSection;
       fieldId: string;
     }
   | {
       type: "select/removeFormatSection";
+      blockId: string;
       stepId: string;
       section: SelectFormatSection;
     }
   | {
       type: "select/changeFormat";
+      blockId: string;
       stepId: string;
       format: SelectInputFormat;
       fieldId: string;
     }
-  | { type: "select/changeCsv"; stepId: string; changes: Partial<CsvConfig> }
+  | {
+      type: "select/changeCsv";
+      blockId: string;
+      stepId: string;
+      changes: Partial<CsvConfig>;
+    }
   | {
       type: "select/changeProtobuf";
+      blockId: string;
       stepId: string;
       changes: Partial<Pick<ProtobufConfig, "messageName" | "schema">>;
     }
-  | { type: "select/addProtobufFieldRow"; stepId: string; id: string }
+  | {
+      type: "select/addProtobufFieldRow";
+      blockId: string;
+      stepId: string;
+      id: string;
+    }
   | {
       type: "select/changeProtobufFieldRow";
+      blockId: string;
       stepId: string;
       id: string;
       changes: Partial<
         Pick<ProtobufFieldRow, "column" | "fieldId" | "fieldType">
       >;
     }
-  | { type: "select/removeProtobufFieldRow"; stepId: string; id: string }
+  | {
+      type: "select/removeProtobufFieldRow";
+      blockId: string;
+      stepId: string;
+      id: string;
+    }
   | {
       type: "select/changeExport";
+      blockId: string;
       stepId: string;
       changes: Partial<SelectExportConfig>;
     }
   | {
       type: "transform/addAsLabelRow";
+      blockId: string;
       kind: TransformKind;
       stepId?: string;
       id: string;
     }
   | {
       type: "transform/changeAsLabelRow";
+      blockId: string;
       kind: TransformKind;
       stepId?: string;
       id: string;
@@ -229,13 +287,15 @@ export type BuilderAction =
     }
   | {
       type: "transform/removeAsLabelRow";
+      blockId: string;
       kind: TransformKind;
       stepId?: string;
       id: string;
     }
-  | { type: "block/removeConditions" }
-  | { type: "block/addTransform"; kind: TransformKind }
-  | { type: "block/removeTransform"; kind: TransformKind }
+  | { type: "block/removeConditionBlock"; blockId: string }
+  | { type: "block/removeExt"; blockId: string }
+  | { type: "block/addTransform"; blockId: string; kind: TransformKind }
+  | { type: "block/removeTransform"; blockId: string; kind: TransformKind }
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
   | { type: "stage/toggleEnabled"; id: string }
   | { type: "stage/add"; id: string }
@@ -259,20 +319,29 @@ export function builderReducer(
     case "condition/add":
       return {
         ...state,
-        conditions: addCondition(state.conditions, action.id),
+        conditionBlocks: mapConditionsInBlock(
+          state.conditionBlocks,
+          action.blockId,
+          (conditions) => addCondition(conditions, action.id),
+        ),
       };
     case "condition/remove":
       return {
         ...state,
-        conditions: removeCondition(state.conditions, action.id),
+        conditionBlocks: mapConditionsInBlock(
+          state.conditionBlocks,
+          action.blockId,
+          (conditions) => removeCondition(conditions, action.id),
+        ),
       };
     case "condition/change":
       return {
         ...state,
-        conditions: updateCondition(
-          state.conditions,
-          action.id,
-          action.changes,
+        conditionBlocks: mapConditionsInBlock(
+          state.conditionBlocks,
+          action.blockId,
+          (conditions) =>
+            updateCondition(conditions, action.id, action.changes),
         ),
       };
     case "step/changeEachN":
@@ -293,197 +362,301 @@ export function builderReducer(
     case "ros/addSection":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          addSection(transform, action.section, action.rowId),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => addSection(transform, action.section, action.rowId),
         ),
       };
     case "ros/removeSection":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          removeSection(transform, action.section),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => removeSection(transform, action.section),
         ),
       };
     case "ros/changeTopic":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          updateTopic(transform, action.topic),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => updateTopic(transform, action.topic),
         ),
       };
     case "ros/addEncodeRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          addEncodeRow(transform, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => addEncodeRow(transform, action.id),
         ),
       };
     case "ros/changeEncodeRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          updateEncodeRow(transform, action.id, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => updateEncodeRow(transform, action.id, action.changes),
         ),
       };
     case "ros/removeEncodeRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          removeEncodeRow(transform, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => removeEncodeRow(transform, action.id),
         ),
       };
     case "ros/changeExport":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "ros", (transform) =>
-          updateExport(transform, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "ros",
+          (transform) => updateExport(transform, action.changes),
         ),
       };
     case "select/changeSql":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateSqlStep(transform, action.id, action.sql),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) => updateSqlStep(transform, action.id, action.sql),
         ),
       };
     case "select/addSqlStep":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          addSqlStep(transform, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) => addSqlStep(transform, action.id),
         ),
       };
     case "select/removeSqlStep":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          removeSqlStep(transform, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) => removeSqlStep(transform, action.id),
         ),
       };
     case "select/addFormatSection":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          addFormatSection(
-            transform,
-            action.stepId,
-            action.section,
-            action.fieldId,
-          ),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            addFormatSection(
+              transform,
+              action.stepId,
+              action.section,
+              action.fieldId,
+            ),
         ),
       };
     case "select/removeFormatSection":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          removeFormatSection(transform, action.stepId, action.section),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            removeFormatSection(transform, action.stepId, action.section),
         ),
       };
     case "select/changeFormat":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          changeFormat(transform, action.stepId, action.format, action.fieldId),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            changeFormat(
+              transform,
+              action.stepId,
+              action.format,
+              action.fieldId,
+            ),
         ),
       };
     case "select/changeCsv":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateCsv(transform, action.stepId, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) => updateCsv(transform, action.stepId, action.changes),
         ),
       };
     case "select/changeProtobuf":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateProtobuf(transform, action.stepId, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            updateProtobuf(transform, action.stepId, action.changes),
         ),
       };
     case "select/addProtobufFieldRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          addProtobufFieldRow(transform, action.stepId, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            addProtobufFieldRow(transform, action.stepId, action.id),
         ),
       };
     case "select/changeProtobufFieldRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateProtobufFieldRow(
-            transform,
-            action.stepId,
-            action.id,
-            action.changes,
-          ),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            updateProtobufFieldRow(
+              transform,
+              action.stepId,
+              action.id,
+              action.changes,
+            ),
         ),
       };
     case "select/removeProtobufFieldRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          removeProtobufFieldRow(transform, action.stepId, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            removeProtobufFieldRow(transform, action.stepId, action.id),
         ),
       };
     case "select/changeExport":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, "select", (transform) =>
-          updateSelectExport(transform, action.stepId, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            updateSelectExport(transform, action.stepId, action.changes),
         ),
       };
     case "transform/addAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          addAsLabelRow(transform, action.stepId, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          action.kind,
+          (transform) => addAsLabelRow(transform, action.stepId, action.id),
         ),
       };
     case "transform/changeAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          updateAsLabelRow(transform, action.stepId, action.id, action.changes),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          action.kind,
+          (transform) =>
+            updateAsLabelRow(
+              transform,
+              action.stepId,
+              action.id,
+              action.changes,
+            ),
         ),
       };
     case "transform/removeAsLabelRow":
       return {
         ...state,
-        transforms: mapTransform(state.transforms, action.kind, (transform) =>
-          removeAsLabelRow(transform, action.stepId, action.id),
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          action.kind,
+          (transform) => removeAsLabelRow(transform, action.stepId, action.id),
         ),
       };
-    case "block/removeConditions":
+    case "block/removeConditionBlock":
       return {
         ...state,
-        conditions: [],
-        blockOrder: removeBlockId(state.blockOrder, CONDITIONS_BLOCK_ID),
+        conditionBlocks: state.conditionBlocks.filter(
+          (block) => block.id !== action.blockId,
+        ),
+        blockOrder: removeBlockId(state.blockOrder, action.blockId),
+      };
+    case "block/removeExt":
+      return {
+        ...state,
+        extBlocks: state.extBlocks.filter(
+          (block) => block.id !== action.blockId,
+        ),
+        blockOrder: removeBlockId(state.blockOrder, action.blockId),
       };
     case "block/addTransform": {
       const newTransform =
         action.kind === "ros"
           ? createRosTransformStep()
           : createSelectTransformStep();
+      const existing = state.extBlocks.find(
+        (block) => block.id === action.blockId,
+      );
+      if (!existing) {
+        return state;
+      }
       return {
         ...state,
-        transforms: [...state.transforms, newTransform],
-        blockOrder: state.blockOrder.includes(PROCESS_BLOCK_ID)
-          ? state.blockOrder
-          : appendBlockId(state.blockOrder, PROCESS_BLOCK_ID),
+        extBlocks: state.extBlocks.map((block) =>
+          block.id === action.blockId
+            ? { ...block, transforms: [...block.transforms, newTransform] }
+            : block,
+        ),
       };
     }
     case "block/removeTransform": {
-      const transforms = state.transforms.filter(
-        (transform) => transform.kind !== action.kind,
-      );
       return {
         ...state,
-        transforms,
-        blockOrder:
-          transforms.length === 0
-            ? removeBlockId(state.blockOrder, PROCESS_BLOCK_ID)
-            : state.blockOrder,
+        extBlocks: state.extBlocks.map((block) =>
+          block.id === action.blockId
+            ? {
+                ...block,
+                transforms: block.transforms.filter(
+                  (transform) => transform.kind !== action.kind,
+                ),
+              }
+            : block,
+        ),
       };
     }
     case "block/reorder":
@@ -540,38 +713,38 @@ export function builderReducer(
       }
 
       // Tear down whatever this id previously represented.
-      let { conditions, steps, transforms } = state;
-      if (previousKind === "conditions") conditions = [];
-      else if (previousKind === "ext") transforms = [];
-      else if (previousKind !== null) steps = removeStep(steps, id);
+      let { conditionBlocks, steps, extBlocks } = state;
+      if (previousKind === "conditions") {
+        conditionBlocks = conditionBlocks.filter((block) => block.id !== id);
+      } else if (previousKind === "ext") {
+        extBlocks = extBlocks.filter((block) => block.id !== id);
+      } else if (previousKind !== null) steps = removeStep(steps, id);
 
-      // Sentinel-based kinds (conditions/ext) always live at their fixed id;
-      // everything else needs a fresh id when moving off a sentinel slot,
-      // or can keep reusing its own id otherwise.
-      const newSentinel = sentinelForKind(kind);
-      const previousSentinel = previousKind
-        ? sentinelForKind(previousKind)
-        : null;
-      const newId =
-        newSentinel ?? (previousSentinel ? crypto.randomUUID() : id);
+      const newId = id;
 
       if (kind === "conditions") {
-        conditions = addCondition(conditions, crypto.randomUUID());
+        conditionBlocks = [
+          ...conditionBlocks,
+          {
+            id: newId,
+            conditions: addCondition([], crypto.randomUUID()),
+          },
+        ];
       } else if (kind === "sample_each_n") {
         steps = addEachNStep(steps, newId);
       } else if (kind === "sample_each_t") {
         steps = addEachTStep(steps, newId);
       } else if (kind === "limit") {
         steps = addLimitStep(steps, newId);
+      } else if (kind === "ext") {
+        extBlocks = [...extBlocks, { id: newId, transforms: [] }];
       }
-      // kind === "ext": no transform created yet - ROS/Select are added from
-      // within the stage itself once #ext is chosen.
 
       return {
         ...state,
-        conditions,
+        conditionBlocks,
         steps,
-        transforms,
+        extBlocks,
         blockOrder: replaceBlockId(state.blockOrder, id, newId),
         pendingStages: state.pendingStages.filter((pid) => pid !== id),
       };
@@ -588,9 +761,9 @@ export function builderReducer(
       const defaultSteps = state.steps.filter((step) => step.type === "each_t");
       const defaultIds = new Set(defaultSteps.map((step) => step.id));
       return {
-        conditions: [],
+        conditionBlocks: [],
         steps: defaultSteps,
-        transforms: [],
+        extBlocks: [],
         blockOrder: defaultSteps.map((step) => step.id),
         enabled: Object.fromEntries(
           Object.entries(state.enabled).filter(([id]) => defaultIds.has(id)),
@@ -604,15 +777,33 @@ export function builderReducer(
 }
 
 export function initialBlockOrder(
-  conditions: FlatCondition[],
+  conditionBlocks: ConditionBlock[],
   steps: Step[],
-  transforms: TransformStepEntry[],
+  extBlocks: ExtBlock[],
 ): string[] {
   return [
-    ...(conditions.length > 0 ? [CONDITIONS_BLOCK_ID] : []),
+    ...conditionBlocks.map((block) => block.id),
     ...steps.map((step) => step.id),
-    ...(transforms.length > 0 ? [PROCESS_BLOCK_ID] : []),
+    ...extBlocks.map((block) => block.id),
   ];
+}
+
+export function conditionBlocksFromList(
+  conditions: FlatCondition[],
+): ConditionBlock[] {
+  if (conditions.length === 0) {
+    return [];
+  }
+  return [{ id: crypto.randomUUID(), conditions }];
+}
+
+export function extBlocksFromTransforms(
+  transforms: TransformStepEntry[],
+): ExtBlock[] {
+  if (transforms.length === 0) {
+    return [];
+  }
+  return [{ id: crypto.randomUUID(), transforms }];
 }
 
 export interface ParsedQueryAndTransform {
@@ -654,10 +845,25 @@ const STEP_KEYS: Record<Step["type"], string> = {
   limit: "$limit",
 };
 
+function mergeConditionTrees(
+  trees: Record<string, unknown>[],
+): Record<string, unknown> {
+  const nonEmpty = trees.filter((tree) => Object.keys(tree).length > 0);
+  if (nonEmpty.length === 0) {
+    return {};
+  }
+  if (nonEmpty.length === 1) {
+    return nonEmpty[0];
+  }
+  return { $and: nonEmpty };
+}
+
 function reorderQueryKeys(
   value: Record<string, unknown>,
   blockOrder: string[],
   steps: Step[],
+  conditionBlockIds: Set<string>,
+  extBlockIds: Set<string>,
 ): Record<string, unknown> {
   const stepKeyById = new Map(
     steps.map((step) => [step.id, STEP_KEYS[step.type]]),
@@ -667,17 +873,28 @@ function reorderQueryKeys(
       key !== "$each_n" &&
       key !== "$each_t" &&
       key !== "$limit" &&
-      key !== "#ext",
+      key !== "#ext" &&
+      key !== "$and",
   );
 
   const orderedKeys: string[] = [];
+  let conditionsKeyAdded = false;
+  let extKeyAdded = false;
   for (const blockId of blockOrder) {
-    const key =
-      blockId === CONDITIONS_BLOCK_ID
-        ? conditionsKey
-        : blockId === PROCESS_BLOCK_ID
-          ? "#ext"
-          : stepKeyById.get(blockId);
+    let key: string | undefined;
+    if (conditionBlockIds.has(blockId)) {
+      if (!conditionsKeyAdded) {
+        key = conditionsKey ?? "$and";
+        conditionsKeyAdded = true;
+      }
+    } else if (extBlockIds.has(blockId)) {
+      if (!extKeyAdded) {
+        key = "#ext";
+        extKeyAdded = true;
+      }
+    } else {
+      key = stepKeyById.get(blockId);
+    }
     if (key !== undefined && key in value && !orderedKeys.includes(key)) {
       orderedKeys.push(key);
     }
@@ -694,22 +911,40 @@ function reorderQueryKeys(
 }
 
 export function serialize(state: BuilderState): string {
-  const effectiveConditions = isStageEnabled(state, CONDITIONS_BLOCK_ID)
-    ? state.conditions
-    : [];
+  const conditionTrees: Record<string, unknown>[] = [];
+  for (const blockId of state.blockOrder) {
+    const block = state.conditionBlocks.find((entry) => entry.id === blockId);
+    if (!block || !isStageEnabled(state, blockId)) {
+      continue;
+    }
+    conditionTrees.push(serializeBuilderList(block.conditions));
+  }
   const effectiveSteps = state.steps.filter((step) =>
     isStageEnabled(state, step.id),
   );
-  const effectiveTransforms = isStageEnabled(state, PROCESS_BLOCK_ID)
-    ? state.transforms
-    : [];
+  const extPayloadParts: Record<string, unknown>[] = [];
+  for (const blockId of state.blockOrder) {
+    const block = state.extBlocks.find((entry) => entry.id === blockId);
+    if (!block || !isStageEnabled(state, blockId)) {
+      continue;
+    }
+    const payload = buildExtPayload(block.transforms);
+    if (payload) {
+      extPayloadParts.push(...payload);
+    }
+  }
 
-  const extPayload = buildExtPayload(effectiveTransforms);
   const merged = {
-    ...serializeBuilderList(effectiveConditions),
+    ...mergeConditionTrees(conditionTrees),
     ...serializeSteps(effectiveSteps),
-    ...(extPayload ? { "#ext": extPayload } : {}),
+    ...(extPayloadParts.length > 0 ? { "#ext": extPayloadParts } : {}),
   };
-  const ordered = reorderQueryKeys(merged, state.blockOrder, state.steps);
+  const ordered = reorderQueryKeys(
+    merged,
+    state.blockOrder,
+    state.steps,
+    new Set(state.conditionBlocks.map((block) => block.id)),
+    new Set(state.extBlocks.map((block) => block.id)),
+  );
   return formatAsStrictJSON(ordered);
 }

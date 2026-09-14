@@ -77,14 +77,12 @@ export function GridFooter({
   align = "center",
 }: {
   children: ReactNode;
-  // "Add option" dropdowns (with hidden sub-choices) stay centered under
-  // the value column, matching every other stage's convention - but a
-  // plain "add another row" action like "Add SQL row" reads more like a
-  // list append, so it sits in the label column instead, flush with the
-  // "ROS"/"SQL" labels above it rather than indented past them.
-  align?: "center" | "start";
+  // "value-start" lines up with the condition inputs (same as "+ Add
+  // condition"); "label-start" sits in the label column (e.g. "+ Add SQL
+  // row"); "center" keeps the value column centered.
+  align?: "center" | "value-start" | "label-start";
 }) {
-  if (align === "start") {
+  if (align === "label-start") {
     return (
       <>
         <div style={{ display: "flex" }}>{children}</div>
@@ -96,7 +94,12 @@ export function GridFooter({
   return (
     <>
       <div />
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: align === "center" ? "center" : "flex-start",
+        }}
+      >
         {children}
       </div>
       <div />

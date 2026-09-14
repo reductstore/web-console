@@ -15,7 +15,7 @@ import {
   SelectTransformStep,
   SqlStep,
 } from "../../Helpers/transformStepBuilder";
-import { BuilderAction } from "../../Helpers/builderReducer";
+import { ExtBlockEditorDispatch } from "../../Helpers/extBlockDispatch";
 import {
   ROW_GAP,
   ROW_GROUP_WIDTH,
@@ -92,7 +92,7 @@ function SqlStepBlock({
   step: SqlStep;
   label: string;
   removable: boolean;
-  dispatch: Dispatch<BuilderAction>;
+  dispatch: ExtBlockEditorDispatch;
 }) {
   const activeFormat = activeFormatOf(step);
 
@@ -379,7 +379,7 @@ function SqlStepBlock({
         />
       )}
 
-      <GridFooter>
+      <GridFooter align="value-start">
         <AddOptionFooter
           menuItems={menuItems}
           onMenuClick={handleMenuClick}
@@ -392,7 +392,7 @@ function SqlStepBlock({
 
 interface SelectStageEditorProps {
   step: SelectTransformStep;
-  dispatch: Dispatch<BuilderAction>;
+  dispatch: ExtBlockEditorDispatch;
 }
 
 export default function SelectStageEditor({
@@ -414,7 +414,7 @@ export default function SelectStageEditor({
         );
       })}
 
-      <GridFooter align="start">
+      <GridFooter align="label-start">
         <AddOptionButton
           label="Add SQL row"
           onClick={() =>

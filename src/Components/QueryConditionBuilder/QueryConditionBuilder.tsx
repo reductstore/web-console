@@ -23,24 +23,24 @@ import {
   ExtensionsLicenseNotice,
 } from "../Stages/StageSectionLayout";
 import {
-  CONDITIONS_BLOCK_ID,
   hasIncompleteSteps,
   hasValue,
 } from "../../Helpers/conditionalQueryBuilder";
-import {
-  PROCESS_BLOCK_ID,
-  hasIncompleteTransform,
-} from "../../Helpers/transformStepBuilder";
+import { hasIncompleteTransform } from "../../Helpers/transformStepBuilder";
 import {
   BuilderAction,
   BuilderState,
   StageKind,
   builderReducer,
+  conditionBlocksFromList,
+  extBlocksFromTransforms,
   initialBlockOrder,
   isStageEnabled,
   parseQueryAndTransform,
   serialize,
 } from "../../Helpers/builderReducer";
+import { conditionBlockDispatch } from "../../Helpers/conditionBlockDispatch";
+import { extBlockDispatch } from "../../Helpers/extBlockDispatch";
 import { checkLicenseStatus } from "../../Helpers/licenseUtils";
 import { QueryOptions } from "reduct-js";
 
@@ -50,16 +50,16 @@ type ValidationContext = ComponentProps<
 
 function buildInitialState(value: string): BuilderState {
   const parsed = parseQueryAndTransform(value);
-  const conditions = parsed?.list ?? [];
+  const conditionBlocks = conditionBlocksFromList(parsed?.list ?? []);
   const steps = parsed?.steps ?? [];
-  const transforms = parsed?.transforms ?? [];
+  const extBlocks = extBlocksFromTransforms(parsed?.transforms ?? []);
   return {
-    conditions,
+    conditionBlocks,
     steps,
-    transforms,
+    extBlocks,
     enabled: {},
     pendingStages: [],
-    blockOrder: initialBlockOrder(conditions, steps, transforms),
+    blockOrder: initialBlockOrder(conditionBlocks, steps, extBlocks),
   };
 }
 
@@ -96,39 +96,11 @@ const STAGE_KIND_OPTIONS: {
   },
 ];
 
-// "conditions" and "ext" are sentinel-based: every stage assigned that kind
-// is stored at the same fixed id (CONDITIONS_BLOCK_ID/PROCESS_BLOCK_ID), so
-// a second one would collide with the first in blockOrder rather than
-// coexist - that has to stay a hard client-side limit. Every other kind is
-// a regular step with its own unique id, so the pipeline can already hold
-// as many of them as you like; whether the server actually accepts that
-// combination is for it to decide, not the UI.
-function usedStageKinds(state: BuilderState): Set<StageKind> {
-  const used = new Set<StageKind>();
-  if (state.blockOrder.includes(CONDITIONS_BLOCK_ID)) used.add("conditions");
-  if (state.blockOrder.includes(PROCESS_BLOCK_ID)) used.add("ext");
-  return used;
-}
-
-// A stage can always be reassigned to any kind that isn't already taken by
-// a *different* stage - its own current kind must stay selectable so the
-// dropdown still shows it as the active choice.
-function disabledKindsFor(
-  state: BuilderState,
-  ownKind: StageKind | null,
-): Set<StageKind> {
-  const used = usedStageKinds(state);
-  if (ownKind) used.delete(ownKind);
-  return used;
-}
-
 function StageKindSelect({
   value,
-  disabledKinds,
   onChange,
 }: {
   value: StageKind | null;
-  disabledKinds: Set<StageKind>;
   onChange: (kind: StageKind) => void;
 }) {
   return (
@@ -143,25 +115,17 @@ function StageKindSelect({
       options={STAGE_KIND_OPTIONS.map((option) => ({
         value: option.kind,
         label: option.label,
-        disabled: disabledKinds.has(option.kind),
       }))}
       virtual={false}
       optionRender={(option) => {
         const meta = STAGE_KIND_OPTIONS.find((o) => o.kind === option.value);
-        const content = (
+        return (
           <div style={{ whiteSpace: "normal" }}>
             <div>{meta?.label}</div>
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
               {meta?.description}
             </Typography.Text>
           </div>
-        );
-        return disabledKinds.has(option.value as StageKind) ? (
-          <Tooltip title="Already used by another stage" placement="right">
-            {content}
-          </Tooltip>
-        ) : (
-          content
         );
       }}
     />
@@ -240,7 +204,6 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value={null}
-              disabledKinds={disabledKindsFor(state, null)}
               onChange={(kind) => dispatch({ type: "stage/setKind", id, kind })}
             />
           ),
@@ -253,24 +216,27 @@ function buildBlocks(
       ];
     }
 
-    if (id === CONDITIONS_BLOCK_ID) {
+    const conditionBlock = state.conditionBlocks.find(
+      (block) => block.id === id,
+    );
+    if (conditionBlock) {
       if (!sourceReady) return [];
+      const blockDispatch = conditionBlockDispatch(id, dispatch);
       return [
         {
-          id: CONDITIONS_BLOCK_ID,
-          onRemove: () => dispatch({ type: "block/removeConditions" }),
-          enabled: isStageEnabled(state, CONDITIONS_BLOCK_ID),
-          onToggleEnabled: () =>
-            dispatch({ type: "stage/toggleEnabled", id: CONDITIONS_BLOCK_ID }),
-          ...insertHandlers(CONDITIONS_BLOCK_ID),
+          id,
+          onRemove: () =>
+            dispatch({ type: "block/removeConditionBlock", blockId: id }),
+          enabled: isStageEnabled(state, id),
+          onToggleEnabled: () => dispatch({ type: "stage/toggleEnabled", id }),
+          ...insertHandlers(id),
           kindSelector: (
             <StageKindSelect
               value="conditions"
-              disabledKinds={disabledKindsFor(state, "conditions")}
               onChange={(kind) =>
                 dispatch({
                   type: "stage/setKind",
-                  id: CONDITIONS_BLOCK_ID,
+                  id,
                   kind,
                 })
               }
@@ -278,17 +244,24 @@ function buildBlocks(
           ),
           content: (
             <ConditionListEditor
-              conditions={state.conditions}
+              conditions={conditionBlock.conditions}
               labelOptions={labelOptions}
               sourceReady={sourceReady}
               onChangeCondition={(conditionId, changes) =>
-                dispatch({ type: "condition/change", id: conditionId, changes })
+                blockDispatch({
+                  type: "condition/change",
+                  id: conditionId,
+                  changes,
+                })
               }
               onRemoveCondition={(conditionId) =>
-                dispatch({ type: "condition/remove", id: conditionId })
+                blockDispatch({ type: "condition/remove", id: conditionId })
               }
               onAddCondition={() =>
-                dispatch({ type: "condition/add", id: crypto.randomUUID() })
+                blockDispatch({
+                  type: "condition/add",
+                  id: crypto.randomUUID(),
+                })
               }
             />
           ),
@@ -296,10 +269,15 @@ function buildBlocks(
       ];
     }
 
-    if (id === PROCESS_BLOCK_ID) {
-      const rosTransform = state.transforms.find((t) => t.kind === "ros");
-      const selectTransform = state.transforms.find((t) => t.kind === "select");
+    const extBlock = state.extBlocks.find((block) => block.id === id);
+    if (extBlock) {
+      const rosTransform = extBlock.transforms.find((t) => t.kind === "ros");
+      const selectTransform = extBlock.transforms.find(
+        (t) => t.kind === "select",
+      );
       if (!sourceReady) return [];
+
+      const blockDispatch = extBlockDispatch(id, dispatch);
 
       const addNestedItems = [
         {
@@ -327,19 +305,18 @@ function buildBlocks(
       ];
       const handleAddNested = ({ key }: { key: string }) => {
         if (key === "ros" || key === "select") {
-          dispatch({ type: "block/addTransform", kind: key });
+          dispatch({ type: "block/addTransform", blockId: id, kind: key });
         }
       };
 
       return [
         {
-          id: PROCESS_BLOCK_ID,
-          removable: false,
-          enabled: isStageEnabled(state, PROCESS_BLOCK_ID),
-          onToggleEnabled: () =>
-            dispatch({ type: "stage/toggleEnabled", id: PROCESS_BLOCK_ID }),
+          id,
+          onRemove: () => dispatch({ type: "block/removeExt", blockId: id }),
+          enabled: isStageEnabled(state, id),
+          onToggleEnabled: () => dispatch({ type: "stage/toggleEnabled", id }),
           headerExtra: hasProLicense ? undefined : <ExtensionsLicenseNotice />,
-          ...insertHandlers(PROCESS_BLOCK_ID),
+          ...insertHandlers(id),
           // Removing ROS/Select lives in the "..." menu instead of a "X"
           // next to each one, so it doesn't read like a separate stage.
           extraMenuItems: [
@@ -349,7 +326,11 @@ function buildBlocks(
                     key: "removeRos",
                     label: "Remove ROS",
                     onClick: () =>
-                      dispatch({ type: "block/removeTransform", kind: "ros" }),
+                      dispatch({
+                        type: "block/removeTransform",
+                        blockId: id,
+                        kind: "ros",
+                      }),
                   },
                 ]
               : []),
@@ -361,6 +342,7 @@ function buildBlocks(
                     onClick: () =>
                       dispatch({
                         type: "block/removeTransform",
+                        blockId: id,
                         kind: "select",
                       }),
                   },
@@ -370,10 +352,7 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value="ext"
-              disabledKinds={disabledKindsFor(state, "ext")}
-              onChange={(kind) =>
-                dispatch({ type: "stage/setKind", id: PROCESS_BLOCK_ID, kind })
-              }
+              onChange={(kind) => dispatch({ type: "stage/setKind", id, kind })}
             />
           ),
           content: (
@@ -382,7 +361,7 @@ function buildBlocks(
                 <ProcessSubsection title="ROS">
                   <TransformStageEditor
                     step={rosTransform.ros}
-                    dispatch={dispatch}
+                    dispatch={blockDispatch}
                   />
                 </ProcessSubsection>
               )}
@@ -390,7 +369,7 @@ function buildBlocks(
                 <ProcessSubsection title="Select" divider={!!rosTransform}>
                   <SelectStageEditor
                     step={selectTransform.select}
-                    dispatch={dispatch}
+                    dispatch={blockDispatch}
                   />
                 </ProcessSubsection>
               )}
@@ -436,10 +415,6 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value={step.type === "each_n" ? "sample_each_n" : "sample_each_t"}
-              disabledKinds={disabledKindsFor(
-                state,
-                step.type === "each_n" ? "sample_each_n" : "sample_each_t",
-              )}
               onChange={(kind) =>
                 dispatch({ type: "stage/setKind", id: step.id, kind })
               }
@@ -479,7 +454,6 @@ function buildBlocks(
         kindSelector: (
           <StageKindSelect
             value="limit"
-            disabledKinds={disabledKindsFor(state, "limit")}
             onChange={(kind) =>
               dispatch({ type: "stage/setKind", id: step.id, kind })
             }
@@ -686,14 +660,19 @@ export default function QueryConditionBuilder({
       return;
     }
     const nextSteps = parsed.steps ?? [];
-    const nextTransforms = parsed.transforms ?? [];
+    const nextConditionBlocks = conditionBlocksFromList(parsed.list);
+    const nextExtBlocks = extBlocksFromTransforms(parsed.transforms ?? []);
     const nextState: BuilderState = {
-      conditions: parsed.list,
+      conditionBlocks: nextConditionBlocks,
       steps: nextSteps,
-      transforms: nextTransforms,
+      extBlocks: nextExtBlocks,
       enabled: {},
       pendingStages: [],
-      blockOrder: initialBlockOrder(parsed.list, nextSteps, nextTransforms),
+      blockOrder: initialBlockOrder(
+        nextConditionBlocks,
+        nextSteps,
+        nextExtBlocks,
+      ),
     };
     skipNextNotifyRef.current = true;
     dispatch({ type: "external/sync", state: nextState });
@@ -705,14 +684,16 @@ export default function QueryConditionBuilder({
       return;
     }
     const hasIncomplete =
-      state.conditions.some(
-        (condition) =>
-          (condition.label.trim() !== "") !== hasValue(condition.value),
+      state.conditionBlocks.some((block) =>
+        block.conditions.some(
+          (condition) =>
+            (condition.label.trim() !== "") !== hasValue(condition.value),
+        ),
       ) ||
       hasIncompleteSteps(state.steps) ||
-      hasIncompleteTransform(state.transforms);
+      state.extBlocks.some((block) => hasIncompleteTransform(block.transforms));
     onIncompleteConditionChange?.(hasIncomplete);
-  }, [state.conditions, state.steps, state.transforms, mode]);
+  }, [state.conditionBlocks, state.steps, state.extBlocks, mode]);
 
   if (mode === "json") {
     return (

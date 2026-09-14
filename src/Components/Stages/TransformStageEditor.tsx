@@ -4,7 +4,7 @@ import {
   RosSection,
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
-import { BuilderAction } from "../../Helpers/builderReducer";
+import { ExtBlockEditorDispatch } from "../../Helpers/extBlockDispatch";
 import { ROS_EXPORT_FIELD_WIDTH, WRAP_ROW_STYLE } from "./stageRowLayout";
 import {
   RemoveSectionButton,
@@ -26,7 +26,7 @@ const ALL_SECTIONS: RosSection[] = ["filter", "encode", "label", "export"];
 
 interface TransformStageEditorProps {
   step: RosTransformStep;
-  dispatch: Dispatch<BuilderAction>;
+  dispatch: ExtBlockEditorDispatch;
 }
 
 function disabledReason(
@@ -217,7 +217,7 @@ export default function TransformStageEditor({
         </GridRow>
       )}
 
-      <GridFooter>
+      <GridFooter align="value-start">
         <AddOptionFooter menuItems={menuItems} onMenuClick={handleMenuClick} />
       </GridFooter>
     </div>

@@ -104,25 +104,15 @@ export default function ConditionListEditor({
           </div>
         ))}
 
-      {/* Offsets past the "Where"/connector column so the button below
-          centers under the condition's label/operator/value inputs
-          themselves - not under the whole row (which would skew it right)
-          and not under the trailing remove-button column either (which is
-          usually an invisible spacer, not something visually part of the
-          bar), so it lines up with what's actually visible. */}
+      {/* Offsets past the "Where"/connector column so the button lines up
+          with the value column in ROS/Select grids (ROW_LABEL_WIDTH + gap). */}
       <div style={{ display: "flex", marginTop: 8 }}>
         <div style={{ width: ROW_LABEL_WIDTH + ROW_GAP, flexShrink: 0 }} />
         <Tooltip title={addConditionHint}>
           {/* A disabled Button doesn't receive pointer events, so wrapping it
               directly stops the Tooltip's hover trigger from ever firing -
               this extra span still does. */}
-          <span
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              width: ROW_VALUE_COLUMN_WIDTH,
-            }}
-          >
+          <span style={{ display: "flex" }}>
             <Button
               aria-label="Add condition"
               disabled={!canAddCondition}
