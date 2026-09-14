@@ -225,7 +225,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
-    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+    const [lastCall] = onChange.mock.calls.at(-1) as [string];
     expect(JSON.parse(lastCall)).toEqual({ $each_t: "$__interval" });
 
     // Picking a (possibly new) source again shouldn't bring the old stage

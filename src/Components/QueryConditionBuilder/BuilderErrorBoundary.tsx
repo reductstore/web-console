@@ -29,7 +29,7 @@ export default class BuilderErrorBoundary extends Component<
         <Alert
           type="error"
           showIcon
-          message="Something went wrong in the query builder"
+          title="Something went wrong in the query builder"
           description="Please reload the page to keep editing this query."
           action={
             <Button size="small" onClick={() => window.location.reload()}>
