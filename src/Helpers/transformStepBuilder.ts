@@ -59,8 +59,6 @@ export interface SqlStep {
   export: SelectExportConfig;
 }
 
-export const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
-
 export interface SelectTransformStep {
   sqlSteps: SqlStep[];
 }
@@ -108,7 +106,7 @@ export function createSelectTransformStep(
 ): Extract<TransformStepEntry, { kind: "select" }> {
   return {
     kind: "select",
-    select: { sqlSteps: [blankSqlStep(id, DEFAULT_SQL)] },
+    select: { sqlSteps: [blankSqlStep(id, "")] },
   };
 }
 

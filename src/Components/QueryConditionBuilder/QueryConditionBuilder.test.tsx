@@ -1446,7 +1446,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
+      expect(screen.getByTestId("monaco-editor")).toHaveValue("");
       expect(screen.queryByText("As label")).toBeNull();
     });
 
