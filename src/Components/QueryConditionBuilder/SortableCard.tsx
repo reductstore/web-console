@@ -1,13 +1,11 @@
-import { ReactNode, CSSProperties, useState } from "react";
+import { ReactNode, CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button, Dropdown, MenuProps, Switch, Typography } from "antd";
 import {
   CloseOutlined,
-  DownOutlined,
   EllipsisOutlined,
   PlusCircleOutlined,
-  RightOutlined,
 } from "@ant-design/icons";
 
 interface SortableCardProps {
@@ -43,7 +41,6 @@ export default function SortableCard({
   kindSelector,
   children,
 }: SortableCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const {
     attributes,
     listeners,
@@ -80,18 +77,12 @@ export default function SortableCard({
       label: "Delete stage",
       disabled: !removable,
     },
-    {
-      key: "toggleExpand",
-      icon: isExpanded ? <DownOutlined /> : <RightOutlined />,
-      label: isExpanded ? "Collapse stage" : "Expand stage",
-    },
   ];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "addAfter") onAddAfter?.();
     else if (key === "addBefore") onAddBefore?.();
     else if (key === "delete") onRemove();
-    else if (key === "toggleExpand") setIsExpanded((prev) => !prev);
   };
 
   return (
@@ -106,14 +97,6 @@ export default function SortableCard({
         {...(isOverlay ? {} : attributes)}
         {...(isOverlay ? {} : listeners)}
       >
-        <Button
-          aria-label={isExpanded ? "Collapse stage" : "Expand stage"}
-          type="text"
-          size="small"
-          icon={isExpanded ? <DownOutlined /> : <RightOutlined />}
-          onClick={() => setIsExpanded((prev) => !prev)}
-          onPointerDown={(e) => e.stopPropagation()}
-        />
         {label && (
           <Typography.Text strong className="queryCardLabel">
             {label}
@@ -144,7 +127,7 @@ export default function SortableCard({
           />
         </Dropdown>
       </div>
-      {isExpanded && <div className="queryCardBody">{children}</div>}
+      <div className="queryCardBody">{children}</div>
     </div>
   );
 }
