@@ -260,6 +260,18 @@ describe("QueryEditor", () => {
     ).toHaveStyle({ height: "220px" });
   });
 
+  it("defaults to minWidth when resizableWidth is set without an explicit width", () => {
+    render(
+      <div style={{ display: "flex", width: 600 }}>
+        <QueryEditor value="{}" onChange={() => {}} resizableWidth minWidth={240} />
+      </div>,
+    );
+    const container = screen
+      .getByRole("separator", { name: "Resize JSON editor width" })
+      .closest(".jsonQueryEditor") as HTMLElement;
+    expect(container).toHaveStyle({ width: "240px" });
+  });
+
   it("does not render a width resize handle unless resizableWidth is set", () => {
     render(<QueryEditor value="{}" onChange={() => {}} />);
     expect(
@@ -304,7 +316,13 @@ describe("QueryEditor", () => {
 
   it("resizes width by pointer drag and removes listeners on completion", () => {
     render(
-      <QueryEditor value="{}" onChange={() => {}} resizableWidth width={300} />,
+      <QueryEditor
+        value="{}"
+        onChange={() => {}}
+        resizableWidth
+        width={300}
+        maxWidth={500}
+      />,
     );
     const handle = screen.getByRole("separator", {
       name: "Resize JSON editor width",

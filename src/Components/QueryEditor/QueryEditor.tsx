@@ -295,10 +295,13 @@ export function QueryEditor({
     );
   };
 
+  const [containerMaxWidth, setContainerMaxWidth] = useState<number>();
+
   const getMaximumEditorWidth = () =>
     Math.max(
       minWidth,
       maxWidth ??
+        containerMaxWidth ??
         Math.floor(window.innerWidth * MAX_INLINE_EDITOR_VIEWPORT_RATIO),
     );
 
@@ -392,12 +395,58 @@ export function QueryEditor({
       (typeof height === "number" ? height : MIN_INLINE_EDITOR_HEIGHT),
   );
 
-  const effectiveWidth = manualWidth ?? width;
+  const effectiveWidth =
+    manualWidth ?? width ?? (resizableWidth ? minWidth : undefined);
   const containerWidthStyle =
     typeof effectiveWidth === "number" ? `${effectiveWidth}px` : undefined;
   const currentWidth = Math.round(
-    manualWidth ?? (typeof width === "number" ? width : minWidth),
+    manualWidth ??
+      width ??
+      (resizableWidth ? minWidth : typeof width === "number" ? width : minWidth),
   );
+
+  useEffect(() => {
+    if (!resizableWidth || maxWidth !== undefined) {
+      setContainerMaxWidth(undefined);
+      return;
+    }
+
+    const editorEl = widthContainerRef.current;
+    const parent = editorEl?.parentElement;
+    if (!editorEl || !parent) {
+      return;
+    }
+
+    const syncBounds = () => {
+      const parentWidth = parent.getBoundingClientRect().width;
+      let reserved = 0;
+      for (const child of Array.from(parent.children)) {
+        if (child !== editorEl) {
+          reserved += (child as HTMLElement).getBoundingClientRect().width;
+        }
+      }
+      const gap =
+        parseFloat(getComputedStyle(parent).columnGap) ||
+        parseFloat(getComputedStyle(parent).gap) ||
+        0;
+      const nextMax = Math.max(
+        minWidth,
+        Math.floor(parentWidth - reserved - gap),
+      );
+      setContainerMaxWidth(nextMax);
+      setManualWidth((current) => {
+        if (current === undefined) {
+          return current;
+        }
+        return Math.min(nextMax, Math.max(minWidth, current));
+      });
+    };
+
+    const observer = new ResizeObserver(syncBounds);
+    observer.observe(parent);
+    syncBounds();
+    return () => observer.disconnect();
+  }, [resizableWidth, maxWidth, minWidth]);
 
   useEffect(
     () => () => {

@@ -24,42 +24,11 @@ export function GridRow({
   label,
   actions,
   children,
-  pinActionsToContent = false,
 }: {
   label: string;
   actions?: ReactNode;
   children: ReactNode;
-  // Keep trailing actions beside resizable content (e.g. a widened SQL
-  // editor) instead of in the fixed third grid column, which would leave
-  // the button floating over the middle of an expanded editor.
-  pinActionsToContent?: boolean;
 }) {
-  if (pinActionsToContent) {
-    return (
-      <>
-        <Typography.Text strong style={{ fontSize: 12, paddingTop: 6 }}>
-          {label}
-        </Typography.Text>
-        <div
-          style={{
-            gridColumn: "2 / 4",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: ROW_GAP,
-            minWidth: 0,
-          }}
-        >
-          {children}
-          {actions && (
-            <div style={{ display: "flex", flexShrink: 0, paddingTop: 6 }}>
-              {actions}
-            </div>
-          )}
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Typography.Text strong style={{ fontSize: 12, paddingTop: 6 }}>

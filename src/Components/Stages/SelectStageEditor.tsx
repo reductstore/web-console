@@ -18,7 +18,6 @@ import {
 import { ExtBlockEditorDispatch } from "../../Helpers/extBlockDispatch";
 import {
   ROW_GAP,
-  ROW_GROUP_WIDTH,
   ROW_ICON_FONT_SIZE,
   WRAP_ROW_STYLE,
   VALUE_INPUT_WIDTH,
@@ -47,12 +46,9 @@ const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
 
 const EXPORT_FORMATS = ["csv", "json", "parquet"];
 
-// Just tall enough to show 2 lines of SQL plus the toolbar; the editor can
-// still be resized (drag handle) or expanded (fullscreen button) from here.
+// Just tall enough to show 2 lines of SQL plus the toolbar; width matches the
+// grid value column (same as the other inputs), with the remove button aside.
 const SQL_EDITOR_HEIGHT = 76;
-// Lets long queries be widened past the row's default column width by
-// dragging the native corner handle, without letting it grow unbounded.
-const SQL_EDITOR_MAX_WIDTH = 900;
 
 function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
   return FORMAT_CHOICES.find((f) => step.formatSections.includes(f.value))
@@ -142,7 +138,6 @@ function SqlStepBlock({
     <>
       <GridRow
         label={label}
-        pinActionsToContent
         actions={
           removable && (
             <RemoveSectionButton
@@ -161,9 +156,7 @@ function SqlStepBlock({
             dispatch({ type: "select/changeSql", id: step.id, sql })
           }
           height={SQL_EDITOR_HEIGHT}
-          resizableWidth
-          minWidth={ROW_GROUP_WIDTH}
-          maxWidth={SQL_EDITOR_MAX_WIDTH}
+          containerStyle={{ width: "100%" }}
         />
       </GridRow>
 
