@@ -1,18 +1,16 @@
-import { Dispatch, useState } from "react";
+import { Dispatch } from "react";
 import {
   Button,
   Checkbox,
   Input,
   InputNumber,
   MenuProps,
-  Modal,
   Segmented,
   Select,
   Tooltip,
 } from "antd";
-import { EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import {
-  DEFAULT_SQL,
   SelectInputFormat,
   SelectTransformStep,
   SqlStep,
@@ -49,6 +47,13 @@ const FORMAT_CHOICES: { value: SelectInputFormat; label: string }[] = [
 
 const EXPORT_FORMATS = ["csv", "json", "parquet"];
 
+// Just tall enough to show 2 lines of SQL plus the toolbar; the editor can
+// still be resized (drag handle) or expanded (fullscreen button) from here.
+const SQL_EDITOR_HEIGHT = 76;
+// Lets long queries be widened past the row's default column width by
+// dragging the native corner handle, without letting it grow unbounded.
+const SQL_EDITOR_MAX_WIDTH = 900;
+
 function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
   return FORMAT_CHOICES.find((f) => step.formatSections.includes(f.value))
     ?.value;
@@ -81,19 +86,15 @@ function disabledReason(option: AddOption, step: SqlStep): string | undefined {
 function SqlStepBlock({
   step,
   label,
-  isFirst,
   removable,
   dispatch,
 }: {
   step: SqlStep;
   label: string;
-  isFirst: boolean;
   removable: boolean;
   dispatch: Dispatch<BuilderAction>;
 }) {
   const activeFormat = activeFormatOf(step);
-  const [isEditingSql, setIsEditingSql] = useState(false);
-  const displaySql = isFirst && !step.sql.trim() ? DEFAULT_SQL : step.sql;
 
   const menuItems: MenuProps["items"] = ADD_OPTIONS.map((option) => {
     const reason = disabledReason(option, step);
@@ -142,73 +143,28 @@ function SqlStepBlock({
       <GridRow
         label={label}
         actions={
-          <>
-            <Button
-              aria-label={`Edit ${label}`}
-              type="text"
-              icon={<EditOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-              onClick={() => setIsEditingSql(true)}
+          removable && (
+            <RemoveSectionButton
+              label={label}
+              onRemove={() =>
+                dispatch({ type: "select/removeSqlStep", id: step.id })
+              }
             />
-            {removable && (
-              <RemoveSectionButton
-                label={label}
-                onRemove={() =>
-                  dispatch({ type: "select/removeSqlStep", id: step.id })
-                }
-              />
-            )}
-          </>
+          )
         }
       >
-        <div
-          style={{
-            minWidth: ROW_GROUP_WIDTH,
-            border: "1px solid #d9d9d9",
-            borderRadius: 6,
-            padding: "6px 10px",
-            background: "#fafafa",
-            fontFamily: "monospace",
-            fontSize: 13,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-          }}
-        >
-          {displaySql.trim() ? (
-            displaySql
-          ) : (
-            <span style={{ color: "#8c8c8c" }}>No SQL yet</span>
-          )}
-        </div>
+        <QueryEditor
+          language="sql"
+          value={step.sql}
+          onChange={(sql) =>
+            dispatch({ type: "select/changeSql", id: step.id, sql })
+          }
+          height={SQL_EDITOR_HEIGHT}
+          resizableWidth
+          minWidth={ROW_GROUP_WIDTH}
+          maxWidth={SQL_EDITOR_MAX_WIDTH}
+        />
       </GridRow>
-      {isEditingSql && (
-        <Modal
-          open={isEditingSql}
-          onCancel={() => setIsEditingSql(false)}
-          footer={null}
-          closable
-          title="SQL Editor"
-          mask={{ closable: false }}
-          keyboard={false}
-          className="jsonQueryEditorModal"
-          width="90vw"
-          centered
-        >
-          <div
-            style={{ display: "flex", flexDirection: "column", height: "100%" }}
-          >
-            <QueryEditor
-              language="sql"
-              value={displaySql}
-              onChange={(sql) =>
-                dispatch({ type: "select/changeSql", id: step.id, sql })
-              }
-              height="100%"
-              containerStyle={{ flex: 1, minHeight: 0 }}
-              allowExpand={false}
-            />
-          </div>
-        </Modal>
-      )}
 
       {activeFormat && (
         <GridRow
@@ -452,7 +408,6 @@ export default function SelectStageEditor({
             key={sqlStep.id}
             step={sqlStep}
             label={label}
-            isFirst={index === 0}
             removable={step.sqlSteps.length > 1}
             dispatch={dispatch}
           />

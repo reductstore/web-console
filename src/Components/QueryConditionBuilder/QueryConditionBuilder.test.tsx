@@ -1509,7 +1509,6 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Edit SQL"));
       fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT temp.value AS value FROM ENTRY()" },
       });

@@ -27,6 +27,7 @@ enum ValidationStatus {
 const MIN_INLINE_EDITOR_HEIGHT = 100;
 const MAX_INLINE_EDITOR_VIEWPORT_RATIO = 0.8;
 const KEYBOARD_RESIZE_STEP = 16;
+const DEFAULT_MIN_INLINE_EDITOR_WIDTH = 240;
 
 type QueryEditorLanguage = "json" | "sql";
 
@@ -51,6 +52,12 @@ interface QueryEditorProps {
   validationContext?: ValidationContext;
   containerStyle?: React.CSSProperties;
   allowExpand?: boolean;
+  // Lets the user drag a handle on the right edge to widen the editor past
+  // its natural column width, e.g. to see a long SQL query on fewer lines.
+  resizableWidth?: boolean;
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
 }
 
 interface IDisposable {
@@ -93,13 +100,21 @@ export function QueryEditor({
   validationContext,
   containerStyle,
   allowExpand = true,
+  resizableWidth = false,
+  width,
+  minWidth = DEFAULT_MIN_INLINE_EDITOR_WIDTH,
+  maxWidth,
 }: QueryEditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const inlineContainerRef = useRef<HTMLDivElement | null>(null);
+  const widthContainerRef = useRef<HTMLDivElement | null>(null);
   const stopPointerResizeRef = useRef<(() => void) | null>(null);
+  const stopWidthPointerResizeRef = useRef<(() => void) | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isResizingWidth, setIsResizingWidth] = useState(false);
   const [manualHeight, setManualHeight] = useState<number | undefined>();
+  const [manualWidth, setManualWidth] = useState<number | undefined>();
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>(
     ValidationStatus.Idle,
   );
@@ -280,6 +295,93 @@ export function QueryEditor({
     );
   };
 
+  const getMaximumEditorWidth = () =>
+    Math.max(
+      minWidth,
+      maxWidth ??
+        Math.floor(window.innerWidth * MAX_INLINE_EDITOR_VIEWPORT_RATIO),
+    );
+
+  const clampEditorWidth = (nextWidth: number) =>
+    Math.min(
+      getMaximumEditorWidth(),
+      Math.max(minWidth, Math.round(nextWidth)),
+    );
+
+  const getRenderedInlineWidth = () => {
+    const container = widthContainerRef.current;
+    const renderedWidth = container?.getBoundingClientRect().width ?? 0;
+    if (renderedWidth > 0) return renderedWidth;
+    if (manualWidth !== undefined) return manualWidth;
+    if (typeof width === "number") return width;
+    return minWidth;
+  };
+
+  const handleWidthResizePointerDown = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    stopWidthPointerResizeRef.current?.();
+
+    const { currentTarget: handle, pointerId, clientX: startX } = event;
+    const startWidth = clampEditorWidth(getRenderedInlineWidth());
+    setManualWidth(startWidth);
+    setIsResizingWidth(true);
+
+    try {
+      handle.setPointerCapture?.(pointerId);
+    } catch {
+      // Pointer capture is optional in older browsers and test environments.
+    }
+
+    const handlePointerMove = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== pointerId) return;
+      setManualWidth(
+        clampEditorWidth(startWidth + pointerEvent.clientX - startX),
+      );
+    };
+
+    const stopPointerResize = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+      try {
+        if (handle.hasPointerCapture?.(pointerId)) {
+          handle.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // The handle may have been removed while a drag was active.
+      }
+      stopWidthPointerResizeRef.current = null;
+    };
+
+    const handlePointerEnd = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== pointerId) return;
+      stopPointerResize();
+      setIsResizingWidth(false);
+    };
+
+    stopWidthPointerResizeRef.current = stopPointerResize;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+  };
+
+  const handleWidthResizeKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    setManualWidth((currentWidth) =>
+      clampEditorWidth(
+        (currentWidth ?? getRenderedInlineWidth()) +
+          direction * KEYBOARD_RESIZE_STEP,
+      ),
+    );
+  };
+
   const effectiveHeight = manualHeight ?? height;
   const containerHeight =
     typeof effectiveHeight === "number"
@@ -290,9 +392,17 @@ export function QueryEditor({
       (typeof height === "number" ? height : MIN_INLINE_EDITOR_HEIGHT),
   );
 
+  const effectiveWidth = manualWidth ?? width;
+  const containerWidthStyle =
+    typeof effectiveWidth === "number" ? `${effectiveWidth}px` : undefined;
+  const currentWidth = Math.round(
+    manualWidth ?? (typeof width === "number" ? width : minWidth),
+  );
+
   useEffect(
     () => () => {
       stopPointerResizeRef.current?.();
+      stopWidthPointerResizeRef.current?.();
     },
     [],
   );
@@ -522,6 +632,7 @@ export function QueryEditor({
   const languageLabel = language.toUpperCase();
   const formatLabel = `Format ${languageLabel}`;
   const resizeLabel = `Resize ${languageLabel} editor`;
+  const resizeWidthLabel = `Resize ${languageLabel} editor width`;
   const modalTitle =
     language === "sql" ? "SQL Editor" : "Conditional Query Editor";
 
@@ -615,7 +726,11 @@ export function QueryEditor({
   return (
     <div
       className={`jsonQueryEditor ${error ? "hasError" : ""}`}
-      style={containerStyle}
+      style={{
+        ...containerStyle,
+        ...(resizableWidth ? { width: containerWidthStyle } : undefined),
+      }}
+      ref={resizableWidth ? widthContainerRef : undefined}
     >
       {isExpanded ? (
         <div
@@ -623,6 +738,29 @@ export function QueryEditor({
           style={{ height: containerHeight }}
         >
           Editing in expanded {languageLabel} editor
+        </div>
+      ) : resizableWidth ? (
+        <div
+          className={`jsonQueryEditorWidthWrap${isResizingWidth ? " isResizingWidth" : ""}`}
+        >
+          {renderEditorShell(
+            { height: containerHeight, flex: 1, minWidth: 0 },
+            true,
+          )}
+          <div
+            className="jsonQueryEditorResizeHandleHorizontal"
+            role="separator"
+            aria-label={resizeWidthLabel}
+            aria-orientation="vertical"
+            aria-valuemin={minWidth}
+            aria-valuemax={getMaximumEditorWidth()}
+            aria-valuenow={currentWidth}
+            tabIndex={0}
+            onPointerDown={handleWidthResizePointerDown}
+            onKeyDown={handleWidthResizeKeyDown}
+          >
+            <span aria-hidden="true" />
+          </div>
         </div>
       ) : (
         renderEditorShell({ height: containerHeight }, true)

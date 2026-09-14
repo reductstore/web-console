@@ -260,6 +260,80 @@ describe("QueryEditor", () => {
     ).toHaveStyle({ height: "220px" });
   });
 
+  it("does not render a width resize handle unless resizableWidth is set", () => {
+    render(<QueryEditor value="{}" onChange={() => {}} />);
+    expect(
+      screen.queryByRole("separator", { name: "Resize JSON editor width" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("resizes width with the keyboard and clamps to its bounds", () => {
+    render(
+      <QueryEditor
+        value="{}"
+        onChange={() => {}}
+        resizableWidth
+        width={300}
+        minWidth={240}
+        maxWidth={500}
+      />,
+    );
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor width",
+    });
+    const container = handle.closest(".jsonQueryEditor") as HTMLElement;
+
+    expect(container).toHaveStyle({ width: "300px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "300");
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(container).toHaveStyle({ width: "316px" });
+
+    for (let i = 0; i < 20; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    }
+    expect(container).toHaveStyle({ width: "240px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "240");
+
+    for (let i = 0; i < 20; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowRight" });
+    }
+    expect(container).toHaveStyle({ width: "500px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "500");
+  });
+
+  it("resizes width by pointer drag and removes listeners on completion", () => {
+    render(
+      <QueryEditor value="{}" onChange={() => {}} resizableWidth width={300} />,
+    );
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor width",
+    });
+    const container = handle.closest(".jsonQueryEditor") as HTMLElement;
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 300,
+      bottom: 0,
+      left: 0,
+      width: 300,
+      height: 0,
+      toJSON: () => ({}),
+    });
+    const removeListener = vi.spyOn(window, "removeEventListener");
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 100 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 180 });
+    expect(container).toHaveStyle({ width: "380px" });
+
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(removeListener).toHaveBeenCalledWith(
+      "pointermove",
+      expect.any(Function),
+    );
+  });
+
   it("passes start/stop into the validation query", async () => {
     const queryNext = vi.fn().mockResolvedValue({ done: true });
     const query = vi.fn().mockReturnValue({ next: queryNext });

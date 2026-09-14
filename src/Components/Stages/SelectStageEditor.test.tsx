@@ -43,7 +43,7 @@ const baseStep: SelectTransformStep = {
 };
 
 describe("SelectStageEditor", () => {
-  it("shows the current SQL value as a frozen preview, not an editable input", () => {
+  it("shows the current SQL value directly in the inline Monaco editor", () => {
     render(
       <SelectStageEditor
         step={{
@@ -54,34 +54,19 @@ describe("SelectStageEditor", () => {
         dispatch={vi.fn()}
       />,
     );
-    expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
-    expect(screen.queryByTestId("monaco-editor")).toBeNull();
+    expect(screen.getByTestId("monaco-editor")).toHaveValue(
+      "SELECT * FROM ENTRY()",
+    );
   });
 
-  it("shows SELECT * FROM ENTRY() as the default when the first SQL row is blank", () => {
+  it("shows an empty inline editor when the SQL row is blank", () => {
     render(<SelectStageEditor step={baseStep} dispatch={vi.fn()} />);
-    expect(screen.getByText("SELECT * FROM ENTRY()")).toBeTruthy();
-    expect(screen.queryByText("No SQL yet")).toBeNull();
+    expect(screen.getByTestId("monaco-editor")).toHaveValue("");
   });
 
-  it("shows a placeholder when a later SQL row is blank", () => {
-    const step: SelectTransformStep = {
-      sqlSteps: [
-        makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" }),
-        makeSqlStep({ id: "sql-2", sql: "" }),
-      ],
-    };
-    render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
-    expect(screen.getByText("No SQL yet")).toBeTruthy();
-  });
-
-  it("opens the SQL Editor modal via the edit button and reports a typed expression", () => {
+  it("edits SQL directly in the inline editor and reports the typed expression", () => {
     const dispatch = vi.fn();
     render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
-    expect(screen.queryByTestId("monaco-editor")).toBeNull();
-
-    fireEvent.click(screen.getByLabelText("Edit SQL"));
-    expect(screen.getByText("SQL Editor")).toBeTruthy();
 
     fireEvent.change(screen.getByTestId("monaco-editor"), {
       target: { value: "SELECT temp.value FROM ENTRY()" },
