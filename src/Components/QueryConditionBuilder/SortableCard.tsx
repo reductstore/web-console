@@ -7,6 +7,7 @@ import {
   EllipsisOutlined,
   PlusCircleOutlined,
 } from "@ant-design/icons";
+import { ROW_LABEL_WIDTH } from "../Stages/stageRowLayout";
 
 export interface BuilderBlockMenuItem {
   key: string;
@@ -126,7 +127,15 @@ export default function SortableCard({
         {...(isOverlay ? {} : listeners)}
       >
         {label && (
-          <Typography.Text strong className="queryCardLabel">
+          // Fixed to the same width as every stage body's label column
+          // (ROW_LABEL_WIDTH) so the kind selector lines up with the
+          // inputs below it instead of trailing "Stage N" at whatever
+          // width that text happens to render at.
+          <Typography.Text
+            strong
+            className="queryCardLabel"
+            style={{ minWidth: ROW_LABEL_WIDTH }}
+          >
             {label}
           </Typography.Text>
         )}
