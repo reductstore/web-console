@@ -96,15 +96,17 @@ const STAGE_KIND_OPTIONS: {
   },
 ];
 
+// "conditions" and "ext" are sentinel-based: every stage assigned that kind
+// is stored at the same fixed id (CONDITIONS_BLOCK_ID/PROCESS_BLOCK_ID), so
+// a second one would collide with the first in blockOrder rather than
+// coexist - that has to stay a hard client-side limit. Every other kind is
+// a regular step with its own unique id, so the pipeline can already hold
+// as many of them as you like; whether the server actually accepts that
+// combination is for it to decide, not the UI.
 function usedStageKinds(state: BuilderState): Set<StageKind> {
   const used = new Set<StageKind>();
   if (state.blockOrder.includes(CONDITIONS_BLOCK_ID)) used.add("conditions");
   if (state.blockOrder.includes(PROCESS_BLOCK_ID)) used.add("ext");
-  if (state.steps.some((step) => step.type === "each_n"))
-    used.add("sample_each_n");
-  if (state.steps.some((step) => step.type === "each_t"))
-    used.add("sample_each_t");
-  if (state.steps.some((step) => step.type === "limit")) used.add("limit");
   return used;
 }
 

@@ -705,7 +705,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("disables both Sample kinds in the stage type dropdown once each_n and each_t are both present", async () => {
+    it("still allows adding another $each_t/$each_n once one of each is already present, since the server decides what's valid", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -728,8 +728,8 @@ describe("QueryConditionBuilder", () => {
 
       const eachTOption = stageTypeOption("$each_t");
       const eachNOption = stageTypeOption("$each_n");
-      expect(eachTOption).toHaveClass("ant-select-item-option-disabled");
-      expect(eachNOption).toHaveClass("ant-select-item-option-disabled");
+      expect(eachTOption).not.toHaveClass("ant-select-item-option-disabled");
+      expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
     });
 
     it("adds a limit step and combines it with an existing filter", async () => {
@@ -959,7 +959,7 @@ describe("QueryConditionBuilder", () => {
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("disables the matching stage type once limit is already added", async () => {
+    it("still allows adding another $limit once one is already added, since the server decides what's valid", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -983,9 +983,37 @@ describe("QueryConditionBuilder", () => {
       const limitOption = stageTypeOption("$limit");
       const eachTOption = stageTypeOption("$each_t");
       const eachNOption = stageTypeOption("$each_n");
-      expect(limitOption).toHaveClass("ant-select-item-option-disabled");
+      expect(limitOption).not.toHaveClass("ant-select-item-option-disabled");
       expect(eachTOption).not.toHaveClass("ant-select-item-option-disabled");
       expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
+    });
+
+    it("still disables &label/#ext in the stage type dropdown once already present, since duplicating them would collide in the pipeline", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await addStageOfKind("&label");
+      await addStageOfKind("#ext");
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add stage"));
+      });
+      const selects = screen.getAllByLabelText("Stage type");
+      await act(async () => {
+        fireEvent.mouseDown(selects[selects.length - 1]);
+      });
+
+      const labelOption = stageTypeOption("&label");
+      const extOption = stageTypeOption("#ext");
+      expect(labelOption).toHaveClass("ant-select-item-option-disabled");
+      expect(extOption).toHaveClass("ant-select-item-option-disabled");
     });
 
     describe("default Sample step", () => {
