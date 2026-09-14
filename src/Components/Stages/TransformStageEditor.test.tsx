@@ -252,21 +252,15 @@ describe("TransformStageEditor", () => {
 
     it("shows the current format, duration, and size", () => {
       render(<TransformStageEditor step={step} dispatch={vi.fn()} />);
-      expect(
-        screen.getByPlaceholderText("mcap (currently the only format)"),
-      ).toHaveValue("mcap");
-      expect(screen.getByPlaceholderText("max duration (e.g. 1m)")).toHaveValue(
-        "1m",
-      );
-      expect(screen.getByPlaceholderText("max size (e.g. 100MB)")).toHaveValue(
-        "100MB",
-      );
+      expect(screen.getByPlaceholderText("mcap")).toHaveValue("mcap");
+      expect(screen.getByPlaceholderText("duration (1m)")).toHaveValue("1m");
+      expect(screen.getByPlaceholderText("size (100MB)")).toHaveValue("100MB");
     });
 
     it("reports edits to each field", () => {
       const dispatch = vi.fn();
       render(<TransformStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.change(screen.getByPlaceholderText("max duration (e.g. 1m)"), {
+      fireEvent.change(screen.getByPlaceholderText("duration (1m)"), {
         target: { value: "5m" },
       });
       expect(dispatch).toHaveBeenCalledWith({

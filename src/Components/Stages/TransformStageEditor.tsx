@@ -5,7 +5,7 @@ import {
   RosTransformStep,
 } from "../../Helpers/transformStepBuilder";
 import { BuilderAction } from "../../Helpers/builderReducer";
-import { ROW_INPUT_WIDTH, WRAP_ROW_STYLE } from "./stageRowLayout";
+import { ROS_EXPORT_FIELD_WIDTH, WRAP_ROW_STYLE } from "./stageRowLayout";
 import {
   RemoveSectionButton,
   AddOptionFooter,
@@ -171,39 +171,48 @@ export default function TransformStageEditor({
           }
         >
           <div style={WRAP_ROW_STYLE}>
-            <Input
-              placeholder="mcap (currently the only format)"
-              value={step.export.format}
-              onChange={(e) =>
-                dispatch({
-                  type: "ros/changeExport",
-                  changes: { format: e.target.value },
-                })
-              }
-              style={{ width: ROW_INPUT_WIDTH }}
-            />
-            <Input
-              placeholder="max duration (e.g. 1m)"
-              value={step.export.duration}
-              onChange={(e) =>
-                dispatch({
-                  type: "ros/changeExport",
-                  changes: { duration: e.target.value },
-                })
-              }
-              style={{ width: ROW_INPUT_WIDTH }}
-            />
-            <Input
-              placeholder="max size (e.g. 100MB)"
-              value={step.export.size}
-              onChange={(e) =>
-                dispatch({
-                  type: "ros/changeExport",
-                  changes: { size: e.target.value },
-                })
-              }
-              style={{ width: ROW_INPUT_WIDTH }}
-            />
+            {/* Placeholders are kept short so all three inputs fit on one
+                line without truncating - the fuller explanation lives in a
+                tooltip instead. */}
+            <Tooltip title="mcap is currently the only supported format">
+              <Input
+                placeholder="mcap"
+                value={step.export.format}
+                onChange={(e) =>
+                  dispatch({
+                    type: "ros/changeExport",
+                    changes: { format: e.target.value },
+                  })
+                }
+                style={{ width: ROS_EXPORT_FIELD_WIDTH }}
+              />
+            </Tooltip>
+            <Tooltip title="Maximum export duration, e.g. 1m">
+              <Input
+                placeholder="duration (1m)"
+                value={step.export.duration}
+                onChange={(e) =>
+                  dispatch({
+                    type: "ros/changeExport",
+                    changes: { duration: e.target.value },
+                  })
+                }
+                style={{ width: ROS_EXPORT_FIELD_WIDTH }}
+              />
+            </Tooltip>
+            <Tooltip title="Maximum export size, e.g. 100MB">
+              <Input
+                placeholder="size (100MB)"
+                value={step.export.size}
+                onChange={(e) =>
+                  dispatch({
+                    type: "ros/changeExport",
+                    changes: { size: e.target.value },
+                  })
+                }
+                style={{ width: ROS_EXPORT_FIELD_WIDTH }}
+              />
+            </Tooltip>
           </div>
         </GridRow>
       )}

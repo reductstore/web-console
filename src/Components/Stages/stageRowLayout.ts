@@ -41,3 +41,11 @@ export const EXPORT_DURATION_WIDTH =
 export const PROTOBUF_MESSAGE_NAME_WIDTH = 160;
 export const PROTOBUF_SCHEMA_WIDTH =
   ROW_VALUE_COLUMN_WIDTH - PROTOBUF_MESSAGE_NAME_WIDTH - ROW_GAP;
+// ROS export shows three plain text inputs (format/duration/size) that are
+// all equally important - unlike Select's export row (a narrow format
+// dropdown + narrow row count, leaving the remainder for duration), so the
+// value column is split into thirds instead of reusing ROW_INPUT_WIDTH
+// (sized for two-input rows), which pushed the third input onto its own
+// line instead of keeping the row on one line.
+export const ROS_EXPORT_FIELD_WIDTH =
+  (ROW_VALUE_COLUMN_WIDTH - ROW_GAP * 2) / 3;

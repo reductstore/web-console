@@ -599,7 +599,11 @@ function buildSqlStageExtras(step: SqlStep): Record<string, unknown> {
   const extras: Record<string, unknown> = {};
 
   if (formatSections.includes("csv")) {
-    extras.csv = { has_headers: csv.hasHeaders };
+    // Only sent when checked - omitting has_headers (rather than forcing it
+    // to false) lets the server infer it from the content type instead,
+    // which is the documented default. The checkbox is only useful to force
+    // it on when inference wouldn't otherwise catch it.
+    extras.csv = csv.hasHeaders ? { has_headers: true } : {};
   }
   if (formatSections.includes("json")) {
     extras.json = {};
