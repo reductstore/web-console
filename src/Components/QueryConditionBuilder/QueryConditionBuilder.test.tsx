@@ -1102,6 +1102,78 @@ describe("QueryConditionBuilder", () => {
       });
     };
 
+    it("keeps the add button's helper text until both extensions are added", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addStageOfKind("#ext");
+      expect(screen.getByText("Add extension")).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
+      });
+      // Select is still addable, so the button (and its helper text) stays.
+      expect(screen.getByText("Add extension")).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "Select" }));
+      });
+      // Both are present now - the add button is gone entirely.
+      expect(screen.queryByText("Add extension")).toBeNull();
+      expect(screen.queryByLabelText("Add ROS or Select")).toBeNull();
+    });
+
+    it("greys out ROS with a tooltip once it's already added, while Select stays enabled", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addStageOfKind("#ext");
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      const menu = within(openActionsMenu()!);
+      expect(menu.getByText("ROS").closest("li")).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      expect(menu.getByText("Select").closest("li")).not.toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+
+      fireEvent.mouseOver(menu.getByText("ROS"));
+      await waitFor(() => {
+        expect(screen.getByRole("tooltip")).toHaveTextContent(
+          "ROS is already added",
+        );
+      });
+    });
+
     it("adds a fresh transform (no sections yet) via the menu", async () => {
       render(
         <QueryConditionBuilder

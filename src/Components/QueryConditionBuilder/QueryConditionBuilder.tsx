@@ -312,8 +312,28 @@ function buildBlocks(
       if (!sourceReady) return [];
 
       const addNestedItems = [
-        { key: "ros", label: "ROS", disabled: !!rosTransform },
-        { key: "select", label: "Select", disabled: !!selectTransform },
+        {
+          key: "ros",
+          disabled: !!rosTransform,
+          label: rosTransform ? (
+            <Tooltip title="ROS is already added" placement="right">
+              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>ROS</span>
+            </Tooltip>
+          ) : (
+            "ROS"
+          ),
+        },
+        {
+          key: "select",
+          disabled: !!selectTransform,
+          label: selectTransform ? (
+            <Tooltip title="Select is already added" placement="right">
+              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>Select</span>
+            </Tooltip>
+          ) : (
+            "Select"
+          ),
+        },
       ];
       const handleAddNested = ({ key }: { key: string }) => {
         if (key === "ros" || key === "select") {
@@ -377,15 +397,14 @@ function buildBlocks(
                   >
                     <Button
                       aria-label="Add ROS or Select"
-                      shape="circle"
-                      size="small"
-                      className="addOptionCircleButton"
                       icon={
                         <PlusOutlined
                           style={{ fontSize: ROW_ICON_FONT_SIZE }}
                         />
                       }
-                    />
+                    >
+                      Add extension
+                    </Button>
                   </Dropdown>
                 </div>
               )}
