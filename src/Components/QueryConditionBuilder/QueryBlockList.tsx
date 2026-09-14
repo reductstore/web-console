@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import { Button, Tooltip } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import SortableCard from "./SortableCard";
+import SortableCard, { BuilderBlockMenuItem } from "./SortableCard";
 import SortableList from "./SortableList";
+
+export type { BuilderBlockMenuItem };
 
 // Kept in sync with ConditionListEditor's own "Select a bucket and entries
 // first" hint, so every !sourceReady tooltip in the builder reads the same.
@@ -16,7 +18,13 @@ export interface BuilderBlock {
   onToggleEnabled: () => void;
   onAddBefore?: () => void;
   onAddAfter?: () => void;
+  // Extra actions shown in the stage's "..." menu, below the standard
+  // add/delete ones - e.g. removing a ROS or Select sub-block from within
+  // the Process stage, instead of a separate "X" button next to each one.
+  extraMenuItems?: BuilderBlockMenuItem[];
   kindSelector?: ReactNode;
+  // Rendered in the card header right after the enable/disable toggle.
+  headerExtra?: ReactNode;
   content: ReactNode;
 }
 
@@ -85,7 +93,9 @@ export default function QueryBlockList({
             onAddBefore={block.onAddBefore}
             onAddAfter={block.onAddAfter}
             canInsert={sourceReady}
+            extraMenuItems={block.extraMenuItems}
             kindSelector={block.kindSelector}
+            headerExtra={block.headerExtra}
           >
             {block.content}
           </SortableCard>

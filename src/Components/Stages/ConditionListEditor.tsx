@@ -126,12 +126,11 @@ export default function ConditionListEditor({
             <Button
               aria-label="Add condition"
               disabled={!canAddCondition}
-              shape="circle"
-              size="small"
-              className="addOptionCircleButton"
               icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
               onClick={onAddCondition}
-            />
+            >
+              Add condition
+            </Button>
           </span>
         </Tooltip>
       </div>

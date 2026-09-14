@@ -8,7 +8,7 @@ import {
   ComponentProps,
 } from "react";
 import { Button, Dropdown, Select, Tooltip, Typography } from "antd";
-import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import BuilderErrorBoundary from "./BuilderErrorBoundary";
@@ -18,7 +18,10 @@ import LimitStageEditor from "../Stages/LimitStageEditor";
 import TransformStageEditor from "../Stages/TransformStageEditor";
 import SelectStageEditor from "../Stages/SelectStageEditor";
 import { ROW_ICON_FONT_SIZE } from "../Stages/stageRowLayout";
-import { ExtensionsDocLink } from "../Stages/StageSectionLayout";
+import {
+  ExtensionsDocLink,
+  ExtensionsLicenseNotice,
+} from "../Stages/StageSectionLayout";
 import {
   CONDITIONS_BLOCK_ID,
   hasIncompleteSteps,
@@ -38,6 +41,7 @@ import {
   parseQueryAndTransform,
   serialize,
 } from "../../Helpers/builderReducer";
+import { checkLicenseStatus } from "../../Helpers/licenseUtils";
 import { QueryOptions } from "reduct-js";
 
 type ValidationContext = ComponentProps<
@@ -164,14 +168,10 @@ function StageKindSelect({
 
 function ProcessSubsection({
   title,
-  removeLabel,
-  onRemove,
   divider = false,
   children,
 }: {
   title: string;
-  removeLabel: string;
-  onRemove: () => void;
   divider?: boolean;
   children: ReactNode;
 }) {
@@ -181,22 +181,9 @@ function ProcessSubsection({
         divider ? { borderTop: "1px solid #f0f0f0", paddingTop: 16 } : undefined
       }
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 8,
-        }}
-      >
-        <Typography.Text strong>{title}</Typography.Text>
-        <Button
-          aria-label={removeLabel}
-          type="text"
-          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
-          onClick={onRemove}
-        />
-      </div>
+      <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
+        {title}
+      </Typography.Text>
       {children}
     </div>
   );
@@ -207,6 +194,7 @@ function buildBlocks(
   sourceReady: boolean,
   labelOptions: string[] | undefined,
   intervalValue: string | undefined,
+  hasProLicense: boolean,
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
   // The default $each_t sample stage renders even before a bucket/entry is
@@ -348,7 +336,35 @@ function buildBlocks(
           enabled: isStageEnabled(state, PROCESS_BLOCK_ID),
           onToggleEnabled: () =>
             dispatch({ type: "stage/toggleEnabled", id: PROCESS_BLOCK_ID }),
+          headerExtra: hasProLicense ? undefined : <ExtensionsLicenseNotice />,
           ...insertHandlers(PROCESS_BLOCK_ID),
+          // Removing ROS/Select lives in the "..." menu instead of a "X"
+          // next to each one, so it doesn't read like a separate stage.
+          extraMenuItems: [
+            ...(rosTransform
+              ? [
+                  {
+                    key: "removeRos",
+                    label: "Remove ROS",
+                    onClick: () =>
+                      dispatch({ type: "block/removeTransform", kind: "ros" }),
+                  },
+                ]
+              : []),
+            ...(selectTransform
+              ? [
+                  {
+                    key: "removeSelect",
+                    label: "Remove Select",
+                    onClick: () =>
+                      dispatch({
+                        type: "block/removeTransform",
+                        kind: "select",
+                      }),
+                  },
+                ]
+              : []),
+          ],
           kindSelector: (
             <StageKindSelect
               value="ext"
@@ -361,13 +377,7 @@ function buildBlocks(
           content: (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {rosTransform && (
-                <ProcessSubsection
-                  title="ROS"
-                  removeLabel="Remove ROS processing"
-                  onRemove={() =>
-                    dispatch({ type: "block/removeTransform", kind: "ros" })
-                  }
-                >
+                <ProcessSubsection title="ROS">
                   <TransformStageEditor
                     step={rosTransform.ros}
                     dispatch={dispatch}
@@ -375,14 +385,7 @@ function buildBlocks(
                 </ProcessSubsection>
               )}
               {selectTransform && (
-                <ProcessSubsection
-                  title="Select"
-                  removeLabel="Remove Select processing"
-                  divider={!!rosTransform}
-                  onRemove={() =>
-                    dispatch({ type: "block/removeTransform", kind: "select" })
-                  }
-                >
+                <ProcessSubsection title="Select" divider={!!rosTransform}>
                   <SelectStageEditor
                     step={selectTransform.select}
                     dispatch={dispatch}
@@ -640,6 +643,36 @@ export default function QueryConditionBuilder({
     validationContext?.entries,
   ]);
 
+  // Assume a valid license until proven otherwise, so a Pro user briefly
+  // sees nothing instead of a flash of a warning that doesn't apply to them.
+  const [hasProLicense, setHasProLicense] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLicenseStatus() {
+      if (!validationContext?.client) {
+        return;
+      }
+      try {
+        const info = await validationContext.client.getInfo();
+        if (!cancelled) {
+          setHasProLicense(
+            checkLicenseStatus(info.license, info.usage).isValid,
+          );
+        }
+      } catch {
+        // Can't confirm one way or the other - leave the last known state.
+      }
+    }
+
+    loadLicenseStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [validationContext?.client]);
+
   useEffect(() => {
     if (mode !== "builder" || value === lastEmittedValueRef.current) {
       return;
@@ -705,6 +738,7 @@ export default function QueryConditionBuilder({
             sourceReady,
             labelOptions,
             validationContext?.intervalValue ?? undefined,
+            hasProLicense,
             dispatch,
           )}
           sourceReady={sourceReady}

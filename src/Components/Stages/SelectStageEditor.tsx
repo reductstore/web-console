@@ -459,7 +459,7 @@ export default function SelectStageEditor({
         );
       })}
 
-      <GridFooter>
+      <GridFooter align="start">
         <AddOptionButton
           label="Add SQL row"
           onClick={() =>

@@ -8,6 +8,12 @@ import {
   PlusCircleOutlined,
 } from "@ant-design/icons";
 
+export interface BuilderBlockMenuItem {
+  key: string;
+  label: string;
+  onClick: () => void;
+}
+
 interface SortableCardProps {
   id: string;
   label?: string;
@@ -21,9 +27,14 @@ interface SortableCardProps {
   // always wired up (and internally guarded) so the insert-here buttons can
   // stay visible-but-disabled instead of disappearing.
   canInsert?: boolean;
+  extraMenuItems?: BuilderBlockMenuItem[];
   enabled?: boolean;
   onToggleEnabled?: () => void;
   kindSelector?: ReactNode;
+  // Rendered in the header right after the enable/disable toggle - e.g. a
+  // license warning that needs to be visible at a glance, not just inside
+  // the (collapsible) card body.
+  headerExtra?: ReactNode;
   children: ReactNode;
 }
 
@@ -36,9 +47,11 @@ export default function SortableCard({
   onAddBefore,
   onAddAfter,
   canInsert = true,
+  extraMenuItems,
   enabled = true,
   onToggleEnabled,
   kindSelector,
+  headerExtra,
   children,
 }: SortableCardProps) {
   const {
@@ -57,6 +70,10 @@ export default function SortableCard({
         transition,
         opacity: isDragging ? 0 : enabled ? 1 : 0.5,
       };
+
+  const extraMenuActions = new Map(
+    extraMenuItems?.map((item) => [item.key, item.onClick]),
+  );
 
   const menuItems: MenuProps["items"] = [
     {
@@ -77,12 +94,23 @@ export default function SortableCard({
       label: "Delete stage",
       disabled: !removable,
     },
+    ...(extraMenuItems?.length
+      ? [
+          { type: "divider" as const },
+          ...extraMenuItems.map((item) => ({
+            key: item.key,
+            icon: <CloseOutlined />,
+            label: item.label,
+          })),
+        ]
+      : []),
   ];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "addAfter") onAddAfter?.();
     else if (key === "addBefore") onAddBefore?.();
     else if (key === "delete") onRemove();
+    else extraMenuActions.get(key)?.();
   };
 
   return (
@@ -113,6 +141,9 @@ export default function SortableCard({
             onChange={() => onToggleEnabled?.()}
           />
         </span>
+        {headerExtra && (
+          <span onPointerDown={(e) => e.stopPropagation()}>{headerExtra}</span>
+        )}
         <div className="queryCardHeaderSpacer" />
         <Dropdown
           menu={{ items: menuItems, onClick: handleMenuClick }}

@@ -72,6 +72,34 @@ const readyValidationContext = {
   entry: "testEntry",
 };
 
+// getInfo() is undefined on the plain readyValidationContext.client above,
+// so it throws and the license note's "unknown yet" default (assume valid,
+// don't nag) just sticks - fine for tests that don't care either way. These
+// two give an explicit answer for the tests that do.
+const noLicenseValidationContext = {
+  ...readyValidationContext,
+  client: {
+    getInfo: vi.fn().mockResolvedValue({ license: undefined, usage: 0n }),
+  } as unknown as Client,
+};
+const proLicenseValidationContext = {
+  ...readyValidationContext,
+  client: {
+    getInfo: vi.fn().mockResolvedValue({
+      license: {
+        licensee: "test",
+        invoice: "123",
+        expiryDate: Date.now() + 1000 * 60 * 60 * 24 * 365,
+        plan: "Pro",
+        deviceNumber: 1,
+        diskQuota: 0,
+        fingerprint: "abc",
+      },
+      usage: 0n,
+    }),
+  } as unknown as Client,
+};
+
 // Once a stage type dropdown has ever been opened, antd/rc-trigger keeps its
 // popup mounted in the DOM (mid leave-animation forever, since jsdom never
 // fires the animation-end event that would let it unmount) - so several
@@ -1202,7 +1230,10 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove ROS processing"));
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      fireEvent.click(within(openActionsMenu()!).getByText("Remove ROS"));
       expect(screen.queryByLabelText("Add option")).toBeNull();
     });
 
@@ -1218,7 +1249,10 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove ROS processing"));
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      fireEvent.click(within(openActionsMenu()!).getByText("Remove ROS"));
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
@@ -1399,7 +1433,10 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove Select processing"));
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      fireEvent.click(within(openActionsMenu()!).getByText("Remove Select"));
       expect(screen.queryByPlaceholderText("SELECT * FROM ENTRY()")).toBeNull();
     });
 
@@ -1415,7 +1452,10 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      fireEvent.click(screen.getByLabelText("Remove Select processing"));
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      fireEvent.click(within(openActionsMenu()!).getByText("Remove Select"));
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
@@ -1615,6 +1655,43 @@ describe("QueryConditionBuilder", () => {
       expect(onUnrepresentable).not.toHaveBeenCalled();
     });
 
+    it("offers to remove ROS and Select independently from the stage actions menu when #ext carries both", async () => {
+      const value = JSON.stringify({
+        "#ext": {
+          ros: { extract: {} },
+          select: { sql: "SELECT * FROM ENTRY()" },
+        },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      let menu = within(openActionsMenu()!);
+      expect(menu.getByText("Remove ROS")).toBeTruthy();
+      expect(menu.getByText("Remove Select")).toBeTruthy();
+
+      fireEvent.click(menu.getByText("Remove ROS"));
+      expect(screen.queryByText("ROS")).toBeNull();
+      expect(screen.getByText("Select")).toBeTruthy();
+
+      // Select's own remove option is still there on its own afterwards.
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Stage actions"));
+      });
+      menu = within(openActionsMenu()!);
+      expect(menu.queryByText("Remove ROS")).toBeNull();
+      expect(menu.getByText("Remove Select")).toBeTruthy();
+    });
+
     it("shows a single Extensions documentation link, not one per extension", () => {
       const value = JSON.stringify({
         "#ext": {
@@ -1639,7 +1716,7 @@ describe("QueryConditionBuilder", () => {
       );
     });
 
-    it("links ReductStore Pro to the pricing page in the license note", () => {
+    it("links ReductStore Pro to the pricing page in the license note when there's no license", async () => {
       const value = JSON.stringify({
         "#ext": { ros: { extract: {} } },
       });
@@ -1649,14 +1726,32 @@ describe("QueryConditionBuilder", () => {
           onChange={noop}
           mode="builder"
           onUnrepresentable={noop}
-          validationContext={readyValidationContext}
+          validationContext={noLicenseValidationContext}
         />,
       );
-      const link = screen.getByText("ReductStore Pro");
+      const link = await screen.findByText("ReductStore Pro");
       expect(link.closest("a")).toHaveAttribute(
         "href",
         "https://www.reduct.store/pricing",
       );
+    });
+
+    it("hides the license note once a valid Pro license is confirmed via getInfo", async () => {
+      const value = JSON.stringify({
+        "#ext": { ros: { extract: {} } },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={proLicenseValidationContext}
+        />,
+      );
+      await waitFor(() => {
+        expect(screen.queryByText("ReductStore Pro")).toBeNull();
+      });
     });
 
     it("keeps ROS above Select even when Select was added first", async () => {

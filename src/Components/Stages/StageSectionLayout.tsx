@@ -1,6 +1,10 @@
 import { CSSProperties, ReactNode } from "react";
 import { Button, Dropdown, MenuProps, Typography } from "antd";
-import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  PlusOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import {
   ROW_LABEL_WIDTH,
   ROW_ICON_FONT_SIZE,
@@ -68,7 +72,27 @@ export function SingleRowStageContent({
   );
 }
 
-export function GridFooter({ children }: { children: ReactNode }) {
+export function GridFooter({
+  children,
+  align = "center",
+}: {
+  children: ReactNode;
+  // "Add option" dropdowns (with hidden sub-choices) stay centered under
+  // the value column, matching every other stage's convention - but a
+  // plain "add another row" action like "Add SQL row" reads more like a
+  // list append, so it sits in the label column instead, flush with the
+  // "ROS"/"SQL" labels above it rather than indented past them.
+  align?: "center" | "start";
+}) {
+  if (align === "start") {
+    return (
+      <>
+        <div style={{ display: "flex" }}>{children}</div>
+        <div />
+        <div />
+      </>
+    );
+  }
   return (
     <>
       <div />
@@ -101,10 +125,16 @@ export function AddOptionFooter({
   menuItems,
   onMenuClick,
   ariaLabel = "Add option",
+  label = "Add option",
 }: {
   menuItems: MenuProps["items"];
   onMenuClick: MenuProps["onClick"];
   ariaLabel?: string;
+  // Visible text next to the "+" - a bare "+" circle doesn't hint that it
+  // opens a menu of otherwise-hidden choices (filter/encode/label/export
+  // for ROS, format/protobuf/export/as-label for Select), so this is shown
+  // by default instead of opt-in.
+  label?: string;
 }) {
   return (
     <Dropdown
@@ -113,11 +143,10 @@ export function AddOptionFooter({
     >
       <Button
         aria-label={ariaLabel}
-        shape="circle"
-        size="small"
-        className="addOptionCircleButton"
         icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      />
+      >
+        {label}
+      </Button>
     </Dropdown>
   );
 }
@@ -139,29 +168,45 @@ export function AddOptionButton({
   );
 }
 
+// Compact warning shown in the stage header, right after the enable/disable
+// toggle, so the license requirement is visible at a glance instead of
+// buried at the bottom of the card.
+export function ExtensionsLicenseNotice() {
+  return (
+    <Typography.Text
+      type="secondary"
+      style={{
+        fontSize: 12,
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <WarningOutlined style={{ color: "#faad14" }} />
+      Requires a{" "}
+      <a
+        href="https://www.reduct.store/pricing"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ReductStore Pro
+      </a>{" "}
+      license
+    </Typography.Text>
+  );
+}
+
 export function ExtensionsDocLink() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        ROS and Select require a{" "}
-        <a
-          href="https://www.reduct.store/pricing"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          ReductStore Pro
-        </a>{" "}
-        license.
-      </Typography.Text>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        <a
-          href="https://www.reduct.store/docs/extensions"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <strong>View Extensions Documentation →</strong>
-        </a>
-      </Typography.Text>
-    </div>
+    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <a
+        href="https://www.reduct.store/docs/extensions"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <strong>View Extensions Documentation →</strong>
+      </a>
+    </Typography.Text>
   );
 }
