@@ -68,12 +68,6 @@ export default function QueryBlockList({
 }: QueryBlockListProps) {
   return (
     <div>
-      {blocks[0] && (
-        <InsertStageButton
-          disabled={!sourceReady}
-          onClick={blocks[0].onAddBefore ?? (() => {})}
-        />
-      )}
       <SortableList
         items={blocks}
         onReorder={onReorderBlock}

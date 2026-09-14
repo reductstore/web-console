@@ -96,40 +96,6 @@ describe("QueryBlockList", () => {
     expect(screen.getByLabelText("Add stage")).toBeTruthy();
   });
 
-  it("shows an insert button above the first block when onAddBefore is given", () => {
-    const onAddBefore = vi.fn();
-    render(
-      <QueryBlockList
-        blocks={[block("a", { onAddBefore }), block("b")]}
-        sourceReady
-        onReorderBlock={() => {}}
-        addStageMenu={null}
-      />,
-    );
-    const insertButtons = screen.getAllByLabelText("Insert stage here");
-    fireEvent.click(insertButtons[0]);
-    expect(onAddBefore).toHaveBeenCalled();
-  });
-
-  it("still renders the leading insert button (as a harmless no-op) when the first block has no onAddBefore", () => {
-    render(
-      <QueryBlockList
-        blocks={[block("a", { onAddAfter: () => {} }), block("b")]}
-        sourceReady
-        onReorderBlock={() => {}}
-        addStageMenu={null}
-      />,
-    );
-    // The leading button (block "a" has no onAddBefore) and the
-    // between-blocks button (from block "a"'s onAddAfter) both show - the
-    // buttons stay in place regardless of a given block's own handlers, so
-    // the layout doesn't shift around.
-    const insertButtons = screen.getAllByLabelText("Insert stage here");
-    expect(insertButtons).toHaveLength(2);
-    // Clicking the leading one (no onAddBefore) is a no-op, not a crash.
-    fireEvent.click(insertButtons[0]);
-  });
-
   it("shows an insert button between two blocks that calls the earlier block's onAddAfter", () => {
     const onAddAfter = vi.fn();
     render(
@@ -140,11 +106,9 @@ describe("QueryBlockList", () => {
         addStageMenu={null}
       />,
     );
-    // Leading button (before "a") + one between "a" and "b" - the second
-    // one is the one wired to block "a"'s onAddAfter.
     const insertButtons = screen.getAllByLabelText("Insert stage here");
-    expect(insertButtons).toHaveLength(2);
-    fireEvent.click(insertButtons[1]);
+    expect(insertButtons).toHaveLength(1);
+    fireEvent.click(insertButtons[0]);
     expect(onAddAfter).toHaveBeenCalled();
   });
 
@@ -157,9 +121,8 @@ describe("QueryBlockList", () => {
         addStageMenu={null}
       />,
     );
-    // Leading button (before "a") + one between "a" and "b" - none after
-    // "b" (the last block).
-    expect(screen.getAllByLabelText("Insert stage here")).toHaveLength(2);
+    // Only the button between "a" and "b" - none before "a" or after "b".
+    expect(screen.getAllByLabelText("Insert stage here")).toHaveLength(1);
   });
 
   it("keeps insert buttons visible but disabled when sourceReady is false, instead of hiding them", () => {
@@ -174,8 +137,7 @@ describe("QueryBlockList", () => {
       />,
     );
     const insertButtons = screen.getAllByLabelText("Insert stage here");
-    // Leading button + the one between "a" and "b".
-    expect(insertButtons).toHaveLength(2);
+    expect(insertButtons).toHaveLength(1);
     insertButtons.forEach((button) => expect(button).toBeDisabled());
   });
 

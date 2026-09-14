@@ -154,10 +154,10 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByLabelText("Add stage")).toBeDisabled();
   });
 
-  it("keeps insert-stage-here buttons visible but disabled before a bucket and entry are selected, and never silently queues stages", () => {
+  it("never silently queues stages while a bucket and entry aren't selected yet", () => {
     // The Data Explorer page defaults the query to a bare $each_t sample
-    // stage before any bucket/entry is chosen, so it (and its header
-    // buttons) render even while !sourceReady.
+    // stage before any bucket/entry is chosen, so it renders even while
+    // !sourceReady.
     const { rerender } = render(
       <QueryConditionBuilder
         value={'{"$each_t": "$__interval"}'}
@@ -166,17 +166,7 @@ describe("QueryConditionBuilder", () => {
         onUnrepresentable={noop}
       />,
     );
-
-    // The default $each_t sample stage renders even without a source, and
-    // its insert-stage-here "+" buttons stay visible too (so the layout
-    // doesn't shift once a source is picked) but disabled - clicking one
-    // while no bucket/entry is selected must not silently queue a pending
-    // stage that only becomes visible once a source is picked.
-    expect(screen.getByText("Stage 1")).toBeTruthy();
-    const insertButtonsBefore = screen.getAllByLabelText("Insert stage here");
-    expect(insertButtonsBefore.length).toBeGreaterThan(0);
-    insertButtonsBefore.forEach((button) => expect(button).toBeDisabled());
-    insertButtonsBefore.forEach((button) => fireEvent.click(button));
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
 
     rerender(
       <QueryConditionBuilder
@@ -188,13 +178,9 @@ describe("QueryConditionBuilder", () => {
       />,
     );
 
-    // Once ready, only the single default sample stage should be present -
-    // no stages silently added while the source wasn't picked yet - and the
-    // insert buttons are now enabled.
+    // Once ready, still just the single default sample stage - none
+    // silently added while the source wasn't picked yet.
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
-    const insertButtonsAfter = screen.getAllByLabelText("Insert stage here");
-    expect(insertButtonsAfter.length).toBeGreaterThan(0);
-    insertButtonsAfter.forEach((button) => expect(button).toBeEnabled());
   });
 
   it("resets to just the default stage when the bucket/entry selection is lost", () => {
