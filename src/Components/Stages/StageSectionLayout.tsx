@@ -141,14 +141,27 @@ export function AddOptionButton({
 
 export function ExtensionsDocLink() {
   return (
-    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-      <a
-        href="https://www.reduct.store/docs/extensions"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <strong>View Extensions Documentation →</strong>
-      </a>
-    </Typography.Text>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        ROS and Select require a{" "}
+        <a
+          href="https://www.reduct.store/pricing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ReductStore Pro
+        </a>{" "}
+        license.
+      </Typography.Text>
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <a
+          href="https://www.reduct.store/docs/extensions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <strong>View Extensions Documentation →</strong>
+        </a>
+      </Typography.Text>
+    </div>
   );
 }

@@ -1639,6 +1639,26 @@ describe("QueryConditionBuilder", () => {
       );
     });
 
+    it("links ReductStore Pro to the pricing page in the license note", () => {
+      const value = JSON.stringify({
+        "#ext": { ros: { extract: {} } },
+      });
+      render(
+        <QueryConditionBuilder
+          value={value}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      const link = screen.getByText("ReductStore Pro");
+      expect(link.closest("a")).toHaveAttribute(
+        "href",
+        "https://www.reduct.store/pricing",
+      );
+    });
+
     it("keeps ROS above Select even when Select was added first", async () => {
       render(
         <QueryConditionBuilder
