@@ -142,6 +142,7 @@ function SqlStepBlock({
     <>
       <GridRow
         label={label}
+        pinActionsToContent
         actions={
           removable && (
             <RemoveSectionButton
