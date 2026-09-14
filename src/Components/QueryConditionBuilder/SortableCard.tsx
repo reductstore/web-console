@@ -9,12 +9,10 @@ import {
   PlusCircleOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { ROW_ICON_BUTTON_WIDTH } from "../Stages/stageRowLayout";
 
 interface SortableCardProps {
   id: string;
   label?: string;
-  removeLabel?: string;
   onRemove: () => void;
   removable?: boolean;
   isOverlay?: boolean;
@@ -34,7 +32,6 @@ interface SortableCardProps {
 export default function SortableCard({
   id,
   label,
-  removeLabel,
   onRemove,
   removable = true,
   isOverlay = false,
@@ -63,18 +60,6 @@ export default function SortableCard({
         transition,
         opacity: isDragging ? 0 : enabled ? 1 : 0.5,
       };
-
-  const removeButton = removable ? (
-    <Button
-      aria-label={removeLabel}
-      type="text"
-      icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
-      onClick={onRemove}
-      onPointerDown={(e) => e.stopPropagation()}
-    />
-  ) : (
-    <div style={{ width: ROW_ICON_BUTTON_WIDTH, flexShrink: 0 }} />
-  );
 
   const menuItems: MenuProps["items"] = [
     {
@@ -146,7 +131,6 @@ export default function SortableCard({
           />
         </span>
         <div className="queryCardHeaderSpacer" />
-        {removeButton}
         <Dropdown
           menu={{ items: menuItems, onClick: handleMenuClick }}
           trigger={["click"]}

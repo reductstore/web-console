@@ -243,7 +243,6 @@ function buildBlocks(
       return [
         {
           id,
-          removeLabel: "Remove stage",
           onRemove: () => dispatch({ type: "stage/removePending", id }),
           enabled: true,
           onToggleEnabled: () => {},
@@ -269,7 +268,6 @@ function buildBlocks(
       return [
         {
           id: CONDITIONS_BLOCK_ID,
-          removeLabel: "Remove label filter",
           onRemove: () => dispatch({ type: "block/removeConditions" }),
           enabled: isStageEnabled(state, CONDITIONS_BLOCK_ID),
           onToggleEnabled: () =>
@@ -406,7 +404,6 @@ function buildBlocks(
       return [
         {
           id: step.id,
-          removeLabel: "Remove sample stage",
           onRemove: () => dispatch({ type: "step/remove", id: step.id }),
           enabled: isStageEnabled(state, step.id),
           onToggleEnabled: () =>
@@ -450,7 +447,6 @@ function buildBlocks(
     return [
       {
         id: step.id,
-        removeLabel: "Remove limit stage",
         onRemove: () => dispatch({ type: "step/remove", id: step.id }),
         enabled: isStageEnabled(state, step.id),
         onToggleEnabled: () =>

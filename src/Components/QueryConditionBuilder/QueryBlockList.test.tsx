@@ -1,8 +1,19 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
+
+// Once opened, antd/rc-trigger keeps a closed dropdown's popup mounted (mid
+// leave-animation forever, since jsdom never fires the animation-end event
+// that would let it unmount), so the currently open one is the one with no
+// "-leave" class.
+const openActionsMenu = () => {
+  const menus = Array.from(document.querySelectorAll(".ant-dropdown"));
+  return menus.filter((menu) => !menu.className.includes("-leave")).at(-1) as
+    | HTMLElement
+    | undefined;
+};
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
 
@@ -33,7 +44,6 @@ const block = (
   overrides: Partial<BuilderBlock> = {},
 ): BuilderBlock => ({
   id,
-  removeLabel: `Remove ${id}`,
   onRemove: () => {},
   enabled: true,
   onToggleEnabled: () => {},
@@ -70,7 +80,7 @@ describe("QueryBlockList", () => {
     expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(2);
   });
 
-  it("calls the block's own onRemove from its remove button", () => {
+  it("calls the block's own onRemove from its actions menu's Delete stage item", async () => {
     const onRemove = vi.fn();
     render(
       <QueryBlockList
@@ -80,7 +90,12 @@ describe("QueryBlockList", () => {
         addStageMenu={null}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Remove a"));
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Stage actions"));
+    });
+    await act(async () => {
+      fireEvent.click(within(openActionsMenu()!).getByText("Delete stage"));
+    });
     expect(onRemove).toHaveBeenCalled();
   });
 

@@ -10,7 +10,6 @@ const SELECT_SOURCE_HINT = "Select a bucket and entries first";
 
 export interface BuilderBlock {
   id: string;
-  removeLabel?: string;
   removable?: boolean;
   onRemove?: () => void;
   enabled: boolean;
@@ -76,7 +75,6 @@ export default function QueryBlockList({
             key={block.id}
             id={block.id}
             label={`Stage ${index + 1}`}
-            removeLabel={block.removeLabel}
             // Defaults to whether a real onRemove was actually given, so a
             // block that forgets to set removable: false never ends up with
             // a remove button that has no label and does nothing.

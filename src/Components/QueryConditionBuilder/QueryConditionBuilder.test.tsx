@@ -109,6 +109,13 @@ const stageTypeOption = (label: string) =>
     .getByText(label)
     .closest(".ant-select-item-option") as Element;
 
+const openActionsMenu = () => {
+  const menus = Array.from(document.querySelectorAll(".ant-dropdown"));
+  return menus.filter((menu) => !menu.className.includes("-leave")).at(-1) as
+    | HTMLElement
+    | undefined;
+};
+
 describe("QueryConditionBuilder", () => {
   it("shows Query with no blocks for an empty value until one is added", () => {
     render(
@@ -136,7 +143,6 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     await addWhereLabels();
-    expect(screen.getByLabelText("Remove label filter")).toBeTruthy();
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
@@ -966,7 +972,6 @@ describe("QueryConditionBuilder", () => {
           />,
         );
         expect(screen.getByText("Stage 1")).toBeTruthy();
-        expect(screen.getByLabelText("Remove sample stage")).toBeTruthy();
       });
 
       it("preserves the default Sample step when a condition is edited", async () => {
@@ -1013,7 +1018,7 @@ describe("QueryConditionBuilder", () => {
         expect(JSON.parse(afterDuration)).toEqual({ $each_t: "30s" });
       });
 
-      it("fully removes sampling once the default step is removed via its X", () => {
+      it("fully removes sampling once the default step is removed via Delete stage", async () => {
         const onChange = vi.fn();
         render(
           <QueryConditionBuilder
@@ -1025,9 +1030,14 @@ describe("QueryConditionBuilder", () => {
           />,
         );
 
-        fireEvent.click(screen.getByLabelText("Remove sample stage"));
+        await act(async () => {
+          fireEvent.click(screen.getByLabelText("Stage actions"));
+        });
+        await act(async () => {
+          fireEvent.click(within(openActionsMenu()!).getByText("Delete stage"));
+        });
 
-        expect(screen.queryByLabelText("Remove sample stage")).toBeNull();
+        expect(screen.queryByText("Stage 1")).toBeNull();
         const [lastCall] = onChange.mock.calls.at(-1) as [string];
         expect(JSON.parse(lastCall)).toEqual({});
       });
