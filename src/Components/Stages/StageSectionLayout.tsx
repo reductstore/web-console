@@ -72,41 +72,6 @@ export function SingleRowStageContent({
   );
 }
 
-export function GridFooter({
-  children,
-  align = "center",
-}: {
-  children: ReactNode;
-  // "value-start" lines up with the condition inputs (same as "+ Add
-  // condition"); "label-start" sits in the label column (e.g. "+ Add SQL
-  // step"); "center" keeps the value column centered.
-  align?: "center" | "value-start" | "label-start";
-}) {
-  if (align === "label-start") {
-    return (
-      <>
-        <div style={{ display: "flex" }}>{children}</div>
-        <div />
-        <div />
-      </>
-    );
-  }
-  return (
-    <>
-      <div />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: align === "center" ? "center" : "flex-start",
-        }}
-      >
-        {children}
-      </div>
-      <div />
-    </>
-  );
-}
-
 export function RemoveSectionButton({
   label,
   onRemove,
@@ -151,23 +116,6 @@ export function AddOptionFooter({
         {label}
       </Button>
     </Dropdown>
-  );
-}
-
-export function AddOptionButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
-      onClick={onClick}
-    >
-      {label}
-    </Button>
   );
 }
 

@@ -55,11 +55,6 @@ export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
 
 export type SampleKind = "each_n" | "each_t";
 
-// Fixed id for the "Label filter" block in a QueryConditionBuilder's
-// blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
-// can't drift apart on what it's called.
-export const CONDITIONS_BLOCK_ID = "conditions";
-
 /**
  * Return a new array with the item at fromIndex moved to toIndex.
  */
