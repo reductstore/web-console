@@ -7,6 +7,7 @@ import {
   Segmented,
   Select,
   Tooltip,
+  Typography,
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import {
@@ -18,6 +19,8 @@ import { ExtBlockEditorDispatch } from "../../Helpers/extBlockDispatch";
 import {
   ROW_GAP,
   ROW_ICON_FONT_SIZE,
+  ROW_LABEL_WIDTH,
+  ROW_VALUE_COLUMN_WIDTH,
   WRAP_ROW_STYLE,
   VALUE_INPUT_WIDTH,
   EXPORT_DURATION_WIDTH,
@@ -27,9 +30,7 @@ import {
 import {
   RemoveSectionButton,
   AddOptionFooter,
-  AddOptionButton,
   GridRow,
-  GridFooter,
   STAGE_GRID_STYLE,
 } from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
@@ -54,18 +55,19 @@ function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
     ?.value;
 }
 
-type AddOption = "format" | "export" | "asLabel";
+type AddOption = "sqlStep" | "format" | "export" | "asLabel";
 
-const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel"];
+const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel", "sqlStep"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
+  sqlStep: "SQL step",
   format: "Format",
   export: "Export",
   asLabel: "As label",
 };
 
 function disabledReason(option: AddOption, step: SqlStep): string | undefined {
-  if (option === "asLabel") return undefined;
+  if (option === "sqlStep" || option === "asLabel") return undefined;
 
   if (option === "export") {
     return step.formatSections.includes("export")
@@ -82,13 +84,11 @@ function SqlStepBlock({
   step,
   label,
   removable,
-  showAddSqlStep,
   dispatch,
 }: {
   step: SqlStep;
   label: string;
   removable: boolean;
-  showAddSqlStep?: boolean;
   dispatch: ExtBlockEditorDispatch;
 }) {
   const activeFormat = activeFormatOf(step);
@@ -111,7 +111,13 @@ function SqlStepBlock({
   });
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
-    if (key === "asLabel") {
+    if (key === "sqlStep") {
+      dispatch({
+        type: "select/addSqlStep",
+        id: crypto.randomUUID(),
+        afterId: step.id,
+      });
+    } else if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
         kind: "select",
@@ -137,29 +143,49 @@ function SqlStepBlock({
 
   return (
     <>
-      <GridRow
-        label={label}
-        actions={
-          removable && (
+      <div style={{ gridColumn: "1 / -1" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
+          <Typography.Text
+            strong
+            style={{ fontSize: 12, minWidth: ROW_LABEL_WIDTH }}
+          >
+            {label}
+          </Typography.Text>
+          <AddOptionFooter
+            label="Add"
+            menuItems={menuItems}
+            onMenuClick={handleMenuClick}
+            ariaLabel={`Add option for ${label}`}
+          />
+          <div style={{ flex: 1 }} />
+          {removable && (
             <RemoveSectionButton
               label={label}
               onRemove={() =>
                 dispatch({ type: "select/removeSqlStep", id: step.id })
               }
             />
-          )
-        }
-      >
-        <QueryEditor
-          language="sql"
-          value={step.sql}
-          onChange={(sql) =>
-            dispatch({ type: "select/changeSql", id: step.id, sql })
-          }
-          height={SQL_EDITOR_HEIGHT}
-          containerStyle={{ width: "100%" }}
-        />
-      </GridRow>
+          )}
+        </div>
+        <div style={{ marginLeft: ROW_LABEL_WIDTH + ROW_GAP }}>
+          <QueryEditor
+            language="sql"
+            value={step.sql}
+            onChange={(sql) =>
+              dispatch({ type: "select/changeSql", id: step.id, sql })
+            }
+            height={SQL_EDITOR_HEIGHT}
+            containerStyle={{ width: ROW_VALUE_COLUMN_WIDTH }}
+          />
+        </div>
+      </div>
 
       {activeFormat && (
         <GridRow
@@ -373,24 +399,6 @@ function SqlStepBlock({
           sectionRemoveLabel="Remove label mapping"
         />
       )}
-
-      <GridFooter align="value-start">
-        <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
-          <AddOptionFooter
-            menuItems={menuItems}
-            onMenuClick={handleMenuClick}
-            ariaLabel={`Add option for ${label}`}
-          />
-          {showAddSqlStep && (
-            <AddOptionButton
-              label="Add SQL step"
-              onClick={() =>
-                dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
-              }
-            />
-          )}
-        </div>
-      </GridFooter>
     </>
   );
 }
@@ -398,6 +406,23 @@ function SqlStepBlock({
 interface SelectStageEditorProps {
   step: SelectTransformStep;
   dispatch: ExtBlockEditorDispatch;
+}
+
+export function SelectStageAddButton({
+  step,
+  dispatch,
+}: SelectStageEditorProps) {
+  if (step.sqlSteps.length > 0) return null;
+  return (
+    <AddOptionFooter
+      label="Add"
+      menuItems={[{ key: "sqlStep", label: ADD_OPTION_LABELS.sqlStep }]}
+      onMenuClick={() =>
+        dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
+      }
+      ariaLabel="Add option for SQL"
+    />
+  );
 }
 
 export default function SelectStageEditor({
@@ -408,14 +433,12 @@ export default function SelectStageEditor({
     <div style={STAGE_GRID_STYLE}>
       {step.sqlSteps.map((sqlStep, index) => {
         const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
-        const isLastSqlStep = index === step.sqlSteps.length - 1;
         return (
           <SqlStepBlock
             key={sqlStep.id}
             step={sqlStep}
             label={label}
             removable={step.sqlSteps.length > 1}
-            showAddSqlStep={isLastSqlStep}
             dispatch={dispatch}
           />
         );

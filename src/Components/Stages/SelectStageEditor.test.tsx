@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import SelectStageEditor from "./SelectStageEditor";
+import SelectStageEditor, { SelectStageAddButton } from "./SelectStageEditor";
 import {
   SelectTransformStep,
   SqlStep,
@@ -163,14 +163,32 @@ describe("SelectStageEditor", () => {
     });
   });
 
-  describe("Add SQL step (beside last Add option)", () => {
-    it("dispatches select/addSqlStep when the Add SQL step button is clicked", () => {
+  describe("Add SQL step (merged into each block's Add menu)", () => {
+    it("dispatches select/addSqlStep with afterId set to the block whose menu was used", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
-        sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
+        sqlSteps: [
+          makeSqlStep({ id: "sql-1" }),
+          makeSqlStep({ id: "sql-2" }),
+          makeSqlStep({ id: "sql-3" }),
+        ],
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByText("Add SQL step"));
+      fireEvent.click(screen.getByLabelText("Add option for SQL 1"));
+      fireEvent.click(screen.getByText("SQL step"));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "select/addSqlStep",
+        id: expect.any(String),
+        afterId: "sql-1",
+      });
+    });
+
+    it("offers SQL step even with no sql steps yet", () => {
+      const dispatch = vi.fn();
+      const step: SelectTransformStep = { sqlSteps: [] };
+      render(<SelectStageAddButton step={step} dispatch={dispatch} />);
+      fireEvent.click(screen.getByLabelText("Add option for SQL"));
+      fireEvent.click(screen.getByText("SQL step"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),

@@ -876,12 +876,6 @@ describe("QueryConditionBuilder", () => {
       await addStageOfKind("#ext");
       const extBlockId = uuidMock.mock.results[callsBeforeExt].value as string;
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
-      });
-      await act(async () => {
         fireEvent.click(screen.getByLabelText("Add option"));
       });
       await act(async () => {
@@ -1150,12 +1144,6 @@ describe("QueryConditionBuilder", () => {
   describe("Process (ROS) step", () => {
     const addTransformBlock = async () => {
       await addStageOfKind("#ext");
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
-      });
     };
 
     const addSection = async (
@@ -1169,7 +1157,7 @@ describe("QueryConditionBuilder", () => {
       });
     };
 
-    it("keeps the add button's helper text until both extensions are added", async () => {
+    it("shows ROS and Select titles immediately, with no separate add step", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1180,65 +1168,9 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addStageOfKind("#ext");
-      expect(screen.getByText("Add extension")).toBeTruthy();
-
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
-      });
-      // Select is still addable, so the button (and its helper text) stays.
-      expect(screen.getByText("Add extension")).toBeTruthy();
-
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Select" }));
-      });
-      // Both are present now - the add button is gone entirely.
-      expect(screen.queryByText("Add extension")).toBeNull();
+      expect(screen.getByText("ROS")).toBeTruthy();
+      expect(screen.getByText("Select")).toBeTruthy();
       expect(screen.queryByLabelText("Add ROS or Select")).toBeNull();
-    });
-
-    it("greys out ROS with a tooltip once it's already added, while Select stays enabled", async () => {
-      render(
-        <QueryConditionBuilder
-          value=""
-          onChange={noop}
-          mode="builder"
-          onUnrepresentable={noop}
-          validationContext={readyValidationContext}
-        />,
-      );
-      await addStageOfKind("#ext");
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
-      });
-
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      const menu = within(openActionsMenu()!);
-      expect(menu.getByText("ROS").closest("li")).toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
-      expect(menu.getByText("Select").closest("li")).not.toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
-
-      fireEvent.mouseOver(menu.getByText("ROS"));
-      await waitFor(() => {
-        expect(screen.getByRole("tooltip")).toHaveTextContent(
-          "ROS is already added",
-        );
-      });
     });
 
     it("adds a fresh transform (no sections yet) via the menu", async () => {
@@ -1258,7 +1190,7 @@ describe("QueryConditionBuilder", () => {
       ).toBeNull();
     });
 
-    it("removes the transform via its card's remove button", async () => {
+    it("resets ROS to empty via its stage actions menu without removing the title", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1269,14 +1201,23 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSection("Filter");
+      expect(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+      ).toBeTruthy();
+
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
       fireEvent.click(within(openActionsMenu()!).getByText("Remove ROS"));
-      expect(screen.queryByLabelText("Add option")).toBeNull();
+
+      expect(screen.getByText("ROS")).toBeTruthy();
+      expect(
+        screen.queryByPlaceholderText("optional ROS topic filter"),
+      ).toBeNull();
     });
 
-    it("offers ROS again via a fresh #ext stage after it's removed, and drops #ext from onChange", async () => {
+    it("drops #ext from onChange once ROS and Select are both empty again", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -1288,6 +1229,14 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSection("Filter");
+      fireEvent.change(
+        screen.getByPlaceholderText("optional ROS topic filter"),
+        { target: { value: "/robot/odom" } },
+      );
+      const [withContent] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(withContent)).toHaveProperty("#ext");
+
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
@@ -1295,15 +1244,6 @@ describe("QueryConditionBuilder", () => {
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
-
-      await addStageOfKind("#ext");
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      expect(screen.getByRole("menuitem", { name: "ROS" })).not.toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
     });
 
     it("reports a typed topic and as_label mapping through onChange, merged as a #ext key", async () => {
@@ -1429,11 +1369,14 @@ describe("QueryConditionBuilder", () => {
   describe("Process (Select) step", () => {
     const addTransformBlock = async () => {
       await addStageOfKind("#ext");
+    };
+
+    const addSqlStep = async () => {
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+        fireEvent.click(screen.getByLabelText("Add option for SQL"));
       });
       await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "Select" }));
+        fireEvent.click(screen.getByText("SQL step"));
       });
     };
 
@@ -1446,7 +1389,7 @@ describe("QueryConditionBuilder", () => {
       });
     };
 
-    it("adds a fresh transform (no SQL or as_label yet) via the menu", async () => {
+    it("shows no SQL editor until Add is used, matching the empty ROS/Select shell", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1457,13 +1400,29 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      expect(screen.queryByTestId("monaco-editor")).toBeNull();
+      expect(screen.getByLabelText("Add option for SQL")).toBeTruthy();
+    });
+
+    it("shows the default SQL once a SQL step is added from the menu", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addTransformBlock();
+      await addSqlStep();
       expect(screen.getByTestId("monaco-editor")).toHaveValue(
         "SELECT * FROM ENTRY()\n",
       );
       expect(screen.queryByText("As label")).toBeNull();
     });
 
-    it("removes the transform via its card's remove button", async () => {
+    it("resets Select to empty via its stage actions menu without removing the title", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1474,14 +1433,19 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSqlStep();
+      expect(screen.getByTestId("monaco-editor")).toBeTruthy();
+
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
       fireEvent.click(within(openActionsMenu()!).getByText("Remove Select"));
-      expect(screen.queryByPlaceholderText("SELECT * FROM ENTRY()")).toBeNull();
+
+      expect(screen.getByText("Select")).toBeTruthy();
+      expect(screen.queryByTestId("monaco-editor")).toBeNull();
     });
 
-    it("offers Select again via a fresh #ext stage after it's removed, and drops #ext from onChange", async () => {
+    it("drops #ext from onChange once ROS and Select are both empty again", async () => {
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -1493,6 +1457,13 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSqlStep();
+      fireEvent.change(screen.getByTestId("monaco-editor"), {
+        target: { value: "SELECT 1 FROM ENTRY()" },
+      });
+      const [withContent] = onChange.mock.calls.at(-1) as [string];
+      expect(JSON.parse(withContent)).toHaveProperty("#ext");
+
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
@@ -1500,14 +1471,6 @@ describe("QueryConditionBuilder", () => {
 
       const [lastCall] = onChange.mock.calls.at(-1) as [string];
       expect(JSON.parse(lastCall)).not.toHaveProperty("#ext");
-
-      await addStageOfKind("#ext");
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      expect(
-        screen.getByRole("menuitem", { name: "Select" }),
-      ).not.toHaveAttribute("aria-disabled", "true");
     });
 
     it("reports a typed sql and as_label mapping through onChange, merged as a #ext key", async () => {
@@ -1522,6 +1485,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSqlStep();
       fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT temp.value AS value FROM ENTRY()" },
       });
@@ -1553,6 +1517,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSqlStep();
 
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add option for SQL"));
@@ -1601,6 +1566,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addSqlStep();
       await addLabelMapping();
 
       fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
@@ -1698,7 +1664,7 @@ describe("QueryConditionBuilder", () => {
     it("offers to remove ROS and Select independently from the stage actions menu when #ext carries both", async () => {
       const value = JSON.stringify({
         "#ext": {
-          ros: { extract: {} },
+          ros: { extract: { topic: "/robot/odom" } },
           select: { sql: "SELECT * FROM ENTRY()" },
         },
       });
@@ -1720,15 +1686,20 @@ describe("QueryConditionBuilder", () => {
       expect(menu.getByText("Remove Select")).toBeTruthy();
 
       fireEvent.click(menu.getByText("Remove ROS"));
-      expect(screen.queryByText("ROS")).toBeNull();
+      // The title stays visible - only its content is cleared.
+      expect(screen.getByText("ROS")).toBeTruthy();
+      expect(
+        screen.queryByPlaceholderText("optional ROS topic filter"),
+      ).toBeNull();
       expect(screen.getByText("Select")).toBeTruthy();
 
-      // Select's own remove option is still there on its own afterwards.
+      // Remove ROS/Select stay offered afterwards too, since both sections
+      // always exist.
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
       menu = within(openActionsMenu()!);
-      expect(menu.queryByText("Remove ROS")).toBeNull();
+      expect(menu.getByText("Remove ROS")).toBeTruthy();
       expect(menu.getByText("Remove Select")).toBeTruthy();
     });
 
@@ -1794,7 +1765,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("keeps ROS above Select even when Select was added first", async () => {
+    it("always renders ROS above Select", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1805,12 +1776,6 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("menuitem", { name: "ROS" }));
-      });
       const rosHeading = screen.getByText("ROS");
       const selectHeading = screen.getByText("Select");
       expect(

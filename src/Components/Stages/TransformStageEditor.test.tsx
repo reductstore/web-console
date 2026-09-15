@@ -1,6 +1,8 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import TransformStageEditor from "./TransformStageEditor";
+import TransformStageEditor, {
+  TransformStageAddButton,
+} from "./TransformStageEditor";
 import { RosTransformStep } from "../../Helpers/transformStepBuilder";
 
 const baseStep: RosTransformStep = {
@@ -11,9 +13,21 @@ const baseStep: RosTransformStep = {
   export: { format: "", duration: "", size: "" },
 };
 
+function renderStage(
+  step: RosTransformStep,
+  dispatch: (action: unknown) => void,
+) {
+  return render(
+    <>
+      <TransformStageAddButton step={step} dispatch={dispatch} />
+      <TransformStageEditor step={step} dispatch={dispatch} />
+    </>,
+  );
+}
+
 describe("TransformStageEditor", () => {
   it("shows only the Add option menu when no section is added", () => {
-    render(<TransformStageEditor step={baseStep} dispatch={vi.fn()} />);
+    renderStage(baseStep, vi.fn());
     expect(screen.getByLabelText("Add option")).toBeTruthy();
     expect(
       screen.queryByPlaceholderText("optional ROS topic filter"),
@@ -22,7 +36,7 @@ describe("TransformStageEditor", () => {
 
   it("adds a section via the dropdown menu", async () => {
     const dispatch = vi.fn();
-    render(<TransformStageEditor step={baseStep} dispatch={dispatch} />);
+    renderStage(baseStep, dispatch);
     fireEvent.click(screen.getByLabelText("Add option"));
     fireEvent.click(await screen.findByText("Filter"));
     expect(dispatch).toHaveBeenCalledWith({
@@ -38,7 +52,7 @@ describe("TransformStageEditor", () => {
       sections: ["filter"],
       topic: "/robot/odom",
     };
-    render(<TransformStageEditor step={withFilter} dispatch={vi.fn()} />);
+    renderStage(withFilter, vi.fn());
     fireEvent.click(screen.getByLabelText("Add option"));
     expect(
       await screen.findByRole("menuitem", { name: "Encode" }),
@@ -55,7 +69,7 @@ describe("TransformStageEditor", () => {
       sections: ["export"],
       export: { format: "mcap", duration: "", size: "" },
     };
-    render(<TransformStageEditor step={withExport} dispatch={vi.fn()} />);
+    renderStage(withExport, vi.fn());
     fireEvent.click(screen.getByLabelText("Add option"));
     for (const name of ["Filter", "Encode", "As label", "Export"]) {
       expect(await screen.findByRole("menuitem", { name })).toHaveAttribute(
@@ -72,7 +86,7 @@ describe("TransformStageEditor", () => {
       encode: [{ id: "e1", key: "", value: "" }],
       asLabel: [{ id: "l1", key: "", value: "" }],
     };
-    render(<TransformStageEditor step={step} dispatch={vi.fn()} />);
+    renderStage(step, vi.fn());
     expect(screen.getByLabelText("Add option")).not.toBeDisabled();
   });
 
@@ -84,7 +98,7 @@ describe("TransformStageEditor", () => {
     };
 
     it("shows the current topic", () => {
-      render(<TransformStageEditor step={step} dispatch={vi.fn()} />);
+      renderStage(step, vi.fn());
       expect(
         screen.getByPlaceholderText("optional ROS topic filter"),
       ).toHaveValue("/robot/odom");
@@ -92,7 +106,7 @@ describe("TransformStageEditor", () => {
 
     it("reports a typed topic", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.change(
         screen.getByPlaceholderText("optional ROS topic filter"),
         { target: { value: "/camera/image" } },
@@ -105,7 +119,7 @@ describe("TransformStageEditor", () => {
 
     it("removes the section via its remove button", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.click(screen.getByLabelText("Remove filter"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "ros/removeSection",
@@ -123,7 +137,7 @@ describe("TransformStageEditor", () => {
 
     it("renders a row and reports edits", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.change(screen.getByPlaceholderText("field (e.g. data)"), {
         target: { value: "image" },
       });
@@ -145,7 +159,7 @@ describe("TransformStageEditor", () => {
 
     it("removes the whole section when the only row's remove button is clicked", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.click(screen.getByLabelText("Remove encode"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "ros/removeSection",
@@ -155,7 +169,7 @@ describe("TransformStageEditor", () => {
 
     it("adds another encode row when Encode is picked again from the menu", async () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
       expect(dispatch).toHaveBeenCalledWith({
@@ -171,7 +185,7 @@ describe("TransformStageEditor", () => {
         sections: ["encode"],
         encode: [{ id: "e1", key: "data", value: "" }],
       };
-      render(<TransformStageEditor step={partial} dispatch={dispatch} />);
+      renderStage(partial, dispatch);
       fireEvent.click(screen.getByLabelText("Add option"));
       fireEvent.click(await screen.findByRole("menuitem", { name: "Encode" }));
       expect(dispatch).toHaveBeenCalledWith({
@@ -190,7 +204,7 @@ describe("TransformStageEditor", () => {
 
     it("renders a row and reports edits", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.change(screen.getByPlaceholderText("label name (e.g. lat_x)"), {
         target: { value: "velocity" },
       });
@@ -222,7 +236,7 @@ describe("TransformStageEditor", () => {
           { id: "l2", key: "accel", value: "accel" },
         ],
       };
-      render(<TransformStageEditor step={twoRows} dispatch={dispatch} />);
+      renderStage(twoRows, dispatch);
       const [firstRemove] = screen.getAllByLabelText("Remove label mapping");
       fireEvent.click(firstRemove);
       expect(dispatch).toHaveBeenCalledWith({
@@ -234,7 +248,7 @@ describe("TransformStageEditor", () => {
 
     it("removes the whole section via its remove button", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.click(screen.getByLabelText("Remove as label"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "ros/removeSection",
@@ -251,7 +265,7 @@ describe("TransformStageEditor", () => {
     };
 
     it("shows the current format, duration, and size", () => {
-      render(<TransformStageEditor step={step} dispatch={vi.fn()} />);
+      renderStage(step, vi.fn());
       expect(screen.getByPlaceholderText("mcap")).toHaveValue("mcap");
       expect(screen.getByPlaceholderText("duration (1m)")).toHaveValue("1m");
       expect(screen.getByPlaceholderText("size (100MB)")).toHaveValue("100MB");
@@ -259,7 +273,7 @@ describe("TransformStageEditor", () => {
 
     it("reports edits to each field", () => {
       const dispatch = vi.fn();
-      render(<TransformStageEditor step={step} dispatch={dispatch} />);
+      renderStage(step, dispatch);
       fireEvent.change(screen.getByPlaceholderText("duration (1m)"), {
         target: { value: "5m" },
       });

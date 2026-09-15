@@ -7,7 +7,7 @@ import {
   useState,
   ComponentProps,
 } from "react";
-import { Button, Dropdown, Select, Tooltip, Typography } from "antd";
+import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
@@ -15,9 +15,13 @@ import BuilderErrorBoundary from "./BuilderErrorBoundary";
 import ConditionListEditor from "../Stages/ConditionListEditor";
 import SampleStageEditor from "../Stages/SampleStageEditor";
 import LimitStageEditor from "../Stages/LimitStageEditor";
-import TransformStageEditor from "../Stages/TransformStageEditor";
-import SelectStageEditor from "../Stages/SelectStageEditor";
-import { ROW_ICON_FONT_SIZE } from "../Stages/stageRowLayout";
+import TransformStageEditor, {
+  TransformStageAddButton,
+} from "../Stages/TransformStageEditor";
+import SelectStageEditor, {
+  SelectStageAddButton,
+} from "../Stages/SelectStageEditor";
+import { ROW_ICON_FONT_SIZE, ROW_LABEL_WIDTH } from "../Stages/stageRowLayout";
 import {
   ExtensionsDocLink,
   ExtensionsLicenseNotice,
@@ -163,10 +167,12 @@ function StageKindSelect({
 
 function ProcessSubsection({
   title,
+  titleExtra,
   divider = false,
   children,
 }: {
   title: string;
+  titleExtra?: ReactNode;
   divider?: boolean;
   children: ReactNode;
 }) {
@@ -176,9 +182,19 @@ function ProcessSubsection({
         divider ? { borderTop: "1px solid #f0f0f0", paddingTop: 16 } : undefined
       }
     >
-      <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-        {title}
-      </Typography.Text>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
+        <Typography.Text strong style={{ minWidth: ROW_LABEL_WIDTH }}>
+          {title}
+        </Typography.Text>
+        {titleExtra}
+      </div>
       {children}
     </div>
   );
@@ -310,36 +326,6 @@ function buildBlocks(
 
       const blockDispatch = extBlockDispatch(id, dispatch);
 
-      const addNestedItems = [
-        {
-          key: "ros",
-          disabled: !!rosTransform,
-          label: rosTransform ? (
-            <Tooltip title="ROS is already added" placement="right">
-              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>ROS</span>
-            </Tooltip>
-          ) : (
-            "ROS"
-          ),
-        },
-        {
-          key: "select",
-          disabled: !!selectTransform,
-          label: selectTransform ? (
-            <Tooltip title="Select is already added" placement="right">
-              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>Select</span>
-            </Tooltip>
-          ) : (
-            "Select"
-          ),
-        },
-      ];
-      const handleAddNested = ({ key }: { key: string }) => {
-        if (key === "ros" || key === "select") {
-          dispatch({ type: "block/addTransform", blockId: id, kind: key });
-        }
-      };
-
       return [
         {
           id,
@@ -348,8 +334,6 @@ function buildBlocks(
           onToggleEnabled: () => dispatch({ type: "stage/toggleEnabled", id }),
           headerExtra: hasProLicense ? undefined : <ExtensionsLicenseNotice />,
           ...insertHandlers(id),
-          // Removing ROS/Select lives in the "..." menu instead of a "X"
-          // next to each one, so it doesn't read like a separate stage.
           extraMenuItems: [
             ...(rosTransform
               ? [
@@ -390,7 +374,15 @@ function buildBlocks(
           content: (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {rosTransform && (
-                <ProcessSubsection title="ROS">
+                <ProcessSubsection
+                  title="ROS"
+                  titleExtra={
+                    <TransformStageAddButton
+                      step={rosTransform.ros}
+                      dispatch={blockDispatch}
+                    />
+                  }
+                >
                   <TransformStageEditor
                     step={rosTransform.ros}
                     dispatch={blockDispatch}
@@ -398,31 +390,21 @@ function buildBlocks(
                 </ProcessSubsection>
               )}
               {selectTransform && (
-                <ProcessSubsection title="Select" divider={!!rosTransform}>
+                <ProcessSubsection
+                  title="Select"
+                  divider
+                  titleExtra={
+                    <SelectStageAddButton
+                      step={selectTransform.select}
+                      dispatch={blockDispatch}
+                    />
+                  }
+                >
                   <SelectStageEditor
                     step={selectTransform.select}
                     dispatch={blockDispatch}
                   />
                 </ProcessSubsection>
-              )}
-              {(!rosTransform || !selectTransform) && (
-                <div style={{ display: "flex", justifyContent: "center" }}>
-                  <Dropdown
-                    menu={{ items: addNestedItems, onClick: handleAddNested }}
-                    trigger={["click"]}
-                  >
-                    <Button
-                      aria-label="Add ROS or Select"
-                      icon={
-                        <PlusOutlined
-                          style={{ fontSize: ROW_ICON_FONT_SIZE }}
-                        />
-                      }
-                    >
-                      Add extension
-                    </Button>
-                  </Dropdown>
-                </div>
               )}
               <ExtensionsDocLink />
             </div>

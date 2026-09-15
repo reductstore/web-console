@@ -9,7 +9,6 @@ import {
   RemoveSectionButton,
   AddOptionFooter,
   GridRow,
-  GridFooter,
   STAGE_GRID_STYLE,
 } from "./StageSectionLayout";
 import RowList from "./KeyValueRowList";
@@ -53,7 +52,7 @@ function disabledReason(
   return undefined;
 }
 
-export default function TransformStageEditor({
+export function TransformStageAddButton({
   step,
   dispatch,
 }: TransformStageEditorProps) {
@@ -89,6 +88,19 @@ export default function TransformStageEditor({
     }
   };
 
+  return (
+    <AddOptionFooter
+      label="Add"
+      menuItems={menuItems}
+      onMenuClick={handleMenuClick}
+    />
+  );
+}
+
+export default function TransformStageEditor({
+  step,
+  dispatch,
+}: TransformStageEditorProps) {
   return (
     <div style={STAGE_GRID_STYLE}>
       {step.sections.includes("filter") && (
@@ -215,10 +227,6 @@ export default function TransformStageEditor({
           </div>
         </GridRow>
       )}
-
-      <GridFooter align="value-start">
-        <AddOptionFooter menuItems={menuItems} onMenuClick={handleMenuClick} />
-      </GridFooter>
     </div>
   );
 }
