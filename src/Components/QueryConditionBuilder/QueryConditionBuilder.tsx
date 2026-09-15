@@ -101,8 +101,10 @@ const STAGE_KIND_OPTIONS: {
   },
 ];
 
-function usedSingletonKinds(state: BuilderState): Set<StageKind> {
+function usedStageKinds(state: BuilderState): Set<StageKind> {
   const used = new Set<StageKind>();
+  if (state.conditionBlocks.length > 0) used.add("conditions");
+  if (state.extBlocks.length > 0) used.add("ext");
   for (const step of state.steps) {
     if (step.type === "each_n") used.add("sample_each_n");
     if (step.type === "each_t") used.add("sample_each_t");
@@ -115,7 +117,7 @@ function disabledKindsFor(
   state: BuilderState,
   ownKind: StageKind | null,
 ): Set<StageKind> {
-  const used = usedSingletonKinds(state);
+  const used = usedStageKinds(state);
   if (ownKind) used.delete(ownKind);
   return used;
 }

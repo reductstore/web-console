@@ -999,7 +999,7 @@ describe("QueryConditionBuilder", () => {
       expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
     });
 
-    it("still allows adding another &label/#ext once one of each is already present, since the server decides what's valid", async () => {
+    it("disables adding another &label/#ext once one of each is already present", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1023,8 +1023,8 @@ describe("QueryConditionBuilder", () => {
 
       const labelOption = stageTypeOption("&label");
       const extOption = stageTypeOption("#ext");
-      expect(labelOption).not.toHaveClass("ant-select-item-option-disabled");
-      expect(extOption).not.toHaveClass("ant-select-item-option-disabled");
+      expect(labelOption).toHaveClass("ant-select-item-option-disabled");
+      expect(extOption).toHaveClass("ant-select-item-option-disabled");
     });
 
     describe("default Sample step", () => {
