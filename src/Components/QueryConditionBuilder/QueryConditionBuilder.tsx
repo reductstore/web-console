@@ -628,20 +628,6 @@ export default function QueryConditionBuilder({
     ((validationContext?.entries?.length ?? 0) > 0 ||
       !!validationContext?.entry);
 
-  // Losing the bucket/entry selection should feel like starting over, not
-  // like everything's still there but hidden: stages added while a source
-  // was picked shouldn't silently reappear if a (possibly different) source
-  // is picked again later. Only resets on an actual ready -> not-ready
-  // transition, and only in builder mode (switching bucket/entry while
-  // looking at raw JSON shouldn't blow away what's being typed there).
-  const wasSourceReadyRef = useRef(sourceReady);
-  useEffect(() => {
-    if (mode === "builder" && wasSourceReadyRef.current && !sourceReady) {
-      dispatch({ type: "builder/resetToDefault" });
-    }
-    wasSourceReadyRef.current = sourceReady;
-  }, [sourceReady, mode]);
-
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
 
   useEffect(() => {

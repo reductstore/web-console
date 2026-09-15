@@ -302,8 +302,7 @@ export type BuilderAction =
   | { type: "stage/setKind"; id: string; kind: StageKind }
   | { type: "stage/removePending"; id: string }
   | { type: "step/remove"; id: string }
-  | { type: "external/sync"; state: BuilderState }
-  | { type: "builder/resetToDefault" };
+  | { type: "external/sync"; state: BuilderState };
 
 export function builderReducer(
   state: BuilderState,
@@ -741,26 +740,6 @@ export function builderReducer(
     }
     case "external/sync":
       return action.state;
-    case "builder/resetToDefault": {
-      // The default $each_t sample stage is the only stage shown before a
-      // bucket/entry is selected (see QueryConditionBuilder's sourceReady
-      // gating) - so it's the only thing that should survive losing the
-      // source. Everything else was only ever visible/addable while a
-      // source was picked, and shouldn't silently reappear if a source is
-      // picked again later.
-      const defaultSteps = state.steps.filter((step) => step.type === "each_t");
-      const defaultIds = new Set(defaultSteps.map((step) => step.id));
-      return {
-        conditionBlocks: [],
-        steps: defaultSteps,
-        extBlocks: [],
-        blockOrder: defaultSteps.map((step) => step.id),
-        enabled: Object.fromEntries(
-          Object.entries(state.enabled).filter(([id]) => defaultIds.has(id)),
-        ),
-        pendingStages: [],
-      };
-    }
     default:
       return state;
   }

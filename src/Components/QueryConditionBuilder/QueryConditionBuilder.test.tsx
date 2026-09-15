@@ -218,7 +218,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
   });
 
-  it("resets to just the default stage when the bucket/entry selection is lost", () => {
+  it("keeps a stage's data when the bucket/entry selection is lost and picked again, instead of resetting", async () => {
     const onChange = vi.fn();
     const { rerender } = render(
       <QueryConditionBuilder
@@ -230,13 +230,9 @@ describe("QueryConditionBuilder", () => {
       />,
     );
 
-    // Add an extra stage while a source is selected.
-    fireEvent.click(screen.getByLabelText("Add stage"));
+    await addStageOfKind("$limit");
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(2);
 
-    // Losing the bucket/entry selection should clear everything back down
-    // to just the default sample stage - not merely hide the extra stage
-    // until a source is picked again.
     rerender(
       <QueryConditionBuilder
         value={'{"$each_t": "$__interval"}'}
@@ -246,11 +242,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
-    const [lastCall] = onChange.mock.calls.at(-1) as [string];
-    expect(JSON.parse(lastCall)).toEqual({ $each_t: "$__interval" });
 
-    // Picking a (possibly new) source again shouldn't bring the old stage
-    // back from the dead.
     rerender(
       <QueryConditionBuilder
         value={'{"$each_t": "$__interval"}'}
@@ -260,7 +252,7 @@ describe("QueryConditionBuilder", () => {
         validationContext={readyValidationContext}
       />,
     );
-    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
+    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(2);
   });
 
   it("shows the JSON editor with the current value in json mode", () => {
