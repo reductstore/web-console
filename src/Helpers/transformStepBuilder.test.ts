@@ -44,7 +44,8 @@ function expectSelect(
 }
 
 function blankSelectTransform() {
-  return createSelectTransformStep();
+  const transform = createSelectTransformStep();
+  return updateSqlStep(transform, transform.select.sqlSteps[0].id, "");
 }
 
 describe("transformStepBuilder", () => {
@@ -421,12 +422,12 @@ describe("transformStepBuilder", () => {
     }
 
     describe("createSelectTransformStep", () => {
-      it("defaults to an empty sql expression and no as_label rows", () => {
+      it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
         expect(transform.select.sqlSteps).toHaveLength(1);
         expect(transform.select.sqlSteps[0]).toMatchObject({
-          sql: "",
+          sql: "SELECT * FROM ENTRY()\n",
           asLabel: [],
         });
       });
@@ -504,8 +505,14 @@ describe("transformStepBuilder", () => {
     });
 
     describe("buildExtPayload", () => {
-      it("returns an empty select stage when nothing is filled in", () => {
+      it("includes the default sql when nothing else is filled in", () => {
         expect(buildExtPayload([createSelectTransformStep()])).toEqual([
+          { select: { sql: "SELECT * FROM ENTRY()" } },
+        ]);
+      });
+
+      it("returns an empty select stage when sql is also blank", () => {
+        expect(buildExtPayload([blankSelectTransform()])).toEqual([
           { select: {} },
         ]);
       });

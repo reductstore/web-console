@@ -69,6 +69,8 @@ export type TransformStepEntry =
 
 export const PROCESS_BLOCK_ID = "process";
 
+export const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
+
 function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
   return { id, key: "", value: "" };
 }
@@ -106,7 +108,7 @@ export function createSelectTransformStep(
 ): Extract<TransformStepEntry, { kind: "select" }> {
   return {
     kind: "select",
-    select: { sqlSteps: [blankSqlStep(id, "")] },
+    select: { sqlSteps: [blankSqlStep(id, DEFAULT_SQL)] },
   };
 }
 

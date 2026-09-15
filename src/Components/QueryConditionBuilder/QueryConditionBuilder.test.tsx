@@ -1457,7 +1457,9 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
-      expect(screen.getByTestId("monaco-editor")).toHaveValue("");
+      expect(screen.getByTestId("monaco-editor")).toHaveValue(
+        "SELECT * FROM ENTRY()\n",
+      );
       expect(screen.queryByText("As label")).toBeNull();
     });
 
