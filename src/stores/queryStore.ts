@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BuilderState } from "../Helpers/builderReducer";
 
 export interface SavedQuery {
   name: string;
@@ -14,6 +15,7 @@ export interface SavedQuery {
   /** Saved selection context for restoring on the query page */
   bucketName?: string;
   entries?: string[];
+  builderState?: BuilderState;
 }
 
 interface QueryStore {

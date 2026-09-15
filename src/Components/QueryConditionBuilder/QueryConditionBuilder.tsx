@@ -584,13 +584,14 @@ function buildAddStageButton(
 
 interface QueryConditionBuilderProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, state?: BuilderState) => void;
   mode: "builder" | "json";
   onUnrepresentable: () => void;
   height?: number | string;
   error?: string;
   validationContext?: ValidationContext;
   onIncompleteConditionChange?: (hasIncomplete: boolean) => void;
+  initialState?: BuilderState;
 }
 
 export default function QueryConditionBuilder({
@@ -602,11 +603,12 @@ export default function QueryConditionBuilder({
   error,
   validationContext,
   onIncompleteConditionChange,
+  initialState,
 }: QueryConditionBuilderProps) {
   const [state, dispatch] = useReducer(
     builderReducer,
     value,
-    buildInitialState,
+    (v) => initialState ?? buildInitialState(v),
   );
   const lastEmittedValueRef = useRef(value);
   const skipNextNotifyRef = useRef(true);
@@ -618,7 +620,7 @@ export default function QueryConditionBuilder({
     }
     const formatted = serialize(state);
     lastEmittedValueRef.current = formatted;
-    onChange(formatted);
+    onChange(formatted, state);
   }, [state]);
 
   const sourceReady =

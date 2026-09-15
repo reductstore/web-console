@@ -11,6 +11,7 @@ import type { Client } from "reduct-js";
 import type { DragEndEvent } from "@dnd-kit/core";
 import QueryConditionBuilder from "./QueryConditionBuilder";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
+import { BuilderState } from "../../Helpers/builderReducer";
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
 
@@ -1844,6 +1845,51 @@ describe("QueryConditionBuilder", () => {
         rosHeading.compareDocumentPosition(selectHeading) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
+    });
+  });
+
+  describe("onChange state and initialState", () => {
+    it("calls onChange with the raw builder state alongside the serialized string", async () => {
+      const onChange = vi.fn();
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={onChange}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      await addStageOfKind("$limit");
+
+      const [, lastState] = onChange.mock.calls.at(-1) as [
+        string,
+        BuilderState,
+      ];
+      expect(lastState.steps).toHaveLength(1);
+      expect(lastState.steps[0].type).toBe("limit");
+    });
+
+    it("seeds the builder from initialState instead of parsing value, restoring a disabled stage", () => {
+      const initialState: BuilderState = {
+        conditionBlocks: [],
+        steps: [{ id: "limit-1", type: "limit", limit: { count: 5 } }],
+        extBlocks: [],
+        blockOrder: ["limit-1"],
+        enabled: { "limit-1": false },
+        pendingStages: [],
+      };
+      render(
+        <QueryConditionBuilder
+          value=""
+          initialState={initialState}
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+      expect(screen.getByLabelText("Enable stage")).toBeTruthy();
     });
   });
 });

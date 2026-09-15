@@ -4,6 +4,7 @@ import { message } from "antd";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import SaveQueryModal from "./SaveQueryModal";
 import { useQueryStore } from "../../stores/queryStore";
+import { BuilderState } from "../../Helpers/builderReducer";
 
 vi.setConfig({ testTimeout: 15000 });
 
@@ -19,6 +20,7 @@ describe("SaveQueryModal", () => {
     open = true,
     queryText = '{"$each_t": "1s"}',
     mode: "builder" | "json" = "builder",
+    builderState?: BuilderState,
   ) => {
     return render(
       <SaveQueryModal
@@ -30,6 +32,7 @@ describe("SaveQueryModal", () => {
         mode={mode}
         timeFormat="UTC"
         rangeKey="last7"
+        builderState={builderState}
       />,
     );
   };
@@ -68,6 +71,30 @@ describe("SaveQueryModal", () => {
       });
     });
     expect(message.success).toHaveBeenCalledWith('Query "my-query" saved');
+  });
+
+  it("saves the builder state snapshot alongside the query, so a disabled stage isn't lost on reload", async () => {
+    const builderState: BuilderState = {
+      conditionBlocks: [],
+      steps: [{ id: "limit-1", type: "limit", limit: { count: 5 } }],
+      extBlocks: [],
+      blockOrder: ["limit-1"],
+      enabled: { "limit-1": false },
+      pendingStages: [],
+    };
+    renderModal(true, '{"$each_t": "1s"}', "builder", builderState);
+
+    fireEvent.change(screen.getByTestId("query-name-input"), {
+      target: { value: "my-query" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const queries = useQueryStore
+        .getState()
+        .getQueries("test-bucket", "test-entry");
+      expect(queries[0].builderState).toEqual(builderState);
+    });
   });
 
   it("saves the mode the query was in when the modal was opened", async () => {
