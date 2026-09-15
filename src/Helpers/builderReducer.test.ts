@@ -56,12 +56,12 @@ function stateWithRosAndSelect(): BuilderState {
   };
 }
 
-function emptyExtBlockState(): BuilderState {
-  return {
-    ...emptyState(),
-    extBlocks: [{ id: EXT_BLOCK_ID, transforms: [] }],
-    blockOrder: [EXT_BLOCK_ID],
-  };
+function stateWithSqlStep(): BuilderState {
+  return builderReducer(stateWithRosAndSelect(), {
+    type: "select/addSqlStep",
+    blockId: EXT_BLOCK_ID,
+    id: "sql-1",
+  });
 }
 
 describe("builderReducer", () => {
@@ -333,7 +333,7 @@ describe("builderReducer", () => {
     }
 
     it("select/changeSql sets the sql and leaves the ros transform untouched", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const sqlStepId = select(initial).sqlSteps[0].id;
       const state = builderReducer(initial, {
         type: "select/changeSql",
@@ -347,8 +347,22 @@ describe("builderReducer", () => {
       );
     });
 
-    it("select/addSqlStep appends a new sql step", () => {
+    it("select/addSqlStep defaults the first sql step to SELECT * FROM ENTRY()", () => {
       const initial = stateWithRosAndSelect();
+      const state = builderReducer(initial, {
+        type: "select/addSqlStep",
+        blockId: EXT_BLOCK_ID,
+        id: "sql-1",
+      });
+      expect(select(state).sqlSteps).toHaveLength(1);
+      expect(select(state).sqlSteps[0]).toMatchObject({
+        id: "sql-1",
+        sql: "SELECT * FROM ENTRY()\n",
+      });
+    });
+
+    it("select/addSqlStep appends a further blank sql step", () => {
+      const initial = stateWithSqlStep();
       const state = builderReducer(initial, {
         type: "select/addSqlStep",
         blockId: EXT_BLOCK_ID,
@@ -361,8 +375,28 @@ describe("builderReducer", () => {
       });
     });
 
+    it("select/addSqlStep inserts right after afterId instead of at the end", () => {
+      const firstId = select(stateWithSqlStep()).sqlSteps[0].id;
+      const withSecond = builderReducer(stateWithSqlStep(), {
+        type: "select/addSqlStep",
+        blockId: EXT_BLOCK_ID,
+        id: "sql-2",
+      });
+      const state = builderReducer(withSecond, {
+        type: "select/addSqlStep",
+        blockId: EXT_BLOCK_ID,
+        id: "inserted",
+        afterId: firstId,
+      });
+      expect(select(state).sqlSteps.map((step) => step.id)).toEqual([
+        firstId,
+        "inserted",
+        "sql-2",
+      ]);
+    });
+
     it("select/removeSqlStep removes the matching sql step", () => {
-      const withTwo = builderReducer(stateWithRosAndSelect(), {
+      const withTwo = builderReducer(stateWithSqlStep(), {
         type: "select/addSqlStep",
         blockId: EXT_BLOCK_ID,
         id: "new-sql-step",
@@ -381,7 +415,7 @@ describe("builderReducer", () => {
     });
 
     it("select/addFormatSection and select/removeFormatSection manage the format sections", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const withCsv = builderReducer(initial, {
         type: "select/addFormatSection",
@@ -401,7 +435,7 @@ describe("builderReducer", () => {
     });
 
     it("select/changeFormat switches the active input format", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const withCsv = builderReducer(initial, {
         type: "select/addFormatSection",
@@ -421,7 +455,7 @@ describe("builderReducer", () => {
     });
 
     it("select/changeCsv merges the csv config", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const state = builderReducer(initial, {
         type: "select/changeCsv",
@@ -435,7 +469,7 @@ describe("builderReducer", () => {
     });
 
     it("select/changeProtobuf merges the protobuf message name and schema", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const state = builderReducer(initial, {
         type: "select/changeProtobuf",
@@ -449,7 +483,7 @@ describe("builderReducer", () => {
     });
 
     it("select/addProtobufFieldRow, select/changeProtobufFieldRow and select/removeProtobufFieldRow manage protobuf field rows", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const withRow = builderReducer(initial, {
         type: "select/addProtobufFieldRow",
@@ -480,7 +514,7 @@ describe("builderReducer", () => {
     });
 
     it("select/changeExport merges the export config", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const state = builderReducer(initial, {
         type: "select/changeExport",
@@ -494,7 +528,7 @@ describe("builderReducer", () => {
     });
 
     it("transform/addAsLabelRow, transform/changeAsLabelRow and transform/removeAsLabelRow manage the select transform's as-label rows", () => {
-      const initial = stateWithRosAndSelect();
+      const initial = stateWithSqlStep();
       const stepId = select(initial).sqlSteps[0].id;
       const withRow = builderReducer(initial, {
         type: "transform/addAsLabelRow",
@@ -560,35 +594,35 @@ describe("builderReducer", () => {
       expect(state.blockOrder).toEqual([]);
     });
 
-    it("block/addTransform adds a ros transform to the ext block", () => {
-      const state = builderReducer(emptyExtBlockState(), {
-        type: "block/addTransform",
+    it("block/removeTransform resets ros to empty while keeping select untouched", () => {
+      const withFilter = builderReducer(stateWithRosAndSelect(), {
+        type: "ros/addSection",
+        blockId: EXT_BLOCK_ID,
+        section: "filter",
+        rowId: "new-row",
+      });
+      const state = builderReducer(withFilter, {
+        type: "block/removeTransform",
         blockId: EXT_BLOCK_ID,
         kind: "ros",
       });
-      expect(state.extBlocks[0].transforms).toHaveLength(1);
-      expect(state.extBlocks[0].transforms[0].kind).toBe("ros");
+      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
+        "ros",
+        "select",
+      ]);
+      const [ros] = state.extBlocks[0].transforms;
+      expect(ros.kind === "ros" && ros.ros.sections).toEqual([]);
       expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
     });
 
-    it("block/addTransform adds a select transform to the ext block", () => {
-      const state = builderReducer(emptyExtBlockState(), {
-        type: "block/addTransform",
+    it("block/removeTransform resets select to empty without dropping the ext block", () => {
+      const withSqlStep = builderReducer(stateWithRosAndSelect(), {
+        type: "select/addSqlStep",
         blockId: EXT_BLOCK_ID,
-        kind: "select",
+        id: "new-sql-step",
       });
-      expect(state.extBlocks[0].transforms).toHaveLength(1);
-      expect(state.extBlocks[0].transforms[0].kind).toBe("select");
-    });
-
-    it("block/addTransform can add both ros and select to the same ext block", () => {
-      const withRos = builderReducer(emptyExtBlockState(), {
-        type: "block/addTransform",
-        blockId: EXT_BLOCK_ID,
-        kind: "ros",
-      });
-      const state = builderReducer(withRos, {
-        type: "block/addTransform",
+      const state = builderReducer(withSqlStep, {
+        type: "block/removeTransform",
         blockId: EXT_BLOCK_ID,
         kind: "select",
       });
@@ -596,44 +630,9 @@ describe("builderReducer", () => {
         "ros",
         "select",
       ]);
+      const [, select] = state.extBlocks[0].transforms;
+      expect(select.kind === "select" && select.select.sqlSteps).toEqual([]);
       expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
-    });
-
-    it("block/removeTransform keeps the ext block while the other kind remains", () => {
-      const withBoth: BuilderState = {
-        ...emptyExtBlockState(),
-        extBlocks: [
-          {
-            id: EXT_BLOCK_ID,
-            transforms: [createRosTransformStep(), createSelectTransformStep()],
-          },
-        ],
-      };
-      const state = builderReducer(withBoth, {
-        type: "block/removeTransform",
-        blockId: EXT_BLOCK_ID,
-        kind: "ros",
-      });
-      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
-        "select",
-      ]);
-      expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
-    });
-
-    it("block/removeTransform drops the ext block when the last transform is removed", () => {
-      const withRos: BuilderState = {
-        ...emptyExtBlockState(),
-        extBlocks: [
-          { id: EXT_BLOCK_ID, transforms: [createRosTransformStep()] },
-        ],
-      };
-      const state = builderReducer(withRos, {
-        type: "block/removeTransform",
-        blockId: EXT_BLOCK_ID,
-        kind: "ros",
-      });
-      expect(state.extBlocks).toEqual([]);
-      expect(state.blockOrder).toEqual([]);
     });
 
     it("stage/add appends a pending stage with no kind chosen yet", () => {
@@ -719,7 +718,7 @@ describe("builderReducer", () => {
       expect(state.conditionBlocks[0].conditions).toHaveLength(1);
     });
 
-    it("stage/setKind ext keeps the pending id and adds no transform yet", () => {
+    it("stage/setKind ext keeps the pending id and creates empty ros and select transforms", () => {
       const withPending = builderReducer(emptyState(), {
         type: "stage/add",
         id: "new-stage",
@@ -731,7 +730,10 @@ describe("builderReducer", () => {
       });
       expect(state.blockOrder).toEqual(["new-stage"]);
       expect(state.pendingStages).toEqual([]);
-      expect(state.extBlocks[0].transforms).toEqual([]);
+      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
+        "ros",
+        "select",
+      ]);
       expect(state.extBlocks[0].id).toBe("new-stage");
     });
 

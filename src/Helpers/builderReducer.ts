@@ -209,7 +209,12 @@ export type BuilderAction =
       changes: Partial<RosExportConfig>;
     }
   | { type: "select/changeSql"; blockId: string; id: string; sql: string }
-  | { type: "select/addSqlStep"; blockId: string; id: string }
+  | {
+      type: "select/addSqlStep";
+      blockId: string;
+      id: string;
+      afterId?: string;
+    }
   | { type: "select/removeSqlStep"; blockId: string; id: string }
   | {
       type: "select/addFormatSection";
@@ -294,7 +299,6 @@ export type BuilderAction =
     }
   | { type: "block/removeConditionBlock"; blockId: string }
   | { type: "block/removeExt"; blockId: string }
-  | { type: "block/addTransform"; blockId: string; kind: TransformKind }
   | { type: "block/removeTransform"; blockId: string; kind: TransformKind }
   | { type: "block/reorder"; fromIndex: number; toIndex: number }
   | { type: "stage/toggleEnabled"; id: string }
@@ -446,7 +450,7 @@ export function builderReducer(
           state.extBlocks,
           action.blockId,
           "select",
-          (transform) => addSqlStep(transform, action.id),
+          (transform) => addSqlStep(transform, action.id, action.afterId),
         ),
       };
     case "select/removeSqlStep":
@@ -624,52 +628,23 @@ export function builderReducer(
         ),
         blockOrder: removeBlockId(state.blockOrder, action.blockId),
       };
-    case "block/addTransform": {
-      const newTransform =
-        action.kind === "ros"
-          ? createRosTransformStep()
-          : createSelectTransformStep();
-      const existing = state.extBlocks.find(
-        (block) => block.id === action.blockId,
-      );
-      if (!existing) {
-        return state;
-      }
+    case "block/removeTransform": {
       return {
         ...state,
         extBlocks: state.extBlocks.map((block) =>
           block.id === action.blockId
-            ? { ...block, transforms: [...block.transforms, newTransform] }
+            ? {
+                ...block,
+                transforms: block.transforms.map((transform) =>
+                  transform.kind === action.kind
+                    ? action.kind === "ros"
+                      ? createRosTransformStep()
+                      : createSelectTransformStep()
+                    : transform,
+                ),
+              }
             : block,
         ),
-      };
-    }
-    case "block/removeTransform": {
-      const updatedBlocks = state.extBlocks.map((block) =>
-        block.id === action.blockId
-          ? {
-              ...block,
-              transforms: block.transforms.filter(
-                (transform) => transform.kind !== action.kind,
-              ),
-            }
-          : block,
-      );
-      const updatedBlock = updatedBlocks.find(
-        (block) => block.id === action.blockId,
-      );
-      if (updatedBlock && updatedBlock.transforms.length === 0) {
-        return {
-          ...state,
-          extBlocks: updatedBlocks.filter(
-            (block) => block.id !== action.blockId,
-          ),
-          blockOrder: removeBlockId(state.blockOrder, action.blockId),
-        };
-      }
-      return {
-        ...state,
-        extBlocks: updatedBlocks,
       };
     }
     case "block/reorder":
@@ -750,7 +725,13 @@ export function builderReducer(
       } else if (kind === "limit") {
         steps = addLimitStep(steps, newId);
       } else if (kind === "ext") {
-        extBlocks = [...extBlocks, { id: newId, transforms: [] }];
+        extBlocks = [
+          ...extBlocks,
+          {
+            id: newId,
+            transforms: [createRosTransformStep(), createSelectTransformStep()],
+          },
+        ];
       }
 
       return {
@@ -816,7 +797,14 @@ export function extBlocksFromTransforms(
   if (transforms.length === 0) {
     return [];
   }
-  return [{ id: crypto.randomUUID(), transforms }];
+  const hasRos = transforms.some((transform) => transform.kind === "ros");
+  const hasSelect = transforms.some((transform) => transform.kind === "select");
+  const completeTransforms = [
+    ...transforms,
+    ...(hasRos ? [] : [createRosTransformStep()]),
+    ...(hasSelect ? [] : [createSelectTransformStep()]),
+  ];
+  return [{ id: crypto.randomUUID(), transforms: completeTransforms }];
 }
 
 export interface ParsedQueryAndTransform {

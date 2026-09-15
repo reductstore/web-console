@@ -4,6 +4,7 @@ import {
   addFormatSection,
   addProtobufFieldRow,
   addSection,
+  addSqlStep,
   buildExtPayload,
   changeFormat,
   createRosTransformStep,
@@ -44,7 +45,7 @@ function expectSelect(
 }
 
 function blankSelectTransform() {
-  const transform = createSelectTransformStep();
+  const transform = addSqlStep(createSelectTransformStep(), "sql-1");
   return updateSqlStep(transform, transform.select.sqlSteps[0].id, "");
 }
 
@@ -225,10 +226,8 @@ describe("transformStepBuilder", () => {
       expect(buildExtPayload([])).toBeUndefined();
     });
 
-    it("returns an empty extract when no section is added", () => {
-      expect(buildExtPayload([createRosTransformStep()])).toEqual([
-        { ros: { extract: {} } },
-      ]);
+    it("omits ros entirely when no section is added", () => {
+      expect(buildExtPayload([createRosTransformStep()])).toBeUndefined();
     });
 
     it("includes topic only when the filter section is added and filled", () => {
@@ -277,7 +276,7 @@ describe("transformStepBuilder", () => {
         duration: "1m",
         size: "100MB",
       });
-      expect(buildExtPayload([transform])).toEqual([{ ros: { extract: {} } }]);
+      expect(buildExtPayload([transform])).toBeUndefined();
 
       transform = addSection(transform, "export");
       expect(buildExtPayload([transform])).toEqual([
@@ -422,20 +421,52 @@ describe("transformStepBuilder", () => {
     }
 
     describe("createSelectTransformStep", () => {
-      it("defaults to SELECT * FROM ENTRY() and no as_label rows", () => {
+      it("starts with no sql steps", () => {
         const transform = createSelectTransformStep();
         expect(transform.kind).toBe("select");
+        expect(transform.select.sqlSteps).toEqual([]);
+      });
+    });
+
+    describe("addSqlStep", () => {
+      it("defaults the first sql step to SELECT * FROM ENTRY()", () => {
+        const transform = addSqlStep(createSelectTransformStep(), "sql-1");
         expect(transform.select.sqlSteps).toHaveLength(1);
         expect(transform.select.sqlSteps[0]).toMatchObject({
+          id: "sql-1",
           sql: "SELECT * FROM ENTRY()\n",
           asLabel: [],
         });
+      });
+
+      it("appends a further blank sql step", () => {
+        const withFirst = addSqlStep(createSelectTransformStep(), "sql-1");
+        const transform = addSqlStep(withFirst, "sql-2");
+        expect(transform.select.sqlSteps).toHaveLength(2);
+        expect(transform.select.sqlSteps[1]).toMatchObject({
+          id: "sql-2",
+          sql: "",
+        });
+      });
+
+      it("inserts the new step right after the one whose menu was used, not at the end", () => {
+        let transform = addSqlStep(createSelectTransformStep(), "sql-1");
+        transform = addSqlStep(transform, "sql-2");
+        transform = addSqlStep(transform, "sql-3");
+
+        const withInsert = addSqlStep(transform, "new-sql", "sql-1");
+        expect(withInsert.select.sqlSteps.map((step) => step.id)).toEqual([
+          "sql-1",
+          "new-sql",
+          "sql-2",
+          "sql-3",
+        ]);
       });
     });
 
     describe("updateSqlStep", () => {
       it("updates the sql expression", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = updateSqlStep(
           initial,
           initial.select.sqlSteps[0].id,
@@ -447,7 +478,7 @@ describe("transformStepBuilder", () => {
 
     describe("as_label rows", () => {
       it("adds, updates, and removes rows", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = addAsLabelRow(initial, firstStepId(initial));
         expect(transform.select.sqlSteps[0].asLabel).toHaveLength(1);
         const [first] = transform.select.sqlSteps[0].asLabel;
@@ -480,7 +511,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("is true for a partially filled as_label row", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addAsLabelRow(initial, firstStepId(initial));
         transform = updateAsLabelRow(
           transform,
@@ -492,7 +523,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("is false once the as_label row is complete", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addAsLabelRow(initial, firstStepId(initial));
         transform = updateAsLabelRow(
           transform,
@@ -505,10 +536,15 @@ describe("transformStepBuilder", () => {
     });
 
     describe("buildExtPayload", () => {
-      it("includes the default sql when nothing else is filled in", () => {
-        expect(buildExtPayload([createSelectTransformStep()])).toEqual([
+      it("includes the default sql of a freshly-added first sql step", () => {
+        const transform = addSqlStep(createSelectTransformStep(), "sql-1");
+        expect(buildExtPayload([transform])).toEqual([
           { select: { sql: "SELECT * FROM ENTRY()" } },
         ]);
+      });
+
+      it("returns undefined when there are no sql steps at all", () => {
+        expect(buildExtPayload([createSelectTransformStep()])).toBeUndefined();
       });
 
       it("returns an empty select stage when sql is also blank", () => {
@@ -518,7 +554,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("includes sql only when non-blank", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = updateSqlStep(
           initial,
           initial.select.sqlSteps[0].id,
@@ -544,7 +580,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("includes both sql and as_label when both are filled", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = updateSqlStep(
           initial,
           initial.select.sqlSteps[0].id,
@@ -640,7 +676,7 @@ describe("transformStepBuilder", () => {
 
     describe("format sections", () => {
       it("adds and removes a format section", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = addFormatSection(
           initial,
           firstStepId(initial),
@@ -656,7 +692,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("is a no-op if the section is already present", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = addFormatSection(
           initial,
           firstStepId(initial),
@@ -673,14 +709,14 @@ describe("transformStepBuilder", () => {
 
     describe("changeFormat", () => {
       it("replaces the active csv/json/parquet format in a single call", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const withCsv = addFormatSection(initial, firstStepId(initial), "csv");
         const withJson = changeFormat(withCsv, firstStepId(withCsv), "json");
         expect(withJson.select.sqlSteps[0].formatSections).toEqual(["json"]);
       });
 
       it("leaves export untouched but replaces protobuf", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const withProtobuf = addFormatSection(
           initial,
           firstStepId(initial),
@@ -703,19 +739,19 @@ describe("transformStepBuilder", () => {
       });
 
       it("is a single mutation even when no format was active yet", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const changed = changeFormat(initial, firstStepId(initial), "csv");
         expect(changed.select.sqlSteps[0].formatSections).toEqual(["csv"]);
       });
 
       it("seeds a blank field row when switching to protobuf with none yet", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const changed = changeFormat(initial, firstStepId(initial), "protobuf");
         expect(changed.select.sqlSteps[0].protobuf.fields).toHaveLength(1);
       });
 
       it("does not duplicate existing protobuf field rows when switching back", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = changeFormat(initial, firstStepId(initial), "protobuf");
         transform = addProtobufFieldRow(transform, firstStepId(transform));
         transform = changeFormat(transform, firstStepId(transform), "csv");
@@ -726,7 +762,7 @@ describe("transformStepBuilder", () => {
 
     describe("updateCsv", () => {
       it("updates hasHeaders", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = updateCsv(initial, firstStepId(initial), {
           hasHeaders: true,
         });
@@ -736,7 +772,7 @@ describe("transformStepBuilder", () => {
 
     describe("protobuf config", () => {
       it("updates messageName and schema", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = updateProtobuf(initial, firstStepId(initial), {
           messageName: "pkg.SensorReading",
           schema: "base64==",
@@ -748,7 +784,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("adds, updates, and removes field rows", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = addProtobufFieldRow(initial, firstStepId(initial));
         expect(transform.select.sqlSteps[0].protobuf.fields).toHaveLength(1);
         const [first] = transform.select.sqlSteps[0].protobuf.fields;
@@ -776,7 +812,7 @@ describe("transformStepBuilder", () => {
 
     describe("updateSelectExport", () => {
       it("merges partial changes into the export config", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         const transform = updateSelectExport(initial, firstStepId(initial), {
           format: "parquet",
         });
@@ -790,7 +826,7 @@ describe("transformStepBuilder", () => {
 
     describe("hasIncompleteTransform (protobuf fields)", () => {
       it("is false when protobuf isn't an active format section", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addProtobufFieldRow(initial, firstStepId(initial));
         transform = updateProtobufFieldRow(
           transform,
@@ -802,7 +838,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("is true for a partially filled field row once protobuf is active", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addFormatSection(
           initial,
           firstStepId(initial),
@@ -819,7 +855,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("is false once the field row is fully filled", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addFormatSection(
           initial,
           firstStepId(initial),
@@ -1093,7 +1129,7 @@ describe("transformStepBuilder", () => {
       });
 
       it("round-trips csv + protobuf fields + export through buildExtPayload", () => {
-        const initial = createSelectTransformStep();
+        const initial = blankSelectTransform();
         let transform = addFormatSection(
           initial,
           firstStepId(initial),
@@ -1139,9 +1175,14 @@ describe("transformStepBuilder", () => {
     });
 
     it("combines both into a single #ext pipeline array when building the payload", () => {
-      expect(
-        buildExtPayload([createRosTransformStep(), blankSelectTransform()]),
-      ).toEqual([{ ros: { extract: {} } }, { select: {} }]);
+      const ros = updateTopic(
+        addSection(createRosTransformStep(), "filter"),
+        "/robot/odom",
+      );
+      expect(buildExtPayload([ros, blankSelectTransform()])).toEqual([
+        { ros: { extract: { topic: "/robot/odom" } } },
+        { select: {} },
+      ]);
     });
 
     it("always puts ros before select in the payload, regardless of block order", () => {
@@ -1149,10 +1190,11 @@ describe("transformStepBuilder", () => {
       // run before select (select otherwise receives the raw, not-yet-
       // extracted record) - this must hold even when the user has visually
       // arranged the Select block above the ROS block.
-      const payload = buildExtPayload([
-        blankSelectTransform(),
-        createRosTransformStep(),
-      ]);
+      const ros = updateTopic(
+        addSection(createRosTransformStep(), "filter"),
+        "/robot/odom",
+      );
+      const payload = buildExtPayload([blankSelectTransform(), ros]);
       expect(payload?.map((stage) => Object.keys(stage)[0])).toEqual([
         "ros",
         "select",

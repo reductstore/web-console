@@ -67,8 +67,6 @@ export type TransformStepEntry =
   | { kind: "ros"; ros: RosTransformStep }
   | { kind: "select"; select: SelectTransformStep };
 
-export const PROCESS_BLOCK_ID = "process";
-
 export const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
 
 function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
@@ -103,12 +101,13 @@ function blankSqlStep(id: string, sql: string): SqlStep {
   };
 }
 
-export function createSelectTransformStep(
-  id: string = crypto.randomUUID(),
-): Extract<TransformStepEntry, { kind: "select" }> {
+export function createSelectTransformStep(): Extract<
+  TransformStepEntry,
+  { kind: "select" }
+> {
   return {
     kind: "select",
-    select: { sqlSteps: [blankSqlStep(id, DEFAULT_SQL)] },
+    select: { sqlSteps: [] },
   };
 }
 
@@ -127,12 +126,22 @@ export function updateSqlStep<Entry extends TransformStepEntry>(
 export function addSqlStep<Entry extends TransformStepEntry>(
   transform: Entry,
   id: string = crypto.randomUUID(),
+  afterId?: string,
 ): Entry {
   if (transform.kind !== "select") return transform;
+  const { sqlSteps } = transform.select;
+  const sql = sqlSteps.length === 0 ? DEFAULT_SQL : "";
+  const insertIndex = afterId
+    ? sqlSteps.findIndex((step) => step.id === afterId) + 1
+    : sqlSteps.length;
   return {
     ...transform,
     select: {
-      sqlSteps: [...transform.select.sqlSteps, blankSqlStep(id, "")],
+      sqlSteps: [
+        ...sqlSteps.slice(0, insertIndex),
+        blankSqlStep(id, sql),
+        ...sqlSteps.slice(insertIndex),
+      ],
     },
   } as Entry;
 }
@@ -730,7 +739,9 @@ export function buildExtPayload(
   );
 
   const payload: Record<string, unknown>[] = [];
-  if (ros) payload.push({ ros: buildRosExt(ros.ros) });
+  if (ros && ros.ros.sections.length > 0) {
+    payload.push({ ros: buildRosExt(ros.ros) });
+  }
   if (select) {
     for (const stage of buildSelectExt(select.select)) {
       payload.push({ select: stage });
