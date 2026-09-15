@@ -226,8 +226,10 @@ describe("transformStepBuilder", () => {
       expect(buildExtPayload([])).toBeUndefined();
     });
 
-    it("omits ros entirely when no section is added", () => {
-      expect(buildExtPayload([createRosTransformStep()])).toBeUndefined();
+    it("returns an empty extract when no section is added", () => {
+      expect(buildExtPayload([createRosTransformStep()])).toEqual([
+        { ros: { extract: {} } },
+      ]);
     });
 
     it("includes topic only when the filter section is added and filled", () => {
@@ -276,7 +278,7 @@ describe("transformStepBuilder", () => {
         duration: "1m",
         size: "100MB",
       });
-      expect(buildExtPayload([transform])).toBeUndefined();
+      expect(buildExtPayload([transform])).toEqual([{ ros: { extract: {} } }]);
 
       transform = addSection(transform, "export");
       expect(buildExtPayload([transform])).toEqual([
@@ -543,8 +545,10 @@ describe("transformStepBuilder", () => {
         ]);
       });
 
-      it("returns undefined when there are no sql steps at all", () => {
-        expect(buildExtPayload([createSelectTransformStep()])).toBeUndefined();
+      it("emits an empty select stage when there are no sql steps yet", () => {
+        expect(buildExtPayload([createSelectTransformStep()])).toEqual([
+          { select: {} },
+        ]);
       });
 
       it("returns an empty select stage when sql is also blank", () => {
@@ -619,20 +623,10 @@ describe("transformStepBuilder", () => {
         );
       });
 
-      it("succeeds with an empty select object", () => {
+      it("succeeds with an empty select object, parsing to no sql steps yet", () => {
         const result = parseExtPayload({ select: {} });
         expect(result.success).toBe(true);
-        expect(expectSelect(result.transforms).select.sqlSteps).toEqual([
-          {
-            id: expect.any(String),
-            sql: "",
-            asLabel: [],
-            formatSections: [],
-            csv: { hasHeaders: false },
-            protobuf: { messageName: "", schema: "", fields: [] },
-            export: { format: "", rows: "", duration: "" },
-          },
-        ]);
+        expect(expectSelect(result.transforms).select.sqlSteps).toEqual([]);
       });
 
       it("parses sql and as_label", () => {

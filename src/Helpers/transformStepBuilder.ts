@@ -670,6 +670,9 @@ function buildSqlStageExtras(step: SqlStep): Record<string, unknown> {
 function buildSelectExt(
   select: SelectTransformStep,
 ): Record<string, unknown>[] {
+  if (select.sqlSteps.length === 0) {
+    return [{}];
+  }
   return select.sqlSteps.map((step) => {
     const stage: Record<string, unknown> = {};
     if (step.sql.trim()) stage.sql = step.sql.trim();
@@ -739,9 +742,7 @@ export function buildExtPayload(
   );
 
   const payload: Record<string, unknown>[] = [];
-  if (ros && ros.ros.sections.length > 0) {
-    payload.push({ ros: buildRosExt(ros.ros) });
-  }
+  if (ros) payload.push({ ros: buildRosExt(ros.ros) });
   if (select) {
     for (const stage of buildSelectExt(select.select)) {
       payload.push({ select: stage });
@@ -1060,6 +1061,16 @@ function parseSelectPayload(select: unknown): {
   const stages = Array.isArray(select) ? select : [select];
   if (stages.length === 0) {
     return { success: false };
+  }
+  if (
+    stages.length === 1 &&
+    isPlainObject(stages[0]) &&
+    Object.keys(stages[0]).length === 0
+  ) {
+    return {
+      success: true,
+      transform: { kind: "select", select: { sqlSteps: [] } },
+    };
   }
 
   const sqlSteps: SqlStep[] = [];
