@@ -8,13 +8,14 @@ import {
 import {
   ROW_LABEL_WIDTH,
   ROW_ICON_FONT_SIZE,
+  ROW_ICON_BUTTON_WIDTH,
   ROW_VALUE_COLUMN_WIDTH,
   ROW_GAP,
 } from "./stageRowLayout";
 
 export const STAGE_GRID_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: `${ROW_LABEL_WIDTH}px ${ROW_VALUE_COLUMN_WIDTH}px max-content`,
+  gridTemplateColumns: `${ROW_LABEL_WIDTH}px ${ROW_VALUE_COLUMN_WIDTH}px ${ROW_ICON_BUTTON_WIDTH}px`,
   rowGap: 16,
   columnGap: ROW_GAP,
   alignItems: "start",
