@@ -620,7 +620,7 @@ describe("builderReducer", () => {
       expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
     });
 
-    it("block/removeTransform leaves an empty ext block when the last transform is removed", () => {
+    it("block/removeTransform drops the ext block when the last transform is removed", () => {
       const withRos: BuilderState = {
         ...emptyExtBlockState(),
         extBlocks: [
@@ -632,8 +632,8 @@ describe("builderReducer", () => {
         blockId: EXT_BLOCK_ID,
         kind: "ros",
       });
-      expect(state.extBlocks[0].transforms).toEqual([]);
-      expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
+      expect(state.extBlocks).toEqual([]);
+      expect(state.blockOrder).toEqual([]);
     });
 
     it("stage/add appends a pending stage with no kind chosen yet", () => {

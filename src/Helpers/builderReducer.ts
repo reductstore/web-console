@@ -645,18 +645,31 @@ export function builderReducer(
       };
     }
     case "block/removeTransform": {
+      const updatedBlocks = state.extBlocks.map((block) =>
+        block.id === action.blockId
+          ? {
+              ...block,
+              transforms: block.transforms.filter(
+                (transform) => transform.kind !== action.kind,
+              ),
+            }
+          : block,
+      );
+      const updatedBlock = updatedBlocks.find(
+        (block) => block.id === action.blockId,
+      );
+      if (updatedBlock && updatedBlock.transforms.length === 0) {
+        return {
+          ...state,
+          extBlocks: updatedBlocks.filter(
+            (block) => block.id !== action.blockId,
+          ),
+          blockOrder: removeBlockId(state.blockOrder, action.blockId),
+        };
+      }
       return {
         ...state,
-        extBlocks: state.extBlocks.map((block) =>
-          block.id === action.blockId
-            ? {
-                ...block,
-                transforms: block.transforms.filter(
-                  (transform) => transform.kind !== action.kind,
-                ),
-              }
-            : block,
-        ),
+        extBlocks: updatedBlocks,
       };
     }
     case "block/reorder":
