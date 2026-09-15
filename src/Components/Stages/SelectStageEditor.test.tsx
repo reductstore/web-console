@@ -163,14 +163,14 @@ describe("SelectStageEditor", () => {
     });
   });
 
-  describe("Add SQL row (bottom button)", () => {
-    it("dispatches select/addSqlStep when the Add SQL row button is clicked", () => {
+  describe("Add SQL step (beside last Add option)", () => {
+    it("dispatches select/addSqlStep when the Add SQL step button is clicked", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
         sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByText("Add SQL row"));
+      fireEvent.click(screen.getByText("Add SQL step"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),

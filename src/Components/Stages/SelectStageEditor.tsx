@@ -83,11 +83,13 @@ function SqlStepBlock({
   step,
   label,
   removable,
+  showAddSqlStep,
   dispatch,
 }: {
   step: SqlStep;
   label: string;
   removable: boolean;
+  showAddSqlStep?: boolean;
   dispatch: ExtBlockEditorDispatch;
 }) {
   const activeFormat = activeFormatOf(step);
@@ -374,11 +376,21 @@ function SqlStepBlock({
       )}
 
       <GridFooter align="value-start">
-        <AddOptionFooter
-          menuItems={menuItems}
-          onMenuClick={handleMenuClick}
-          ariaLabel={`Add option for ${label}`}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
+          <AddOptionFooter
+            menuItems={menuItems}
+            onMenuClick={handleMenuClick}
+            ariaLabel={`Add option for ${label}`}
+          />
+          {showAddSqlStep && (
+            <AddOptionButton
+              label="Add SQL step"
+              onClick={() =>
+                dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
+              }
+            />
+          )}
+        </div>
       </GridFooter>
     </>
   );
@@ -397,25 +409,18 @@ export default function SelectStageEditor({
     <div style={STAGE_GRID_STYLE}>
       {step.sqlSteps.map((sqlStep, index) => {
         const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
+        const isLastSqlStep = index === step.sqlSteps.length - 1;
         return (
           <SqlStepBlock
             key={sqlStep.id}
             step={sqlStep}
             label={label}
             removable={step.sqlSteps.length > 1}
+            showAddSqlStep={isLastSqlStep}
             dispatch={dispatch}
           />
         );
       })}
-
-      <GridFooter align="label-start">
-        <AddOptionButton
-          label="Add SQL row"
-          onClick={() =>
-            dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
-          }
-        />
-      </GridFooter>
     </div>
   );
 }

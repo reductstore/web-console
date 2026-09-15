@@ -79,7 +79,7 @@ export function GridFooter({
   children: ReactNode;
   // "value-start" lines up with the condition inputs (same as "+ Add
   // condition"); "label-start" sits in the label column (e.g. "+ Add SQL
-  // row"); "center" keeps the value column centered.
+  // step"); "center" keeps the value column centered.
   align?: "center" | "value-start" | "label-start";
 }) {
   if (align === "label-start") {
