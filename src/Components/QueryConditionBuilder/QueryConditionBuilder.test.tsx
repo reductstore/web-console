@@ -705,7 +705,7 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
-    it("still allows adding another $each_t/$each_n once one of each is already present, since the server decides what's valid", async () => {
+    it("disables adding another $each_t/$each_n once one of each is already present", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -728,8 +728,8 @@ describe("QueryConditionBuilder", () => {
 
       const eachTOption = stageTypeOption("$each_t");
       const eachNOption = stageTypeOption("$each_n");
-      expect(eachTOption).not.toHaveClass("ant-select-item-option-disabled");
-      expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
+      expect(eachTOption).toHaveClass("ant-select-item-option-disabled");
+      expect(eachNOption).toHaveClass("ant-select-item-option-disabled");
     });
 
     it("adds a limit step and combines it with an existing filter", async () => {
@@ -970,7 +970,7 @@ describe("QueryConditionBuilder", () => {
       expect(onIncompleteConditionChange).toHaveBeenLastCalledWith(false);
     });
 
-    it("still allows adding another $limit once one is already added, since the server decides what's valid", async () => {
+    it("disables adding another $limit once one is already added, without affecting other kinds", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -994,7 +994,7 @@ describe("QueryConditionBuilder", () => {
       const limitOption = stageTypeOption("$limit");
       const eachTOption = stageTypeOption("$each_t");
       const eachNOption = stageTypeOption("$each_n");
-      expect(limitOption).not.toHaveClass("ant-select-item-option-disabled");
+      expect(limitOption).toHaveClass("ant-select-item-option-disabled");
       expect(eachTOption).not.toHaveClass("ant-select-item-option-disabled");
       expect(eachNOption).not.toHaveClass("ant-select-item-option-disabled");
     });

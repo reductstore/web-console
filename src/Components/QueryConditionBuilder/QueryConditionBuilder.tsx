@@ -96,11 +96,32 @@ const STAGE_KIND_OPTIONS: {
   },
 ];
 
+function usedSingletonKinds(state: BuilderState): Set<StageKind> {
+  const used = new Set<StageKind>();
+  for (const step of state.steps) {
+    if (step.type === "each_n") used.add("sample_each_n");
+    if (step.type === "each_t") used.add("sample_each_t");
+    if (step.type === "limit") used.add("limit");
+  }
+  return used;
+}
+
+function disabledKindsFor(
+  state: BuilderState,
+  ownKind: StageKind | null,
+): Set<StageKind> {
+  const used = usedSingletonKinds(state);
+  if (ownKind) used.delete(ownKind);
+  return used;
+}
+
 function StageKindSelect({
   value,
+  disabledKinds,
   onChange,
 }: {
   value: StageKind | null;
+  disabledKinds: Set<StageKind>;
   onChange: (kind: StageKind) => void;
 }) {
   return (
@@ -115,17 +136,25 @@ function StageKindSelect({
       options={STAGE_KIND_OPTIONS.map((option) => ({
         value: option.kind,
         label: option.label,
+        disabled: disabledKinds.has(option.kind),
       }))}
       virtual={false}
       optionRender={(option) => {
         const meta = STAGE_KIND_OPTIONS.find((o) => o.kind === option.value);
-        return (
+        const content = (
           <div style={{ whiteSpace: "normal" }}>
             <div>{meta?.label}</div>
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
               {meta?.description}
             </Typography.Text>
           </div>
+        );
+        return disabledKinds.has(option.value as StageKind) ? (
+          <Tooltip title="Already used by another stage" placement="right">
+            {content}
+          </Tooltip>
+        ) : (
+          content
         );
       }}
     />
@@ -204,6 +233,7 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value={null}
+              disabledKinds={disabledKindsFor(state, null)}
               onChange={(kind) => dispatch({ type: "stage/setKind", id, kind })}
             />
           ),
@@ -233,6 +263,7 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value="conditions"
+              disabledKinds={disabledKindsFor(state, "conditions")}
               onChange={(kind) =>
                 dispatch({
                   type: "stage/setKind",
@@ -352,6 +383,7 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value="ext"
+              disabledKinds={disabledKindsFor(state, "ext")}
               onChange={(kind) => dispatch({ type: "stage/setKind", id, kind })}
             />
           ),
@@ -415,6 +447,10 @@ function buildBlocks(
           kindSelector: (
             <StageKindSelect
               value={step.type === "each_n" ? "sample_each_n" : "sample_each_t"}
+              disabledKinds={disabledKindsFor(
+                state,
+                step.type === "each_n" ? "sample_each_n" : "sample_each_t",
+              )}
               onChange={(kind) =>
                 dispatch({ type: "stage/setKind", id: step.id, kind })
               }
@@ -454,6 +490,7 @@ function buildBlocks(
         kindSelector: (
           <StageKindSelect
             value="limit"
+            disabledKinds={disabledKindsFor(state, "limit")}
             onChange={(kind) =>
               dispatch({ type: "stage/setKind", id: step.id, kind })
             }
