@@ -369,7 +369,7 @@ describe("builderReducer", () => {
       });
     });
 
-    it("select/addSqlStep appends a further blank sql step", () => {
+    it("select/addSqlStep also defaults a further sql step to SELECT * FROM ENTRY()", () => {
       const initial = stateWithSqlStep();
       const state = builderReducer(initial, {
         type: "select/addSqlStep",
@@ -379,7 +379,7 @@ describe("builderReducer", () => {
       expect(select(state).sqlSteps).toHaveLength(2);
       expect(select(state).sqlSteps[1]).toMatchObject({
         id: "new-sql-step",
-        sql: "",
+        sql: "SELECT * FROM ENTRY()\n",
       });
     });
 
@@ -418,7 +418,7 @@ describe("builderReducer", () => {
       expect(select(state).sqlSteps).toHaveLength(1);
       expect(select(state).sqlSteps[0]).toMatchObject({
         id: "new-sql-step",
-        sql: "",
+        sql: "SELECT * FROM ENTRY()\n",
       });
     });
 

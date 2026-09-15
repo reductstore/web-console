@@ -441,13 +441,13 @@ describe("transformStepBuilder", () => {
         });
       });
 
-      it("appends a further blank sql step", () => {
+      it("also defaults a further sql step to SELECT * FROM ENTRY()", () => {
         const withFirst = addSqlStep(createSelectTransformStep(), "sql-1");
         const transform = addSqlStep(withFirst, "sql-2");
         expect(transform.select.sqlSteps).toHaveLength(2);
         expect(transform.select.sqlSteps[1]).toMatchObject({
           id: "sql-2",
-          sql: "",
+          sql: "SELECT * FROM ENTRY()\n",
         });
       });
 

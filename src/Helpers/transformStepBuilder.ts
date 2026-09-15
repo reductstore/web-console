@@ -130,7 +130,6 @@ export function addSqlStep<Entry extends TransformStepEntry>(
 ): Entry {
   if (transform.kind !== "select") return transform;
   const { sqlSteps } = transform.select;
-  const sql = sqlSteps.length === 0 ? DEFAULT_SQL : "";
   const insertIndex = afterId
     ? sqlSteps.findIndex((step) => step.id === afterId) + 1
     : sqlSteps.length;
@@ -139,7 +138,7 @@ export function addSqlStep<Entry extends TransformStepEntry>(
     select: {
       sqlSteps: [
         ...sqlSteps.slice(0, insertIndex),
-        blankSqlStep(id, sql),
+        blankSqlStep(id, DEFAULT_SQL),
         ...sqlSteps.slice(insertIndex),
       ],
     },
