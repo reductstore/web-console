@@ -93,7 +93,7 @@ function SqlStepBlock({
 }) {
   const activeFormat = activeFormatOf(step);
 
-  const menuItems: MenuProps["items"] = ADD_OPTIONS.map((option) => {
+  const buildOptionItem = (option: AddOption) => {
     const reason = disabledReason(option, step);
     return {
       key: option,
@@ -108,7 +108,15 @@ function SqlStepBlock({
         ADD_OPTION_LABELS[option]
       ),
     };
-  });
+  };
+
+  const menuItems: MenuProps["items"] = [
+    ...ADD_OPTIONS.filter((option) => option !== "sqlStep").map(
+      buildOptionItem,
+    ),
+    { type: "divider" as const },
+    buildOptionItem("sqlStep"),
+  ];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "sqlStep") {

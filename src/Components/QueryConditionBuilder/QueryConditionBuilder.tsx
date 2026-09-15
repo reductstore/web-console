@@ -7,7 +7,7 @@ import {
   useState,
   ComponentProps,
 } from "react";
-import { Button, Select, Tooltip, Typography } from "antd";
+import { Button, Dropdown, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
@@ -326,6 +326,36 @@ function buildBlocks(
 
       const blockDispatch = extBlockDispatch(id, dispatch);
 
+      const addNestedItems = [
+        {
+          key: "ros",
+          disabled: !!rosTransform,
+          label: rosTransform ? (
+            <Tooltip title="ROS is already added" placement="right">
+              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>ROS</span>
+            </Tooltip>
+          ) : (
+            "ROS"
+          ),
+        },
+        {
+          key: "select",
+          disabled: !!selectTransform,
+          label: selectTransform ? (
+            <Tooltip title="Select is already added" placement="right">
+              <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>Select</span>
+            </Tooltip>
+          ) : (
+            "Select"
+          ),
+        },
+      ];
+      const handleAddNested = ({ key }: { key: string }) => {
+        if (key === "ros" || key === "select") {
+          dispatch({ type: "block/addTransform", blockId: id, kind: key });
+        }
+      };
+
       return [
         {
           id,
@@ -392,7 +422,7 @@ function buildBlocks(
               {selectTransform && (
                 <ProcessSubsection
                   title="Select"
-                  divider
+                  divider={!!rosTransform}
                   titleExtra={
                     <SelectStageAddButton
                       step={selectTransform.select}
@@ -405,6 +435,25 @@ function buildBlocks(
                     dispatch={blockDispatch}
                   />
                 </ProcessSubsection>
+              )}
+              {(!rosTransform || !selectTransform) && (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <Dropdown
+                    menu={{ items: addNestedItems, onClick: handleAddNested }}
+                    trigger={["click"]}
+                  >
+                    <Button
+                      aria-label="Add ROS or Select"
+                      icon={
+                        <PlusOutlined
+                          style={{ fontSize: ROW_ICON_FONT_SIZE }}
+                        />
+                      }
+                    >
+                      Add extension
+                    </Button>
+                  </Dropdown>
+                </div>
               )}
               <ExtensionsDocLink />
             </div>

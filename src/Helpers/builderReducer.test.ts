@@ -43,6 +43,14 @@ function condition(
   };
 }
 
+function emptyExtBlockState(): BuilderState {
+  return {
+    ...emptyState(),
+    extBlocks: [{ id: EXT_BLOCK_ID, transforms: [] }],
+    blockOrder: [EXT_BLOCK_ID],
+  };
+}
+
 function stateWithRosAndSelect(): BuilderState {
   return {
     ...emptyState(),
@@ -594,35 +602,35 @@ describe("builderReducer", () => {
       expect(state.blockOrder).toEqual([]);
     });
 
-    it("block/removeTransform resets ros to empty while keeping select untouched", () => {
-      const withFilter = builderReducer(stateWithRosAndSelect(), {
-        type: "ros/addSection",
-        blockId: EXT_BLOCK_ID,
-        section: "filter",
-        rowId: "new-row",
-      });
-      const state = builderReducer(withFilter, {
-        type: "block/removeTransform",
+    it("block/addTransform adds a ros transform to the ext block", () => {
+      const state = builderReducer(emptyExtBlockState(), {
+        type: "block/addTransform",
         blockId: EXT_BLOCK_ID,
         kind: "ros",
       });
-      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
-        "ros",
-        "select",
-      ]);
-      const [ros] = state.extBlocks[0].transforms;
-      expect(ros.kind === "ros" && ros.ros.sections).toEqual([]);
+      expect(state.extBlocks[0].transforms).toHaveLength(1);
+      expect(state.extBlocks[0].transforms[0].kind).toBe("ros");
       expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
     });
 
-    it("block/removeTransform resets select to empty without dropping the ext block", () => {
-      const withSqlStep = builderReducer(stateWithRosAndSelect(), {
-        type: "select/addSqlStep",
+    it("block/addTransform adds a select transform to the ext block", () => {
+      const state = builderReducer(emptyExtBlockState(), {
+        type: "block/addTransform",
         blockId: EXT_BLOCK_ID,
-        id: "new-sql-step",
+        kind: "select",
       });
-      const state = builderReducer(withSqlStep, {
-        type: "block/removeTransform",
+      expect(state.extBlocks[0].transforms).toHaveLength(1);
+      expect(state.extBlocks[0].transforms[0].kind).toBe("select");
+    });
+
+    it("block/addTransform can add both ros and select to the same ext block", () => {
+      const withRos = builderReducer(emptyExtBlockState(), {
+        type: "block/addTransform",
+        blockId: EXT_BLOCK_ID,
+        kind: "ros",
+      });
+      const state = builderReducer(withRos, {
+        type: "block/addTransform",
         blockId: EXT_BLOCK_ID,
         kind: "select",
       });
@@ -630,8 +638,34 @@ describe("builderReducer", () => {
         "ros",
         "select",
       ]);
-      const [, select] = state.extBlocks[0].transforms;
-      expect(select.kind === "select" && select.select.sqlSteps).toEqual([]);
+      expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
+    });
+
+    it("block/removeTransform keeps the ext block while the other kind remains", () => {
+      const state = builderReducer(stateWithRosAndSelect(), {
+        type: "block/removeTransform",
+        blockId: EXT_BLOCK_ID,
+        kind: "ros",
+      });
+      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
+        "select",
+      ]);
+      expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
+    });
+
+    it("block/removeTransform leaves an empty ext block when the last transform is removed", () => {
+      const withRos: BuilderState = {
+        ...emptyExtBlockState(),
+        extBlocks: [
+          { id: EXT_BLOCK_ID, transforms: [createRosTransformStep()] },
+        ],
+      };
+      const state = builderReducer(withRos, {
+        type: "block/removeTransform",
+        blockId: EXT_BLOCK_ID,
+        kind: "ros",
+      });
+      expect(state.extBlocks[0].transforms).toEqual([]);
       expect(state.blockOrder).toEqual([EXT_BLOCK_ID]);
     });
 
@@ -718,7 +752,7 @@ describe("builderReducer", () => {
       expect(state.conditionBlocks[0].conditions).toHaveLength(1);
     });
 
-    it("stage/setKind ext keeps the pending id and creates empty ros and select transforms", () => {
+    it("stage/setKind ext keeps the pending id and starts with no transforms yet", () => {
       const withPending = builderReducer(emptyState(), {
         type: "stage/add",
         id: "new-stage",
@@ -730,10 +764,7 @@ describe("builderReducer", () => {
       });
       expect(state.blockOrder).toEqual(["new-stage"]);
       expect(state.pendingStages).toEqual([]);
-      expect(state.extBlocks[0].transforms.map((t) => t.kind)).toEqual([
-        "ros",
-        "select",
-      ]);
+      expect(state.extBlocks[0].transforms).toEqual([]);
       expect(state.extBlocks[0].id).toBe("new-stage");
     });
 

@@ -876,6 +876,12 @@ describe("QueryConditionBuilder", () => {
       await addStageOfKind("#ext");
       const extBlockId = uuidMock.mock.results[callsBeforeExt].value as string;
       await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText("ROS"));
+      });
+      await act(async () => {
         fireEvent.click(screen.getByLabelText("Add option"));
       });
       await act(async () => {
@@ -1146,6 +1152,15 @@ describe("QueryConditionBuilder", () => {
       await addStageOfKind("#ext");
     };
 
+    const addExtension = async (kind: "ROS" | "Select") => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText(kind));
+      });
+    };
+
     const addSection = async (
       name: "Filter" | "Encode" | "As label" | "Export",
     ) => {
@@ -1157,7 +1172,7 @@ describe("QueryConditionBuilder", () => {
       });
     };
 
-    it("shows ROS and Select titles immediately, with no separate add step", async () => {
+    it("shows Add extension until ROS or Select are chosen", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1168,9 +1183,9 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addStageOfKind("#ext");
-      expect(screen.getByText("ROS")).toBeTruthy();
-      expect(screen.getByText("Select")).toBeTruthy();
-      expect(screen.queryByLabelText("Add ROS or Select")).toBeNull();
+      expect(screen.getByLabelText("Add ROS or Select")).toBeTruthy();
+      expect(screen.queryByText("ROS")).toBeNull();
+      expect(screen.queryByText("Select")).toBeNull();
     });
 
     it("adds a fresh transform (no sections yet) via the menu", async () => {
@@ -1184,13 +1199,14 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
       expect(screen.getByLabelText("Add option")).toBeTruthy();
       expect(
         screen.queryByPlaceholderText("optional ROS topic filter"),
       ).toBeNull();
     });
 
-    it("resets ROS to empty via its stage actions menu without removing the title", async () => {
+    it("removes ROS via its stage actions menu", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1201,6 +1217,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
       await addSection("Filter");
       expect(
         screen.getByPlaceholderText("optional ROS topic filter"),
@@ -1211,10 +1228,10 @@ describe("QueryConditionBuilder", () => {
       });
       fireEvent.click(within(openActionsMenu()!).getByText("Remove ROS"));
 
-      expect(screen.getByText("ROS")).toBeTruthy();
       expect(
         screen.queryByPlaceholderText("optional ROS topic filter"),
       ).toBeNull();
+      expect(screen.getByText("Add extension")).toBeTruthy();
     });
 
     it("drops #ext from onChange once ROS and Select are both empty again", async () => {
@@ -1229,6 +1246,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
       await addSection("Filter");
       fireEvent.change(
         screen.getByPlaceholderText("optional ROS topic filter"),
@@ -1258,6 +1276,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
       await addSection("Filter");
       fireEvent.change(
         screen.getByPlaceholderText("optional ROS topic filter"),
@@ -1292,6 +1311,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
       await addSection("Encode");
 
       fireEvent.change(screen.getByPlaceholderText("field (e.g. data)"), {
@@ -1371,6 +1391,15 @@ describe("QueryConditionBuilder", () => {
       await addStageOfKind("#ext");
     };
 
+    const addExtension = async (kind: "ROS" | "Select") => {
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add ROS or Select"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText(kind));
+      });
+    };
+
     const addSqlStep = async () => {
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Add option for SQL"));
@@ -1400,6 +1429,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       expect(screen.queryByTestId("monaco-editor")).toBeNull();
       expect(screen.getByLabelText("Add option for SQL")).toBeTruthy();
     });
@@ -1415,6 +1445,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
       expect(screen.getByTestId("monaco-editor")).toHaveValue(
         "SELECT * FROM ENTRY()\n",
@@ -1422,7 +1453,7 @@ describe("QueryConditionBuilder", () => {
       expect(screen.queryByText("As label")).toBeNull();
     });
 
-    it("resets Select to empty via its stage actions menu without removing the title", async () => {
+    it("removes Select via its stage actions menu", async () => {
       render(
         <QueryConditionBuilder
           value=""
@@ -1433,6 +1464,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
       expect(screen.getByTestId("monaco-editor")).toBeTruthy();
 
@@ -1441,8 +1473,8 @@ describe("QueryConditionBuilder", () => {
       });
       fireEvent.click(within(openActionsMenu()!).getByText("Remove Select"));
 
-      expect(screen.getByText("Select")).toBeTruthy();
       expect(screen.queryByTestId("monaco-editor")).toBeNull();
+      expect(screen.getByText("Add extension")).toBeTruthy();
     });
 
     it("drops #ext from onChange once ROS and Select are both empty again", async () => {
@@ -1457,6 +1489,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
       fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT 1 FROM ENTRY()" },
@@ -1485,6 +1518,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
       fireEvent.change(screen.getByTestId("monaco-editor"), {
         target: { value: "SELECT temp.value AS value FROM ENTRY()" },
@@ -1517,6 +1551,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
 
       await act(async () => {
@@ -1566,6 +1601,7 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("Select");
       await addSqlStep();
       await addLabelMapping();
 
@@ -1686,20 +1722,17 @@ describe("QueryConditionBuilder", () => {
       expect(menu.getByText("Remove Select")).toBeTruthy();
 
       fireEvent.click(menu.getByText("Remove ROS"));
-      // The title stays visible - only its content is cleared.
-      expect(screen.getByText("ROS")).toBeTruthy();
       expect(
         screen.queryByPlaceholderText("optional ROS topic filter"),
       ).toBeNull();
       expect(screen.getByText("Select")).toBeTruthy();
+      expect(screen.getByText("Add extension")).toBeTruthy();
 
-      // Remove ROS/Select stay offered afterwards too, since both sections
-      // always exist.
       await act(async () => {
         fireEvent.click(screen.getByLabelText("Stage actions"));
       });
       menu = within(openActionsMenu()!);
-      expect(menu.getByText("Remove ROS")).toBeTruthy();
+      expect(menu.queryByText("Remove ROS")).toBeNull();
       expect(menu.getByText("Remove Select")).toBeTruthy();
     });
 
@@ -1776,6 +1809,8 @@ describe("QueryConditionBuilder", () => {
         />,
       );
       await addTransformBlock();
+      await addExtension("ROS");
+      await addExtension("Select");
       const rosHeading = screen.getByText("ROS");
       const selectHeading = screen.getByText("Select");
       expect(
