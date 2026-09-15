@@ -83,12 +83,10 @@ function disabledReason(option: AddOption, step: SqlStep): string | undefined {
 function SqlStepBlock({
   step,
   label,
-  removable,
   dispatch,
 }: {
   step: SqlStep;
   label: string;
-  removable: boolean;
   dispatch: ExtBlockEditorDispatch;
 }) {
   const activeFormat = activeFormatOf(step);
@@ -173,14 +171,12 @@ function SqlStepBlock({
             ariaLabel={`Add option for ${label}`}
           />
           <div style={{ flex: 1 }} />
-          {removable && (
-            <RemoveSectionButton
-              label={label}
-              onRemove={() =>
-                dispatch({ type: "select/removeSqlStep", id: step.id })
-              }
-            />
-          )}
+          <RemoveSectionButton
+            label={label}
+            onRemove={() =>
+              dispatch({ type: "select/removeSqlStep", id: step.id })
+            }
+          />
         </div>
         <div style={{ marginLeft: ROW_LABEL_WIDTH + ROW_GAP }}>
           <QueryEditor
@@ -446,7 +442,6 @@ export default function SelectStageEditor({
             key={sqlStep.id}
             step={sqlStep}
             label={label}
-            removable={step.sqlSteps.length > 1}
             dispatch={dispatch}
           />
         );
