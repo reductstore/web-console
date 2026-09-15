@@ -1027,6 +1027,33 @@ describe("QueryConditionBuilder", () => {
       expect(extOption).toHaveClass("ant-select-item-option-disabled");
     });
 
+    it("disables Add stage once all 5 kinds are used, with a max-reached tooltip", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await addStageOfKind("&label");
+      await addStageOfKind("#ext");
+      await addStageOfKind("$each_n");
+      await addStageOfKind("$each_t");
+      await addStageOfKind("$limit");
+
+      expect(screen.getByLabelText("Add stage")).toBeDisabled();
+
+      fireEvent.mouseOver(screen.getByLabelText("Add stage"));
+      await waitFor(() => {
+        expect(screen.getByRole("tooltip")).toHaveTextContent(
+          "Maximum of 5 stages reached",
+        );
+      });
+    });
+
     describe("default Sample step", () => {
       it("shows the default $each_t/$__interval step automatically, without needing to be added", () => {
         render(

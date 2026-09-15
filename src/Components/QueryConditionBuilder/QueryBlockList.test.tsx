@@ -56,7 +56,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -68,7 +68,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[block("a"), block("b")]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -85,7 +85,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[block("a", { onRemove })]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -103,7 +103,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={<button aria-label="Add stage">Add stage</button>}
       />,
@@ -116,7 +116,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[block("a", { onAddAfter }), block("b")]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -131,7 +131,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[block("a", { onAddAfter: () => {} }), block("b")]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -140,13 +140,13 @@ describe("QueryBlockList", () => {
     expect(screen.getAllByLabelText("Insert stage here")).toHaveLength(1);
   });
 
-  it("keeps insert buttons visible but disabled when sourceReady is false, instead of hiding them", () => {
+  it("keeps insert buttons visible but disabled when insertion is blocked, instead of hiding them", () => {
     const onAddBefore = vi.fn();
     const onAddAfter = vi.fn();
     render(
       <QueryBlockList
         blocks={[block("a", { onAddBefore, onAddAfter }), block("b")]}
-        sourceReady={false}
+        insertDisabledHint="Select a bucket and entries first"
         onReorderBlock={() => {}}
         addStageMenu={null}
       />,
@@ -161,7 +161,7 @@ describe("QueryBlockList", () => {
     render(
       <QueryBlockList
         blocks={[block("a"), block("b"), block("c")]}
-        sourceReady
+        insertDisabledHint=""
         onReorderBlock={onReorderBlock}
         addStageMenu={null}
       />,

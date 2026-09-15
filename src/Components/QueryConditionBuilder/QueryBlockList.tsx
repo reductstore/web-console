@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Button, Tooltip } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import SortableCard, { BuilderBlockMenuItem } from "./SortableCard";
 import SortableList from "./SortableList";
 
@@ -25,24 +24,21 @@ export interface BuilderBlock {
 
 interface QueryBlockListProps {
   blocks: BuilderBlock[];
-  // Whether inserting a new stage is currently allowed - when false, the
-  // insert-here buttons stay visible but disabled instead of disappearing,
-  // so the layout doesn't shift around as a bucket/entry gets picked.
-  sourceReady: boolean;
+  insertDisabledHint: string;
   onReorderBlock: (fromIndex: number, toIndex: number) => void;
   addStageMenu: ReactNode;
 }
 
 function InsertStageButton({
   onClick,
-  disabled,
+  hint,
 }: {
   onClick: () => void;
-  disabled?: boolean;
+  hint: string;
 }) {
   return (
     <div className="stageInsertRow">
-      <Tooltip title={disabled ? SELECT_SOURCE_HINT : ""}>
+      <Tooltip title={hint}>
         {/* A disabled Button doesn't receive pointer events, so wrapping it
             directly stops the Tooltip's hover trigger from ever firing -
             this extra span still does. */}
@@ -53,7 +49,7 @@ function InsertStageButton({
             size="small"
             className="stageInsertButton"
             icon={<PlusOutlined />}
-            disabled={disabled}
+            disabled={!!hint}
             onClick={onClick}
           />
         </span>
@@ -64,7 +60,7 @@ function InsertStageButton({
 
 export default function QueryBlockList({
   blocks,
-  sourceReady,
+  insertDisabledHint,
   onReorderBlock,
   addStageMenu,
 }: QueryBlockListProps) {
@@ -87,7 +83,7 @@ export default function QueryBlockList({
             onToggleEnabled={block.onToggleEnabled}
             onAddBefore={block.onAddBefore}
             onAddAfter={block.onAddAfter}
-            canInsert={sourceReady}
+            canInsert={!insertDisabledHint}
             extraMenuItems={block.extraMenuItems}
             kindSelector={block.kindSelector}
             headerExtra={block.headerExtra}
@@ -97,7 +93,7 @@ export default function QueryBlockList({
         )}
         renderBetween={(block) => (
           <InsertStageButton
-            disabled={!sourceReady}
+            hint={insertDisabledHint}
             onClick={block.onAddAfter ?? (() => {})}
           />
         )}

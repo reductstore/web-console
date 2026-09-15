@@ -101,6 +101,16 @@ const STAGE_KIND_OPTIONS: {
   },
 ];
 
+const MAX_STAGES = STAGE_KIND_OPTIONS.length;
+
+function insertStageHint(sourceReady: boolean, blockOrder: string[]): string {
+  if (!sourceReady) return SELECT_SOURCE_HINT;
+  if (blockOrder.length >= MAX_STAGES) {
+    return `Maximum of ${MAX_STAGES} stages reached`;
+  }
+  return "";
+}
+
 function usedStageKinds(state: BuilderState): Set<StageKind> {
   const used = new Set<StageKind>();
   if (state.conditionBlocks.length > 0) used.add("conditions");
@@ -216,11 +226,11 @@ function buildBlocks(
   // too - QueryBlockList keeps them visible but disabled while !sourceReady
   // (so the layout stays static instead of buttons popping in and out), and
   // this guard is belt-and-suspenders: never dispatch a stage/insert while
-  // no bucket/entry is selected, even if a disabled button is somehow
-  // triggered.
+  // no bucket/entry is selected or the stage limit is reached, even if a
+  // disabled button is somehow triggered.
   const insertHandlers = (anchorId: string) => ({
     onAddBefore: () => {
-      if (!sourceReady) return;
+      if (insertStageHint(sourceReady, state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
         id: crypto.randomUUID(),
@@ -229,7 +239,7 @@ function buildBlocks(
       });
     },
     onAddAfter: () => {
-      if (!sourceReady) return;
+      if (insertStageHint(sourceReady, state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
         id: crypto.randomUUID(),
@@ -544,24 +554,24 @@ function buildBlocks(
 }
 
 function buildAddStageButton(
-  sourceReady: boolean,
+  hint: string,
   dispatch: Dispatch<BuilderAction>,
 ): ReactNode {
   return (
-    <Tooltip title={sourceReady ? "" : SELECT_SOURCE_HINT}>
+    <Tooltip title={hint}>
       {/* A disabled Button doesn't receive pointer events, so wrapping it
           directly stops the Tooltip's hover trigger from ever firing -
           this extra span still does. */}
       <span>
         <Button
           aria-label="Add stage"
-          disabled={!sourceReady}
+          disabled={!!hint}
           icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
           onClick={() => {
             // Belt-and-suspenders: `disabled` already blocks native clicks,
-            // but never dispatch a stage/add while no bucket/entry is
-            // selected.
-            if (!sourceReady) return;
+            // but never dispatch a stage/add while it's not currently
+            // allowed.
+            if (hint) return;
             dispatch({ type: "stage/add", id: crypto.randomUUID() });
           }}
         >
@@ -791,11 +801,14 @@ export default function QueryConditionBuilder({
             hasProLicense,
             dispatch,
           )}
-          sourceReady={sourceReady}
+          insertDisabledHint={insertStageHint(sourceReady, state.blockOrder)}
           onReorderBlock={(fromIndex, toIndex) =>
             dispatch({ type: "block/reorder", fromIndex, toIndex })
           }
-          addStageMenu={buildAddStageButton(sourceReady, dispatch)}
+          addStageMenu={buildAddStageButton(
+            insertStageHint(sourceReady, state.blockOrder),
+            dispatch,
+          )}
         />
       </BuilderErrorBoundary>
       {error && (
