@@ -45,6 +45,7 @@ import {
 } from "../../Helpers/builderReducer";
 import { conditionBlockDispatch } from "../../Helpers/conditionBlockDispatch";
 import { extBlockDispatch } from "../../Helpers/extBlockDispatch";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { checkLicenseStatus } from "../../Helpers/licenseUtils";
 import { QueryOptions } from "reduct-js";
 
@@ -539,10 +540,6 @@ function buildBlocks(
     ];
   });
 }
-
-// Kept in sync with ConditionListEditor's own "Select a bucket and entries
-// first" hint, so every !sourceReady tooltip in the builder reads the same.
-const SELECT_SOURCE_HINT = "Select a bucket and entries first";
 
 function buildAddStageButton(
   sourceReady: boolean,

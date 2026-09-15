@@ -1,6 +1,7 @@
 import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
 import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
 
@@ -48,7 +49,7 @@ export default function ConditionListEditor({
     lastCondition.label.trim() !== "" &&
     hasValue(lastCondition.value);
   const addConditionHint = !sourceReady
-    ? "Select a bucket and entries first"
+    ? SELECT_SOURCE_HINT
     : !canAddCondition
       ? "Fill in the label and value first"
       : "";

@@ -12,7 +12,7 @@ type ConditionBlockEditorAction = {
   >;
 }[ConditionBlockScopedAction["type"]];
 
-export type ConditionBlockEditorDispatch = Dispatch<ConditionBlockEditorAction>;
+type ConditionBlockEditorDispatch = Dispatch<ConditionBlockEditorAction>;
 
 export function conditionBlockDispatch(
   blockId: string,

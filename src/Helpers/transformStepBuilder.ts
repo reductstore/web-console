@@ -67,7 +67,7 @@ export type TransformStepEntry =
   | { kind: "ros"; ros: RosTransformStep }
   | { kind: "select"; select: SelectTransformStep };
 
-export const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
+const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
 
 function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
   return { id, key: "", value: "" };

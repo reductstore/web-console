@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import QueryConditionBuilder from "../QueryConditionBuilder";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -1482,11 +1483,7 @@ export default function QueryPanel({
                   }}
                   type={showCancel ? "default" : "primary"}
                   disabled={!hasValidSelection}
-                  title={
-                    !hasValidSelection
-                      ? "Select a bucket and entries first"
-                      : undefined
-                  }
+                  title={!hasValidSelection ? SELECT_SOURCE_HINT : undefined}
                   style={{
                     width: 130,
                     whiteSpace: "nowrap",

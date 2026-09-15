@@ -1,14 +1,9 @@
 import { ReactNode } from "react";
 import { Button, Tooltip } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import SortableCard, { BuilderBlockMenuItem } from "./SortableCard";
 import SortableList from "./SortableList";
-
-export type { BuilderBlockMenuItem };
-
-// Kept in sync with ConditionListEditor's own "Select a bucket and entries
-// first" hint, so every !sourceReady tooltip in the builder reads the same.
-const SELECT_SOURCE_HINT = "Select a bucket and entries first";
 
 export interface BuilderBlock {
   id: string;

@@ -146,18 +146,7 @@ export type StageKind =
   | "sample_each_t"
   | "limit";
 
-function replaceBlockId(
-  blockOrder: string[],
-  oldId: string,
-  newId: string,
-): string[] {
-  return blockOrder.map((id) => (id === oldId ? newId : id));
-}
-
-export function currentStageKind(
-  state: BuilderState,
-  id: string,
-): StageKind | null {
+function currentStageKind(state: BuilderState, id: string): StageKind | null {
   if (state.pendingStages.includes(id)) return null;
   if (state.conditionBlocks.some((block) => block.id === id)) {
     return "conditions";
@@ -724,24 +713,22 @@ export function builderReducer(
         extBlocks = extBlocks.filter((block) => block.id !== id);
       } else if (previousKind !== null) steps = removeStep(steps, id);
 
-      const newId = id;
-
       if (kind === "conditions") {
         conditionBlocks = [
           ...conditionBlocks,
           {
-            id: newId,
+            id,
             conditions: addCondition([], crypto.randomUUID()),
           },
         ];
       } else if (kind === "sample_each_n") {
-        steps = addEachNStep(steps, newId);
+        steps = addEachNStep(steps, id);
       } else if (kind === "sample_each_t") {
-        steps = addEachTStep(steps, newId);
+        steps = addEachTStep(steps, id);
       } else if (kind === "limit") {
-        steps = addLimitStep(steps, newId);
+        steps = addLimitStep(steps, id);
       } else if (kind === "ext") {
-        extBlocks = [...extBlocks, { id: newId, transforms: [] }];
+        extBlocks = [...extBlocks, { id, transforms: [] }];
       }
 
       return {
@@ -749,7 +736,6 @@ export function builderReducer(
         conditionBlocks,
         steps,
         extBlocks,
-        blockOrder: replaceBlockId(state.blockOrder, id, newId),
         pendingStages: state.pendingStages.filter((pid) => pid !== id),
       };
     }
@@ -810,7 +796,7 @@ export function extBlocksFromTransforms(
   return [{ id: crypto.randomUUID(), transforms }];
 }
 
-export interface ParsedQueryAndTransform {
+interface ParsedQueryAndTransform {
   list: FlatCondition[];
   steps?: Step[];
   transforms?: TransformStepEntry[];
