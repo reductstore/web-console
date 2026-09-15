@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button, Dropdown, MenuProps, Switch, Typography } from "antd";
 import {
-  CloseOutlined,
+  DeleteOutlined,
   EllipsisOutlined,
   PlusCircleOutlined,
 } from "@ant-design/icons";
@@ -91,7 +91,7 @@ export default function SortableCard({
     },
     {
       key: "delete",
-      icon: <CloseOutlined />,
+      icon: <DeleteOutlined />,
       label: "Delete stage",
       disabled: !removable,
     },
@@ -100,7 +100,7 @@ export default function SortableCard({
           { type: "divider" as const },
           ...extraMenuItems.map((item) => ({
             key: item.key,
-            icon: <CloseOutlined />,
+            icon: <DeleteOutlined />,
             label: item.label,
           })),
         ]
