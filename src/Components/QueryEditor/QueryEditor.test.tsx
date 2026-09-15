@@ -263,7 +263,12 @@ describe("QueryEditor", () => {
   it("defaults to minWidth when resizableWidth is set without an explicit width", () => {
     render(
       <div style={{ display: "flex", width: 600 }}>
-        <QueryEditor value="{}" onChange={() => {}} resizableWidth minWidth={240} />
+        <QueryEditor
+          value="{}"
+          onChange={() => {}}
+          resizableWidth
+          minWidth={240}
+        />
       </div>,
     );
     const container = screen

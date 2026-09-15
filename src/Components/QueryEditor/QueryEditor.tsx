@@ -402,7 +402,11 @@ export function QueryEditor({
   const currentWidth = Math.round(
     manualWidth ??
       width ??
-      (resizableWidth ? minWidth : typeof width === "number" ? width : minWidth),
+      (resizableWidth
+        ? minWidth
+        : typeof width === "number"
+          ? width
+          : minWidth),
   );
 
   useEffect(() => {

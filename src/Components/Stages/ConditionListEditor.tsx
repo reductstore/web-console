@@ -2,12 +2,7 @@ import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
-import {
-  ROW_LABEL_WIDTH,
-  ROW_ICON_FONT_SIZE,
-  ROW_GAP,
-  ROW_VALUE_COLUMN_WIDTH,
-} from "./stageRowLayout";
+import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
 
 type ConnectorChoice = "$and" | "$or" | "not";
 
