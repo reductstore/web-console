@@ -1,5 +1,11 @@
 import React from "react";
-import { render, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  render,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { Mock } from "vitest";
 import { act } from "react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
@@ -233,7 +239,11 @@ describe("EntryDetail", () => {
     });
 
     it("should show the Monaco editor with default JSON", () => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -281,7 +291,11 @@ describe("EntryDetail", () => {
     });
 
     const editJsonTo = (value: string) => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       const textArea = monacoEditor!.querySelector(
         "textarea",
@@ -290,20 +304,28 @@ describe("EntryDetail", () => {
       return textArea;
     };
 
-    // The default query has no conditions of its own, so Label filter (a
-    // step like Sample/Limit) has to be added from the menu before there's
-    // a row to interact with.
+    // The default query has no conditions of its own, so a &label stage
+    // has to be added before there's a row to interact with. The dropdown
+    // is scoped explicitly since the page's own help text also mentions
+    // "&label" outside the dropdown.
     const addLabelFilter = async () => {
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add step"));
+        fireEvent.click(screen.getByLabelText("Add stage"));
       });
+      const selects = screen.getAllByLabelText("Stage type");
       await act(async () => {
-        fireEvent.click(screen.getByText("Label filter"));
+        fireEvent.mouseDown(selects[selects.length - 1]);
+      });
+      const dropdown = document.querySelector(
+        ".ant-select-dropdown",
+      ) as HTMLElement;
+      await act(async () => {
+        fireEvent.click(within(dropdown).getByText("&label"));
       });
     };
 
-    it("starts in Builder mode, ready to add a Label filter block", () => {
-      expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    it("starts in Builder mode, ready to add a &label stage", () => {
+      expect(screen.getByLabelText("Add stage")).not.toBeDisabled();
     });
 
     it("reparses losslessly when returning to Builder without touching the JSON", async () => {
@@ -314,43 +336,68 @@ describe("EntryDetail", () => {
         target: { value: "active" },
       });
 
-      fireEvent.click(screen.getByRole("switch"));
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
 
-      expect(screen.getByText("Label filter")).toBeTruthy();
+      expect(screen.getByText("Stage 1")).toBeTruthy();
       expect(screen.getByPlaceholderText("value")).toHaveValue("active");
     });
 
     it("shows a confirmation before resetting the builder after a manual JSON edit", () => {
       editJsonTo('{"&status": {"$eq": "active"}}');
 
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       // Still in JSON mode: the switch is deferred behind the confirmation.
-      expect(screen.queryByText("Label filter")).toBeNull();
+      expect(screen.queryByLabelText("Add stage")).toBeNull();
       expect(screen.getByText(/completely reset the builder/)).toBeTruthy();
     });
 
     it("resets the builder once the confirmation is accepted", () => {
       editJsonTo('{"&status": {"$eq": "active"}}');
 
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-      // The reset goes back to the app's zero-condition default, so Where
-      // labels (added just for the edited "&status" condition) is gone too.
-      expect(screen.queryByText("Label filter")).toBeNull();
+      // The reset goes back to the app's zero-condition default, so the
+      // &label stage (added just for the edited "&status" condition) is
+      // gone too.
+      expect(screen.queryByRole("combobox", { name: "Label" })).toBeNull();
       expect(screen.queryByPlaceholderText("value")).toBeNull();
     });
 
     it("resets to the default $each_t query, not a bare {}, so a later JSON view still shows it", () => {
       editJsonTo('{"&status": {"$eq": "active"}}');
 
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
       // Back in Builder mode after the reset; switch to JSON again without
       // touching the builder.
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       const textArea = monacoEditor!.querySelector(
         "textarea",
@@ -361,10 +408,14 @@ describe("EntryDetail", () => {
     it("stays in JSON mode and keeps the edit when the reset is cancelled", () => {
       const textArea = editJsonTo('{"&status": {"$eq": "active"}}');
 
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-      expect(screen.queryByText("Label filter")).toBeNull();
+      expect(screen.queryByLabelText("Add stage")).toBeNull();
       expect(textArea.value).toBe('{"&status": {"$eq": "active"}}');
     });
 
@@ -438,7 +489,7 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("json-saved");
 
-        expect(screen.queryByText("Label filter")).toBeNull();
+        expect(screen.queryByLabelText("Add stage")).toBeNull();
         const monacoEditor = container.querySelector(".monaco-editor-mock");
         const textArea = monacoEditor!.querySelector(
           "textarea",
@@ -449,7 +500,11 @@ describe("EntryDetail", () => {
       it("restores builder mode and repopulates its fields when loading a query saved from Builder mode", async () => {
         // Start from JSON mode so ending up in Builder mode proves the
         // saved mode was applied, not just left as-is.
-        fireEvent.click(screen.getByRole("switch"));
+        fireEvent.click(
+          screen.getByRole("switch", {
+            name: "Switch between Builder and JSON mode",
+          }),
+        );
         act(() => {
           useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
             name: "builder-saved",
@@ -460,12 +515,16 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("builder-saved");
 
-        expect(screen.getByText("Label filter")).toBeTruthy();
+        expect(screen.getByText("Stage 1")).toBeTruthy();
         expect(screen.getByPlaceholderText("value")).toHaveValue("active");
       });
 
       it("falls back to the representability check for a query saved before mode was tracked", async () => {
-        fireEvent.click(screen.getByRole("switch"));
+        fireEvent.click(
+          screen.getByRole("switch", {
+            name: "Switch between Builder and JSON mode",
+          }),
+        );
         act(() => {
           useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
             name: "legacy-saved",
@@ -475,7 +534,7 @@ describe("EntryDetail", () => {
 
         await loadSavedQuery("legacy-saved");
 
-        expect(screen.getByText("Label filter")).toBeTruthy();
+        expect(screen.getByText("Stage 1")).toBeTruthy();
       });
 
       it("keeps Save disabled for an untouched query saved before mode was tracked", async () => {
@@ -947,7 +1006,11 @@ describe("EntryDetail", () => {
       });
 
       // Check the Monaco editor component value
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       expect(monacoEditor).not.toBeNull();
 
@@ -974,7 +1037,11 @@ describe("EntryDetail", () => {
       });
 
       // After render, the condition should contain the default macro
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const updatedMonacoEditor = container.querySelector(
         ".monaco-editor-mock",
       );
@@ -999,7 +1066,11 @@ describe("EntryDetail", () => {
         "&label": { $eq: "test" },
       };
 
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Switch between Builder and JSON mode",
+        }),
+      );
       const monacoEditor = container.querySelector(".monaco-editor-mock");
       const textArea = monacoEditor!.querySelector(
         "textarea",

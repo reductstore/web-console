@@ -6,7 +6,13 @@ import {
   LABEL_OPERATORS,
   isMultiValueOperator,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_INPUT_WIDTH, ROW_GAP, ROW_GROUP_WIDTH } from "./stepRowLayout";
+import {
+  ROW_INPUT_WIDTH,
+  ROW_ICON_FONT_SIZE,
+  ROW_ICON_BUTTON_WIDTH,
+  OPERATOR_SELECT_WIDTH,
+  WRAP_ROW_STYLE,
+} from "./stageRowLayout";
 
 interface LabelConditionEditorProps {
   condition: FlatCondition;
@@ -45,54 +51,52 @@ export default function LabelConditionEditor({
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: ROW_GAP }}>
-      <div style={{ display: "flex", gap: ROW_GAP, width: ROW_GROUP_WIDTH }}>
-        <AutoComplete
-          aria-label="Label"
-          placeholder="label"
-          value={condition.label}
-          options={labelOptions.map((option) => ({ value: option }))}
-          onChange={(value) =>
-            onChange(condition.id, { label: value.replace(/^&/, "") })
-          }
-          style={{ width: ROW_INPUT_WIDTH, flexShrink: 0 }}
-          popupMatchSelectWidth={false}
-        />
+    <div style={WRAP_ROW_STYLE}>
+      <AutoComplete
+        aria-label="Label"
+        placeholder="label"
+        value={condition.label}
+        options={labelOptions.map((option) => ({ value: option }))}
+        onChange={(value) =>
+          onChange(condition.id, { label: value.replace(/^&/, "") })
+        }
+        style={{ width: ROW_INPUT_WIDTH }}
+        popupMatchSelectWidth={false}
+      />
+      <Select
+        value={condition.operator}
+        options={LABEL_OPERATORS}
+        onChange={handleOperatorChange}
+        style={{ width: OPERATOR_SELECT_WIDTH }}
+        popupMatchSelectWidth={false}
+      />
+      {isMultiValue ? (
         <Select
-          value={condition.operator}
-          options={LABEL_OPERATORS}
-          onChange={handleOperatorChange}
-          style={{ width: "max-content", minWidth: 48, flexShrink: 0 }}
+          mode="tags"
+          placeholder="values"
+          tokenSeparators={[","]}
+          value={condition.value as string[]}
+          onChange={(value) => onChange(condition.id, { value })}
+          style={{ width: ROW_INPUT_WIDTH }}
           popupMatchSelectWidth={false}
         />
-        {isMultiValue ? (
-          <Select
-            mode="tags"
-            placeholder="values"
-            tokenSeparators={[","]}
-            value={condition.value as string[]}
-            onChange={(value) => onChange(condition.id, { value })}
-            style={{ flex: 1, minWidth: 0 }}
-            popupMatchSelectWidth={false}
-          />
-        ) : (
-          <Input
-            placeholder="value"
-            value={condition.value as string}
-            onChange={(e) => onChange(condition.id, { value: e.target.value })}
-            style={{ flex: 1, minWidth: 0 }}
-          />
-        )}
-      </div>
+      ) : (
+        <Input
+          placeholder="value"
+          value={condition.value as string}
+          onChange={(e) => onChange(condition.id, { value: e.target.value })}
+          style={{ width: ROW_INPUT_WIDTH }}
+        />
+      )}
       {removable ? (
         <Button
           aria-label="Remove condition"
           type="text"
-          icon={<CloseOutlined style={{ transform: "scale(0.65)" }} />}
+          icon={<CloseOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
           onClick={() => onRemove(condition.id)}
         />
       ) : (
-        <div style={{ width: 32, flexShrink: 0 }} />
+        <div style={{ width: ROW_ICON_BUTTON_WIDTH, flexShrink: 0 }} />
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH } from "./stepRowLayout";
+import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
 
 type ConnectorChoice = "$and" | "$or" | "not";
 
@@ -48,7 +49,7 @@ export default function ConditionListEditor({
     lastCondition.label.trim() !== "" &&
     hasValue(lastCondition.value);
   const addConditionHint = !sourceReady
-    ? "Select a bucket and entries first"
+    ? SELECT_SOURCE_HINT
     : !canAddCondition
       ? "Fill in the label and value first"
       : "";
@@ -99,19 +100,26 @@ export default function ConditionListEditor({
           </div>
         ))}
 
-      <Tooltip title={addConditionHint}>
-        {/* A disabled Button doesn't receive pointer events, so wrapping it
-            directly stops the Tooltip's hover trigger from ever firing -
-            this extra span still does. */}
-        <span style={{ display: "inline-block", marginTop: 8 }}>
-          <Button
-            aria-label="Add condition"
-            disabled={!canAddCondition}
-            icon={<PlusOutlined style={{ transform: "scale(0.65)" }} />}
-            onClick={onAddCondition}
-          />
-        </span>
-      </Tooltip>
+      {/* Offsets past the "Where"/connector column so the button lines up
+          with the value column in ROS/Select grids (ROW_LABEL_WIDTH + gap). */}
+      <div style={{ display: "flex", marginTop: 8 }}>
+        <div style={{ width: ROW_LABEL_WIDTH + ROW_GAP, flexShrink: 0 }} />
+        <Tooltip title={addConditionHint}>
+          {/* A disabled Button doesn't receive pointer events, so wrapping it
+              directly stops the Tooltip's hover trigger from ever firing -
+              this extra span still does. */}
+          <span style={{ display: "flex" }}>
+            <Button
+              aria-label="Add condition"
+              disabled={!canAddCondition}
+              icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+              onClick={onAddCondition}
+            >
+              Add condition
+            </Button>
+          </span>
+        </Tooltip>
+      </div>
     </div>
   );
 }

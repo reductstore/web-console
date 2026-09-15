@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { Button, Popconfirm, Select, Tooltip, Typography } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import {
@@ -33,7 +33,6 @@ export default function QuerySelector({
   const currentQueries = getQueries(bucketName, entryName);
   const allQueryGroups = getAllQueries();
   const loadedQueryName = getLoadedQueryName(bucketName, entryName);
-  const didAutoLoad = useRef(false);
 
   const currentKey = (() => {
     const entries = Array.isArray(entryName) ? entryName : [entryName];
@@ -47,23 +46,6 @@ export default function QuerySelector({
   const otherGroups = showAllQueries
     ? allQueryGroups.filter((g) => g.key !== currentKey)
     : [];
-
-  // Auto-load last used query when navigating to this entry
-  useEffect(() => {
-    didAutoLoad.current = false;
-  }, [bucketName, entryName]);
-
-  useEffect(() => {
-    if (didAutoLoad.current) return;
-    didAutoLoad.current = true;
-
-    if (loadedQueryName) {
-      const query = currentQueries.find((q) => q.name === loadedQueryName);
-      if (query) {
-        onLoadQuery(query);
-      }
-    }
-  }, [bucketName, entryName, loadedQueryName, currentQueries, onLoadQuery]);
 
   const handleSelect = (value: string) => {
     // value format: "key::name" for other groups, just "name" for current

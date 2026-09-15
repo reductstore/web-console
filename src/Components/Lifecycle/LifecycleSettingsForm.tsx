@@ -23,7 +23,7 @@ import {
 import { InfoCircleOutlined } from "@ant-design/icons";
 
 import "./LifecycleSettingsForm.css";
-import { JsonQueryEditor } from "../JsonEditor";
+import { QueryEditor } from "../QueryEditor";
 import { parseAndFormat, processWhenCondition } from "../../Helpers/json5Utils";
 import { LIFECYCLE_TYPE_OPTIONS } from "./LifecycleModeUtils";
 
@@ -427,7 +427,7 @@ export default class LifecycleSettingsForm extends React.Component<
                   }
                 >
                   {!isTestEnvironment && (
-                    <JsonQueryEditor
+                    <QueryEditor
                       value={this.state.formattedWhen}
                       onChange={(value: string) =>
                         this.handleWhenConditionChange(value)

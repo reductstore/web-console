@@ -71,7 +71,7 @@ describe("QuerySelector", () => {
     expect(screen.queryByTestId("delete-query-q1")).toBeNull();
   });
 
-  it("auto-loads last used query on mount", () => {
+  it("never auto-loads a query just because the bucket/entry matches a previous one", () => {
     useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
       name: "q1",
       query: '{"$each_t": "5s"}',
@@ -89,11 +89,6 @@ describe("QuerySelector", () => {
       />,
     );
 
-    expect(onLoadQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "q1", query: '{"$each_t": "5s"}' }),
-    );
-    expect(
-      useQueryStore.getState().getLoadedQueryName("test-bucket", "test-entry"),
-    ).toBe("q1");
+    expect(onLoadQuery).not.toHaveBeenCalled();
   });
 });

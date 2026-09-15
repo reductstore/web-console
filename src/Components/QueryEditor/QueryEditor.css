@@ -12,6 +12,52 @@
   height: 100%;
 }
 
+.jsonQueryEditorWidthWrap {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.jsonQueryEditorResizeHandleHorizontal {
+  position: relative;
+  flex: 0 0 6px;
+  border-radius: 0 6px 6px 0;
+  background: #fafafa;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.jsonQueryEditorResizeHandleHorizontal span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 32px;
+  border-radius: 2px;
+  background: #bfbfbf;
+  transform: translate(-50%, -50%);
+  transition:
+    height 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.jsonQueryEditorResizeHandleHorizontal:hover span,
+.jsonQueryEditorResizeHandleHorizontal:focus-visible span {
+  height: 44px;
+  background: var(--input-focus);
+}
+
+.jsonQueryEditorResizeHandleHorizontal:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--input-focus);
+}
+
+.jsonQueryEditorWidthWrap.isResizingWidth,
+.jsonQueryEditorWidthWrap.isResizingWidth * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
 .jsonQueryEditorContainer.isResizable .jsonQueryEditorToolbar {
   border-radius: 0;
 }
@@ -106,6 +152,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
 }
 
 .jsonQueryEditorBody {

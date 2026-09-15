@@ -4,7 +4,8 @@ import {
   EachTStep,
   SampleKind,
 } from "../../Helpers/conditionalQueryBuilder";
-import { ROW_LABEL_WIDTH, VALUE_INPUT_WIDTH } from "./stepRowLayout";
+import { VALUE_INPUT_WIDTH } from "./stageRowLayout";
+import { SingleRowStageContent } from "./StageSectionLayout";
 
 const DURATION_SUGGESTIONS = [
   "$__interval",
@@ -20,7 +21,7 @@ const DURATION_SUGGESTIONS = [
   "1h",
 ].map((value) => ({ value }));
 
-interface SampleStepEditorProps {
+interface SampleStageEditorProps {
   kind: SampleKind;
   everyNth?: number;
   duration: string;
@@ -30,7 +31,7 @@ interface SampleStepEditorProps {
   intervalValue?: string;
 }
 
-export default function SampleStepEditor({
+export default function SampleStageEditor({
   kind,
   everyNth,
   duration,
@@ -38,23 +39,9 @@ export default function SampleStepEditor({
   onChangeEachN,
   onChangeEachT,
   intervalValue,
-}: SampleStepEditorProps) {
+}: SampleStageEditorProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        flex: 1,
-        minWidth: 0,
-      }}
-    >
-      <Typography.Text
-        strong
-        style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
-      >
-        {kind === "each_n" ? "Step" : "Interval"}
-      </Typography.Text>
+    <SingleRowStageContent label={kind === "each_n" ? "Step" : "Interval"}>
       {kind === "each_n" ? (
         <InputNumber
           min={1}
@@ -83,6 +70,6 @@ export default function SampleStepEditor({
           resolves to {intervalValue}
         </Typography.Text>
       )}
-    </div>
+    </SingleRowStageContent>
   );
 }

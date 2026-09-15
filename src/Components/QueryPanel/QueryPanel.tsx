@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import QueryConditionBuilder from "../QueryConditionBuilder";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -60,6 +61,7 @@ import {
   processWhenCondition,
 } from "../../Helpers/json5Utils";
 import { parseQueryValue } from "../../Helpers/conditionalQueryBuilder";
+import { BuilderState } from "../../Helpers/builderReducer";
 import EditRecordLabels from "../EditRecordLabels";
 import RecordPreview from "../RecordPreview";
 import SaveQueryModal from "../SavedQueries/SaveQueryModal";
@@ -157,6 +159,11 @@ export default function QueryPanel({
   const [showCancel, setShowCancel] = useState(false);
   const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [whenCondition, setWhenCondition] = useState<string>(defaultQuery);
+  const builderStateRef = useRef<BuilderState | undefined>(undefined);
+  const [builderInitialState, setBuilderInitialState] = useState<
+    BuilderState | undefined
+  >(undefined);
+  const [builderKey, setBuilderKey] = useState(0);
   // If the initial query isn't representable in the builder (e.g. a
   // hand-written query with real nested grouping), land in JSON mode
   // instead of silently showing an empty builder next to the real query.
@@ -921,6 +928,11 @@ export default function QueryPanel({
       }
 
       setWhenCondition(saved.query);
+      builderStateRef.current = saved.builderState;
+      if (saved.builderState) {
+        setBuilderInitialState(saved.builderState);
+        setBuilderKey((k) => k + 1);
+      }
       setFetchError("");
       // Reopen in whichever mode the query was saved from, falling back to
       // the representability check for queries saved before this was
@@ -971,6 +983,8 @@ export default function QueryPanel({
     rangeEnd: timeRange.end?.toString(),
     bucketName,
     entries: [...selectedEntries],
+    builderState:
+      conditionMode === "builder" ? builderStateRef.current : undefined,
   });
 
   const handleSaveQuery = () => {
@@ -1362,9 +1376,12 @@ export default function QueryPanel({
                 </div>
                 <div className="queryConditionalContent">
                   <QueryConditionBuilder
+                    key={builderKey}
+                    initialState={builderInitialState}
                     value={whenCondition}
-                    onChange={(value: string) => {
+                    onChange={(value, state) => {
                       setWhenCondition(value);
+                      builderStateRef.current = state;
                       if (fetchError) {
                         setFetchError("");
                       }
@@ -1429,12 +1446,6 @@ export default function QueryPanel({
                 </Modal>
               </div>
               <div className="fetchButton">
-                <QueryStatusLabel
-                  status={progress.status}
-                  recordCount={records.length}
-                  elapsed={progress.elapsed}
-                  eta={progress.eta}
-                />
                 <Button
                   onClick={() => {
                     if (showCancel && fetchCtrlRef.current) {
@@ -1445,11 +1456,7 @@ export default function QueryPanel({
                   }}
                   type={showCancel ? "default" : "primary"}
                   disabled={!hasValidSelection}
-                  title={
-                    !hasValidSelection
-                      ? "Select a bucket and entries first"
-                      : undefined
-                  }
+                  title={!hasValidSelection ? SELECT_SOURCE_HINT : undefined}
                   style={{
                     width: 130,
                     whiteSpace: "nowrap",
@@ -1464,6 +1471,12 @@ export default function QueryPanel({
                 >
                   {showCancel ? "Stop" : "Run Query"}
                 </Button>
+                <QueryStatusLabel
+                  status={progress.status}
+                  recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
+                />
               </div>
               <QueryProgressBar
                 status={progress.status}
@@ -1545,6 +1558,9 @@ export default function QueryPanel({
         rangeKey={detectRangeKey(timeRange.start, timeRange.end)}
         rangeStart={timeRange.start?.toString()}
         rangeEnd={timeRange.end?.toString()}
+        builderState={
+          conditionMode === "builder" ? builderStateRef.current : undefined
+        }
       />
 
       <ShareLinkModal
