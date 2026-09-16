@@ -171,14 +171,26 @@ describe("SelectStageEditor", () => {
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for Select 1"));
-      fireEvent.click(screen.getByRole("menuitem", { name: "Select step" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "SQL" }));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/setSql",
         stepId: "sql-1",
       });
     });
 
-    it("spills into a new block after the current one when it already has a sql field", () => {
+    it("greys out SQL once the block already has one", () => {
+      const step: SelectTransformStep = {
+        sqlSteps: [makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" })],
+      };
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
+      expect(screen.getByRole("menuitem", { name: "SQL" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+    });
+
+    it("Select step always inserts a new block after the current one, sql or not", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
         sqlSteps: [
@@ -201,7 +213,7 @@ describe("SelectStageEditor", () => {
       const step: SelectTransformStep = { sqlSteps: [] };
       render(<SelectStageAddButton step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for Select"));
-      fireEvent.click(screen.getByText("Select step"));
+      fireEvent.click(screen.getByText("SQL"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),

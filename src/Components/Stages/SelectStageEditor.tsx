@@ -55,19 +55,24 @@ function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
     ?.value;
 }
 
-type AddOption = "sql" | "format" | "export" | "asLabel";
+type AddOption = "sql" | "format" | "export" | "asLabel" | "selectStep";
 
-const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel", "sql"];
+const ADD_OPTIONS: AddOption[] = ["sql", "format", "export", "asLabel"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
-  sql: "Select step",
+  sql: "SQL",
   format: "Format",
   export: "Export",
   asLabel: "As label",
+  selectStep: "Select step",
 };
 
 function disabledReason(option: AddOption, step: SqlStep): string | undefined {
-  if (option === "sql" || option === "asLabel") return undefined;
+  if (option === "asLabel" || option === "selectStep") return undefined;
+
+  if (option === "sql") {
+    return step.sql !== null ? "SQL is already added" : undefined;
+  }
 
   if (option === "export") {
     return step.formatSections.includes("export")
@@ -109,22 +114,20 @@ function SqlStepBlock({
   };
 
   const menuItems: MenuProps["items"] = [
-    ...ADD_OPTIONS.filter((option) => option !== "sql").map(buildOptionItem),
+    ...ADD_OPTIONS.map(buildOptionItem),
     { type: "divider" as const },
-    buildOptionItem("sql"),
+    buildOptionItem("selectStep"),
   ];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "sql") {
-      if (step.sql !== null) {
-        dispatch({
-          type: "select/addSqlStep",
-          id: crypto.randomUUID(),
-          afterId: step.id,
-        });
-      } else {
-        dispatch({ type: "select/setSql", stepId: step.id });
-      }
+      dispatch({ type: "select/setSql", stepId: step.id });
+    } else if (key === "selectStep") {
+      dispatch({
+        type: "select/addSqlStep",
+        id: crypto.randomUUID(),
+        afterId: step.id,
+      });
     } else if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
@@ -426,14 +429,10 @@ export function SelectStageAddButton({
 }: SelectStageEditorProps) {
   if (step.sqlSteps.length > 0) return null;
 
-  const menuItems: MenuProps["items"] = [
-    ...ADD_OPTIONS.filter((option) => option !== "sql").map((option) => ({
-      key: option,
-      label: ADD_OPTION_LABELS[option],
-    })),
-    { type: "divider" as const },
-    { key: "sql", label: ADD_OPTION_LABELS.sql },
-  ];
+  const menuItems: MenuProps["items"] = ADD_OPTIONS.map((option) => ({
+    key: option,
+    label: ADD_OPTION_LABELS[option],
+  }));
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "sql") {
