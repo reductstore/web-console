@@ -859,6 +859,21 @@ describe("builderReducer", () => {
       }
     });
 
+    it("stage/setKind null tears down the stage's content and puts it back in pendingStages", () => {
+      const withKind = builderReducer(
+        builderReducer(emptyState(), { type: "stage/add", id: "new-stage" }),
+        { type: "stage/setKind", id: "new-stage", kind: "conditions" },
+      );
+      const state = builderReducer(withKind, {
+        type: "stage/setKind",
+        id: "new-stage",
+        kind: null,
+      });
+      expect(state.blockOrder).toEqual(["new-stage"]);
+      expect(state.pendingStages).toEqual(["new-stage"]);
+      expect(state.conditionBlocks).toEqual([]);
+    });
+
     it("block/reorder moves the block id from one index to another", () => {
       const initial: BuilderState = {
         ...emptyState(),

@@ -31,6 +31,7 @@ interface SortableCardProps {
   extraMenuItems?: BuilderBlockMenuItem[];
   enabled?: boolean;
   onToggleEnabled?: () => void;
+  toggleDisabled?: boolean;
   kindSelector?: ReactNode;
   // Rendered in the header right after the enable/disable toggle - e.g. a
   // license warning that needs to be visible at a glance, not just inside
@@ -51,6 +52,7 @@ export default function SortableCard({
   extraMenuItems,
   enabled = true,
   onToggleEnabled,
+  toggleDisabled = false,
   kindSelector,
   headerExtra,
   children,
@@ -147,6 +149,7 @@ export default function SortableCard({
             aria-label={enabled ? "Disable stage" : "Enable stage"}
             size="small"
             checked={enabled}
+            disabled={toggleDisabled}
             onChange={() => onToggleEnabled?.()}
           />
         </span>

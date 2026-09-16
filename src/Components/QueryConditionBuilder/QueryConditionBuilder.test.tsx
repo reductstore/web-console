@@ -1047,6 +1047,54 @@ describe("QueryConditionBuilder", () => {
       });
     });
 
+    it("disables the enable/disable toggle until a stage type is chosen", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText("Add stage"));
+      });
+      expect(screen.getByLabelText("Disable stage")).toBeDisabled();
+
+      const selects = screen.getAllByLabelText("Stage type");
+      await act(async () => {
+        fireEvent.mouseDown(selects[selects.length - 1]);
+      });
+      await act(async () => {
+        fireEvent.click(within(openStageTypeDropdown()).getByText("$limit"));
+      });
+      expect(screen.getByLabelText("Disable stage")).not.toBeDisabled();
+    });
+
+    it("clearing the stage type through the select's own x reverts it to pending and disables the toggle again", async () => {
+      render(
+        <QueryConditionBuilder
+          value=""
+          onChange={noop}
+          mode="builder"
+          onUnrepresentable={noop}
+          validationContext={readyValidationContext}
+        />,
+      );
+
+      await addStageOfKind("$limit");
+      expect(screen.getByLabelText("Disable stage")).not.toBeDisabled();
+
+      fireEvent.click(document.querySelector(".ant-select-clear")!);
+
+      expect(screen.getByLabelText("Disable stage")).toBeDisabled();
+      expect(
+        screen.getByText("Choose a stage type above to configure it."),
+      ).toBeTruthy();
+    });
+
     describe("default Sample step", () => {
       it("shows the default $each_t/$__interval step automatically, without needing to be added", () => {
         render(

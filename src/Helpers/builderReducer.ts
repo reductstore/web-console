@@ -318,7 +318,7 @@ export type BuilderAction =
       anchorId: string;
       position: "before" | "after";
     }
-  | { type: "stage/setKind"; id: string; kind: StageKind }
+  | { type: "stage/setKind"; id: string; kind: StageKind | null }
   | { type: "stage/removePending"; id: string }
   | { type: "step/remove"; id: string }
   | { type: "external/sync"; state: BuilderState };
@@ -792,7 +792,10 @@ export function builderReducer(
         conditionBlocks,
         steps,
         extBlocks,
-        pendingStages: state.pendingStages.filter((pid) => pid !== id),
+        pendingStages:
+          kind === null
+            ? [...state.pendingStages, id]
+            : state.pendingStages.filter((pid) => pid !== id),
       };
     }
     case "external/sync":

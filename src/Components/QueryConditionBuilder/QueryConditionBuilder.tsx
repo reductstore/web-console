@@ -139,7 +139,7 @@ function StageKindSelect({
 }: {
   value: StageKind | null;
   disabledKinds: Set<StageKind>;
-  onChange: (kind: StageKind) => void;
+  onChange: (kind: StageKind | null) => void;
 }) {
   return (
     <Select
@@ -149,7 +149,8 @@ function StageKindSelect({
       popupMatchSelectWidth={300}
       classNames={{ popup: { root: "stageKindDropdown" } }}
       value={value ?? undefined}
-      onChange={onChange}
+      allowClear
+      onChange={(kind) => onChange(kind ?? null)}
       options={STAGE_KIND_OPTIONS.map((option) => ({
         value: option.kind,
         label: option.label,
@@ -258,6 +259,7 @@ function buildBlocks(
           onRemove: () => dispatch({ type: "stage/removePending", id }),
           enabled: true,
           onToggleEnabled: () => {},
+          toggleDisabled: true,
           ...insertHandlers(id),
           kindSelector: (
             <StageKindSelect

@@ -10,6 +10,7 @@ export interface BuilderBlock {
   onRemove?: () => void;
   enabled: boolean;
   onToggleEnabled: () => void;
+  toggleDisabled?: boolean;
   onAddBefore?: () => void;
   onAddAfter?: () => void;
   // Extra actions shown in the stage's "..." menu, below the standard
@@ -81,6 +82,7 @@ export default function QueryBlockList({
             onRemove={block.onRemove ?? (() => {})}
             enabled={block.enabled}
             onToggleEnabled={block.onToggleEnabled}
+            toggleDisabled={block.toggleDisabled}
             onAddBefore={block.onAddBefore}
             onAddAfter={block.onAddAfter}
             canInsert={!insertDisabledHint}
