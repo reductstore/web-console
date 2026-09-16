@@ -143,7 +143,6 @@ function StageKindSelect({
     <Select
       aria-label="Stage type"
       placeholder="Select a stage type"
-      className="stageKindSelect"
       style={{ width: 160 }}
       popupMatchSelectWidth={300}
       classNames={{ popup: { root: "stageKindDropdown" } }}
