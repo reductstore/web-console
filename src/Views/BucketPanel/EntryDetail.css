@@ -141,6 +141,15 @@
   text-overflow: unset;
 }
 
+.stageKindSelect .ant-select-suffix {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.stageKindSelect .ant-select-clear {
+  inset-inline-end: 33px !important;
+}
+
 .queryCardBody {
   margin-top: 25px;
 }
