@@ -16,7 +16,6 @@ import {
 import {
   Typography,
   Button,
-  Dropdown,
   Input,
   Select,
   Modal,
@@ -30,7 +29,6 @@ import type { ColumnType } from "antd/es/table";
 import {
   DeleteOutlined,
   DownloadOutlined,
-  DownOutlined,
   LoadingOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
@@ -1087,41 +1085,17 @@ export default function QueryPanel({
   // Saving persists the bucket and entry selection alongside the query, so
   // the button lives with the Query header rather than inside the Where
   // labels section.
-  const loadedQueryName = getLoadedQueryName(bucketName, selectedEntries);
-  const saveTooltipTitle = isSaveDisabled
-    ? "Query unchanged"
-    : "Save query to browser";
-
   const saveButton = (
-    <Tooltip title={saveTooltipTitle}>
-      {loadedQueryName ? (
-        <Dropdown.Button
-          onClick={handleSaveQuery}
-          icon={<DownOutlined />}
-          trigger={["click"]}
-          buttonsRender={([primaryButton, dropdownTrigger]) => [
-            React.cloneElement(primaryButton as React.ReactElement<any>, {
-              "aria-label": "Save query",
-              disabled: isSaveDisabled,
-            }),
-            dropdownTrigger,
-          ]}
-          menu={{
-            items: [{ key: "saveAsNew", label: "Save as new" }],
-            onClick: () => setIsSaveQueryModalVisible(true),
-          }}
-        >
-          Save
-        </Dropdown.Button>
-      ) : (
-        <Button
-          aria-label="Save query"
-          onClick={handleSaveQuery}
-          disabled={isSaveDisabled}
-        >
-          Save
-        </Button>
-      )}
+    <Tooltip
+      title={isSaveDisabled ? "Query unchanged" : "Save query to browser"}
+    >
+      <Button
+        aria-label="Save query"
+        onClick={handleSaveQuery}
+        disabled={isSaveDisabled}
+      >
+        Save
+      </Button>
     </Tooltip>
   );
 
