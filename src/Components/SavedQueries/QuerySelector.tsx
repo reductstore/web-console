@@ -1,7 +1,11 @@
 import React from "react";
 import { Button, Popconfirm, Select, Tooltip, Typography } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
-import { useQueryStore, SavedQuery } from "../../stores/queryStore";
+import {
+  useQueryStore,
+  SavedQuery,
+  formatQueryKey,
+} from "../../stores/queryStore";
 
 interface QuerySelectorProps {
   bucketName: string;
@@ -48,24 +52,15 @@ export default function QuerySelector({
   const handleSelect = (value: string) => {
     // value format: "key::name" for other groups, just "name" for current
     const sepIdx = value.indexOf("::");
-    if (sepIdx !== -1) {
-      const sourceKey = value.substring(0, sepIdx);
-      const queryName = value.substring(sepIdx + 2);
-      const group = allQueryGroups.find((g) => g.key === sourceKey);
-      const query = group?.queries.find((q) => q.name === queryName);
-      if (query) {
-        onLoadQuery(query);
-        // Set loaded name on the target bucket/entries context
-        if (query.bucketName && query.entries?.length) {
-          setLoadedQueryName(query.bucketName, query.entries, query.name);
-        }
-      }
-    } else {
-      const query = currentQueries.find((q) => q.name === value);
-      if (query) {
-        onLoadQuery(query);
-        setLoadedQueryName(bucketName, entryName, query.name);
-      }
+    const query =
+      sepIdx !== -1
+        ? allQueryGroups
+            .find((g) => g.key === value.substring(0, sepIdx))
+            ?.queries.find((q) => q.name === value.substring(sepIdx + 2))
+        : currentQueries.find((q) => q.name === value);
+    if (query) {
+      onLoadQuery(query);
+      setLoadedQueryName(bucketName, entryName, query.name);
     }
   };
 
@@ -78,24 +73,53 @@ export default function QuerySelector({
     onClearQuery?.();
   };
 
-  const options = [
-    ...currentQueries.map((q) => ({
-      key: q.name,
-      value: q.name,
-      name: q.name,
-      onDelete: () => handleDelete(q.name),
-    })),
-    ...otherGroups.flatMap((group) =>
-      group.queries.map((q) => ({
-        key: `${group.key}::${q.name}`,
-        value: `${group.key}::${q.name}`,
-        name: q.name,
-        onDelete: () => deleteQueryByKey(group.key, q.name),
-      })),
-    ),
-  ];
+  const totalQueries =
+    currentQueries.length +
+    otherGroups.reduce((sum, g) => sum + g.queries.length, 0);
+  if (totalQueries === 0) return null;
 
-  if (options.length === 0) return null;
+  const renderOption = (option: {
+    key: string;
+    value: string;
+    name: string;
+    onDelete: () => void;
+  }) => (
+    <Select.Option key={option.key} value={option.value} label={option.name}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Typography.Text>{option.name}</Typography.Text>
+        {editable && (
+          <Popconfirm
+            title={`Delete query "${option.name}"?`}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              option.onDelete();
+            }}
+            onCancel={(e) => e?.stopPropagation()}
+            okText="Delete"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Delete query">
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => e.stopPropagation()}
+                data-testid={`delete-query-${option.name}`}
+              />
+            </Tooltip>
+          </Popconfirm>
+        )}
+      </div>
+    </Select.Option>
+  );
 
   return (
     <Select<string>
@@ -111,46 +135,25 @@ export default function QuerySelector({
       onClear={handleClear}
       popupMatchSelectWidth={false}
     >
-      {options.map((option) => (
-        <Select.Option
-          key={option.key}
-          value={option.value}
-          label={option.name}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography.Text>{option.name}</Typography.Text>
-            {editable && (
-              <Popconfirm
-                title={`Delete query "${option.name}"?`}
-                onConfirm={(e) => {
-                  e?.stopPropagation();
-                  option.onDelete();
-                }}
-                onCancel={(e) => e?.stopPropagation()}
-                okText="Delete"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
-              >
-                <Tooltip title="Delete query">
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={(e) => e.stopPropagation()}
-                    data-testid={`delete-query-${option.name}`}
-                  />
-                </Tooltip>
-              </Popconfirm>
-            )}
-          </div>
-        </Select.Option>
+      {currentQueries.map((q) =>
+        renderOption({
+          key: q.name,
+          value: q.name,
+          name: q.name,
+          onDelete: () => handleDelete(q.name),
+        }),
+      )}
+      {otherGroups.map((group) => (
+        <Select.OptGroup key={group.key} label={formatQueryKey(group.key)}>
+          {group.queries.map((q) =>
+            renderOption({
+              key: `${group.key}::${q.name}`,
+              value: `${group.key}::${q.name}`,
+              name: q.name,
+              onDelete: () => deleteQueryByKey(group.key, q.name),
+            }),
+          )}
+        </Select.OptGroup>
       ))}
     </Select>
   );

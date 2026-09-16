@@ -92,7 +92,7 @@ describe("QuerySelector", () => {
     expect(onLoadQuery).not.toHaveBeenCalled();
   });
 
-  it("shows queries from other buckets flat, with a delete button, when showAllQueries is on", () => {
+  it("shows queries from other buckets grouped by bucket/entry, with a delete button, when showAllQueries is on", () => {
     useQueryStore.getState().saveQuery("other-bucket", "other-entry", {
       name: "other-query",
       query: "{}",
@@ -114,7 +114,7 @@ describe("QuerySelector", () => {
     fireEvent.mouseDown(container.querySelector(".ant-select")!);
 
     expect(screen.getByText("other-query")).toBeTruthy();
-    expect(screen.queryByText(/other-bucket/)).toBeNull();
+    expect(screen.getByText("other-bucket/other-entry")).toBeTruthy();
     expect(screen.getByTestId("delete-query-other-query")).toBeTruthy();
   });
 
