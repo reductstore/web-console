@@ -175,7 +175,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getByPlaceholderText("value")).toBeTruthy();
   });
 
-  it("hides every block until a bucket and entry are selected, and disables Add stage", () => {
+  it("allows adding and viewing stages even before a bucket and entry are selected", () => {
     render(
       <QueryConditionBuilder
         value=""
@@ -185,8 +185,7 @@ describe("QueryConditionBuilder", () => {
       />,
     );
     expect(screen.getByText("Query")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add stage")).toBeDisabled();
+    expect(screen.getByLabelText("Add stage")).not.toBeDisabled();
   });
 
   it("never silently queues stages while a bucket and entry aren't selected yet", () => {
@@ -218,7 +217,7 @@ describe("QueryConditionBuilder", () => {
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
   });
 
-  it("keeps a stage's data when the bucket/entry selection is lost and picked again, instead of resetting", async () => {
+  it("keeps a stage visible when the bucket/entry selection is lost, instead of hiding it", async () => {
     const onChange = vi.fn();
     const { rerender } = render(
       <QueryConditionBuilder
@@ -239,17 +238,6 @@ describe("QueryConditionBuilder", () => {
         onChange={onChange}
         mode="builder"
         onUnrepresentable={noop}
-      />,
-    );
-    expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(1);
-
-    rerender(
-      <QueryConditionBuilder
-        value={'{"$each_t": "$__interval"}'}
-        onChange={onChange}
-        mode="builder"
-        onUnrepresentable={noop}
-        validationContext={readyValidationContext}
       />,
     );
     expect(screen.getAllByText(/^Stage \d+$/)).toHaveLength(2);

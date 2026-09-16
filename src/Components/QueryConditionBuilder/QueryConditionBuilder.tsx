@@ -45,7 +45,6 @@ import {
 } from "../../Helpers/builderReducer";
 import { conditionBlockDispatch } from "../../Helpers/conditionBlockDispatch";
 import { extBlockDispatch } from "../../Helpers/extBlockDispatch";
-import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { checkLicenseStatus } from "../../Helpers/licenseUtils";
 import { QueryOptions } from "reduct-js";
 
@@ -103,8 +102,7 @@ const STAGE_KIND_OPTIONS: {
 
 const MAX_STAGES = STAGE_KIND_OPTIONS.length;
 
-function insertStageHint(sourceReady: boolean, blockOrder: string[]): string {
-  if (!sourceReady) return SELECT_SOURCE_HINT;
+function insertStageHint(blockOrder: string[]): string {
   if (blockOrder.length >= MAX_STAGES) {
     return `Maximum of ${MAX_STAGES} stages reached`;
   }
@@ -217,22 +215,14 @@ function ProcessSubsection({
 
 function buildBlocks(
   state: BuilderState,
-  sourceReady: boolean,
   labelOptions: string[] | undefined,
   intervalValue: string | undefined,
   hasProLicense: boolean,
   dispatch: Dispatch<BuilderAction>,
 ): BuilderBlock[] {
-  // The default $each_t sample stage renders even before a bucket/entry is
-  // selected (see below), so its insert-stage buttons are always wired up
-  // too - QueryBlockList keeps them visible but disabled while !sourceReady
-  // (so the layout stays static instead of buttons popping in and out), and
-  // this guard is belt-and-suspenders: never dispatch a stage/insert while
-  // no bucket/entry is selected or the stage limit is reached, even if a
-  // disabled button is somehow triggered.
   const insertHandlers = (anchorId: string) => ({
     onAddBefore: () => {
-      if (insertStageHint(sourceReady, state.blockOrder)) return;
+      if (insertStageHint(state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
         id: crypto.randomUUID(),
@@ -241,7 +231,7 @@ function buildBlocks(
       });
     },
     onAddAfter: () => {
-      if (insertStageHint(sourceReady, state.blockOrder)) return;
+      if (insertStageHint(state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
         id: crypto.randomUUID(),
@@ -253,7 +243,6 @@ function buildBlocks(
 
   return state.blockOrder.flatMap((id): BuilderBlock[] => {
     if (state.pendingStages.includes(id)) {
-      if (!sourceReady) return [];
       return [
         {
           id,
@@ -282,7 +271,6 @@ function buildBlocks(
       (block) => block.id === id,
     );
     if (conditionBlock) {
-      if (!sourceReady) return [];
       const blockDispatch = conditionBlockDispatch(id, dispatch);
       return [
         {
@@ -309,7 +297,6 @@ function buildBlocks(
             <ConditionListEditor
               conditions={conditionBlock.conditions}
               labelOptions={labelOptions}
-              sourceReady={sourceReady}
               onChangeCondition={(conditionId, changes) =>
                 blockDispatch({
                   type: "condition/change",
@@ -338,7 +325,6 @@ function buildBlocks(
       const selectTransform = extBlock.transforms.find(
         (t) => t.kind === "select",
       );
-      if (!sourceReady) return [];
 
       const blockDispatch = extBlockDispatch(id, dispatch);
 
@@ -484,7 +470,6 @@ function buildBlocks(
 
     const step = state.steps.find((s) => s.id === id);
     if (!step) return [];
-    if (step.type !== "each_t" && !sourceReady) return [];
 
     if (step.type === "each_n" || step.type === "each_t") {
       return [
@@ -629,11 +614,6 @@ export default function QueryConditionBuilder({
     lastEmittedValueRef.current = formatted;
     onChange(formatted, state);
   }, [state]);
-
-  const sourceReady =
-    !!validationContext?.bucket &&
-    ((validationContext?.entries?.length ?? 0) > 0 ||
-      !!validationContext?.entry);
 
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
 
@@ -790,18 +770,17 @@ export default function QueryConditionBuilder({
         <QueryBlockList
           blocks={buildBlocks(
             state,
-            sourceReady,
             labelOptions,
             validationContext?.intervalValue ?? undefined,
             hasProLicense,
             dispatch,
           )}
-          insertDisabledHint={insertStageHint(sourceReady, state.blockOrder)}
+          insertDisabledHint={insertStageHint(state.blockOrder)}
           onReorderBlock={(fromIndex, toIndex) =>
             dispatch({ type: "block/reorder", fromIndex, toIndex })
           }
           addStageMenu={buildAddStageButton(
-            insertStageHint(sourceReady, state.blockOrder),
+            insertStageHint(state.blockOrder),
             dispatch,
           )}
         />

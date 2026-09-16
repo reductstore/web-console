@@ -1,7 +1,6 @@
 import { Button, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import LabelConditionEditor from "./LabelConditionEditor";
-import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
 import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
 
@@ -31,7 +30,6 @@ interface ConditionListEditorProps {
   onRemoveCondition: (id: string) => void;
   onAddCondition: () => void;
   labelOptions?: string[];
-  sourceReady?: boolean;
 }
 
 export default function ConditionListEditor({
@@ -40,19 +38,15 @@ export default function ConditionListEditor({
   onRemoveCondition,
   onAddCondition,
   labelOptions,
-  sourceReady = true,
 }: ConditionListEditorProps) {
   const lastCondition = conditions[conditions.length - 1];
   const canAddCondition =
-    sourceReady &&
     !!lastCondition &&
     lastCondition.label.trim() !== "" &&
     hasValue(lastCondition.value);
-  const addConditionHint = !sourceReady
-    ? SELECT_SOURCE_HINT
-    : !canAddCondition
-      ? "Fill in the label and value first"
-      : "";
+  const addConditionHint = !canAddCondition
+    ? "Fill in the label and value first"
+    : "";
   const handleConnectorChange = (id: string, choice: ConnectorChoice) => {
     if (choice === "not") {
       onChangeCondition(id, { connector: "$and", negated: true });
@@ -63,42 +57,41 @@ export default function ConditionListEditor({
 
   return (
     <div>
-      {sourceReady &&
-        conditions.map((condition, index) => (
-          <div
-            key={condition.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            {index > 0 ? (
-              <Select
-                popupMatchSelectWidth={false}
-                value={connectorChoiceFor(condition)}
-                options={CONNECTOR_OPTIONS}
-                onChange={(value) => handleConnectorChange(condition.id, value)}
-                style={{ width: ROW_LABEL_WIDTH }}
-              />
-            ) : (
-              <Typography.Text
-                strong
-                style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
-              >
-                Where
-              </Typography.Text>
-            )}
-            <LabelConditionEditor
-              condition={condition}
-              onChange={onChangeCondition}
-              onRemove={onRemoveCondition}
-              removable={conditions.length > 1}
-              labelOptions={labelOptions}
+      {conditions.map((condition, index) => (
+        <div
+          key={condition.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
+          {index > 0 ? (
+            <Select
+              popupMatchSelectWidth={false}
+              value={connectorChoiceFor(condition)}
+              options={CONNECTOR_OPTIONS}
+              onChange={(value) => handleConnectorChange(condition.id, value)}
+              style={{ width: ROW_LABEL_WIDTH }}
             />
-          </div>
-        ))}
+          ) : (
+            <Typography.Text
+              strong
+              style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
+            >
+              Where
+            </Typography.Text>
+          )}
+          <LabelConditionEditor
+            condition={condition}
+            onChange={onChangeCondition}
+            onRemove={onRemoveCondition}
+            removable={conditions.length > 1}
+            labelOptions={labelOptions}
+          />
+        </div>
+      ))}
 
       {/* Offsets past the "Where"/connector column so the button lines up
           with the value column in ROS/Select grids (ROW_LABEL_WIDTH + gap). */}
