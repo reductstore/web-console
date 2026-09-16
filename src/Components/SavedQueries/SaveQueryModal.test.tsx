@@ -119,9 +119,6 @@ describe("SaveQueryModal", () => {
       name: "existing",
       query: "{}",
     });
-    useQueryStore
-      .getState()
-      .setLoadedQueryName("test-bucket", "test-entry", null);
 
     renderModal();
 

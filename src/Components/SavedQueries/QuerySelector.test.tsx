@@ -21,6 +21,7 @@ describe("QuerySelector", () => {
   const renderSelector = (
     editable = true,
     queries: Array<{ name: string; query: string }> = [],
+    loadedQueryName: string | null = null,
   ) => {
     for (const q of queries) {
       useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
@@ -28,15 +29,13 @@ describe("QuerySelector", () => {
         query: q.query,
       });
     }
-    useQueryStore
-      .getState()
-      .setLoadedQueryName("test-bucket", "test-entry", null);
 
     return render(
       <QuerySelector
         bucketName="test-bucket"
         entryName="test-entry"
         onLoadQuery={onLoadQuery}
+        loadedQueryName={loadedQueryName}
         editable={editable}
       />,
     );
@@ -71,20 +70,18 @@ describe("QuerySelector", () => {
     expect(screen.queryByTestId("delete-query-q1")).toBeNull();
   });
 
-  it("never auto-loads a query just because the bucket/entry matches a previous one", () => {
+  it("never calls onLoadQuery just from rendering with a loaded query name", () => {
     useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
       name: "q1",
       query: '{"$each_t": "5s"}',
     });
-    useQueryStore
-      .getState()
-      .setLoadedQueryName("test-bucket", "test-entry", "q1");
 
     render(
       <QuerySelector
         bucketName="test-bucket"
         entryName="test-entry"
         onLoadQuery={onLoadQuery}
+        loadedQueryName="q1"
         editable={true}
       />,
     );
@@ -97,15 +94,13 @@ describe("QuerySelector", () => {
       name: "other-query",
       query: "{}",
     });
-    useQueryStore
-      .getState()
-      .setLoadedQueryName("test-bucket", "test-entry", null);
 
     const { container } = render(
       <QuerySelector
         bucketName="test-bucket"
         entryName="test-entry"
         onLoadQuery={onLoadQuery}
+        loadedQueryName={null}
         editable={true}
         showAllQueries={true}
       />,
@@ -124,9 +119,6 @@ describe("QuerySelector", () => {
       name: "q1",
       query: '{"$each_t": "5s"}',
     });
-    useQueryStore
-      .getState()
-      .setLoadedQueryName("test-bucket", "test-entry", "q1");
 
     const { container } = render(
       <QuerySelector
@@ -134,6 +126,7 @@ describe("QuerySelector", () => {
         entryName="test-entry"
         onLoadQuery={onLoadQuery}
         onClearQuery={onClearQuery}
+        loadedQueryName="q1"
         editable={true}
       />,
     );
@@ -143,8 +136,66 @@ describe("QuerySelector", () => {
     fireEvent.click(clearIcon!);
 
     expect(onClearQuery).toHaveBeenCalled();
-    expect(
-      useQueryStore.getState().getLoadedQueryName("test-bucket", "test-entry"),
-    ).toBeNull();
+  });
+
+  it("reports the query's own bucket/entry when deleting a current-bucket query", () => {
+    const onQueryDeleted = vi.fn();
+    useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
+      name: "q1",
+      query: "{}",
+    });
+
+    const { container } = render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        onQueryDeleted={onQueryDeleted}
+        loadedQueryName={null}
+        editable={true}
+      />,
+    );
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(screen.getByTestId("delete-query-q1"));
+    fireEvent.click(screen.getByText("Delete"));
+
+    expect(onQueryDeleted).toHaveBeenCalledWith(
+      "test-bucket",
+      ["test-entry"],
+      "q1",
+    );
+  });
+
+  it("reports the source bucket/entry when deleting a query from another group", () => {
+    const onQueryDeleted = vi.fn();
+    useQueryStore.getState().saveQuery("other-bucket", "other-entry", {
+      name: "other-query",
+      query: "{}",
+      bucketName: "other-bucket",
+      entries: ["other-entry"],
+    });
+
+    const { container } = render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        onQueryDeleted={onQueryDeleted}
+        loadedQueryName={null}
+        editable={true}
+        showAllQueries={true}
+      />,
+    );
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(screen.getByTestId("delete-query-other-query"));
+    fireEvent.click(screen.getByText("Delete"));
+
+    expect(onQueryDeleted).toHaveBeenCalledWith(
+      "other-bucket",
+      ["other-entry"],
+      "other-query",
+    );
   });
 });

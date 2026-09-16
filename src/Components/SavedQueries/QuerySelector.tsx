@@ -12,6 +12,12 @@ interface QuerySelectorProps {
   entryName: string | string[];
   onLoadQuery: (saved: SavedQuery) => void;
   onClearQuery?: () => void;
+  onQueryDeleted?: (
+    bucketName: string,
+    entries: string[],
+    name: string,
+  ) => void;
+  loadedQueryName: string | null;
   editable: boolean;
   showAllQueries?: boolean;
 }
@@ -21,20 +27,15 @@ export default function QuerySelector({
   entryName,
   onLoadQuery,
   onClearQuery,
+  onQueryDeleted,
+  loadedQueryName,
   editable,
   showAllQueries = false,
 }: QuerySelectorProps) {
-  const {
-    getQueries,
-    getAllQueries,
-    deleteQuery,
-    deleteQueryByKey,
-    getLoadedQueryName,
-    setLoadedQueryName,
-  } = useQueryStore();
+  const { getQueries, getAllQueries, deleteQuery, deleteQueryByKey } =
+    useQueryStore();
   const currentQueries = getQueries(bucketName, entryName);
   const allQueryGroups = getAllQueries();
-  const loadedQueryName = getLoadedQueryName(bucketName, entryName);
 
   const currentKey = (() => {
     const entries = Array.isArray(entryName) ? entryName : [entryName];
@@ -60,16 +61,26 @@ export default function QuerySelector({
         : currentQueries.find((q) => q.name === value);
     if (query) {
       onLoadQuery(query);
-      setLoadedQueryName(bucketName, entryName, query.name);
     }
   };
 
-  const handleDelete = (name: string) => {
+  const handleDeleteCurrent = (name: string) => {
     deleteQuery(bucketName, entryName, name);
+    const entries = Array.isArray(entryName) ? entryName : [entryName];
+    onQueryDeleted?.(bucketName, entries, name);
+  };
+
+  const handleDeleteOther = (
+    groupKey: string,
+    groupBucket: string,
+    groupEntries: string[],
+    name: string,
+  ) => {
+    deleteQueryByKey(groupKey, name);
+    onQueryDeleted?.(groupBucket, groupEntries, name);
   };
 
   const handleClear = () => {
-    setLoadedQueryName(bucketName, entryName, null);
     onClearQuery?.();
   };
 
@@ -140,21 +151,32 @@ export default function QuerySelector({
           key: q.name,
           value: q.name,
           name: q.name,
-          onDelete: () => handleDelete(q.name),
+          onDelete: () => handleDeleteCurrent(q.name),
         }),
       )}
-      {otherGroups.map((group) => (
-        <Select.OptGroup key={group.key} label={formatQueryKey(group.key)}>
-          {group.queries.map((q) =>
-            renderOption({
-              key: `${group.key}::${q.name}`,
-              value: `${group.key}::${q.name}`,
-              name: q.name,
-              onDelete: () => deleteQueryByKey(group.key, q.name),
-            }),
-          )}
-        </Select.OptGroup>
-      ))}
+      {otherGroups.map((group) => {
+        const [groupQuery] = group.queries;
+        const groupBucket = groupQuery?.bucketName ?? "";
+        const groupEntries = groupQuery?.entries ?? [];
+        return (
+          <Select.OptGroup key={group.key} label={formatQueryKey(group.key)}>
+            {group.queries.map((q) =>
+              renderOption({
+                key: `${group.key}::${q.name}`,
+                value: `${group.key}::${q.name}`,
+                name: q.name,
+                onDelete: () =>
+                  handleDeleteOther(
+                    group.key,
+                    groupBucket,
+                    groupEntries,
+                    q.name,
+                  ),
+              }),
+            )}
+          </Select.OptGroup>
+        );
+      })}
     </Select>
   );
 }

@@ -15,6 +15,7 @@ interface SaveQueryModalProps {
   rangeStart?: string;
   rangeEnd?: string;
   builderState?: BuilderState;
+  onSaved?: (name: string) => void;
 }
 
 export default function SaveQueryModal({
@@ -29,6 +30,7 @@ export default function SaveQueryModal({
   rangeStart,
   rangeEnd,
   builderState,
+  onSaved,
 }: SaveQueryModalProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export default function SaveQueryModal({
       builderState,
     });
     message.success(`Query "${queryName}" saved`);
+    onSaved?.(queryName);
     handleClose();
   };
 

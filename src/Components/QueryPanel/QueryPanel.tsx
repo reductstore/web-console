@@ -168,6 +168,11 @@ export default function QueryPanel({
     BuilderState | undefined
   >(undefined);
   const [builderKey, setBuilderKey] = useState(0);
+  const [loadedQuery, setLoadedQuery] = useState<{
+    name: string;
+    bucketName: string;
+    entries: string[];
+  } | null>(null);
   // If the initial query isn't representable in the builder (e.g. a
   // hand-written query with real nested grouping), land in JSON mode
   // instead of silently showing an empty builder next to the real query.
@@ -218,7 +223,7 @@ export default function QueryPanel({
     interval: null as string | null,
   }));
 
-  const { getLoadedQueryName, getQueries } = useQueryStore();
+  const { getQueries } = useQueryStore();
 
   useEffect(() => {
     setBucketName(initialBucketName);
@@ -472,6 +477,7 @@ export default function QueryPanel({
     builderStateRef.current = undefined;
     setBuilderInitialState(undefined);
     setBuilderKey((k) => k + 1);
+    setLoadedQuery(null);
   };
 
   const getSelectionRangeFallback = (): {
@@ -968,6 +974,11 @@ export default function QueryPanel({
 
   const handleLoadQuery = useCallback(
     (saved: SavedQuery) => {
+      setLoadedQuery({
+        name: saved.name,
+        bucketName: saved.bucketName ?? bucketName,
+        entries: saved.entries?.length ? saved.entries : selectedEntries,
+      });
       setWhenCondition(saved.query);
       builderStateRef.current = saved.builderState;
       if (saved.builderState) {
@@ -1011,19 +1022,39 @@ export default function QueryPanel({
         stopText: formatValue(end, useUnix),
       }));
     },
-    [showUnix],
+    [showUnix, bucketName, selectedEntries],
   );
 
-  const currentQuerySnapshot = (): SavedQuery => ({
-    name: getLoadedQueryName(bucketName, selectedEntries) ?? "",
+  const handleQueryDeleted = (
+    deletedBucket: string,
+    deletedEntries: string[],
+    name: string,
+  ) => {
+    const sameEntries = (a: string[], b: string[]) =>
+      JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+    if (
+      loadedQuery &&
+      loadedQuery.name === name &&
+      loadedQuery.bucketName === deletedBucket &&
+      sameEntries(loadedQuery.entries, deletedEntries)
+    ) {
+      resetBuilderToBlank();
+    }
+  };
+
+  const currentQuerySnapshot = (
+    targetBucket: string = bucketName,
+    targetEntries: string[] = selectedEntries,
+  ): SavedQuery => ({
+    name: loadedQuery?.name ?? "",
     query: whenCondition,
     mode: conditionMode,
     timeFormat: showUnix ? "Unix" : "UTC",
     rangeKey: detectRangeKey(timeRange.start, timeRange.end),
     rangeStart: timeRange.start?.toString(),
     rangeEnd: timeRange.end?.toString(),
-    bucketName,
-    entries: [...selectedEntries],
+    bucketName: targetBucket,
+    entries: [...targetEntries],
     builderState:
       conditionMode === "builder" ? builderStateRef.current : undefined,
   });
@@ -1033,11 +1064,14 @@ export default function QueryPanel({
       return;
     }
 
-    const loadedName = getLoadedQueryName(bucketName, selectedEntries);
-    if (loadedName) {
+    if (loadedQuery) {
       const { saveQuery } = useQueryStore.getState();
-      saveQuery(bucketName, selectedEntries, currentQuerySnapshot());
-      message.success(`Query "${loadedName}" updated`);
+      saveQuery(
+        loadedQuery.bucketName,
+        loadedQuery.entries,
+        currentQuerySnapshot(loadedQuery.bucketName, loadedQuery.entries),
+      );
+      message.success(`Query "${loadedQuery.name}" updated`);
     } else {
       setIsSaveQueryModalVisible(true);
     }
@@ -1047,13 +1081,15 @@ export default function QueryPanel({
     if (!hasValidSelection || !whenCondition.trim()) {
       return true;
     }
-    const loadedName = getLoadedQueryName(bucketName, selectedEntries);
-    if (!loadedName) return false;
-    const loaded = getQueries(bucketName, selectedEntries).find(
-      (query) => query.name === loadedName,
+    if (!loadedQuery) return false;
+    const loaded = getQueries(loadedQuery.bucketName, loadedQuery.entries).find(
+      (query) => query.name === loadedQuery.name,
     );
     if (!loaded) return false;
-    const snap = currentQuerySnapshot();
+    const snap = currentQuerySnapshot(
+      loadedQuery.bucketName,
+      loadedQuery.entries,
+    );
     // loaded.mode is absent for queries saved before mode was tracked -
     // fall back to the same representability check handleLoadQuery uses,
     // or a legacy save always looks "changed" and Save stays enabled.
@@ -1232,6 +1268,8 @@ export default function QueryPanel({
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
                         onClearQuery={resetBuilderToBlank}
+                        onQueryDeleted={handleQueryDeleted}
+                        loadedQueryName={loadedQuery?.name ?? null}
                         editable
                         showAllQueries={showSelectionControls}
                       />
@@ -1411,6 +1449,8 @@ export default function QueryPanel({
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
                         onClearQuery={resetBuilderToBlank}
+                        onQueryDeleted={handleQueryDeleted}
+                        loadedQueryName={loadedQuery?.name ?? null}
                         editable
                         showAllQueries={showSelectionControls}
                       />
@@ -1604,6 +1644,13 @@ export default function QueryPanel({
         rangeEnd={timeRange.end?.toString()}
         builderState={
           conditionMode === "builder" ? builderStateRef.current : undefined
+        }
+        onSaved={(name) =>
+          setLoadedQuery({
+            name,
+            bucketName,
+            entries: [...selectedEntries],
+          })
         }
       />
 
