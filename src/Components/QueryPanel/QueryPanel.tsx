@@ -979,6 +979,14 @@ export default function QueryPanel({
         bucketName: saved.bucketName ?? bucketName,
         entries: saved.entries?.length ? saved.entries : selectedEntries,
       });
+      if (showSelectionControls) {
+        if (saved.bucketName) {
+          setBucketName(saved.bucketName);
+        }
+        if (saved.entries && saved.entries.length > 0) {
+          setSelectedEntries(saved.entries);
+        }
+      }
       setWhenCondition(saved.query);
       builderStateRef.current = saved.builderState;
       if (saved.builderState) {
@@ -1022,7 +1030,7 @@ export default function QueryPanel({
         stopText: formatValue(end, useUnix),
       }));
     },
-    [showUnix, bucketName, selectedEntries],
+    [showUnix, bucketName, selectedEntries, showSelectionControls],
   );
 
   const handleQueryDeleted = (
