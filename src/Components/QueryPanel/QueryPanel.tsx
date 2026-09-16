@@ -1111,41 +1111,40 @@ export default function QueryPanel({
   // the button lives with the Query header rather than inside the Where
   // labels section.
   const loadedQueryName = getLoadedQueryName(bucketName, selectedEntries);
+  const saveTooltipTitle = isSaveDisabled
+    ? "Query unchanged"
+    : "Save query to browser";
 
-  const saveButton = loadedQueryName ? (
-    <Tooltip
-      title={isSaveDisabled ? "Query unchanged" : "Save query to browser"}
-    >
-      <Dropdown.Button
-        onClick={handleSaveQuery}
-        icon={<DownOutlined />}
-        trigger={["click"]}
-        buttonsRender={([saveButton, dropdownButton]) => [
-          React.cloneElement(saveButton as React.ReactElement<any>, {
-            "aria-label": "Save query",
-            disabled: isSaveDisabled,
-          }),
-          dropdownButton,
-        ]}
-        menu={{
-          items: [{ key: "saveAsNew", label: "Save as new" }],
-          onClick: () => setIsSaveQueryModalVisible(true),
-        }}
-      >
-        Save
-      </Dropdown.Button>
-    </Tooltip>
-  ) : (
-    <Tooltip
-      title={isSaveDisabled ? "Query unchanged" : "Save query to browser"}
-    >
-      <Button
-        aria-label="Save query"
-        onClick={handleSaveQuery}
-        disabled={isSaveDisabled}
-      >
-        Save
-      </Button>
+  const saveButton = (
+    <Tooltip title={saveTooltipTitle}>
+      {loadedQueryName ? (
+        <Dropdown.Button
+          onClick={handleSaveQuery}
+          icon={<DownOutlined />}
+          trigger={["click"]}
+          buttonsRender={([primaryButton, dropdownTrigger]) => [
+            React.cloneElement(primaryButton as React.ReactElement<any>, {
+              "aria-label": "Save query",
+              disabled: isSaveDisabled,
+            }),
+            dropdownTrigger,
+          ]}
+          menu={{
+            items: [{ key: "saveAsNew", label: "Save as new" }],
+            onClick: () => setIsSaveQueryModalVisible(true),
+          }}
+        >
+          Save
+        </Dropdown.Button>
+      ) : (
+        <Button
+          aria-label="Save query"
+          onClick={handleSaveQuery}
+          disabled={isSaveDisabled}
+        >
+          Save
+        </Button>
+      )}
     </Tooltip>
   );
 
