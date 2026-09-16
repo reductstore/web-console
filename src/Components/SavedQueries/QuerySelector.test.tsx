@@ -92,6 +92,32 @@ describe("QuerySelector", () => {
     expect(onLoadQuery).not.toHaveBeenCalled();
   });
 
+  it("shows queries from other buckets flat, with a delete button, when showAllQueries is on", () => {
+    useQueryStore.getState().saveQuery("other-bucket", "other-entry", {
+      name: "other-query",
+      query: "{}",
+    });
+    useQueryStore
+      .getState()
+      .setLoadedQueryName("test-bucket", "test-entry", null);
+
+    const { container } = render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        editable={true}
+        showAllQueries={true}
+      />,
+    );
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+
+    expect(screen.getByText("other-query")).toBeTruthy();
+    expect(screen.queryByText(/other-bucket/)).toBeNull();
+    expect(screen.getByTestId("delete-query-other-query")).toBeTruthy();
+  });
+
   it("calls onClearQuery when the loaded query is cleared from the dropdown", () => {
     const onClearQuery = vi.fn();
     useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
