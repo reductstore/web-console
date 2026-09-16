@@ -11,6 +11,7 @@ interface QuerySelectorProps {
   bucketName: string;
   entryName: string | string[];
   onLoadQuery: (saved: SavedQuery) => void;
+  onClearQuery?: () => void;
   editable: boolean;
   showAllQueries?: boolean;
 }
@@ -19,6 +20,7 @@ export default function QuerySelector({
   bucketName,
   entryName,
   onLoadQuery,
+  onClearQuery,
   editable,
   showAllQueries = false,
 }: QuerySelectorProps) {
@@ -77,6 +79,7 @@ export default function QuerySelector({
 
   const handleClear = () => {
     setLoadedQueryName(bucketName, entryName, null);
+    onClearQuery?.();
   };
 
   const totalQueries =

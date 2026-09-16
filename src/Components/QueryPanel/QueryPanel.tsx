@@ -467,6 +467,14 @@ export default function QueryPanel({
   const hasValidSelection =
     bucketName.trim().length > 0 && !!selectedEntryQuery;
 
+  const resetBuilderToBlank = () => {
+    setWhenCondition(defaultQuery);
+    setConditionMode("builder");
+    builderStateRef.current = undefined;
+    setBuilderInitialState(undefined);
+    setBuilderKey((k) => k + 1);
+  };
+
   const wasHasValidSelectionRef = useRef(hasValidSelection);
   const prevSelectionRef = useRef({ bucketName, selectedEntries });
   useEffect(() => {
@@ -475,11 +483,7 @@ export default function QueryPanel({
         prevSelectionRef.current;
       const loadedName = getLoadedQueryName(prevBucket, prevEntries);
       if (loadedName) {
-        setWhenCondition(defaultQuery);
-        setConditionMode("builder");
-        builderStateRef.current = undefined;
-        setBuilderInitialState(undefined);
-        setBuilderKey((k) => k + 1);
+        resetBuilderToBlank();
         setLoadedQueryName(prevBucket, prevEntries, null);
       }
     }
@@ -1259,6 +1263,7 @@ export default function QueryPanel({
                         bucketName={bucketName}
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
+                        onClearQuery={resetBuilderToBlank}
                         editable={hasWritePermission}
                         showAllQueries={showSelectionControls}
                       />
@@ -1437,6 +1442,7 @@ export default function QueryPanel({
                         bucketName={bucketName}
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
+                        onClearQuery={resetBuilderToBlank}
                         editable={hasWritePermission}
                         showAllQueries={showSelectionControls}
                       />

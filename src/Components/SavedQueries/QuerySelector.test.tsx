@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import QuerySelector from "./QuerySelector";
@@ -90,5 +90,35 @@ describe("QuerySelector", () => {
     );
 
     expect(onLoadQuery).not.toHaveBeenCalled();
+  });
+
+  it("calls onClearQuery when the loaded query is cleared from the dropdown", () => {
+    const onClearQuery = vi.fn();
+    useQueryStore.getState().saveQuery("test-bucket", "test-entry", {
+      name: "q1",
+      query: '{"$each_t": "5s"}',
+    });
+    useQueryStore
+      .getState()
+      .setLoadedQueryName("test-bucket", "test-entry", "q1");
+
+    const { container } = render(
+      <QuerySelector
+        bucketName="test-bucket"
+        entryName="test-entry"
+        onLoadQuery={onLoadQuery}
+        onClearQuery={onClearQuery}
+        editable={true}
+      />,
+    );
+
+    const clearIcon = container.querySelector(".ant-select-clear");
+    expect(clearIcon).toBeTruthy();
+    fireEvent.click(clearIcon!);
+
+    expect(onClearQuery).toHaveBeenCalled();
+    expect(
+      useQueryStore.getState().getLoadedQueryName("test-bucket", "test-entry"),
+    ).toBeNull();
   });
 });
