@@ -60,7 +60,7 @@ type AddOption = "sql" | "format" | "export" | "asLabel";
 const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel", "sql"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
-  sql: "SQL step",
+  sql: "Select step",
   format: "Format",
   export: "Export",
   asLabel: "As label",

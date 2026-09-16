@@ -171,7 +171,7 @@ describe("SelectStageEditor", () => {
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for Select 1"));
-      fireEvent.click(screen.getByRole("menuitem", { name: "SQL step" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Select step" }));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/setSql",
         stepId: "sql-1",
@@ -188,7 +188,7 @@ describe("SelectStageEditor", () => {
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for Select 1"));
-      fireEvent.click(screen.getByRole("menuitem", { name: "SQL step" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Select step" }));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),
@@ -201,7 +201,7 @@ describe("SelectStageEditor", () => {
       const step: SelectTransformStep = { sqlSteps: [] };
       render(<SelectStageAddButton step={step} dispatch={dispatch} />);
       fireEvent.click(screen.getByLabelText("Add option for Select"));
-      fireEvent.click(screen.getByText("SQL step"));
+      fireEvent.click(screen.getByText("Select step"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),

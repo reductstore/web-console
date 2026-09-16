@@ -1473,7 +1473,7 @@ describe("QueryConditionBuilder", () => {
         fireEvent.click(screen.getByLabelText("Add option for Select"));
       });
       await act(async () => {
-        fireEvent.click(screen.getByText("SQL step"));
+        fireEvent.click(screen.getByText("Select step"));
       });
     };
 
