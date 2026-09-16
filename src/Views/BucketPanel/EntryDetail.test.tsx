@@ -551,6 +551,30 @@ describe("EntryDetail", () => {
           screen.getByRole("button", { name: "Save query" }),
         ).toBeDisabled();
       });
+
+      it("opens the save modal to save as a new query even when the loaded one is unchanged", async () => {
+        act(() => {
+          useQueryStore.getState().saveQuery("testBucket", ["testEntry"], {
+            name: "original",
+            query: '{"&status": {"$eq": "active"}}',
+            mode: "json",
+          });
+        });
+
+        await loadSavedQuery("original");
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole("button", { name: "down" }));
+        });
+        await waitFor(() => {
+          expect(screen.getByText("Save as new")).toBeTruthy();
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByText("Save as new"));
+        });
+
+        expect(screen.getByTestId("query-name-input")).toBeTruthy();
+      });
     });
   });
 
