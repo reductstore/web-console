@@ -218,7 +218,8 @@ export default function QueryPanel({
     interval: null as string | null,
   }));
 
-  const { getLoadedQueryName, getQueries } = useQueryStore();
+  const { getLoadedQueryName, setLoadedQueryName, getQueries } =
+    useQueryStore();
 
   useEffect(() => {
     setBucketName(initialBucketName);
@@ -465,6 +466,32 @@ export default function QueryPanel({
 
   const hasValidSelection =
     bucketName.trim().length > 0 && !!selectedEntryQuery;
+
+  const wasHasValidSelectionRef = useRef(hasValidSelection);
+  const prevSelectionRef = useRef({ bucketName, selectedEntries });
+  useEffect(() => {
+    if (wasHasValidSelectionRef.current && !hasValidSelection) {
+      const { bucketName: prevBucket, selectedEntries: prevEntries } =
+        prevSelectionRef.current;
+      const loadedName = getLoadedQueryName(prevBucket, prevEntries);
+      if (loadedName) {
+        setWhenCondition(defaultQuery);
+        setConditionMode("builder");
+        builderStateRef.current = undefined;
+        setBuilderInitialState(undefined);
+        setBuilderKey((k) => k + 1);
+        setLoadedQueryName(prevBucket, prevEntries, null);
+      }
+    }
+    wasHasValidSelectionRef.current = hasValidSelection;
+    prevSelectionRef.current = { bucketName, selectedEntries };
+  }, [
+    hasValidSelection,
+    bucketName,
+    selectedEntries,
+    getLoadedQueryName,
+    setLoadedQueryName,
+  ]);
 
   const getSelectionRangeFallback = (): {
     start?: bigint;
