@@ -55,19 +55,19 @@ function activeFormatOf(step: SqlStep): SelectInputFormat | undefined {
     ?.value;
 }
 
-type AddOption = "sqlStep" | "format" | "export" | "asLabel";
+type AddOption = "sql" | "format" | "export" | "asLabel";
 
-const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel", "sqlStep"];
+const ADD_OPTIONS: AddOption[] = ["format", "export", "asLabel", "sql"];
 
 const ADD_OPTION_LABELS: Record<AddOption, string> = {
-  sqlStep: "SQL step",
+  sql: "SQL step",
   format: "Format",
   export: "Export",
   asLabel: "As label",
 };
 
 function disabledReason(option: AddOption, step: SqlStep): string | undefined {
-  if (option === "sqlStep" || option === "asLabel") return undefined;
+  if (option === "sql" || option === "asLabel") return undefined;
 
   if (option === "export") {
     return step.formatSections.includes("export")
@@ -109,20 +109,22 @@ function SqlStepBlock({
   };
 
   const menuItems: MenuProps["items"] = [
-    ...ADD_OPTIONS.filter((option) => option !== "sqlStep").map(
-      buildOptionItem,
-    ),
+    ...ADD_OPTIONS.filter((option) => option !== "sql").map(buildOptionItem),
     { type: "divider" as const },
-    buildOptionItem("sqlStep"),
+    buildOptionItem("sql"),
   ];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
-    if (key === "sqlStep") {
-      dispatch({
-        type: "select/addSqlStep",
-        id: crypto.randomUUID(),
-        afterId: step.id,
-      });
+    if (key === "sql") {
+      if (step.sql !== null) {
+        dispatch({
+          type: "select/addSqlStep",
+          id: crypto.randomUUID(),
+          afterId: step.id,
+        });
+      } else {
+        dispatch({ type: "select/setSql", stepId: step.id });
+      }
     } else if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
@@ -170,15 +172,21 @@ function SqlStepBlock({
             onMenuClick={handleMenuClick}
             ariaLabel={`Add option for ${label}`}
           />
-          <div style={{ flex: 1 }} />
-          <RemoveSectionButton
-            label={label}
-            onRemove={() =>
-              dispatch({ type: "select/removeSqlStep", id: step.id })
-            }
-          />
         </div>
-        <div style={{ marginLeft: ROW_LABEL_WIDTH + ROW_GAP }}>
+      </div>
+
+      {step.sql !== null && (
+        <GridRow
+          label="SQL"
+          actions={
+            <RemoveSectionButton
+              label={`${label} SQL`}
+              onRemove={() =>
+                dispatch({ type: "select/removeSql", stepId: step.id })
+              }
+            />
+          }
+        >
           <QueryEditor
             language="sql"
             value={step.sql}
@@ -188,8 +196,8 @@ function SqlStepBlock({
             height={SQL_EDITOR_HEIGHT}
             containerStyle={{ width: ROW_VALUE_COLUMN_WIDTH }}
           />
-        </div>
-      </div>
+        </GridRow>
+      )}
 
       {activeFormat && (
         <GridRow
@@ -417,14 +425,48 @@ export function SelectStageAddButton({
   dispatch,
 }: SelectStageEditorProps) {
   if (step.sqlSteps.length > 0) return null;
+
+  const menuItems: MenuProps["items"] = [
+    ...ADD_OPTIONS.filter((option) => option !== "sql").map((option) => ({
+      key: option,
+      label: ADD_OPTION_LABELS[option],
+    })),
+    { type: "divider" as const },
+    { key: "sql", label: ADD_OPTION_LABELS.sql },
+  ];
+
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "sql") {
+      dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() });
+    } else if (key === "asLabel") {
+      dispatch({
+        type: "select/addAsLabelStep",
+        id: crypto.randomUUID(),
+        rowId: crypto.randomUUID(),
+      });
+    } else if (key === "export") {
+      dispatch({
+        type: "select/addFormatStep",
+        section: "export",
+        id: crypto.randomUUID(),
+        fieldId: crypto.randomUUID(),
+      });
+    } else if (key === "format") {
+      dispatch({
+        type: "select/addFormatStep",
+        section: "csv",
+        id: crypto.randomUUID(),
+        fieldId: crypto.randomUUID(),
+      });
+    }
+  };
+
   return (
     <AddOptionFooter
       label="Add"
-      menuItems={[{ key: "sqlStep", label: ADD_OPTION_LABELS.sqlStep }]}
-      onMenuClick={() =>
-        dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() })
-      }
-      ariaLabel="Add option for SQL"
+      menuItems={menuItems}
+      onMenuClick={handleMenuClick}
+      ariaLabel="Add option for Select"
     />
   );
 }
@@ -436,7 +478,8 @@ export default function SelectStageEditor({
   return (
     <div style={STAGE_GRID_STYLE}>
       {step.sqlSteps.map((sqlStep, index) => {
-        const label = step.sqlSteps.length > 1 ? `SQL ${index + 1}` : "SQL";
+        const label =
+          step.sqlSteps.length > 1 ? `Select ${index + 1}` : "Select";
         return (
           <SqlStepBlock
             key={sqlStep.id}

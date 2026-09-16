@@ -56,7 +56,10 @@ import {
   updateSelectExport,
   updateSqlStep,
   addSqlStep,
-  removeSqlStep,
+  addFormatStep,
+  addAsLabelStep,
+  setSql,
+  removeSql,
   updateTopic,
 } from "./transformStepBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "./json5Utils";
@@ -204,7 +207,23 @@ export type BuilderAction =
       id: string;
       afterId?: string;
     }
-  | { type: "select/removeSqlStep"; blockId: string; id: string }
+  | { type: "select/setSql"; blockId: string; stepId: string; sql?: string }
+  | { type: "select/removeSql"; blockId: string; stepId: string }
+  | {
+      type: "select/addFormatStep";
+      blockId: string;
+      section: SelectFormatSection;
+      id: string;
+      fieldId: string;
+      afterId?: string;
+    }
+  | {
+      type: "select/addAsLabelStep";
+      blockId: string;
+      id: string;
+      rowId: string;
+      afterId?: string;
+    }
   | {
       type: "select/addFormatSection";
       blockId: string;
@@ -442,14 +461,52 @@ export function builderReducer(
           (transform) => addSqlStep(transform, action.id, action.afterId),
         ),
       };
-    case "select/removeSqlStep":
+    case "select/setSql":
       return {
         ...state,
         extBlocks: mapTransformInBlock(
           state.extBlocks,
           action.blockId,
           "select",
-          (transform) => removeSqlStep(transform, action.id),
+          (transform) => setSql(transform, action.stepId, action.sql),
+        ),
+      };
+    case "select/removeSql":
+      return {
+        ...state,
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) => removeSql(transform, action.stepId),
+        ),
+      };
+    case "select/addFormatStep":
+      return {
+        ...state,
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            addFormatStep(
+              transform,
+              action.section,
+              action.id,
+              action.fieldId,
+              action.afterId,
+            ),
+        ),
+      };
+    case "select/addAsLabelStep":
+      return {
+        ...state,
+        extBlocks: mapTransformInBlock(
+          state.extBlocks,
+          action.blockId,
+          "select",
+          (transform) =>
+            addAsLabelStep(transform, action.id, action.rowId, action.afterId),
         ),
       };
     case "select/addFormatSection":

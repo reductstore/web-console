@@ -403,7 +403,7 @@ describe("builderReducer", () => {
       ]);
     });
 
-    it("select/removeSqlStep removes the matching sql step", () => {
+    it("select/removeSql removes the whole step once it has no other fields left", () => {
       const withTwo = builderReducer(stateWithSqlStep(), {
         type: "select/addSqlStep",
         blockId: EXT_BLOCK_ID,
@@ -411,14 +411,87 @@ describe("builderReducer", () => {
       });
       const firstId = select(withTwo).sqlSteps[0].id;
       const state = builderReducer(withTwo, {
-        type: "select/removeSqlStep",
+        type: "select/removeSql",
         blockId: EXT_BLOCK_ID,
-        id: firstId,
+        stepId: firstId,
       });
       expect(select(state).sqlSteps).toHaveLength(1);
       expect(select(state).sqlSteps[0]).toMatchObject({
         id: "new-sql-step",
         sql: "SELECT * FROM ENTRY()\n",
+      });
+    });
+
+    it("select/removeSql only clears the sql field when the step still has other fields", () => {
+      const withFormat = builderReducer(stateWithSqlStep(), {
+        type: "select/addFormatSection",
+        blockId: EXT_BLOCK_ID,
+        stepId: "sql-1",
+        section: "csv",
+        fieldId: "field-1",
+      });
+      const state = builderReducer(withFormat, {
+        type: "select/removeSql",
+        blockId: EXT_BLOCK_ID,
+        stepId: "sql-1",
+      });
+      expect(select(state).sqlSteps).toHaveLength(1);
+      expect(select(state).sqlSteps[0]).toMatchObject({
+        id: "sql-1",
+        sql: null,
+        formatSections: ["csv"],
+      });
+    });
+
+    it("select/setSql activates the sql field on an existing step", () => {
+      const state = builderReducer(stateWithRosAndSelect(), {
+        type: "select/addFormatStep",
+        blockId: EXT_BLOCK_ID,
+        section: "csv",
+        id: "step-1",
+        fieldId: "field-1",
+      });
+      const withSql = builderReducer(state, {
+        type: "select/setSql",
+        blockId: EXT_BLOCK_ID,
+        stepId: "step-1",
+      });
+      expect(select(withSql).sqlSteps).toHaveLength(1);
+      expect(select(withSql).sqlSteps[0]).toMatchObject({
+        id: "step-1",
+        sql: "SELECT * FROM ENTRY()\n",
+        formatSections: ["csv"],
+      });
+    });
+
+    it("select/addFormatStep creates a new step that starts with only a format section", () => {
+      const state = builderReducer(stateWithRosAndSelect(), {
+        type: "select/addFormatStep",
+        blockId: EXT_BLOCK_ID,
+        section: "export",
+        id: "step-1",
+        fieldId: "field-1",
+      });
+      expect(select(state).sqlSteps).toHaveLength(1);
+      expect(select(state).sqlSteps[0]).toMatchObject({
+        id: "step-1",
+        sql: null,
+        formatSections: ["export"],
+      });
+    });
+
+    it("select/addAsLabelStep creates a new step that starts with only an as-label row", () => {
+      const state = builderReducer(stateWithRosAndSelect(), {
+        type: "select/addAsLabelStep",
+        blockId: EXT_BLOCK_ID,
+        id: "step-1",
+        rowId: "row-1",
+      });
+      expect(select(state).sqlSteps).toHaveLength(1);
+      expect(select(state).sqlSteps[0]).toMatchObject({
+        id: "step-1",
+        sql: null,
+        asLabel: [{ id: "row-1", key: "", value: "" }],
       });
     });
 

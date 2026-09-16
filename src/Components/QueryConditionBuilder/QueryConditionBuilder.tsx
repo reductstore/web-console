@@ -184,7 +184,7 @@ function ProcessSubsection({
   divider = false,
   children,
 }: {
-  title: string;
+  title?: string;
   titleExtra?: ReactNode;
   divider?: boolean;
   children: ReactNode;
@@ -434,7 +434,11 @@ function buildBlocks(
               )}
               {selectTransform && (
                 <ProcessSubsection
-                  title="Select"
+                  title={
+                    selectTransform.select.sqlSteps.length === 0
+                      ? "Select"
+                      : undefined
+                  }
                   divider={!!rosTransform}
                   titleExtra={
                     <SelectStageAddButton

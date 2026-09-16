@@ -28,7 +28,7 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
 
 function makeSqlStep(overrides: Partial<SqlStep> & { id: string }): SqlStep {
   return {
-    sql: "",
+    sql: null,
     asLabel: [],
     formatSections: [],
     csv: { hasHeaders: false },
@@ -39,7 +39,7 @@ function makeSqlStep(overrides: Partial<SqlStep> & { id: string }): SqlStep {
 }
 
 const baseStep: SelectTransformStep = {
-  sqlSteps: [makeSqlStep({ id: "sql-1" })],
+  sqlSteps: [makeSqlStep({ id: "sql-1", sql: "" })],
 };
 
 describe("SelectStageEditor", () => {
@@ -86,7 +86,7 @@ describe("SelectStageEditor", () => {
   it("dispatches transform/addAsLabelRow with kind select when As label is picked from the add menu", () => {
     const dispatch = vi.fn();
     render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
-    fireEvent.click(screen.getByLabelText("Add option for SQL"));
+    fireEvent.click(screen.getByLabelText("Add option for Select"));
     fireEvent.click(screen.getByText("As label"));
     expect(dispatch).toHaveBeenCalledWith({
       type: "transform/addAsLabelRow",
@@ -163,19 +163,32 @@ describe("SelectStageEditor", () => {
     });
   });
 
-  describe("Add SQL step (merged into each block's Add menu)", () => {
-    it("dispatches select/addSqlStep with afterId set to the block whose menu was used", () => {
+  describe("SQL as a toggleable field", () => {
+    it("activates the sql field in place when the block doesn't have one yet", () => {
+      const dispatch = vi.fn();
+      const step: SelectTransformStep = {
+        sqlSteps: [makeSqlStep({ id: "sql-1" }), makeSqlStep({ id: "sql-2" })],
+      };
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
+      fireEvent.click(screen.getByLabelText("Add option for Select 1"));
+      fireEvent.click(screen.getByRole("menuitem", { name: "SQL step" }));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "select/setSql",
+        stepId: "sql-1",
+      });
+    });
+
+    it("spills into a new block after the current one when it already has a sql field", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
         sqlSteps: [
-          makeSqlStep({ id: "sql-1" }),
+          makeSqlStep({ id: "sql-1", sql: "SELECT * FROM ENTRY()" }),
           makeSqlStep({ id: "sql-2" }),
-          makeSqlStep({ id: "sql-3" }),
         ],
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Add option for SQL 1"));
-      fireEvent.click(screen.getByText("SQL step"));
+      fireEvent.click(screen.getByLabelText("Add option for Select 1"));
+      fireEvent.click(screen.getByRole("menuitem", { name: "SQL step" }));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),
@@ -183,16 +196,56 @@ describe("SelectStageEditor", () => {
       });
     });
 
-    it("offers SQL step even with no sql steps yet", () => {
+    it("offers SQL even with no blocks yet", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = { sqlSteps: [] };
       render(<SelectStageAddButton step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Add option for SQL"));
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
       fireEvent.click(screen.getByText("SQL step"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),
       });
+    });
+
+    it("offers Format, Export and As label as alternatives when no blocks exist yet", () => {
+      const dispatch = vi.fn();
+      const step: SelectTransformStep = { sqlSteps: [] };
+      render(<SelectStageAddButton step={step} dispatch={dispatch} />);
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
+      fireEvent.click(screen.getByText("As label"));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "select/addAsLabelStep",
+        id: expect.any(String),
+        rowId: expect.any(String),
+      });
+    });
+
+    it("removes only the sql field, leaving the rest of the block in place", () => {
+      const dispatch = vi.fn();
+      const step: SelectTransformStep = {
+        sqlSteps: [
+          makeSqlStep({
+            id: "sql-1",
+            sql: "SELECT * FROM ENTRY()",
+            formatSections: ["csv"],
+          }),
+        ],
+      };
+      render(<SelectStageEditor step={step} dispatch={dispatch} />);
+      fireEvent.click(screen.getByLabelText("Remove select sql"));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "select/removeSql",
+        stepId: "sql-1",
+      });
+    });
+
+    it("hides the sql editor entirely when the block has no sql field", () => {
+      const step: SelectTransformStep = {
+        sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
+      };
+      render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
+      expect(screen.queryByTestId("monaco-editor")).toBeNull();
     });
   });
 
@@ -200,7 +253,7 @@ describe("SelectStageEditor", () => {
     it("adds the format section (defaulting to CSV) via the dropdown menu", () => {
       const dispatch = vi.fn();
       render(<SelectStageEditor step={baseStep} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Add option for SQL"));
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
       fireEvent.click(screen.getByText("Format"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addFormatSection",
@@ -215,7 +268,7 @@ describe("SelectStageEditor", () => {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
-      fireEvent.click(screen.getByLabelText("Add option for SQL"));
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
       expect(screen.getByRole("menuitem", { name: "Format" })).toHaveAttribute(
         "aria-disabled",
         "true",
@@ -227,7 +280,7 @@ describe("SelectStageEditor", () => {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["csv"] })],
       };
       render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
-      fireEvent.click(screen.getByLabelText("Add option for SQL"));
+      fireEvent.click(screen.getByLabelText("Add option for Select"));
       expect(
         screen.getByRole("menuitem", { name: "Export" }),
       ).not.toHaveAttribute("aria-disabled", "true");
@@ -246,7 +299,7 @@ describe("SelectStageEditor", () => {
         ],
       };
       render(<SelectStageEditor step={step} dispatch={vi.fn()} />);
-      expect(screen.getByLabelText("Add option for SQL")).not.toBeDisabled();
+      expect(screen.getByLabelText("Add option for Select")).not.toBeDisabled();
     });
   });
 
@@ -329,7 +382,7 @@ describe("SelectStageEditor", () => {
         sqlSteps: [makeSqlStep({ id: "sql-1", formatSections: ["parquet"] })],
       };
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Remove sql format"));
+      fireEvent.click(screen.getByLabelText("Remove select format"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",
         stepId: "sql-1",
@@ -441,7 +494,7 @@ describe("SelectStageEditor", () => {
       it("removes the whole section via its remove button", () => {
         const dispatch = vi.fn();
         render(<SelectStageEditor step={step} dispatch={dispatch} />);
-        fireEvent.click(screen.getByLabelText("Remove sql format"));
+        fireEvent.click(screen.getByLabelText("Remove select format"));
         expect(dispatch).toHaveBeenCalledWith({
           type: "select/removeFormatSection",
           stepId: "sql-1",
@@ -500,7 +553,7 @@ describe("SelectStageEditor", () => {
     it("removes the section via its remove button", () => {
       const dispatch = vi.fn();
       render(<SelectStageEditor step={step} dispatch={dispatch} />);
-      fireEvent.click(screen.getByLabelText("Remove sql export"));
+      fireEvent.click(screen.getByLabelText("Remove select export"));
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/removeFormatSection",
         stepId: "sql-1",

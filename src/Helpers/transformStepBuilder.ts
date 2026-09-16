@@ -51,7 +51,7 @@ export interface SelectExportConfig {
 
 export interface SqlStep {
   id: string;
-  sql: string;
+  sql: string | null;
   asLabel: KeyValueRow[];
   formatSections: SelectFormatSection[];
   csv: CsvConfig;
@@ -89,7 +89,7 @@ export function createRosTransformStep(): Extract<
   };
 }
 
-function blankSqlStep(id: string, sql: string): SqlStep {
+function blankSqlStep(id: string, sql: string | null = null): SqlStep {
   return {
     id,
     sql,
@@ -123,9 +123,9 @@ export function updateSqlStep<Entry extends TransformStepEntry>(
   } as Entry;
 }
 
-export function addSqlStep<Entry extends TransformStepEntry>(
+function addBlankStep<Entry extends TransformStepEntry>(
   transform: Entry,
-  id: string = crypto.randomUUID(),
+  id: string,
   afterId?: string,
 ): Entry {
   if (transform.kind !== "select") return transform;
@@ -138,24 +138,89 @@ export function addSqlStep<Entry extends TransformStepEntry>(
     select: {
       sqlSteps: [
         ...sqlSteps.slice(0, insertIndex),
-        blankSqlStep(id, DEFAULT_SQL),
+        blankSqlStep(id),
         ...sqlSteps.slice(insertIndex),
       ],
     },
   } as Entry;
 }
 
-export function removeSqlStep<Entry extends TransformStepEntry>(
+export function addSqlStep<Entry extends TransformStepEntry>(
   transform: Entry,
-  id: string,
+  id: string = crypto.randomUUID(),
+  afterId?: string,
+): Entry {
+  return setSql(addBlankStep(transform, id, afterId), id, DEFAULT_SQL);
+}
+
+export function addFormatStep<Entry extends TransformStepEntry>(
+  transform: Entry,
+  section: SelectFormatSection,
+  id: string = crypto.randomUUID(),
+  fieldId: string = crypto.randomUUID(),
+  afterId?: string,
+): Entry {
+  return addFormatSection(
+    addBlankStep(transform, id, afterId),
+    id,
+    section,
+    fieldId,
+  );
+}
+
+export function addAsLabelStep<Entry extends TransformStepEntry>(
+  transform: Entry,
+  id: string = crypto.randomUUID(),
+  rowId: string = crypto.randomUUID(),
+  afterId?: string,
+): Entry {
+  return addAsLabelRow(addBlankStep(transform, id, afterId), id, rowId);
+}
+
+function isSqlStepEmpty(step: SqlStep): boolean {
+  return (
+    step.sql === null &&
+    step.formatSections.length === 0 &&
+    step.asLabel.length === 0
+  );
+}
+
+function pruneEmptySqlStep(
+  select: SelectTransformStep,
+  stepId: string,
+): SelectTransformStep {
+  const step = select.sqlSteps.find((s) => s.id === stepId);
+  if (step && isSqlStepEmpty(step)) {
+    return { sqlSteps: select.sqlSteps.filter((s) => s.id !== stepId) };
+  }
+  return select;
+}
+
+export function setSql<Entry extends TransformStepEntry>(
+  transform: Entry,
+  stepId: string,
+  sql: string = DEFAULT_SQL,
 ): Entry {
   if (transform.kind !== "select") return transform;
   return {
     ...transform,
-    select: {
-      sqlSteps: transform.select.sqlSteps.filter((step) => step.id !== id),
-    },
+    select: mapSqlStep(transform.select, stepId, (step) => ({
+      ...step,
+      sql,
+    })),
   } as Entry;
+}
+
+export function removeSql<Entry extends TransformStepEntry>(
+  transform: Entry,
+  stepId: string,
+): Entry {
+  if (transform.kind !== "select") return transform;
+  const cleared = mapSqlStep(transform.select, stepId, (step) => ({
+    ...step,
+    sql: null,
+  }));
+  return { ...transform, select: pruneEmptySqlStep(cleared, stepId) } as Entry;
 }
 
 function mapSqlStep(
@@ -231,13 +296,11 @@ export function removeFormatSection<Entry extends TransformStepEntry>(
   section: SelectFormatSection,
 ): Entry {
   if (transform.kind !== "select") return transform;
-  return {
-    ...transform,
-    select: mapSqlStep(transform.select, stepId, (step) => ({
-      ...step,
-      formatSections: step.formatSections.filter((s) => s !== section),
-    })),
-  } as Entry;
+  const next = mapSqlStep(transform.select, stepId, (step) => ({
+    ...step,
+    formatSections: step.formatSections.filter((s) => s !== section),
+  }));
+  return { ...transform, select: pruneEmptySqlStep(next, stepId) } as Entry;
 }
 
 export function updateCsv<Entry extends TransformStepEntry>(
@@ -521,12 +584,13 @@ export function removeAsLabelRow<Entry extends TransformStepEntry>(
       },
     } as Entry;
   }
+  const next = mapSqlStep(transform.select, stepId as string, (step) => ({
+    ...step,
+    asLabel: removeRow(step.asLabel, id),
+  }));
   return {
     ...transform,
-    select: mapSqlStep(transform.select, stepId as string, (step) => ({
-      ...step,
-      asLabel: removeRow(step.asLabel, id),
-    })),
+    select: pruneEmptySqlStep(next, stepId as string),
   } as Entry;
 }
 
@@ -674,7 +738,7 @@ function buildSelectExt(
   }
   return select.sqlSteps.map((step) => {
     const stage: Record<string, unknown> = {};
-    if (step.sql.trim()) stage.sql = step.sql.trim();
+    if (step.sql?.trim()) stage.sql = step.sql.trim();
     Object.assign(stage, buildSqlStageExtras(step));
     return stage;
   });
@@ -1044,7 +1108,7 @@ function parseSqlStage(stage: unknown): SqlStep | undefined {
 
   return {
     id: crypto.randomUUID(),
-    sql: (sql as string) ?? "",
+    sql: sql !== undefined ? (sql as string) : null,
     asLabel,
     formatSections,
     csv,

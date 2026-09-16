@@ -1422,7 +1422,7 @@ describe("QueryConditionBuilder", () => {
 
     const addSqlStep = async () => {
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option for SQL"));
+        fireEvent.click(screen.getByLabelText("Add option for Select"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("SQL step"));
@@ -1431,7 +1431,7 @@ describe("QueryConditionBuilder", () => {
 
     const addLabelMapping = async () => {
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option for SQL"));
+        fireEvent.click(screen.getByLabelText("Add option for Select"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("As label"));
@@ -1451,7 +1451,7 @@ describe("QueryConditionBuilder", () => {
       await addTransformBlock();
       await addExtension("Select");
       expect(screen.queryByTestId("monaco-editor")).toBeNull();
-      expect(screen.getByLabelText("Add option for SQL")).toBeTruthy();
+      expect(screen.getByLabelText("Add option for Select")).toBeTruthy();
     });
 
     it("shows the default SQL once a SQL step is added from the menu", async () => {
@@ -1575,7 +1575,7 @@ describe("QueryConditionBuilder", () => {
       await addSqlStep();
 
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option for SQL"));
+        fireEvent.click(screen.getByLabelText("Add option for Select"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("Format"));
@@ -1584,7 +1584,7 @@ describe("QueryConditionBuilder", () => {
         fireEvent.click(screen.getByText("Parquet"));
       });
       await act(async () => {
-        fireEvent.click(screen.getByLabelText("Add option for SQL"));
+        fireEvent.click(screen.getByLabelText("Add option for Select"));
       });
       await act(async () => {
         fireEvent.click(screen.getByText("Export"));
