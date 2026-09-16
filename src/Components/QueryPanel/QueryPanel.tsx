@@ -968,16 +968,6 @@ export default function QueryPanel({
 
   const handleLoadQuery = useCallback(
     (saved: SavedQuery) => {
-      // Restore bucket and entries if available (query page)
-      if (showSelectionControls) {
-        if (saved.bucketName) {
-          setBucketName(saved.bucketName);
-        }
-        if (saved.entries && saved.entries.length > 0) {
-          setSelectedEntries(saved.entries);
-        }
-      }
-
       setWhenCondition(saved.query);
       builderStateRef.current = saved.builderState;
       if (saved.builderState) {
@@ -1021,7 +1011,7 @@ export default function QueryPanel({
         stopText: formatValue(end, useUnix),
       }));
     },
-    [showUnix, showSelectionControls],
+    [showUnix],
   );
 
   const currentQuerySnapshot = (): SavedQuery => ({
@@ -1242,7 +1232,7 @@ export default function QueryPanel({
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
                         onClearQuery={resetBuilderToBlank}
-                        editable={hasWritePermission}
+                        editable
                         showAllQueries={showSelectionControls}
                       />
                       {saveButton}
@@ -1421,7 +1411,7 @@ export default function QueryPanel({
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
                         onClearQuery={resetBuilderToBlank}
-                        editable={hasWritePermission}
+                        editable
                         showAllQueries={showSelectionControls}
                       />
                     )}
