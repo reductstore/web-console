@@ -1100,7 +1100,8 @@ export default function QueryPanel({
       loaded.rangeKey === snap.rangeKey &&
       (snap.rangeKey !== "custom" ||
         (loaded.rangeStart === snap.rangeStart &&
-          loaded.rangeEnd === snap.rangeEnd))
+          loaded.rangeEnd === snap.rangeEnd)) &&
+      JSON.stringify(loaded.builderState) === JSON.stringify(snap.builderState)
     );
   })();
 
