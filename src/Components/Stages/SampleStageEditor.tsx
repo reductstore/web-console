@@ -48,7 +48,7 @@ export default function SampleStageEditor({
           placeholder="every Nth record"
           value={everyNth}
           onChange={(value) => onChangeEachN({ everyNth: value ?? undefined })}
-          style={{ width: VALUE_INPUT_WIDTH / 2 }}
+          style={{ width: VALUE_INPUT_WIDTH }}
         />
       ) : (
         <AutoComplete
