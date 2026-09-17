@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import type { Client } from "reduct-js";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { v4 as uuidv4 } from "uuid";
 import QueryConditionBuilder from "./QueryConditionBuilder";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import { BuilderState } from "../../Helpers/builderReducer";
@@ -52,6 +53,11 @@ vi.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
   getSqlCompletionProvider: () => ({}),
 }));
+
+vi.mock("uuid", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("uuid")>();
+  return { ...actual, v4: vi.fn(actual.v4) };
+});
 
 beforeEach(() => {
   mockJSDOM();
@@ -779,10 +785,9 @@ describe("QueryConditionBuilder", () => {
     });
 
     it("reorders the JSON's keys to match a drag-and-drop reorder of the blocks", async () => {
-      // Spying (not mocking the implementation) still returns the real
-      // generated ids, just lets the test read back which one a specific
-      // action produced.
-      const uuidMock = vi.spyOn(crypto, "randomUUID");
+      // The UUID mock wraps the real implementation, so the test can read
+      // back the generated id without changing runtime behavior.
+      const uuidMock = vi.mocked(uuidv4);
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -827,12 +832,10 @@ describe("QueryConditionBuilder", () => {
 
       const [afterDrag] = onChange.mock.calls.at(-1) as [string];
       expect(Object.keys(JSON.parse(afterDrag))).toEqual(["$limit", "&status"]);
-
-      uuidMock.mockRestore();
     });
 
     it("reorders the JSON's ext key to match a drag-and-drop reorder involving the Transform block", async () => {
-      const uuidMock = vi.spyOn(crypto, "randomUUID");
+      const uuidMock = vi.mocked(uuidv4);
       const onChange = vi.fn();
       render(
         <QueryConditionBuilder
@@ -886,8 +889,6 @@ describe("QueryConditionBuilder", () => {
 
       const [afterDrag] = onChange.mock.calls.at(-1) as [string];
       expect(Object.keys(JSON.parse(afterDrag))).toEqual(["#ext", "&status"]);
-
-      uuidMock.mockRestore();
     });
 
     it("reports an incomplete step once its default count is cleared, and clears once refilled", async () => {
