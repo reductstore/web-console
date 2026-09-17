@@ -163,10 +163,7 @@ function SqlStepBlock({
             marginBottom: 6,
           }}
         >
-          <Typography.Text
-            strong
-            style={{ fontSize: 12, minWidth: ROW_LABEL_WIDTH }}
-          >
+          <Typography.Text strong style={{ minWidth: ROW_LABEL_WIDTH }}>
             {label}
           </Typography.Text>
           <AddOptionFooter
