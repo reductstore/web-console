@@ -76,20 +76,6 @@ describe("ConditionListEditor", () => {
     expect(onAddCondition).not.toHaveBeenCalled();
   });
 
-  it("hides every row and disables + until a data source is selected", () => {
-    render(
-      <ConditionListEditor
-        conditions={[condition("a")]}
-        onChangeCondition={noop}
-        onRemoveCondition={noop}
-        onAddCondition={noop}
-        sourceReady={false}
-      />,
-    );
-    expect(screen.queryByPlaceholderText("value")).toBeNull();
-    expect(screen.getByLabelText("Add condition")).toBeDisabled();
-  });
-
   it("hides every remove button when only one condition remains", () => {
     render(
       <ConditionListEditor

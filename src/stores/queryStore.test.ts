@@ -29,15 +29,6 @@ describe("queryStore", () => {
       });
     });
 
-    it("should set loadedQueryName after saving", () => {
-      useQueryStore
-        .getState()
-        .saveQuery("bucket", "test-entry", { name: "q1", query: "{}" });
-      expect(
-        useQueryStore.getState().getLoadedQueryName("bucket", "test-entry"),
-      ).toBe("q1");
-    });
-
     it("should save timeFormat and rangeKey", () => {
       useQueryStore.getState().saveQuery("bucket", "test-entry", {
         name: "q1",
@@ -110,34 +101,6 @@ describe("queryStore", () => {
         .getState()
         .getQueries("bucket", "test-entry");
       expect(queries).toHaveLength(0);
-    });
-
-    it("should clear loadedQueryName if deleted query was loaded", () => {
-      useQueryStore
-        .getState()
-        .saveQuery("bucket", "test-entry", { name: "my-query", query: "{}" });
-      expect(
-        useQueryStore.getState().getLoadedQueryName("bucket", "test-entry"),
-      ).toBe("my-query");
-
-      useQueryStore.getState().deleteQuery("bucket", "test-entry", "my-query");
-      expect(
-        useQueryStore.getState().getLoadedQueryName("bucket", "test-entry"),
-      ).toBeNull();
-    });
-
-    it("should not clear loadedQueryName if different query was deleted", () => {
-      useQueryStore
-        .getState()
-        .saveQuery("bucket", "test-entry", { name: "q1", query: "{}" });
-      useQueryStore
-        .getState()
-        .saveQuery("bucket", "test-entry", { name: "q2", query: "{}" });
-
-      useQueryStore.getState().deleteQuery("bucket", "test-entry", "q1");
-      expect(
-        useQueryStore.getState().getLoadedQueryName("bucket", "test-entry"),
-      ).toBe("q2");
     });
 
     it("should delete query from a multi-entry selection only", () => {

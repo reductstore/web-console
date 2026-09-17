@@ -237,7 +237,7 @@ describe("conditionalQueryBuilder", () => {
     });
 
     it("parses a chain of conditions combined with $each_t, matching what the builder actually saves", () => {
-      // This is the exact shape QueryConditionBuilder's applyQuery produces:
+      // This is the exact shape builderReducer's serialize produces:
       // serializeBuilderList's output with the steps spread alongside it.
       const serialized = serializeBuilderList([
         makeCondition({ id: "a", label: "status" }),

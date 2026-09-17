@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 import { ReadableRecord } from "reduct-js/lib/cjs/Record";
 import QueryConditionBuilder from "../QueryConditionBuilder";
+import { SELECT_SOURCE_HINT } from "../../Helpers/builderHints";
 import { getExtensionFromContentType } from "../../Helpers/contentType";
 // @ts-ignore
 import prettierBytes from "prettier-bytes";
@@ -60,6 +61,7 @@ import {
   processWhenCondition,
 } from "../../Helpers/json5Utils";
 import { parseQueryValue } from "../../Helpers/conditionalQueryBuilder";
+import { BuilderState } from "../../Helpers/builderReducer";
 import EditRecordLabels from "../EditRecordLabels";
 import RecordPreview from "../RecordPreview";
 import SaveQueryModal from "../SavedQueries/SaveQueryModal";
@@ -157,6 +159,16 @@ export default function QueryPanel({
   const [showCancel, setShowCancel] = useState(false);
   const cancelDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [whenCondition, setWhenCondition] = useState<string>(defaultQuery);
+  const builderStateRef = useRef<BuilderState | undefined>(undefined);
+  const [builderInitialState, setBuilderInitialState] = useState<
+    BuilderState | undefined
+  >(undefined);
+  const [builderKey, setBuilderKey] = useState(0);
+  const [loadedQuery, setLoadedQuery] = useState<{
+    name: string;
+    bucketName: string;
+    entries: string[];
+  } | null>(null);
   // If the initial query isn't representable in the builder (e.g. a
   // hand-written query with real nested grouping), land in JSON mode
   // instead of silently showing an empty builder next to the real query.
@@ -207,7 +219,7 @@ export default function QueryPanel({
     interval: null as string | null,
   }));
 
-  const { getLoadedQueryName, getQueries } = useQueryStore();
+  const { getQueries } = useQueryStore();
 
   useEffect(() => {
     setBucketName(initialBucketName);
@@ -415,6 +427,15 @@ export default function QueryPanel({
 
   const hasValidSelection =
     bucketName.trim().length > 0 && !!selectedEntryQuery;
+
+  const resetBuilderToBlank = () => {
+    setWhenCondition(defaultQuery);
+    setConditionMode("builder");
+    builderStateRef.current = undefined;
+    setBuilderInitialState(undefined);
+    setBuilderKey((k) => k + 1);
+    setLoadedQuery(null);
+  };
 
   const getSelectionRangeFallback = (): {
     start?: bigint;
@@ -849,7 +870,7 @@ export default function QueryPanel({
             title: "Entry",
             dataIndex: "entryName",
             key: "entryName",
-            render: (name: string) => name || "—",
+            render: (name: string) => (name ? `/${name}` : "—"),
           } satisfies ColumnType<RecordTableRow>,
         ]
       : []),
@@ -910,7 +931,11 @@ export default function QueryPanel({
 
   const handleLoadQuery = useCallback(
     (saved: SavedQuery) => {
-      // Restore bucket and entries if available (query page)
+      setLoadedQuery({
+        name: saved.name,
+        bucketName: saved.bucketName ?? bucketName,
+        entries: saved.entries?.length ? saved.entries : selectedEntries,
+      });
       if (showSelectionControls) {
         if (saved.bucketName) {
           setBucketName(saved.bucketName);
@@ -919,8 +944,12 @@ export default function QueryPanel({
           setSelectedEntries(saved.entries);
         }
       }
-
       setWhenCondition(saved.query);
+      builderStateRef.current = saved.builderState;
+      if (saved.builderState) {
+        setBuilderInitialState(saved.builderState);
+        setBuilderKey((k) => k + 1);
+      }
       setFetchError("");
       // Reopen in whichever mode the query was saved from, falling back to
       // the representability check for queries saved before this was
@@ -958,19 +987,41 @@ export default function QueryPanel({
         stopText: formatValue(end, useUnix),
       }));
     },
-    [showUnix, showSelectionControls],
+    [showUnix, bucketName, selectedEntries, showSelectionControls],
   );
 
-  const currentQuerySnapshot = (): SavedQuery => ({
-    name: getLoadedQueryName(bucketName, selectedEntries) ?? "",
+  const handleQueryDeleted = (
+    deletedBucket: string,
+    deletedEntries: string[],
+    name: string,
+  ) => {
+    const sameEntries = (a: string[], b: string[]) =>
+      JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+    if (
+      loadedQuery &&
+      loadedQuery.name === name &&
+      loadedQuery.bucketName === deletedBucket &&
+      sameEntries(loadedQuery.entries, deletedEntries)
+    ) {
+      resetBuilderToBlank();
+    }
+  };
+
+  const currentQuerySnapshot = (
+    targetBucket: string,
+    targetEntries: string[],
+  ): SavedQuery => ({
+    name: loadedQuery?.name ?? "",
     query: whenCondition,
     mode: conditionMode,
     timeFormat: showUnix ? "Unix" : "UTC",
     rangeKey: detectRangeKey(timeRange.start, timeRange.end),
     rangeStart: timeRange.start?.toString(),
     rangeEnd: timeRange.end?.toString(),
-    bucketName,
-    entries: [...selectedEntries],
+    bucketName: targetBucket,
+    entries: [...targetEntries],
+    builderState:
+      conditionMode === "builder" ? builderStateRef.current : undefined,
   });
 
   const handleSaveQuery = () => {
@@ -978,11 +1029,14 @@ export default function QueryPanel({
       return;
     }
 
-    const loadedName = getLoadedQueryName(bucketName, selectedEntries);
-    if (loadedName) {
+    if (loadedQuery) {
       const { saveQuery } = useQueryStore.getState();
-      saveQuery(bucketName, selectedEntries, currentQuerySnapshot());
-      message.success(`Query "${loadedName}" updated`);
+      saveQuery(
+        loadedQuery.bucketName,
+        loadedQuery.entries,
+        currentQuerySnapshot(loadedQuery.bucketName, loadedQuery.entries),
+      );
+      message.success(`Query "${loadedQuery.name}" updated`);
     } else {
       setIsSaveQueryModalVisible(true);
     }
@@ -992,13 +1046,15 @@ export default function QueryPanel({
     if (!hasValidSelection || !whenCondition.trim()) {
       return true;
     }
-    const loadedName = getLoadedQueryName(bucketName, selectedEntries);
-    if (!loadedName) return false;
-    const loaded = getQueries(bucketName, selectedEntries).find(
-      (query) => query.name === loadedName,
+    if (!loadedQuery) return false;
+    const loaded = getQueries(loadedQuery.bucketName, loadedQuery.entries).find(
+      (query) => query.name === loadedQuery.name,
     );
     if (!loaded) return false;
-    const snap = currentQuerySnapshot();
+    const snap = currentQuerySnapshot(
+      loadedQuery.bucketName,
+      loadedQuery.entries,
+    );
     // loaded.mode is absent for queries saved before mode was tracked -
     // fall back to the same representability check handleLoadQuery uses,
     // or a legacy save always looks "changed" and Save stays enabled.
@@ -1012,7 +1068,8 @@ export default function QueryPanel({
       loaded.rangeKey === snap.rangeKey &&
       (snap.rangeKey !== "custom" ||
         (loaded.rangeStart === snap.rangeStart &&
-          loaded.rangeEnd === snap.rangeEnd))
+          loaded.rangeEnd === snap.rangeEnd)) &&
+      JSON.stringify(loaded.builderState) === JSON.stringify(snap.builderState)
     );
   })();
 
@@ -1175,7 +1232,10 @@ export default function QueryPanel({
                         bucketName={bucketName}
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
-                        editable={hasWritePermission}
+                        onClearQuery={resetBuilderToBlank}
+                        onQueryDeleted={handleQueryDeleted}
+                        loadedQueryName={loadedQuery?.name ?? null}
+                        editable
                         showAllQueries={showSelectionControls}
                       />
                       {saveButton}
@@ -1353,7 +1413,10 @@ export default function QueryPanel({
                         bucketName={bucketName}
                         entryName={selectedEntries}
                         onLoadQuery={handleLoadQuery}
-                        editable={hasWritePermission}
+                        onClearQuery={resetBuilderToBlank}
+                        onQueryDeleted={handleQueryDeleted}
+                        loadedQueryName={loadedQuery?.name ?? null}
+                        editable
                         showAllQueries={showSelectionControls}
                       />
                     )}
@@ -1362,9 +1425,12 @@ export default function QueryPanel({
                 </div>
                 <div className="queryConditionalContent">
                   <QueryConditionBuilder
+                    key={builderKey}
+                    initialState={builderInitialState}
                     value={whenCondition}
-                    onChange={(value: string) => {
+                    onChange={(value, state) => {
                       setWhenCondition(value);
+                      builderStateRef.current = state;
                       if (fetchError) {
                         setFetchError("");
                       }
@@ -1429,12 +1495,6 @@ export default function QueryPanel({
                 </Modal>
               </div>
               <div className="fetchButton">
-                <QueryStatusLabel
-                  status={progress.status}
-                  recordCount={records.length}
-                  elapsed={progress.elapsed}
-                  eta={progress.eta}
-                />
                 <Button
                   onClick={() => {
                     if (showCancel && fetchCtrlRef.current) {
@@ -1445,11 +1505,7 @@ export default function QueryPanel({
                   }}
                   type={showCancel ? "default" : "primary"}
                   disabled={!hasValidSelection}
-                  title={
-                    !hasValidSelection
-                      ? "Select a bucket and entries first"
-                      : undefined
-                  }
+                  title={!hasValidSelection ? SELECT_SOURCE_HINT : undefined}
                   style={{
                     width: 130,
                     whiteSpace: "nowrap",
@@ -1464,6 +1520,12 @@ export default function QueryPanel({
                 >
                   {showCancel ? "Stop" : "Run Query"}
                 </Button>
+                <QueryStatusLabel
+                  status={progress.status}
+                  recordCount={records.length}
+                  elapsed={progress.elapsed}
+                  eta={progress.eta}
+                />
               </div>
               <QueryProgressBar
                 status={progress.status}
@@ -1545,6 +1607,16 @@ export default function QueryPanel({
         rangeKey={detectRangeKey(timeRange.start, timeRange.end)}
         rangeStart={timeRange.start?.toString()}
         rangeEnd={timeRange.end?.toString()}
+        builderState={
+          conditionMode === "builder" ? builderStateRef.current : undefined
+        }
+        onSaved={(name) =>
+          setLoadedQuery({
+            name,
+            bucketName,
+            entries: [...selectedEntries],
+          })
+        }
       />
 
       <ShareLinkModal

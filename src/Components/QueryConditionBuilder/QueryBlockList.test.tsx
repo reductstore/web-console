@@ -1,13 +1,19 @@
 import React from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { DragEndEvent } from "@dnd-kit/core";
-import QueryBlockList from "./QueryBlockList";
+import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
-import { FlatCondition, Step } from "../../Helpers/conditionalQueryBuilder";
-import {
-  TRANSFORM_BLOCK_ID,
-  TransformStepEntry,
-} from "../../Helpers/transformStepBuilder";
+
+// Once opened, antd/rc-trigger keeps a closed dropdown's popup mounted (mid
+// leave-animation forever, since jsdom never fires the animation-end event
+// that would let it unmount), so the currently open one is the one with no
+// "-leave" class.
+const openActionsMenu = () => {
+  const menus = Array.from(document.querySelectorAll(".ant-dropdown"));
+  return menus.filter((menu) => !menu.className.includes("-leave")).at(-1) as
+    | HTMLElement
+    | undefined;
+};
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
 
@@ -33,438 +39,136 @@ beforeEach(() => {
   capturedOnDragEnd = undefined;
 });
 
-const noop = () => {};
-
-const condition = (id: string): FlatCondition => ({
+const block = (
+  id: string,
+  overrides: Partial<BuilderBlock> = {},
+): BuilderBlock => ({
   id,
-  label: "status",
-  operator: "$eq",
-  value: "active",
-  negated: false,
-  connector: "$and",
+  onRemove: () => {},
+  enabled: true,
+  onToggleEnabled: () => {},
+  content: <div>Content {id}</div>,
+  ...overrides,
 });
 
-const eachNStep: Step = {
-  id: "each-n-1",
-  type: "each_n",
-  eachN: { everyNth: 2 },
-};
-const eachTStep: Step = {
-  id: "each-t-1",
-  type: "each_t",
-  eachT: { duration: "", useIntervalMacro: true },
-};
-const limitStep: Step = {
-  id: "limit-1",
-  type: "limit",
-  limit: { count: 100 },
-};
-
-const baseProps = {
-  onChangeCondition: noop,
-  onRemoveCondition: noop,
-  onAddCondition: noop,
-  onChangeEachN: noop,
-  onChangeEachT: noop,
-  onChangeLimit: noop,
-  onAddEachT: noop,
-  onAddEachN: noop,
-  onAddLimit: noop,
-  onAddConditionsBlock: noop,
-  onRemoveConditionsBlock: noop,
-  onAddTransformBlock: noop,
-  onRemoveTransformBlock: noop,
-  onAddSection: noop,
-  onRemoveSection: noop,
-  onChangeTopic: noop,
-  onAddEncodeRow: noop,
-  onChangeEncodeRow: noop,
-  onRemoveEncodeRow: noop,
-  onAddAsLabelRow: noop,
-  onChangeAsLabelRow: noop,
-  onRemoveAsLabelRow: noop,
-  onChangeExport: noop,
-  onRemoveStep: noop,
-  onReorderBlock: noop,
-};
-
-const transformStep: TransformStepEntry = {
-  kind: "ros",
-  ros: {
-    sections: ["filter", "label"],
-    topic: "/robot/odom",
-    encode: [],
-    asLabel: [{ id: "row-1", key: "speed", value: "speed" }],
-    export: { format: "", duration: "", size: "" },
-  },
-};
-
-const openAddStepMenu = async () => {
-  await act(async () => {
-    fireEvent.click(screen.getByLabelText("Add step"));
-  });
-};
-
 describe("QueryBlockList", () => {
-  it("renders nothing until a block has been added", () => {
+  it("renders nothing when there are no blocks", () => {
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
+        blocks={[]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    expect(screen.queryByText("Label filter")).toBeNull();
     expect(screen.queryByLabelText("Drag to reorder")).toBeNull();
   });
 
-  it("renders the Label filter block with a drag handle and a remove button once added", () => {
+  it("renders each block's position-based stage label, content, and drag handle", () => {
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions"]}
-        conditions={[condition("a")]}
-        steps={[]}
+        blocks={[block("a"), block("b")]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    expect(screen.getByText("Label filter")).toBeTruthy();
-    expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(1);
-    expect(screen.getByLabelText("Remove label filter")).toBeTruthy();
+    expect(screen.getByText("Stage 1")).toBeTruthy();
+    expect(screen.getByText("Content a")).toBeTruthy();
+    expect(screen.getByText("Stage 2")).toBeTruthy();
+    expect(screen.getByText("Content b")).toBeTruthy();
+    expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(2);
   });
 
-  it("calls onRemoveConditionsBlock from the Label filter block's remove button", () => {
-    const onRemoveConditionsBlock = vi.fn();
+  it("calls the block's own onRemove from its actions menu's Delete stage item", async () => {
+    const onRemove = vi.fn();
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions"]}
-        conditions={[condition("a")]}
-        steps={[]}
-        onRemoveConditionsBlock={onRemoveConditionsBlock}
+        blocks={[block("a", { onRemove })]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Remove label filter"));
-    expect(onRemoveConditionsBlock).toHaveBeenCalled();
-  });
-
-  it("renders each_n and each_t as two separate Sample blocks with distinct titles, plus Limit", () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions", "each-n-1", "each-t-1", "limit-1"]}
-        conditions={[condition("a")]}
-        steps={[eachNStep, eachTStep, limitStep]}
-      />,
-    );
-    expect(screen.getByText("Sample every N")).toBeTruthy();
-    expect(screen.getByText("Sample by time")).toBeTruthy();
-    expect(screen.getByText("Limit")).toBeTruthy();
-    expect(screen.getAllByLabelText("Drag to reorder")).toHaveLength(4);
-    expect(screen.getAllByLabelText("Remove sample step")).toHaveLength(2);
-  });
-
-  it("renders the Transform block with its title and remove button", () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
-        conditions={[]}
-        steps={[]}
-        transform={transformStep}
-      />,
-    );
-    expect(screen.getByText("Process (ROS)")).toBeTruthy();
-    expect(screen.getByLabelText("Remove process")).toBeTruthy();
-  });
-
-  it("calls onRemoveTransformBlock from the Transform block's remove button", () => {
-    const onRemoveTransformBlock = vi.fn();
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
-        conditions={[]}
-        steps={[]}
-        transform={transformStep}
-        onRemoveTransformBlock={onRemoveTransformBlock}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Remove process"));
-    expect(onRemoveTransformBlock).toHaveBeenCalled();
-  });
-
-  it("offers Process (ROS) in the Add step menu, and calls onAddTransformBlock when picked", async () => {
-    const onAddTransformBlock = vi.fn();
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
-        onAddTransformBlock={onAddTransformBlock}
-      />,
-    );
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Process (ROS)" }),
-    ).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByText("Process (ROS)"));
+      fireEvent.click(screen.getByLabelText("Stage actions"));
     });
-    expect(onAddTransformBlock).toHaveBeenCalled();
-  });
-
-  it("greys out Process (ROS) once it's already added", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[TRANSFORM_BLOCK_ID]}
-        conditions={[]}
-        steps={[]}
-        transform={transformStep}
-      />,
-    );
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Process (ROS)" }),
-    ).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("hides every block except the default Interval step until a data source is selected, but keeps Add step reachable and greys out its menu", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions", "each-t-1"]}
-        conditions={[condition("a")]}
-        steps={[eachTStep]}
-        sourceReady={false}
-      />,
-    );
-    expect(screen.queryByText("Label filter")).toBeNull();
-    expect(screen.getByText("Sample by time")).toBeTruthy();
-    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Label filter" }),
-    ).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("still hides non-default steps like Limit until a data source is selected", () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["each-t-1", "limit-1"]}
-        conditions={[]}
-        steps={[eachTStep, limitStep]}
-        sourceReady={false}
-      />,
-    );
-    expect(screen.getByText("Sample by time")).toBeTruthy();
-    expect(screen.queryByText("Limit")).toBeNull();
-  });
-
-  it("calls onRemoveStep with a step's id from its block's remove button", () => {
-    const onRemoveStep = vi.fn();
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["limit-1"]}
-        conditions={[]}
-        steps={[limitStep]}
-        onRemoveStep={onRemoveStep}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Remove limit step"));
-    expect(onRemoveStep).toHaveBeenCalledWith("limit-1");
-  });
-
-  it("offers Label filter, both Sample kinds, Limit, and Transform in the Add step menu when none has been added yet", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
-      />,
-    );
-    await openAddStepMenu();
-    expect(screen.getByRole("menuitem", { name: "Label filter" })).toBeTruthy();
-    expect(
-      screen.getByRole("menuitem", { name: "Sample by time" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("menuitem", { name: "Sample every N" }),
-    ).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "Limit" })).toBeTruthy();
-    expect(
-      screen.getByRole("menuitem", { name: "Process (ROS)" }),
-    ).toBeTruthy();
-  });
-
-  it("greys out only the Sample kind that's already been added", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["each-t-1"]}
-        conditions={[]}
-        steps={[eachTStep]}
-      />,
-    );
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Sample by time" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(
-      screen.getByRole("menuitem", { name: "Sample every N" }),
-    ).not.toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("greys out both Sample menu items once both kinds are already added", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["each-n-1", "each-t-1"]}
-        conditions={[]}
-        steps={[eachNStep, eachTStep]}
-      />,
-    );
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Sample by time" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(
-      screen.getByRole("menuitem", { name: "Sample every N" }),
-    ).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("greys out Label filter once it's already added", async () => {
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions"]}
-        conditions={[condition("a")]}
-        steps={[]}
-      />,
-    );
-    await openAddStepMenu();
-    expect(
-      screen.getByRole("menuitem", { name: "Label filter" }),
-    ).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("calls onAddConditionsBlock when Label filter is picked from the menu", async () => {
-    const onAddConditionsBlock = vi.fn();
-    render(
-      <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
-        onAddConditionsBlock={onAddConditionsBlock}
-      />,
-    );
-    await openAddStepMenu();
     await act(async () => {
-      fireEvent.click(screen.getByText("Label filter"));
+      fireEvent.click(within(openActionsMenu()!).getByText("Delete stage"));
     });
-    expect(onAddConditionsBlock).toHaveBeenCalled();
+    expect(onRemove).toHaveBeenCalled();
   });
 
-  it("calls onAddEachT when Sample by time is picked from the menu", async () => {
-    const onAddEachT = vi.fn();
+  it("renders the addStageMenu slot", () => {
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
-        onAddEachT={onAddEachT}
+        blocks={[]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={<button aria-label="Add stage">Add stage</button>}
       />,
     );
-    await openAddStepMenu();
-    await act(async () => {
-      fireEvent.click(screen.getByText("Sample by time"));
-    });
-    expect(onAddEachT).toHaveBeenCalled();
+    expect(screen.getByLabelText("Add stage")).toBeTruthy();
   });
 
-  it("calls onAddEachN when Sample every N is picked from the menu", async () => {
-    const onAddEachN = vi.fn();
+  it("shows an insert button between two blocks that calls the earlier block's onAddAfter", () => {
+    const onAddAfter = vi.fn();
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={[]}
-        conditions={[]}
-        steps={[]}
-        onAddEachN={onAddEachN}
+        blocks={[block("a", { onAddAfter }), block("b")]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    await openAddStepMenu();
-    await act(async () => {
-      fireEvent.click(screen.getByText("Sample every N"));
-    });
-    expect(onAddEachN).toHaveBeenCalled();
+    const insertButtons = screen.getAllByLabelText("Insert stage here");
+    expect(insertButtons).toHaveLength(1);
+    fireEvent.click(insertButtons[0]);
+    expect(onAddAfter).toHaveBeenCalled();
   });
 
-  it("keeps Add step enabled and greys out every item once every block type is present", async () => {
+  it("does not render an insert button after the last block", () => {
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={[
-          "conditions",
-          "each-n-1",
-          "each-t-1",
-          "limit-1",
-          TRANSFORM_BLOCK_ID,
-        ]}
-        conditions={[condition("a")]}
-        steps={[eachNStep, eachTStep, limitStep]}
-        transform={transformStep}
+        blocks={[block("a", { onAddAfter: () => {} }), block("b")]}
+        insertDisabledHint=""
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
-    await openAddStepMenu();
-    for (const name of [
-      "Label filter",
-      "Sample by time",
-      "Sample every N",
-      "Limit",
-      "Process (ROS)",
-    ]) {
-      expect(screen.getByRole("menuitem", { name })).toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
-    }
+    // Only the button between "a" and "b" - none before "a" or after "b".
+    expect(screen.getAllByLabelText("Insert stage here")).toHaveLength(1);
   });
 
-  it("keeps Add step enabled when only some block types are present", () => {
+  it("keeps insert buttons visible but disabled when insertion is blocked, instead of hiding them", () => {
+    const onAddBefore = vi.fn();
+    const onAddAfter = vi.fn();
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions", "each-n-1"]}
-        conditions={[condition("a")]}
-        steps={[eachNStep]}
+        blocks={[block("a", { onAddBefore, onAddAfter }), block("b")]}
+        insertDisabledHint="Select a bucket and entries first"
+        onReorderBlock={() => {}}
+        addStageMenu={null}
       />,
     );
-    expect(screen.getByLabelText("Add step")).not.toBeDisabled();
+    const insertButtons = screen.getAllByLabelText("Insert stage here");
+    expect(insertButtons).toHaveLength(1);
+    insertButtons.forEach((button) => expect(button).toBeDisabled());
   });
 
   it("calls onReorderBlock with the resolved from/to indexes when a block is dragged over another", () => {
     const onReorderBlock = vi.fn();
     render(
       <QueryBlockList
-        {...baseProps}
-        blockOrder={["conditions", "each-t-1", "limit-1"]}
-        conditions={[condition("a")]}
-        steps={[eachTStep, limitStep]}
+        blocks={[block("a"), block("b"), block("c")]}
+        insertDisabledHint=""
         onReorderBlock={onReorderBlock}
+        addStageMenu={null}
       />,
     );
     capturedOnDragEnd?.({
-      active: { id: "conditions" },
-      over: { id: "limit-1" },
+      active: { id: "a" },
+      over: { id: "c" },
     } as DragEndEvent);
     expect(onReorderBlock).toHaveBeenCalledWith(0, 2);
   });

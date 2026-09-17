@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Button, Input, Modal, message } from "antd";
 import { useQueryStore } from "../../stores/queryStore";
+import { BuilderState } from "../../Helpers/builderReducer";
 
 interface SaveQueryModalProps {
   open: boolean;
@@ -13,6 +14,8 @@ interface SaveQueryModalProps {
   rangeKey: string;
   rangeStart?: string;
   rangeEnd?: string;
+  builderState?: BuilderState;
+  onSaved?: (name: string) => void;
 }
 
 export default function SaveQueryModal({
@@ -26,6 +29,8 @@ export default function SaveQueryModal({
   rangeKey,
   rangeStart,
   rangeEnd,
+  builderState,
+  onSaved,
 }: SaveQueryModalProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +60,10 @@ export default function SaveQueryModal({
       rangeEnd,
       bucketName,
       entries: Array.isArray(entryName) ? [...entryName] : [entryName],
+      builderState,
     });
     message.success(`Query "${queryName}" saved`);
+    onSaved?.(queryName);
     handleClose();
   };
 

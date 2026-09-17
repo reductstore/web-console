@@ -55,11 +55,6 @@ export type Step = EachNStepEntry | EachTStepEntry | LimitStepEntry;
 
 export type SampleKind = "each_n" | "each_t";
 
-// Fixed id for the "Label filter" block in a QueryConditionBuilder's
-// blockOrder - shared so QueryConditionBuilder.tsx and QueryBlockList.tsx
-// can't drift apart on what it's called.
-export const CONDITIONS_BLOCK_ID = "conditions";
-
 /**
  * Return a new array with the item at fromIndex moved to toIndex.
  */
@@ -515,11 +510,14 @@ export function removeCondition(
 /**
  * Return a new list with an empty condition appended
  */
-export function addCondition(list: FlatCondition[]): FlatCondition[] {
+export function addCondition(
+  list: FlatCondition[],
+  id: string = crypto.randomUUID(),
+): FlatCondition[] {
   return [
     ...list,
     {
-      id: crypto.randomUUID(),
+      id,
       label: "",
       operator: "$eq",
       value: "",
@@ -529,29 +527,28 @@ export function addCondition(list: FlatCondition[]): FlatCondition[] {
   ];
 }
 
-export function addEachNStep(steps: Step[]): Step[] {
+export function addEachNStep(
+  steps: Step[],
+  id: string = crypto.randomUUID(),
+): Step[] {
+  return [...steps, { id, type: "each_n", eachN: { everyNth: 2 } }];
+}
+
+export function addEachTStep(
+  steps: Step[],
+  id: string = crypto.randomUUID(),
+): Step[] {
   return [
     ...steps,
-    { id: crypto.randomUUID(), type: "each_n", eachN: { everyNth: 2 } },
+    { id, type: "each_t", eachT: { duration: "", useIntervalMacro: true } },
   ];
 }
 
-export function addEachTStep(steps: Step[]): Step[] {
-  return [
-    ...steps,
-    {
-      id: crypto.randomUUID(),
-      type: "each_t",
-      eachT: { duration: "", useIntervalMacro: true },
-    },
-  ];
-}
-
-export function addLimitStep(steps: Step[]): Step[] {
-  return [
-    ...steps,
-    { id: crypto.randomUUID(), type: "limit", limit: { count: 1000 } },
-  ];
+export function addLimitStep(
+  steps: Step[],
+  id: string = crypto.randomUUID(),
+): Step[] {
+  return [...steps, { id, type: "limit", limit: { count: 1000 } }];
 }
 
 export function updateEachNStep(

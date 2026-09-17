@@ -1,0 +1,118 @@
+import { Button, Select, Tooltip, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import LabelConditionEditor from "./LabelConditionEditor";
+import { FlatCondition, hasValue } from "../../Helpers/conditionalQueryBuilder";
+import { ROW_LABEL_WIDTH, ROW_ICON_FONT_SIZE, ROW_GAP } from "./stageRowLayout";
+
+type ConnectorChoice = "$and" | "$or" | "not";
+
+const CONNECTOR_OPTIONS: { value: ConnectorChoice; label: string }[] = [
+  { value: "$and", label: "and" },
+  { value: "$or", label: "or" },
+  { value: "not", label: "not" },
+];
+
+function connectorChoiceFor(condition: FlatCondition): ConnectorChoice {
+  return condition.negated ? "not" : condition.connector;
+}
+
+interface ConditionListEditorProps {
+  conditions: FlatCondition[];
+  onChangeCondition: (
+    id: string,
+    changes: Partial<
+      Pick<
+        FlatCondition,
+        "label" | "operator" | "value" | "negated" | "connector"
+      >
+    >,
+  ) => void;
+  onRemoveCondition: (id: string) => void;
+  onAddCondition: () => void;
+  labelOptions?: string[];
+}
+
+export default function ConditionListEditor({
+  conditions,
+  onChangeCondition,
+  onRemoveCondition,
+  onAddCondition,
+  labelOptions,
+}: ConditionListEditorProps) {
+  const lastCondition = conditions[conditions.length - 1];
+  const canAddCondition =
+    !!lastCondition &&
+    lastCondition.label.trim() !== "" &&
+    hasValue(lastCondition.value);
+  const addConditionHint = !canAddCondition
+    ? "Fill in the label and value first"
+    : "";
+  const handleConnectorChange = (id: string, choice: ConnectorChoice) => {
+    if (choice === "not") {
+      onChangeCondition(id, { connector: "$and", negated: true });
+      return;
+    }
+    onChangeCondition(id, { connector: choice, negated: false });
+  };
+
+  return (
+    <div>
+      {conditions.map((condition, index) => (
+        <div
+          key={condition.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
+          {index > 0 ? (
+            <Select
+              popupMatchSelectWidth={false}
+              value={connectorChoiceFor(condition)}
+              options={CONNECTOR_OPTIONS}
+              onChange={(value) => handleConnectorChange(condition.id, value)}
+              style={{ width: ROW_LABEL_WIDTH }}
+            />
+          ) : (
+            <Typography.Text
+              strong
+              style={{ width: ROW_LABEL_WIDTH, flexShrink: 0, fontSize: 12 }}
+            >
+              Where
+            </Typography.Text>
+          )}
+          <LabelConditionEditor
+            condition={condition}
+            onChange={onChangeCondition}
+            onRemove={onRemoveCondition}
+            removable={conditions.length > 1}
+            labelOptions={labelOptions}
+          />
+        </div>
+      ))}
+
+      {/* Offsets past the "Where"/connector column so the button lines up
+          with the value column in ROS/Select grids (ROW_LABEL_WIDTH + gap). */}
+      <div style={{ display: "flex", marginTop: 8 }}>
+        <div style={{ width: ROW_LABEL_WIDTH + ROW_GAP, flexShrink: 0 }} />
+        <Tooltip title={addConditionHint}>
+          {/* A disabled Button doesn't receive pointer events, so wrapping it
+              directly stops the Tooltip's hover trigger from ever firing -
+              this extra span still does. */}
+          <span style={{ display: "flex" }}>
+            <Button
+              aria-label="Add condition"
+              disabled={!canAddCondition}
+              icon={<PlusOutlined style={{ fontSize: ROW_ICON_FONT_SIZE }} />}
+              onClick={onAddCondition}
+            >
+              Add condition
+            </Button>
+          </span>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}

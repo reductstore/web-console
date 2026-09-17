@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { BuilderState } from "../Helpers/builderReducer";
 
 export interface SavedQuery {
   name: string;
@@ -14,21 +15,17 @@ export interface SavedQuery {
   /** Saved selection context for restoring on the query page */
   bucketName?: string;
   entries?: string[];
+  builderState?: BuilderState;
 }
 
 interface QueryStore {
   queries: Record<string, SavedQuery[]>;
-  loadedQueryNames: Record<string, string | null>;
 
   getQueries: (
     bucketName: string,
     entryName: string | string[],
   ) => SavedQuery[];
   getAllQueries: () => { key: string; queries: SavedQuery[] }[];
-  getLoadedQueryName: (
-    bucketName: string,
-    entryName: string | string[],
-  ) => string | null;
   saveQuery: (
     bucketName: string,
     entryName: string | string[],
@@ -40,11 +37,6 @@ interface QueryStore {
     name: string,
   ) => void;
   deleteQueryByKey: (key: string, name: string) => void;
-  setLoadedQueryName: (
-    bucketName: string,
-    entryName: string | string[],
-    name: string | null,
-  ) => void;
   clearQueries: () => void;
 }
 
@@ -85,7 +77,6 @@ export const useQueryStore = create<QueryStore>()(
   persist(
     (set, get) => ({
       queries: {},
-      loadedQueryNames: {},
 
       getQueries: (bucketName: string, entryName: string | string[]) => {
         return get().queries[entryKey(bucketName, entryName)] || [];
@@ -96,13 +87,6 @@ export const useQueryStore = create<QueryStore>()(
         return Object.entries(allQueries)
           .filter(([, queries]) => queries.length > 0)
           .map(([key, queries]) => ({ key, queries }));
-      },
-
-      getLoadedQueryName: (
-        bucketName: string,
-        entryName: string | string[],
-      ) => {
-        return get().loadedQueryNames[entryKey(bucketName, entryName)] ?? null;
       },
 
       saveQuery: (
@@ -118,10 +102,6 @@ export const useQueryStore = create<QueryStore>()(
         );
         set((state) => ({
           queries: { ...state.queries, [key]: updated },
-          loadedQueryNames: {
-            ...state.loadedQueryNames,
-            [key]: saved.name,
-          },
         }));
       },
 
@@ -136,36 +116,19 @@ export const useQueryStore = create<QueryStore>()(
       deleteQueryByKey: (key: string, name: string) => {
         const existing = get().queries[key] || [];
         const updated = existing.filter((q) => q.name !== name);
-        const currentLoaded = get().loadedQueryNames[key];
         set((state) => ({
           queries: { ...state.queries, [key]: updated },
-          loadedQueryNames: {
-            ...state.loadedQueryNames,
-            [key]: currentLoaded === name ? null : currentLoaded,
-          },
-        }));
-      },
-
-      setLoadedQueryName: (
-        bucketName: string,
-        entryName: string | string[],
-        name: string | null,
-      ) => {
-        const key = entryKey(bucketName, entryName);
-        set((state) => ({
-          loadedQueryNames: { ...state.loadedQueryNames, [key]: name },
         }));
       },
 
       clearQueries: () => {
-        set({ queries: {}, loadedQueryNames: {} });
+        set({ queries: {} });
       },
     }),
     {
       name: "reduct:savedQueries",
       partialize: (state) => ({
         queries: state.queries,
-        loadedQueryNames: state.loadedQueryNames,
       }),
     },
   ),

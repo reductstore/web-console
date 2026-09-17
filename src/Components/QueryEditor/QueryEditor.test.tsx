@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { Client } from "reduct-js";
-import { JsonQueryEditor } from "./JsonQueryEditor";
+import { QueryEditor } from "./QueryEditor";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 
 vi.mock("@monaco-editor/react", () => ({
@@ -15,34 +15,56 @@ vi.mock("@monaco-editor/react", () => ({
   default: ({
     value,
     onChange,
+    beforeMount,
+    onMount,
   }: {
     value?: string;
     onChange?: (value: string) => void;
-  }) => (
-    <textarea
-      data-testid="monaco-editor"
-      value={value}
-      onChange={(event) => onChange?.(event.target.value)}
-    />
-  ),
+    beforeMount?: (monaco: unknown) => void;
+    onMount?: (editor: unknown, monaco: unknown) => void;
+  }) => {
+    const stubMonaco = {
+      languages: { registerCompletionItemProvider: vi.fn() },
+    };
+    beforeMount?.(stubMonaco);
+    onMount?.(
+      {
+        trigger: vi.fn(),
+        onDidFocusEditorText: vi.fn(),
+        onMouseDown: vi.fn(),
+        getModel: () => null,
+        getAction: () => null,
+      },
+      stubMonaco,
+    );
+    return (
+      <textarea
+        data-testid="monaco-editor"
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    );
+  },
 }));
 
 vi.mock("monaco-editor", () => ({}));
+const getSqlCompletionProvider = vi.fn(() => ({}));
 vi.mock("@reductstore/reduct-query-monaco", () => ({
   getCompletionProvider: () => ({}),
+  getSqlCompletionProvider: () => getSqlCompletionProvider(),
 }));
 vi.mock("../../Helpers/json5Utils", () => ({
   processWhenCondition: () => ({ success: true, value: {} }),
 }));
 
-describe("JsonQueryEditor", () => {
+describe("QueryEditor", () => {
   beforeEach(() => {
     mockJSDOM();
   });
 
   it("shows validation unavailable without validation context", () => {
     render(
-      <JsonQueryEditor
+      <QueryEditor
         value="{}"
         onChange={() => {
           /* */
@@ -55,7 +77,7 @@ describe("JsonQueryEditor", () => {
 
   it("forwards changes from the editor", () => {
     const onChange = vi.fn();
-    render(<JsonQueryEditor value="{}" onChange={onChange} />);
+    render(<QueryEditor value="{}" onChange={onChange} />);
 
     fireEvent.change(screen.getByTestId("monaco-editor"), {
       target: { value: '{"a":1}' },
@@ -66,7 +88,7 @@ describe("JsonQueryEditor", () => {
 
   it("disables format button when readOnly", () => {
     render(
-      <JsonQueryEditor
+      <QueryEditor
         value="{}"
         onChange={() => {
           /* */
@@ -81,7 +103,7 @@ describe("JsonQueryEditor", () => {
   it("prompts for bucket when validation context has no bucket", () => {
     const client = {} as Client;
     render(
-      <JsonQueryEditor
+      <QueryEditor
         value="{}"
         onChange={() => {
           /* */
@@ -95,7 +117,7 @@ describe("JsonQueryEditor", () => {
 
   it("shows the expanded placeholder after clicking expand", () => {
     render(
-      <JsonQueryEditor
+      <QueryEditor
         value="{}"
         onChange={() => {
           /* */
@@ -111,7 +133,7 @@ describe("JsonQueryEditor", () => {
   });
 
   it("resizes with the keyboard and clamps to its bounds", () => {
-    render(<JsonQueryEditor value="{}" onChange={() => {}} height={140} />);
+    render(<QueryEditor value="{}" onChange={() => {}} height={140} />);
     const handle = screen.getByRole("separator", {
       name: "Resize JSON editor",
     });
@@ -138,7 +160,7 @@ describe("JsonQueryEditor", () => {
   });
 
   it("resizes by pointer drag and removes listeners on completion", () => {
-    render(<JsonQueryEditor value="{}" onChange={() => {}} height={140} />);
+    render(<QueryEditor value="{}" onChange={() => {}} height={140} />);
     const handle = screen.getByRole("separator", {
       name: "Resize JSON editor",
     });
@@ -173,20 +195,20 @@ describe("JsonQueryEditor", () => {
 
   it("keeps following height props until a manual resize", () => {
     const { rerender } = render(
-      <JsonQueryEditor value="{}" onChange={() => {}} height={120} />,
+      <QueryEditor value="{}" onChange={() => {}} height={120} />,
     );
     const handle = screen.getByRole("separator", {
       name: "Resize JSON editor",
     });
 
-    rerender(<JsonQueryEditor value="{}" onChange={() => {}} height={180} />);
+    rerender(<QueryEditor value="{}" onChange={() => {}} height={180} />);
     expect(handle.parentElement).toHaveStyle({ height: "180px" });
 
     fireEvent.keyDown(handle, { key: "ArrowDown" });
     expect(handle.parentElement).toHaveStyle({ height: "196px" });
 
     rerender(
-      <JsonQueryEditor
+      <QueryEditor
         value={'{\n  "changed": true\n}'}
         onChange={() => {}}
         height={300}
@@ -196,7 +218,7 @@ describe("JsonQueryEditor", () => {
   });
 
   it("keeps the expanded editor full-height without a resize handle", () => {
-    render(<JsonQueryEditor value="{}" onChange={() => {}} height={120} />);
+    render(<QueryEditor value="{}" onChange={() => {}} height={120} />);
     const handle = screen.getByRole("separator", {
       name: "Resize JSON editor",
     });
@@ -222,7 +244,7 @@ describe("JsonQueryEditor", () => {
 
   it("starts from the supplied height after remounting", () => {
     const first = render(
-      <JsonQueryEditor value="{}" onChange={() => {}} height={120} />,
+      <QueryEditor value="{}" onChange={() => {}} height={120} />,
     );
     fireEvent.keyDown(
       screen.getByRole("separator", { name: "Resize JSON editor" }),
@@ -230,12 +252,109 @@ describe("JsonQueryEditor", () => {
     );
     first.unmount();
 
-    render(<JsonQueryEditor value="{}" onChange={() => {}} height={220} />);
+    render(<QueryEditor value="{}" onChange={() => {}} height={220} />);
 
     expect(
       screen.getByRole("separator", { name: "Resize JSON editor" })
         .parentElement,
     ).toHaveStyle({ height: "220px" });
+  });
+
+  it("defaults to minWidth when resizableWidth is set without an explicit width", () => {
+    render(
+      <div style={{ display: "flex", width: 600 }}>
+        <QueryEditor
+          value="{}"
+          onChange={() => {}}
+          resizableWidth
+          minWidth={240}
+        />
+      </div>,
+    );
+    const container = screen
+      .getByRole("separator", { name: "Resize JSON editor width" })
+      .closest(".jsonQueryEditor") as HTMLElement;
+    expect(container).toHaveStyle({ width: "240px" });
+  });
+
+  it("does not render a width resize handle unless resizableWidth is set", () => {
+    render(<QueryEditor value="{}" onChange={() => {}} />);
+    expect(
+      screen.queryByRole("separator", { name: "Resize JSON editor width" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("resizes width with the keyboard and clamps to its bounds", () => {
+    render(
+      <QueryEditor
+        value="{}"
+        onChange={() => {}}
+        resizableWidth
+        width={300}
+        minWidth={240}
+        maxWidth={500}
+      />,
+    );
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor width",
+    });
+    const container = handle.closest(".jsonQueryEditor") as HTMLElement;
+
+    expect(container).toHaveStyle({ width: "300px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "300");
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(container).toHaveStyle({ width: "316px" });
+
+    for (let i = 0; i < 20; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    }
+    expect(container).toHaveStyle({ width: "240px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "240");
+
+    for (let i = 0; i < 20; i += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowRight" });
+    }
+    expect(container).toHaveStyle({ width: "500px" });
+    expect(handle).toHaveAttribute("aria-valuenow", "500");
+  });
+
+  it("resizes width by pointer drag and removes listeners on completion", () => {
+    render(
+      <QueryEditor
+        value="{}"
+        onChange={() => {}}
+        resizableWidth
+        width={300}
+        maxWidth={500}
+      />,
+    );
+    const handle = screen.getByRole("separator", {
+      name: "Resize JSON editor width",
+    });
+    const container = handle.closest(".jsonQueryEditor") as HTMLElement;
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 300,
+      bottom: 0,
+      left: 0,
+      width: 300,
+      height: 0,
+      toJSON: () => ({}),
+    });
+    const removeListener = vi.spyOn(window, "removeEventListener");
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 100 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 180 });
+    expect(container).toHaveStyle({ width: "380px" });
+
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(removeListener).toHaveBeenCalledWith(
+      "pointermove",
+      expect.any(Function),
+    );
   });
 
   it("passes start/stop into the validation query", async () => {
@@ -246,7 +365,7 @@ describe("JsonQueryEditor", () => {
     } as unknown as Client;
 
     render(
-      <JsonQueryEditor
+      <QueryEditor
         value="{}"
         onChange={() => {
           /* */
@@ -269,5 +388,55 @@ describe("JsonQueryEditor", () => {
     await waitFor(() =>
       expect(query).toHaveBeenCalledWith("entry-a", 1n, 2n, expect.anything()),
     );
+  });
+
+  describe("sql language", () => {
+    it("shows the current SQL value", () => {
+      render(
+        <QueryEditor
+          language="sql"
+          value="SELECT * FROM ENTRY()"
+          onChange={() => {}}
+        />,
+      );
+      expect(screen.getByTestId("monaco-editor")).toHaveValue(
+        "SELECT * FROM ENTRY()",
+      );
+    });
+
+    it("reports a typed SQL value", () => {
+      const onChange = vi.fn();
+      render(<QueryEditor language="sql" value="" onChange={onChange} />);
+      fireEvent.change(screen.getByTestId("monaco-editor"), {
+        target: { value: "SELECT temp.value FROM ENTRY()" },
+      });
+      expect(onChange).toHaveBeenCalledWith("SELECT temp.value FROM ENTRY()");
+    });
+
+    it("registers the SQL completion provider", () => {
+      render(<QueryEditor language="sql" value="" onChange={() => {}} />);
+      expect(getSqlCompletionProvider).toHaveBeenCalled();
+    });
+
+    it("hides the validate button and status for sql, keeping format and expand", () => {
+      render(<QueryEditor language="sql" value="" onChange={() => {}} />);
+      expect(
+        screen.queryByLabelText("Validate condition"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Format SQL")).toBeInTheDocument();
+      expect(screen.getByLabelText("Expand editor")).toBeInTheDocument();
+    });
+
+    it("hides the expand button when allowExpand is false", () => {
+      render(
+        <QueryEditor
+          language="sql"
+          value=""
+          onChange={() => {}}
+          allowExpand={false}
+        />,
+      );
+      expect(screen.queryByLabelText("Expand editor")).not.toBeInTheDocument();
+    });
   });
 });
