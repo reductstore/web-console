@@ -913,7 +913,7 @@ export default function QueryPanel({
             title: "Entry",
             dataIndex: "entryName",
             key: "entryName",
-            render: (name: string) => name || "—",
+            render: (name: string) => (name ? `/${name}` : "—"),
           } satisfies ColumnType<RecordTableRow>,
         ]
       : []),
