@@ -1051,8 +1051,8 @@ export default function QueryPanel({
   };
 
   const currentQuerySnapshot = (
-    targetBucket: string = bucketName,
-    targetEntries: string[] = selectedEntries,
+    targetBucket: string,
+    targetEntries: string[],
   ): SavedQuery => ({
     name: loadedQuery?.name ?? "",
     query: whenCondition,
