@@ -12,7 +12,7 @@ describe("buildEntryOptions", () => {
     ]);
 
     expect(options).toEqual([
-      { label: "All", options: [{ label: "**", value: "**" }] },
+      { label: "All", options: [{ label: "*", value: "*" }] },
       {
         label: "entry",
         options: [

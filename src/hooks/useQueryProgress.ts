@@ -15,6 +15,9 @@ const formatDuration = (ms: number): string => {
 };
 
 const matchesPattern = (entryName: string, pattern: string): boolean => {
+  if (pattern === "*") {
+    return true;
+  }
   if (pattern.endsWith("**")) {
     return entryName.startsWith(pattern.slice(0, -2));
   }

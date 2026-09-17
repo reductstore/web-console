@@ -58,7 +58,7 @@ export const buildEntryOptions = (entries: string[]) => {
   const groupedOptions = new Map<string, EntryOption[]>();
   const otherOptions: EntryOption[] = [];
   for (const option of options) {
-    if (option.value === "**") continue;
+    if (option.value === "*") continue;
 
     const slashIdx = option.value.indexOf("/");
     if (slashIdx === -1) {
@@ -73,7 +73,7 @@ export const buildEntryOptions = (entries: string[]) => {
   }
 
   const groups: EntryOptionGroup[] = [
-    { label: "All", options: [{ label: "**", value: "**" }] },
+    { label: "All", options: [{ label: "*", value: "*" }] },
   ];
   for (const [label, groupOptions] of groupedOptions) {
     groups.push({ label, options: groupOptions });
