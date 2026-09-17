@@ -126,7 +126,6 @@ function SqlStepBlock({
       dispatch({
         type: "select/addSqlStep",
         id: crypto.randomUUID(),
-        afterId: step.id,
       });
     } else if (key === "asLabel") {
       dispatch({

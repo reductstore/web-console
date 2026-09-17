@@ -190,7 +190,7 @@ describe("SelectStageEditor", () => {
       );
     });
 
-    it("Select step always inserts a new block after the current one, sql or not", () => {
+    it("Select step always appends a new block at the end, regardless of which block's menu was used", () => {
       const dispatch = vi.fn();
       const step: SelectTransformStep = {
         sqlSteps: [
@@ -204,7 +204,6 @@ describe("SelectStageEditor", () => {
       expect(dispatch).toHaveBeenCalledWith({
         type: "select/addSqlStep",
         id: expect.any(String),
-        afterId: "sql-1",
       });
     });
 
