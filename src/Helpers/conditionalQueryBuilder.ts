@@ -1,4 +1,5 @@
 import { safeParseJSON5 } from "./json5Utils";
+import { v4 as uuidv4 } from "uuid";
 
 export type LabelOperator =
   | "$eq"
@@ -297,7 +298,7 @@ function toFlatCondition(
   connector: LogicalConnector,
 ): FlatCondition {
   return {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     label: item.leaf.label,
     operator: item.leaf.operator,
     value: item.leaf.value,
@@ -375,7 +376,7 @@ function parseSteps(
       return { success: false };
     }
     steps.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: "each_n",
       eachN: { everyNth: eachN === null ? undefined : eachN },
     });
@@ -386,7 +387,7 @@ function parseSteps(
       return { success: false };
     }
     steps.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: "each_t",
       eachT:
         eachT === "$__interval"
@@ -402,7 +403,7 @@ function parseSteps(
       return { success: false };
     }
     steps.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: "limit",
       limit: { count: limit === null ? undefined : limit },
     });
@@ -512,7 +513,7 @@ export function removeCondition(
  */
 export function addCondition(
   list: FlatCondition[],
-  id: string = crypto.randomUUID(),
+  id: string = uuidv4(),
 ): FlatCondition[] {
   return [
     ...list,
@@ -527,27 +528,18 @@ export function addCondition(
   ];
 }
 
-export function addEachNStep(
-  steps: Step[],
-  id: string = crypto.randomUUID(),
-): Step[] {
+export function addEachNStep(steps: Step[], id: string = uuidv4()): Step[] {
   return [...steps, { id, type: "each_n", eachN: { everyNth: 2 } }];
 }
 
-export function addEachTStep(
-  steps: Step[],
-  id: string = crypto.randomUUID(),
-): Step[] {
+export function addEachTStep(steps: Step[], id: string = uuidv4()): Step[] {
   return [
     ...steps,
     { id, type: "each_t", eachT: { duration: "", useIntervalMacro: true } },
   ];
 }
 
-export function addLimitStep(
-  steps: Step[],
-  id: string = crypto.randomUUID(),
-): Step[] {
+export function addLimitStep(steps: Step[], id: string = uuidv4()): Step[] {
   return [...steps, { id, type: "limit", limit: { count: 1000 } }];
 }
 

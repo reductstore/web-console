@@ -63,6 +63,7 @@ import {
   updateTopic,
 } from "./transformStepBuilder";
 import { formatAsStrictJSON, safeParseJSON5 } from "./json5Utils";
+import { v4 as uuidv4 } from "uuid";
 
 export interface ExtBlock {
   id: string;
@@ -774,7 +775,7 @@ export function builderReducer(
           ...conditionBlocks,
           {
             id,
-            conditions: addCondition([], crypto.randomUUID()),
+            conditions: addCondition([], uuidv4()),
           },
         ];
       } else if (kind === "sample_each_n") {
@@ -823,7 +824,7 @@ export function conditionBlocksFromList(
   if (conditions.length === 0) {
     return [];
   }
-  return [{ id: crypto.randomUUID(), conditions }];
+  return [{ id: uuidv4(), conditions }];
 }
 
 export function extBlocksFromTransforms(
@@ -832,7 +833,7 @@ export function extBlocksFromTransforms(
   if (transforms.length === 0) {
     return [];
   }
-  return [{ id: crypto.randomUUID(), transforms }];
+  return [{ id: uuidv4(), transforms }];
 }
 
 interface ParsedQueryAndTransform {

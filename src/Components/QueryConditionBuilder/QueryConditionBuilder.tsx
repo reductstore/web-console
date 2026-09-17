@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Button, Dropdown, Select, Tooltip, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { v4 as uuidv4 } from "uuid";
 import { QueryEditor } from "../QueryEditor";
 import QueryBlockList, { BuilderBlock } from "./QueryBlockList";
 import BuilderErrorBoundary from "./BuilderErrorBoundary";
@@ -224,7 +225,7 @@ function buildBlocks(
       if (insertStageHint(state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         anchorId,
         position: "before" as const,
       });
@@ -233,7 +234,7 @@ function buildBlocks(
       if (insertStageHint(state.blockOrder)) return;
       dispatch({
         type: "stage/insert",
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         anchorId,
         position: "after" as const,
       });
@@ -309,7 +310,7 @@ function buildBlocks(
               onAddCondition={() =>
                 blockDispatch({
                   type: "condition/add",
-                  id: crypto.randomUUID(),
+                  id: uuidv4(),
                 })
               }
             />
@@ -563,7 +564,7 @@ function buildAddStageButton(
             // but never dispatch a stage/add while it's not currently
             // allowed.
             if (hint) return;
-            dispatch({ type: "stage/add", id: crypto.randomUUID() });
+            dispatch({ type: "stage/add", id: uuidv4() });
           }}
         >
           Add stage

@@ -10,6 +10,7 @@ import {
   Typography,
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { v4 as uuidv4 } from "uuid";
 import {
   SelectInputFormat,
   SelectTransformStep,
@@ -125,28 +126,28 @@ function SqlStepBlock({
     } else if (key === "selectStep") {
       dispatch({
         type: "select/addSqlStep",
-        id: crypto.randomUUID(),
+        id: uuidv4(),
       });
     } else if (key === "asLabel") {
       dispatch({
         type: "transform/addAsLabelRow",
         kind: "select",
         stepId: step.id,
-        id: crypto.randomUUID(),
+        id: uuidv4(),
       });
     } else if (key === "export") {
       dispatch({
         type: "select/addFormatSection",
         stepId: step.id,
         section: "export",
-        fieldId: crypto.randomUUID(),
+        fieldId: uuidv4(),
       });
     } else if (key === "format") {
       dispatch({
         type: "select/addFormatSection",
         stepId: step.id,
         section: "csv",
-        fieldId: crypto.randomUUID(),
+        fieldId: uuidv4(),
       });
     }
   };
@@ -226,7 +227,7 @@ function SqlStepBlock({
                     type: "select/changeFormat",
                     stepId: step.id,
                     format: value as SelectInputFormat,
-                    fieldId: crypto.randomUUID(),
+                    fieldId: uuidv4(),
                   })
                 }
               />
@@ -303,7 +304,7 @@ function SqlStepBlock({
                     dispatch({
                       type: "select/addProtobufFieldRow",
                       stepId: step.id,
-                      id: crypto.randomUUID(),
+                      id: uuidv4(),
                     })
                   }
                 />
@@ -432,26 +433,26 @@ export function SelectStageAddButton({
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "sql") {
-      dispatch({ type: "select/addSqlStep", id: crypto.randomUUID() });
+      dispatch({ type: "select/addSqlStep", id: uuidv4() });
     } else if (key === "asLabel") {
       dispatch({
         type: "select/addAsLabelStep",
-        id: crypto.randomUUID(),
-        rowId: crypto.randomUUID(),
+        id: uuidv4(),
+        rowId: uuidv4(),
       });
     } else if (key === "export") {
       dispatch({
         type: "select/addFormatStep",
         section: "export",
-        id: crypto.randomUUID(),
-        fieldId: crypto.randomUUID(),
+        id: uuidv4(),
+        fieldId: uuidv4(),
       });
     } else if (key === "format") {
       dispatch({
         type: "select/addFormatStep",
         section: "csv",
-        id: crypto.randomUUID(),
-        fieldId: crypto.randomUUID(),
+        id: uuidv4(),
+        fieldId: uuidv4(),
       });
     }
   };

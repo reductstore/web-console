@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid";
+
 export type TransformKind = "ros" | "select";
 
 export type RosSection = "filter" | "encode" | "label" | "export";
@@ -69,7 +71,7 @@ export type TransformStepEntry =
 
 const DEFAULT_SQL = "SELECT * FROM ENTRY()\n";
 
-function blankRow(id: string = crypto.randomUUID()): KeyValueRow {
+function blankRow(id: string = uuidv4()): KeyValueRow {
   return { id, key: "", value: "" };
 }
 
@@ -147,7 +149,7 @@ function addBlankStep<Entry extends TransformStepEntry>(
 
 export function addSqlStep<Entry extends TransformStepEntry>(
   transform: Entry,
-  id: string = crypto.randomUUID(),
+  id: string = uuidv4(),
   afterId?: string,
 ): Entry {
   return setSql(addBlankStep(transform, id, afterId), id, DEFAULT_SQL);
@@ -156,8 +158,8 @@ export function addSqlStep<Entry extends TransformStepEntry>(
 export function addFormatStep<Entry extends TransformStepEntry>(
   transform: Entry,
   section: SelectFormatSection,
-  id: string = crypto.randomUUID(),
-  fieldId: string = crypto.randomUUID(),
+  id: string = uuidv4(),
+  fieldId: string = uuidv4(),
   afterId?: string,
 ): Entry {
   return addFormatSection(
@@ -170,8 +172,8 @@ export function addFormatStep<Entry extends TransformStepEntry>(
 
 export function addAsLabelStep<Entry extends TransformStepEntry>(
   transform: Entry,
-  id: string = crypto.randomUUID(),
-  rowId: string = crypto.randomUUID(),
+  id: string = uuidv4(),
+  rowId: string = uuidv4(),
   afterId?: string,
 ): Entry {
   return addAsLabelRow(addBlankStep(transform, id, afterId), id, rowId);
@@ -239,7 +241,7 @@ export function addFormatSection<Entry extends TransformStepEntry>(
   transform: Entry,
   stepId: string,
   section: SelectFormatSection,
-  fieldId: string = crypto.randomUUID(),
+  fieldId: string = uuidv4(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   const target = transform.select.sqlSteps.find((step) => step.id === stepId);
@@ -268,7 +270,7 @@ export function changeFormat<Entry extends TransformStepEntry>(
   transform: Entry,
   stepId: string,
   format: SelectInputFormat,
-  fieldId: string = crypto.randomUUID(),
+  fieldId: string = uuidv4(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   return {
@@ -333,16 +335,14 @@ export function updateProtobuf<Entry extends TransformStepEntry>(
   } as Entry;
 }
 
-function blankProtobufFieldRow(
-  id: string = crypto.randomUUID(),
-): ProtobufFieldRow {
+function blankProtobufFieldRow(id: string = uuidv4()): ProtobufFieldRow {
   return { id, column: "", fieldId: "", fieldType: "" };
 }
 
 export function addProtobufFieldRow<Entry extends TransformStepEntry>(
   transform: Entry,
   stepId: string,
-  id: string = crypto.randomUUID(),
+  id: string = uuidv4(),
 ): Entry {
   if (transform.kind !== "select") return transform;
   return {
@@ -414,7 +414,7 @@ export function updateSelectExport<Entry extends TransformStepEntry>(
 export function addSection<Entry extends TransformStepEntry>(
   transform: Entry,
   section: RosSection,
-  rowId: string = crypto.randomUUID(),
+  rowId: string = uuidv4(),
 ): Entry {
   if (transform.kind !== "ros") return transform;
   if (transform.ros.sections.includes(section)) {
@@ -470,10 +470,7 @@ export function updateExport<Entry extends TransformStepEntry>(
   } as Entry;
 }
 
-function addRow(
-  rows: KeyValueRow[],
-  id: string = crypto.randomUUID(),
-): KeyValueRow[] {
+function addRow(rows: KeyValueRow[], id: string = uuidv4()): KeyValueRow[] {
   return [...rows, blankRow(id)];
 }
 
@@ -491,7 +488,7 @@ function removeRow(rows: KeyValueRow[], id: string): KeyValueRow[] {
 
 export function addEncodeRow<Entry extends TransformStepEntry>(
   transform: Entry,
-  id: string = crypto.randomUUID(),
+  id: string = uuidv4(),
 ): Entry {
   if (transform.kind !== "ros") return transform;
   return {
@@ -529,7 +526,7 @@ export function removeEncodeRow<Entry extends TransformStepEntry>(
 export function addAsLabelRow<Entry extends TransformStepEntry>(
   transform: Entry,
   stepId: string | undefined,
-  id: string = crypto.randomUUID(),
+  id: string = uuidv4(),
 ): Entry {
   if (transform.kind === "ros") {
     return {
@@ -627,7 +624,7 @@ function parseRowMap(raw: unknown): KeyValueRow[] | undefined {
     return undefined;
   }
   const rows = Object.entries(raw).map(([key, value]) => ({
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     key,
     value: typeof value === "string" ? value : String(value),
   }));
@@ -1057,7 +1054,7 @@ function parseSqlStage(stage: unknown): SqlStep | undefined {
           return undefined;
         }
         fields.push({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           column,
           fieldId: String(fieldIdRaw),
           fieldType: fieldTypeRaw,
@@ -1107,7 +1104,7 @@ function parseSqlStage(stage: unknown): SqlStep | undefined {
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     sql: sql !== undefined ? (sql as string) : null,
     asLabel,
     formatSections,
