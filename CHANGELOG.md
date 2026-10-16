@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Add TB to the bucket quota size units, default new quotas to 1 TB, hide quota size for NONE quotas, discard unsaved settings on close, and show saving progress, [PR-255](https://github.com/reductstore/web-console/pull/255)
 - Redesign the web console sidebar, [PR-256](https://github.com/reductstore/web-console/pull/256)
 
 ## 1.17.2 - 2026-09-17

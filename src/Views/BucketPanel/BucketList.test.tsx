@@ -2,7 +2,7 @@ import React from "react";
 import { render, waitFor, fireEvent } from "@testing-library/react";
 import { mockJSDOM } from "../../Helpers/TestHelpers";
 import BucketList from "./BucketList";
-import { BucketInfo, Client, Status } from "reduct-js";
+import { Bucket, BucketInfo, Client, QuotaType, Status } from "reduct-js";
 import { MemoryRouter } from "react-router-dom";
 import { act } from "react";
 
@@ -154,6 +154,63 @@ describe("BucketList", () => {
     );
     expect(document.querySelector(".ant-modal-title")?.textContent).toBe(
       "Settings",
+    );
+  });
+
+  it("should discard unsaved settings when the settings modal closes", async () => {
+    const bucket = {
+      getSettings: vi.fn().mockResolvedValue({
+        maxBlockSize: 64_000_000n,
+        maxBlockRecords: 1024,
+        quotaSize: 1000n,
+        quotaType: QuotaType.FIFO,
+      }),
+    } as unknown as Bucket;
+    client.getBucket = vi.fn().mockResolvedValue(bucket);
+
+    const { container } = render(
+      <MemoryRouter>
+        <BucketList client={client} permissions={{ fullAccess: true }} />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".ant-table-row").length,
+      ).toBeGreaterThan(0),
+    );
+
+    const [, emptyBucketRow] = container.querySelectorAll(".ant-table-row");
+    const settingsIcon = emptyBucketRow.querySelector(".anticon-setting");
+    fireEvent.click(settingsIcon!.closest("span[style]")!);
+
+    await waitFor(() =>
+      expect(document.querySelector(".ant-modal .ant-select")).not.toBeNull(),
+    );
+    const modal = document.querySelector(".ant-modal") as HTMLElement;
+    fireEvent.mouseDown(modal.querySelector(".ant-select")!);
+    fireEvent.click(
+      Array.from(
+        document.querySelectorAll(".ant-select-item-option-content"),
+      ).find((element) => element.textContent === "HARD")!,
+    );
+    await waitFor(() =>
+      expect(modal.querySelector('[title="HARD"]')).not.toBeNull(),
+    );
+
+    fireEvent.click(modal.querySelector(".ant-modal-close")!);
+    await waitFor(() =>
+      expect(modal.className).toContain("ant-zoom-leave-active"),
+    );
+    fireEvent.transitionEnd(modal);
+    await waitFor(() =>
+      expect(document.querySelector(".ant-modal .ant-select")).toBeNull(),
+    );
+    fireEvent.click(settingsIcon!.closest("span[style]")!);
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('.ant-modal [title="FIFO"]'),
+      ).not.toBeNull(),
     );
   });
 

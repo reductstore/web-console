@@ -165,6 +165,7 @@ export default function Dashboard(props: Readonly<Props>) {
               title="Add a new bucket"
               open={creatingBucket}
               footer={null}
+              destroyOnHidden
               onCancel={() => setCreatingBucket(false)}
             >
               <BucketSettingsForm
