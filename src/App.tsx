@@ -110,53 +110,50 @@ export default function App(props: Readonly<Props>) {
   const version = process.env.REACT_APP_VERSION || "development";
 
   const getMenuItems = (): MenuProps["items"] => {
-    const items: MenuProps["items"] = [];
+    const items: MenuProps["items"] = [
+      {
+        key: "dashboard",
+        icon: <HomeOutlined />,
+        label: "Dashboard",
+        onClick: () => navigate("/dashboard"),
+      },
+      {
+        key: "query",
+        icon: <LineChartOutlined />,
+        label: "Data Explorer",
+        onClick: () => navigate("/query"),
+      },
+      {
+        key: "buckets",
+        icon: <DatabaseOutlined />,
+        label: "Buckets",
+        onClick: () => navigate("/buckets"),
+      },
+    ];
 
-    if (permissions) {
+    if (permissions?.fullAccess) {
       items.push(
         {
-          key: "dashboard",
-          icon: <HomeOutlined />,
-          label: "Dashboard",
-          onClick: () => navigate("/dashboard"),
+          key: "replications",
+          icon: <ShareAltOutlined />,
+          label: "Replications",
+          onClick: () => navigate("/replications"),
         },
         {
-          key: "query",
-          icon: <LineChartOutlined />,
-          label: "Data Explorer",
-          onClick: () => navigate("/query"),
+          key: "lifecycles",
+          icon: <ClockCircleOutlined />,
+          label: "Lifecycles",
+          onClick: () => navigate("/lifecycles"),
         },
         {
-          key: "buckets",
-          icon: <DatabaseOutlined />,
-          label: "Buckets",
-          onClick: () => navigate("/buckets"),
+          key: "security",
+          icon: <LockOutlined />,
+          label: "Security",
+          onClick: () => navigate("/tokens"),
         },
       );
-
-      if (permissions.fullAccess) {
-        items.push(
-          {
-            key: "replications",
-            icon: <ShareAltOutlined />,
-            label: "Replications",
-            onClick: () => navigate("/replications"),
-          },
-          {
-            key: "lifecycles",
-            icon: <ClockCircleOutlined />,
-            label: "Lifecycles",
-            onClick: () => navigate("/lifecycles"),
-          },
-          {
-            key: "security",
-            icon: <LockOutlined />,
-            label: "Security",
-            onClick: () => navigate("/tokens"),
-          },
-        );
-      }
     }
+
     return items;
   };
 
@@ -179,157 +176,166 @@ export default function App(props: Readonly<Props>) {
       }}
     >
       <Layout className="AppShell">
-        <Layout.Sider
-          breakpoint="md"
-          className="Sider"
-          collapsed={siderCollapsed}
-          collapsedWidth={60}
-          onBreakpoint={setSiderCollapsed}
-          trigger={null}
-          width={220}
-        >
-          <div className={`Brand ${siderCollapsed ? "BrandCollapsed" : ""}`}>
-            <button
-              aria-label="ReductStore dashboard"
-              className="BrandButton"
-              onClick={() => navigate("/dashboard")}
-              type="button"
-            >
-              <img alt="" className="BrandLogo" src={`${publicUrl}/logo.svg`} />
-              {!siderCollapsed && (
-                <span className="BrandName">ReductStore</span>
-              )}
-            </button>
-          </div>
-          <nav aria-label="Main navigation" className="Navigation">
-            <Menu
-              className="MenuItem MainMenu"
-              inlineCollapsed={siderCollapsed}
-              items={getMenuItems()}
-              mode="inline"
-              selectedKeys={[selectedKey]}
-            />
-          </nav>
-          <footer
-            className={`SidebarFooter ${siderCollapsed ? "SidebarFooterCollapsed" : ""}`}
+        {permissions && (
+          <Layout.Sider
+            breakpoint="md"
+            className="Sider"
+            collapsed={siderCollapsed}
+            collapsedWidth={60}
+            onBreakpoint={setSiderCollapsed}
+            trigger={null}
+            width={220}
           >
-            {permissions && (
-              <div className="ConsoleMenu">
-                <Dropdown
-                  classNames={{ root: "ConsoleDropdown" }}
-                  menu={{
-                    items: [
-                      {
-                        key: "token",
-                        label: <span>{tokenName ?? "Current API token"}</span>,
-                        disabled: true,
+            <div className={`Brand ${siderCollapsed ? "BrandCollapsed" : ""}`}>
+              <button
+                aria-label="ReductStore dashboard"
+                className="BrandButton"
+                onClick={() => navigate("/dashboard")}
+                type="button"
+              >
+                <img
+                  alt=""
+                  className="BrandLogo"
+                  src={`${publicUrl}/logo.svg`}
+                />
+                {!siderCollapsed && (
+                  <span className="BrandName">ReductStore</span>
+                )}
+              </button>
+            </div>
+            <nav aria-label="Main navigation" className="Navigation">
+              <Menu
+                className="MenuItem MainMenu"
+                inlineCollapsed={siderCollapsed}
+                items={getMenuItems()}
+                mode="inline"
+                selectedKeys={[selectedKey]}
+              />
+            </nav>
+            <footer
+              className={`SidebarFooter ${siderCollapsed ? "SidebarFooterCollapsed" : ""}`}
+            >
+              {permissions && (
+                <div className="ConsoleMenu">
+                  <Dropdown
+                    classNames={{ root: "ConsoleDropdown" }}
+                    menu={{
+                      items: [
+                        {
+                          key: "token",
+                          className: "TokenMenuItem",
+                          label: (
+                            <span>{tokenName ?? "Current API token"}</span>
+                          ),
+                          disabled: true,
+                        },
+                        {
+                          key: "documentation",
+                          icon: <BookOutlined />,
+                          label: (
+                            <a
+                              href="https://www.reduct.store/docs"
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              Documentation
+                            </a>
+                          ),
+                        },
+                        {
+                          key: "guides",
+                          icon: <ReadOutlined />,
+                          label: (
+                            <a
+                              href="https://www.reduct.store/docs/guides"
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              Guides
+                            </a>
+                          ),
+                        },
+                        {
+                          key: "cli",
+                          icon: <CodeOutlined />,
+                          label: (
+                            <a
+                              href="https://github.com/reductstore/reduct-cli"
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              CLI
+                            </a>
+                          ),
+                        },
+                        {
+                          key: "version",
+                          icon: <InfoCircleOutlined />,
+                          label: (
+                            <a
+                              href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              Web Console v{version}
+                            </a>
+                          ),
+                        },
+                        { type: "divider" },
+                        {
+                          key: "logout",
+                          icon: <LogoutOutlined />,
+                          label: <span>Sign out</span>,
+                        },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === "logout") onLogout();
                       },
-                      {
-                        key: "documentation",
-                        icon: <BookOutlined />,
-                        label: (
-                          <a
-                            href="https://www.reduct.store/docs"
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            Documentation
-                          </a>
-                        ),
-                      },
-                      {
-                        key: "guides",
-                        icon: <ReadOutlined />,
-                        label: (
-                          <a
-                            href="https://www.reduct.store/docs/guides"
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            Guides
-                          </a>
-                        ),
-                      },
-                      {
-                        key: "cli",
-                        icon: <CodeOutlined />,
-                        label: (
-                          <a
-                            href="https://github.com/reductstore/reduct-cli"
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            CLI
-                          </a>
-                        ),
-                      },
-                      {
-                        key: "version",
-                        icon: <InfoCircleOutlined />,
-                        label: (
-                          <a
-                            href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            Web Console v{version}
-                          </a>
-                        ),
-                      },
-                      { type: "divider" },
-                      {
-                        key: "logout",
-                        icon: <LogoutOutlined />,
-                        label: <span>Sign out</span>,
-                      },
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === "logout") onLogout();
-                    },
-                  }}
-                  placement="topLeft"
-                  trigger={["click"]}
-                >
-                  <Button
-                    aria-label="Console menu"
-                    className="ConsoleTrigger"
-                    icon={<AppstoreOutlined />}
-                    type="text"
+                    }}
+                    placement="topLeft"
+                    trigger={["click"]}
                   >
-                    {!siderCollapsed && "Console"}
-                  </Button>
-                </Dropdown>
-              </div>
-            )}
-            <div className="SidebarFooterBottom">
-              {!siderCollapsed && (
-                <div className="Socials">
-                  {socialLinks.map((social) => (
-                    <a
-                      key={social.label}
-                      aria-label={social.label}
-                      className="SocialLink"
-                      href={social.href}
-                      rel="noreferrer"
-                      target="_blank"
+                    <Button
+                      aria-label="Console menu"
+                      className="ConsoleTrigger"
+                      icon={<AppstoreOutlined />}
+                      type="text"
                     >
-                      {social.icon}
-                    </a>
-                  ))}
+                      {!siderCollapsed && "Console"}
+                    </Button>
+                  </Dropdown>
                 </div>
               )}
-              <Button
-                aria-label={
-                  siderCollapsed ? "Expand navigation" : "Collapse navigation"
-                }
-                className="CollapseToggle"
-                icon={siderCollapsed ? <RightOutlined /> : <LeftOutlined />}
-                onClick={() => setSiderCollapsed((collapsed) => !collapsed)}
-                type="text"
-              />
-            </div>
-          </footer>
-        </Layout.Sider>
+              <div className="SidebarFooterBottom">
+                {!siderCollapsed && (
+                  <div className="Socials">
+                    {socialLinks.map((social) => (
+                      <a
+                        key={social.label}
+                        aria-label={social.label}
+                        className="SocialLink"
+                        href={social.href}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {social.icon}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  aria-label={
+                    siderCollapsed ? "Expand navigation" : "Collapse navigation"
+                  }
+                  className="CollapseToggle"
+                  icon={siderCollapsed ? <RightOutlined /> : <LeftOutlined />}
+                  onClick={() => setSiderCollapsed((collapsed) => !collapsed)}
+                  type="text"
+                />
+              </div>
+            </footer>
+          </Layout.Sider>
+        )}
         <Layout className="AppContent">
           <Layout.Content>
             <AppRoutes

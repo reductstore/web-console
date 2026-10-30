@@ -131,7 +131,9 @@
   width: 100%;
   height: 34px;
   padding-inline: 8px !important;
+  background: rgb(255 255 255 / 16%) !important;
   color: #fff !important;
+  font-weight: 600;
   text-align: left;
 }
 
@@ -159,6 +161,10 @@
 
 .ConsoleDropdown .ant-dropdown-menu-item {
   overflow-wrap: anywhere;
+}
+
+.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled {
+  cursor: default;
 }
 
 .SidebarFooterBottom {

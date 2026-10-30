@@ -45,6 +45,26 @@ describe("App", () => {
     return result;
   };
 
+  const renderLoggedOutApp = async () => {
+    backendAPI.isAllowed = vi.fn().mockResolvedValue(false);
+
+    const result = render(
+      <MemoryRouter>
+        <App
+          backendApi={backendAPI}
+          publicUrl="/ui"
+          apiUrl="https://example.com"
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(backendAPI.isAllowed).toHaveBeenCalled();
+    });
+
+    return result;
+  };
+
   it("should have a link to dashboard panel", async () => {
     await renderApp({ fullAccess: false });
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -53,6 +73,16 @@ describe("App", () => {
   it("should have a link to bucket panel", async () => {
     await renderApp({ fullAccess: false });
     expect(screen.getByText("Buckets")).toBeInTheDocument();
+  });
+
+  it("shows only the login view while logged out", async () => {
+    await renderLoggedOutApp();
+
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Console menu" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should have a link to replication panel", async () => {
