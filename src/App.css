@@ -146,8 +146,7 @@
   width: 100%;
   height: 34px;
   padding-inline: 8px !important;
-  color: #fff !important;
-  font-weight: 600;
+  color: var(--primary-fg) !important;
   text-align: left;
 }
 
