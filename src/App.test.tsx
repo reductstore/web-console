@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { mockJSDOM } from "./Helpers/TestHelpers";
 import { MemoryRouter } from "react-router-dom";
 
@@ -86,5 +86,17 @@ describe("App", () => {
   it("should show help menu", async () => {
     const { container } = await renderApp({ fullAccess: false });
     expect(container.querySelector(".help-menu-item")).toBeInTheDocument();
+  });
+
+  it("collapses and expands the navigation from its footer control", async () => {
+    await renderApp({ fullAccess: false });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Collapse navigation" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Expand navigation" }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ConfigProvider, Image, Layout, Menu } from "antd";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Button, ConfigProvider, Dropdown, Layout, Menu } from "antd";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { MenuProps } from "antd";
 
 import logo from "./logo.png";
@@ -11,9 +11,11 @@ import {
   BorderOuterOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
+  LeftOutlined,
   LineChartOutlined,
   LockOutlined,
   LogoutOutlined,
+  RightOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { TokenPermissions } from "reduct-js";
@@ -30,19 +32,13 @@ const PRIMARY_COLOR = "#231b49";
 export default function App(props: Readonly<Props>) {
   const { backendApi, publicUrl } = props;
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const [permissions, setPermissions] = useState<TokenPermissions | undefined>({
     fullAccess: false,
   });
   const [authLoading, setAuthLoading] = useState(true);
   const [siderCollapsed, setSiderCollapsed] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1024,
-  );
-
-  const handleResize = useCallback(() => {
-    setWindowWidth(window.innerWidth);
-  }, []);
 
   useEffect(() => {
     backendApi.onUnauthorized = () => {
@@ -66,19 +62,6 @@ export default function App(props: Readonly<Props>) {
       .catch((err) => console.error(err))
       .finally(() => setAuthLoading(false));
   }, [backendApi]);
-
-  useEffect(() => {
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [handleResize]);
-
-  const handleSiderCollapse = (collapsed: boolean) => {
-    setSiderCollapsed(collapsed);
-  };
-
-  const handleToggleSider = () => {
-    setSiderCollapsed((prev) => !prev);
-  };
 
   const onLogout = async () => {
     backendApi.logout();
@@ -145,10 +128,7 @@ export default function App(props: Readonly<Props>) {
     return items;
   };
 
-  let marginLeft = 0;
-  if (windowWidth <= 768) {
-    marginLeft = !siderCollapsed ? 220 : 60;
-  }
+  const selectedKey = pathname === "/" ? "dashboard" : pathname.split("/")[1];
 
   const normalizeStaticUrl = (url: string): string => {
     return url.replace(process.env.PUBLIC_URL, publicUrl);
@@ -170,87 +150,97 @@ export default function App(props: Readonly<Props>) {
         },
       }}
     >
-      <Layout style={{ minHeight: "100vh" }}>
-        {/* Overlay for mobile menu */}
-        {siderCollapsed === false ? null : (
-          <div
-            className="SiderOverlay"
-            onClick={handleToggleSider}
-            aria-label="Close menu overlay"
-          />
-        )}
+      <Layout className="AppShell">
         <Layout.Sider
-          className="Sider"
-          collapsible
-          collapsed={siderCollapsed}
-          onCollapse={handleSiderCollapse}
           breakpoint="md"
+          className="Sider"
+          collapsed={siderCollapsed}
           collapsedWidth={60}
-          width={220}
+          onBreakpoint={setSiderCollapsed}
           trigger={null}
-          style={{ position: "relative" }}
+          width={220}
         >
-          {/* Hide logo and meta on mobile via CSS */}
-          <div className="LogoContainer">
-            {!siderCollapsed && (
-              <Image src={normalizeStaticUrl(logo)} preview={false} />
-            )}
+          <div className={`Brand ${siderCollapsed ? "BrandCollapsed" : ""}`}>
+            <button
+              aria-label="ReductStore dashboard"
+              className="BrandButton"
+              onClick={() => navigate("/dashboard")}
+              type="button"
+            >
+              <img
+                alt=""
+                className="BrandLogo"
+                src={normalizeStaticUrl(logo)}
+              />
+            </button>
           </div>
-          {/* Mobile menu toggle button */}
-          <button
-            className="MobileMenuToggle"
-            aria-label="Toggle menu"
-            onClick={handleToggleSider}
-          >
-            <span className="MobileMenuIcon" />
-          </button>
-          <div className="MenuContainer">
+          <nav aria-label="Main navigation" className="Navigation">
             <Menu
               className="MenuItem MainMenu"
-              selectable={false}
-              mode="inline"
+              inlineCollapsed={siderCollapsed}
               items={getMenuItems()}
-              defaultOpenKeys={["help"]}
+              mode="inline"
+              openKeys={siderCollapsed ? [] : ["help"]}
+              selectedKeys={[selectedKey]}
             />
-            <div className="Divider" />
+          </nav>
+          <footer
+            className={`SidebarFooter ${siderCollapsed ? "SidebarFooterCollapsed" : ""}`}
+          >
             {permissions && (
-              <Menu
-                className="MenuItem LogoutMenu"
-                selectable={false}
-                mode="inline"
-                items={[
-                  {
-                    key: "logout",
-                    icon: <LogoutOutlined />,
-                    label: "Logout",
-                    onClick: onLogout,
+              <Dropdown
+                classNames={{ root: "SessionDropdown" }}
+                menu={{
+                  items: [
+                    {
+                      key: "logout",
+                      icon: <LogoutOutlined />,
+                      label: <span>Sign out</span>,
+                    },
+                  ],
+                  onClick: ({ key }) => {
+                    if (key === "logout") void onLogout();
                   },
-                ]}
-              />
-            )}
-          </div>
-          {!siderCollapsed && (
-            <div className="Meta">
-              <div className="MetaItem">
-                Web Console{" "}
-                <a
-                  href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                }}
+                placement="topLeft"
+                trigger={["click"]}
+              >
+                <Button
+                  aria-label="Session menu"
+                  className="SessionTrigger"
+                  icon={<LogoutOutlined />}
+                  type="text"
                 >
-                  v{version}
-                </a>
-              </div>
+                  {!siderCollapsed && "Session"}
+                </Button>
+              </Dropdown>
+            )}
+            <div className="SidebarFooterBottom">
+              {!siderCollapsed && (
+                <div className="Meta">
+                  Web Console{" "}
+                  <a
+                    href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    v{version}
+                  </a>
+                </div>
+              )}
+              <Button
+                aria-label={
+                  siderCollapsed ? "Expand navigation" : "Collapse navigation"
+                }
+                className="CollapseToggle"
+                icon={siderCollapsed ? <RightOutlined /> : <LeftOutlined />}
+                onClick={() => setSiderCollapsed((collapsed) => !collapsed)}
+                type="text"
+              />
             </div>
-          )}
+          </footer>
         </Layout.Sider>
-        <Layout
-          style={{
-            zIndex: 1,
-            marginLeft,
-            transition: "margin-left 0.2s",
-          }}
-        >
+        <Layout className="AppContent">
           <Layout.Content>
             <AppRoutes
               backendApi={backendApi}
