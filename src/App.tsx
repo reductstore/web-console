@@ -3,23 +3,27 @@ import { Button, ConfigProvider, Dropdown, Layout, Menu } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { MenuProps } from "antd";
 
-import logo from "./logo.png";
 import "./App.css";
 import { IBackendAPI } from "./BackendAPI";
 import { AppRoutes } from "./Components/Routes";
 import {
-  BorderOuterOutlined,
+  BookOutlined,
   ClockCircleOutlined,
+  CommentOutlined,
   DatabaseOutlined,
+  GithubOutlined,
+  HomeOutlined,
   LeftOutlined,
   LineChartOutlined,
+  LinkedinOutlined,
   LockOutlined,
   LogoutOutlined,
   RightOutlined,
   ShareAltOutlined,
+  UserOutlined,
+  YoutubeOutlined,
 } from "@ant-design/icons";
 import { TokenPermissions } from "reduct-js";
-import { getHelpMenuItems } from "./Components/HelpMenu";
 
 interface Props {
   backendApi: IBackendAPI;
@@ -29,20 +33,43 @@ interface Props {
 
 const PRIMARY_COLOR = "#231b49";
 
+const socialLinks = [
+  {
+    label: "Discourse",
+    href: "https://community.reduct.store",
+    icon: <CommentOutlined />,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/reductstore",
+    icon: <LinkedinOutlined />,
+  },
+  {
+    label: "YouTube",
+    href: "https://www.youtube.com/@ReductStore",
+    icon: <YoutubeOutlined />,
+  },
+  {
+    label: "GitHub",
+    href: "https://github.com/reductstore/reductstore",
+    icon: <GithubOutlined />,
+  },
+];
+
 export default function App(props: Readonly<Props>) {
   const { backendApi, publicUrl } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [permissions, setPermissions] = useState<TokenPermissions | undefined>({
-    fullAccess: false,
-  });
+  const [permissions, setPermissions] = useState<TokenPermissions>();
+  const [tokenName, setTokenName] = useState<string>();
   const [authLoading, setAuthLoading] = useState(true);
   const [siderCollapsed, setSiderCollapsed] = useState(false);
 
   useEffect(() => {
     backendApi.onUnauthorized = () => {
       setPermissions(undefined);
+      setTokenName(undefined);
       navigate("/login");
     };
     return () => {
@@ -56,24 +83,26 @@ export default function App(props: Readonly<Props>) {
       .then((isAllowed) => {
         return isAllowed ? backendApi.me() : undefined;
       })
-      .then((token) =>
-        setPermissions((token && token.permissions) ?? undefined),
-      )
+      .then((token) => {
+        setPermissions(token?.permissions);
+        setTokenName(token?.name);
+      })
       .catch((err) => console.error(err))
       .finally(() => setAuthLoading(false));
   }, [backendApi]);
 
-  const onLogout = async () => {
+  const onLogout = () => {
     backendApi.logout();
     setPermissions(undefined);
+    setTokenName(undefined);
   };
 
   const onLogin = async () => {
-    setPermissions((await backendApi.me()).permissions);
+    const token = await backendApi.me();
+    setPermissions(token.permissions);
+    setTokenName(token.name);
     navigate("/");
   };
-
-  const version = process.env.REACT_APP_VERSION;
 
   const getMenuItems = (): MenuProps["items"] => {
     const items: MenuProps["items"] = [];
@@ -82,7 +111,7 @@ export default function App(props: Readonly<Props>) {
       items.push(
         {
           key: "dashboard",
-          icon: <BorderOuterOutlined />,
+          icon: <HomeOutlined />,
           label: "Dashboard",
           onClick: () => navigate("/dashboard"),
         },
@@ -123,16 +152,24 @@ export default function App(props: Readonly<Props>) {
         );
       }
     }
-    items.push(...getHelpMenuItems());
+    items.push({
+      key: "documentation",
+      icon: <BookOutlined />,
+      label: (
+        <a
+          href="https://www.reduct.store/docs"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Documentation
+        </a>
+      ),
+    });
 
     return items;
   };
 
   const selectedKey = pathname === "/" ? "dashboard" : pathname.split("/")[1];
-
-  const normalizeStaticUrl = (url: string): string => {
-    return url.replace(process.env.PUBLIC_URL, publicUrl);
-  };
 
   return (
     <ConfigProvider
@@ -167,11 +204,10 @@ export default function App(props: Readonly<Props>) {
               onClick={() => navigate("/dashboard")}
               type="button"
             >
-              <img
-                alt=""
-                className="BrandLogo"
-                src={normalizeStaticUrl(logo)}
-              />
+              <img alt="" className="BrandLogo" src={`${publicUrl}/logo.svg`} />
+              {!siderCollapsed && (
+                <span className="BrandName">ReductStore</span>
+              )}
             </button>
           </div>
           <nav aria-label="Main navigation" className="Navigation">
@@ -180,7 +216,6 @@ export default function App(props: Readonly<Props>) {
               inlineCollapsed={siderCollapsed}
               items={getMenuItems()}
               mode="inline"
-              openKeys={siderCollapsed ? [] : ["help"]}
               selectedKeys={[selectedKey]}
             />
           </nav>
@@ -189,9 +224,15 @@ export default function App(props: Readonly<Props>) {
           >
             {permissions && (
               <Dropdown
-                classNames={{ root: "SessionDropdown" }}
+                classNames={{ root: "AccountDropdown" }}
                 menu={{
                   items: [
+                    {
+                      key: "token",
+                      label: <span>{tokenName ?? "Current API token"}</span>,
+                      disabled: true,
+                    },
+                    { type: "divider" },
                     {
                       key: "logout",
                       icon: <LogoutOutlined />,
@@ -199,33 +240,37 @@ export default function App(props: Readonly<Props>) {
                     },
                   ],
                   onClick: ({ key }) => {
-                    if (key === "logout") void onLogout();
+                    if (key === "logout") onLogout();
                   },
                 }}
                 placement="topLeft"
                 trigger={["click"]}
               >
                 <Button
-                  aria-label="Session menu"
-                  className="SessionTrigger"
-                  icon={<LogoutOutlined />}
+                  aria-label="Account menu"
+                  className="AccountTrigger"
+                  icon={<UserOutlined />}
                   type="text"
                 >
-                  {!siderCollapsed && "Session"}
+                  {!siderCollapsed && "Account"}
                 </Button>
               </Dropdown>
             )}
             <div className="SidebarFooterBottom">
               {!siderCollapsed && (
-                <div className="Meta">
-                  Web Console{" "}
-                  <a
-                    href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    v{version}
-                  </a>
+                <div className="Socials">
+                  {socialLinks.map((social) => (
+                    <a
+                      key={social.label}
+                      aria-label={social.label}
+                      className="SocialLink"
+                      href={social.href}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {social.icon}
+                    </a>
+                  ))}
                 </div>
               )}
               <Button

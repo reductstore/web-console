@@ -29,37 +29,44 @@
 .Brand {
   display: flex;
   align-items: center;
-  height: 68px;
-  padding: 16px 20px;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
 }
 
 .BrandButton {
-  display: block;
-  width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
   padding: 0;
-  overflow: hidden;
   border: 0;
   background: transparent;
+  color: #fff;
   cursor: pointer;
 }
 
 .BrandLogo {
   display: block;
-  width: 160px;
-  height: auto;
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
+}
+
+.BrandName {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .BrandCollapsed {
   justify-content: center;
-  padding-inline: 13px;
+  padding: 0;
 }
 
 .BrandCollapsed .BrandButton {
-  width: 34px;
-}
-
-.BrandCollapsed .BrandLogo {
-  width: 99px;
+  justify-content: center;
+  width: 28px;
 }
 
 .Navigation {
@@ -101,55 +108,40 @@
   color: var(--primary-hover) !important;
 }
 
-.Sider .ant-menu-submenu-arrow::before,
-.Sider .ant-menu-submenu-arrow::after {
-  background: currentcolor !important;
-}
-
-.ant-menu-submenu-popup,
-.ant-menu-submenu-popup .ant-menu,
-.ant-menu-submenu-popup .ant-menu-item,
-.ant-menu-submenu-popup.help-menu-item,
-.ant-menu-submenu-popup .help-menu-item {
-  background: var(--primary-bg) !important;
-}
-
-.ant-menu-submenu-popup .ant-menu-item:hover,
-.ant-menu-submenu-popup .ant-menu-item-selected {
-  background: rgb(255 255 255 / 16%) !important;
-  color: var(--primary-hover) !important;
-}
-
 .SidebarFooter {
   display: grid;
-  gap: 8px;
-  padding: 12px 8px 8px;
+  gap: 4px;
+  padding: 8px;
   border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
-.SessionTrigger {
+.AccountTrigger {
   display: flex;
   align-items: center;
   width: 100%;
-  height: 38px;
+  height: 34px;
   padding-inline: 8px !important;
   color: var(--primary-fg) !important;
   text-align: left;
 }
 
-.SessionTrigger:hover,
-.SessionTrigger:focus-visible {
+.AccountTrigger:hover,
+.AccountTrigger:focus-visible {
   background: rgb(255 255 255 / 10%) !important;
   color: var(--primary-hover) !important;
 }
 
-.SidebarFooterCollapsed .SessionTrigger {
+.SidebarFooterCollapsed .AccountTrigger {
   justify-content: center;
   padding-inline: 0 !important;
 }
 
-.SessionDropdown .ant-dropdown-menu {
-  min-width: 160px;
+.AccountDropdown .ant-dropdown-menu {
+  min-width: 220px;
+}
+
+.AccountDropdown .ant-dropdown-menu-item-disabled {
+  overflow-wrap: anywhere;
 }
 
 .SidebarFooterBottom {
@@ -159,18 +151,26 @@
   min-height: 32px;
 }
 
-.Meta {
+.Socials {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.SocialLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   color: var(--primary-fg);
-  font-size: 12px;
-  white-space: nowrap;
+  font-size: 16px;
 }
 
-.Meta a {
-  color: inherit;
-}
-
-.Meta a:hover,
-.Meta a:focus-visible {
+.SocialLink:hover,
+.SocialLink:focus-visible {
+  background: rgb(255 255 255 / 10%);
   color: var(--primary-hover);
 }
 

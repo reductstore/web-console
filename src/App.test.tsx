@@ -24,7 +24,9 @@ describe("App", () => {
 
   const renderApp = async (permissions: { fullAccess: boolean }) => {
     backendAPI.isAllowed = vi.fn().mockResolvedValue(true);
-    backendAPI.me = vi.fn().mockResolvedValue({ permissions } as Token);
+    backendAPI.me = vi
+      .fn()
+      .mockResolvedValue({ name: "demo-token", permissions } as Token);
 
     const result = render(
       <MemoryRouter>
@@ -83,9 +85,13 @@ describe("App", () => {
     expect(screen.queryByText("Lifecycles")).not.toBeInTheDocument();
   });
 
-  it("should show help menu", async () => {
-    const { container } = await renderApp({ fullAccess: false });
-    expect(container.querySelector(".help-menu-item")).toBeInTheDocument();
+  it("links to the documentation from the navigation", async () => {
+    await renderApp({ fullAccess: false });
+
+    expect(screen.getByRole("link", { name: "Documentation" })).toHaveAttribute(
+      "href",
+      "https://www.reduct.store/docs",
+    );
   });
 
   it("collapses and expands the navigation from its footer control", async () => {
@@ -98,5 +104,23 @@ describe("App", () => {
     expect(
       screen.getByRole("button", { name: "Expand navigation" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the signed-in token name in the account menu", async () => {
+    await renderApp({ fullAccess: false });
+
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+
+    expect(await screen.findByText("demo-token")).toBeInTheDocument();
+    expect(screen.getByText("Sign out")).toBeInTheDocument();
+  });
+
+  it("shows the account social links in the footer", async () => {
+    await renderApp({ fullAccess: false });
+
+    expect(screen.getByRole("link", { name: "Discourse" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "LinkedIn" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "YouTube" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "GitHub" })).toBeInTheDocument();
   });
 });
