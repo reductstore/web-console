@@ -159,12 +159,15 @@
   min-width: 220px;
 }
 
-.ConsoleDropdown .ant-dropdown-menu-item {
+.ConsoleDropdown .ant-dropdown-menu-item,
+.ConsoleDropdown .ant-dropdown-menu-item a {
   overflow-wrap: anywhere;
+  color: #1f1f1f !important;
 }
 
-.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled {
-  cursor: default;
+.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled,
+.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled * {
+  cursor: default !important;
 }
 
 .SidebarFooterBottom {
