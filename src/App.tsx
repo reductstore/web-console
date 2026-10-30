@@ -237,52 +237,56 @@ export default function App(props: Readonly<Props>) {
                         },
                         {
                           key: "documentation",
-                          icon: <BookOutlined />,
+                          className: "ConsoleLinkItem",
                           label: (
                             <a
                               href="https://www.reduct.store/docs"
                               rel="noopener noreferrer"
                               target="_blank"
                             >
+                              <BookOutlined aria-hidden />
                               Documentation
                             </a>
                           ),
                         },
                         {
                           key: "guides",
-                          icon: <ReadOutlined />,
+                          className: "ConsoleLinkItem",
                           label: (
                             <a
                               href="https://www.reduct.store/docs/guides"
                               rel="noopener noreferrer"
                               target="_blank"
                             >
+                              <ReadOutlined aria-hidden />
                               Guides
                             </a>
                           ),
                         },
                         {
                           key: "cli",
-                          icon: <CodeOutlined />,
+                          className: "ConsoleLinkItem",
                           label: (
                             <a
                               href="https://github.com/reductstore/reduct-cli"
                               rel="noopener noreferrer"
                               target="_blank"
                             >
+                              <CodeOutlined aria-hidden />
                               CLI
                             </a>
                           ),
                         },
                         {
                           key: "version",
-                          icon: <InfoCircleOutlined />,
+                          className: "ConsoleLinkItem",
                           label: (
                             <a
                               href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
                               rel="noopener noreferrer"
                               target="_blank"
                             >
+                              <InfoCircleOutlined aria-hidden />
                               Web Console v{version}
                             </a>
                           ),

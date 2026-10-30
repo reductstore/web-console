@@ -178,6 +178,21 @@
   color: #1f1f1f !important;
 }
 
+.ConsoleDropdown .ConsoleLinkItem {
+  padding: 0 !important;
+}
+
+.ConsoleDropdown .ConsoleLinkItem .ant-dropdown-menu-title-content {
+  width: 100%;
+}
+
+.ConsoleDropdown .ConsoleLinkItem a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+}
+
 .ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled,
 .ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled * {
   cursor: default !important;
