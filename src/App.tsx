@@ -36,6 +36,9 @@ interface Props {
 
 const PRIMARY_COLOR = "#231b49";
 
+const FONT_FAMILY =
+  'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif';
+
 const socialLinks = [
   {
     label: "Discourse",
@@ -165,6 +168,7 @@ export default function App(props: Readonly<Props>) {
         token: {
           colorPrimary: PRIMARY_COLOR,
           colorLink: PRIMARY_COLOR,
+          fontFamily: FONT_FAMILY,
         },
         components: {
           Menu: {
