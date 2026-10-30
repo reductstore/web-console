@@ -7,12 +7,14 @@ import "./App.css";
 import { IBackendAPI } from "./BackendAPI";
 import { AppRoutes } from "./Components/Routes";
 import {
+  AppstoreOutlined,
   BookOutlined,
   ClockCircleOutlined,
   CommentOutlined,
   DatabaseOutlined,
   GithubOutlined,
   HomeOutlined,
+  InfoCircleOutlined,
   LeftOutlined,
   LineChartOutlined,
   LinkedinOutlined,
@@ -20,7 +22,6 @@ import {
   LogoutOutlined,
   RightOutlined,
   ShareAltOutlined,
-  UserOutlined,
   YoutubeOutlined,
 } from "@ant-design/icons";
 import { TokenPermissions } from "reduct-js";
@@ -104,6 +105,8 @@ export default function App(props: Readonly<Props>) {
     navigate("/");
   };
 
+  const version = process.env.REACT_APP_VERSION || "development";
+
   const getMenuItems = (): MenuProps["items"] => {
     const items: MenuProps["items"] = [];
 
@@ -152,20 +155,6 @@ export default function App(props: Readonly<Props>) {
         );
       }
     }
-    items.push({
-      key: "documentation",
-      icon: <BookOutlined />,
-      label: (
-        <a
-          href="https://www.reduct.store/docs"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Documentation
-        </a>
-      ),
-    });
-
     return items;
   };
 
@@ -223,38 +212,66 @@ export default function App(props: Readonly<Props>) {
             className={`SidebarFooter ${siderCollapsed ? "SidebarFooterCollapsed" : ""}`}
           >
             {permissions && (
-              <Dropdown
-                classNames={{ root: "AccountDropdown" }}
-                menu={{
-                  items: [
-                    {
-                      key: "token",
-                      label: <span>{tokenName ?? "Current API token"}</span>,
-                      disabled: true,
+              <div className="ConsoleMenu">
+                <Dropdown
+                  classNames={{ root: "ConsoleDropdown" }}
+                  menu={{
+                    items: [
+                      {
+                        key: "token",
+                        label: <span>{tokenName ?? "Current API token"}</span>,
+                        disabled: true,
+                      },
+                      {
+                        key: "documentation",
+                        icon: <BookOutlined />,
+                        label: (
+                          <a
+                            href="https://www.reduct.store/docs"
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            Documentation
+                          </a>
+                        ),
+                      },
+                      {
+                        key: "version",
+                        icon: <InfoCircleOutlined />,
+                        label: (
+                          <a
+                            href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            Web Console v{version}
+                          </a>
+                        ),
+                      },
+                      { type: "divider" },
+                      {
+                        key: "logout",
+                        icon: <LogoutOutlined />,
+                        label: <span>Sign out</span>,
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === "logout") onLogout();
                     },
-                    { type: "divider" },
-                    {
-                      key: "logout",
-                      icon: <LogoutOutlined />,
-                      label: <span>Sign out</span>,
-                    },
-                  ],
-                  onClick: ({ key }) => {
-                    if (key === "logout") onLogout();
-                  },
-                }}
-                placement="topLeft"
-                trigger={["click"]}
-              >
-                <Button
-                  aria-label="Account menu"
-                  className="AccountTrigger"
-                  icon={<UserOutlined />}
-                  type="text"
+                  }}
+                  placement="topLeft"
+                  trigger={["click"]}
                 >
-                  {!siderCollapsed && "Account"}
-                </Button>
-              </Dropdown>
+                  <Button
+                    aria-label="Console menu"
+                    className="ConsoleTrigger"
+                    icon={<AppstoreOutlined />}
+                    type="text"
+                  >
+                    {!siderCollapsed && "Console"}
+                  </Button>
+                </Dropdown>
+              </div>
             )}
             <div className="SidebarFooterBottom">
               {!siderCollapsed && (

@@ -85,12 +85,19 @@ describe("App", () => {
     expect(screen.queryByText("Lifecycles")).not.toBeInTheDocument();
   });
 
-  it("links to the documentation from the navigation", async () => {
+  it("shows documentation and version in the console menu", async () => {
     await renderApp({ fullAccess: false });
 
-    expect(screen.getByRole("link", { name: "Documentation" })).toHaveAttribute(
+    fireEvent.click(screen.getByRole("button", { name: "Console menu" }));
+
+    expect(
+      await screen.findByRole("link", { name: "Documentation" }),
+    ).toHaveAttribute("href", "https://www.reduct.store/docs");
+    expect(
+      screen.getByRole("link", { name: "Web Console vdevelopment" }),
+    ).toHaveAttribute(
       "href",
-      "https://www.reduct.store/docs",
+      "https://github.com/reductstore/web-console/releases/tag/vdevelopment",
     );
   });
 
@@ -106,10 +113,10 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the signed-in token name in the account menu", async () => {
+  it("shows the signed-in token name in the console menu", async () => {
     await renderApp({ fullAccess: false });
 
-    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Console menu" }));
 
     expect(await screen.findByText("demo-token")).toBeInTheDocument();
     expect(screen.getByText("Sign out")).toBeInTheDocument();

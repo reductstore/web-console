@@ -21,9 +21,13 @@
 }
 
 .Sider .ant-layout-sider-children {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .Brand {
@@ -109,15 +113,19 @@
 }
 
 .SidebarFooter {
-  display: grid;
-  gap: 4px;
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
-.AccountTrigger {
+.ConsoleMenu {
+  padding: 4px 8px;
+}
+
+.ConsoleTrigger {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   width: 100%;
   height: 34px;
   padding-inline: 8px !important;
@@ -125,57 +133,61 @@
   text-align: left;
 }
 
-.AccountTrigger:hover,
-.AccountTrigger:focus-visible {
+.ConsoleTrigger:hover,
+.ConsoleTrigger:focus-visible {
   background: rgb(255 255 255 / 10%) !important;
   color: var(--primary-hover) !important;
 }
 
-.SidebarFooterCollapsed .AccountTrigger {
+.SidebarFooterCollapsed .ConsoleMenu {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.SidebarFooterCollapsed .ConsoleTrigger {
+  width: 34px;
   justify-content: center;
   padding-inline: 0 !important;
 }
 
-.AccountDropdown .ant-dropdown-menu {
+.ConsoleDropdown .ant-dropdown-menu {
   min-width: 220px;
 }
 
-.AccountDropdown .ant-dropdown-menu-item-disabled {
+.ConsoleDropdown .ant-dropdown-menu-item {
   overflow-wrap: anywhere;
 }
 
 .SidebarFooterBottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 32px;
+  gap: 12px;
+  padding: 4px 12px 8px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
 .Socials {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 2px;
+  justify-content: space-between;
 }
 
 .SocialLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  display: flex;
+  font-size: 18px;
   color: var(--primary-fg);
-  font-size: 16px;
 }
 
 .SocialLink:hover,
 .SocialLink:focus-visible {
-  background: rgb(255 255 255 / 10%);
   color: var(--primary-hover);
 }
 
 .CollapseToggle {
   flex: 0 0 auto;
+  font-size: 13px;
   color: var(--primary-fg) !important;
 }
 
@@ -187,6 +199,7 @@
 
 .SidebarFooterCollapsed .SidebarFooterBottom {
   justify-content: center;
+  padding: 8px 0;
 }
 
 .AppContent {
