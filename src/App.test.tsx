@@ -151,6 +151,17 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the Console name when its collapsed control is hovered", async () => {
+    await renderApp({ fullAccess: false });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Collapse navigation" }),
+    );
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Console menu" }));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Console");
+  });
+
   it("shows the signed-in token name in the console menu", async () => {
     await renderApp({ fullAccess: false });
 

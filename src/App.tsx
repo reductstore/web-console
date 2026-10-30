@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, ConfigProvider, Dropdown, Layout, Menu } from "antd";
+import { Button, ConfigProvider, Dropdown, Layout, Menu, Tooltip } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { MenuProps } from "antd";
 
@@ -295,14 +295,19 @@ export default function App(props: Readonly<Props>) {
                     placement="topLeft"
                     trigger={["click"]}
                   >
-                    <Button
-                      aria-label="Console menu"
-                      className="ConsoleTrigger"
-                      icon={<AppstoreOutlined />}
-                      type="text"
+                    <Tooltip
+                      placement="right"
+                      title={siderCollapsed ? "Console" : undefined}
                     >
-                      {!siderCollapsed && "Console"}
-                    </Button>
+                      <Button
+                        aria-label="Console menu"
+                        className="ConsoleTrigger"
+                        icon={<AppstoreOutlined />}
+                        type="text"
+                      >
+                        {!siderCollapsed && "Console"}
+                      </Button>
+                    </Tooltip>
                   </Dropdown>
                 </div>
               )}

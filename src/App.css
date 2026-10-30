@@ -103,6 +103,21 @@
   padding-inline-start: 8px !important;
 }
 
+.Sider .ant-menu-inline-collapsed > .ant-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 4px auto;
+  padding-inline: 0 !important;
+  line-height: 34px;
+}
+
+.Sider .ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon {
+  margin-inline-end: 0;
+}
+
 .Sider .ant-menu-item:hover,
 .Sider .ant-menu-submenu-title:hover {
   background: rgb(255 255 255 / 10%) !important;
@@ -146,7 +161,7 @@
 .SidebarFooterCollapsed .ConsoleMenu {
   display: flex;
   justify-content: center;
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
 .SidebarFooterCollapsed .ConsoleTrigger {
@@ -210,7 +225,7 @@
 
 .SidebarFooterCollapsed .SidebarFooterBottom {
   justify-content: center;
-  padding: 8px 0;
+  padding: 4px 0 8px;
 }
 
 .AppContent {
