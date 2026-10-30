@@ -85,7 +85,7 @@ describe("App", () => {
     expect(screen.queryByText("Lifecycles")).not.toBeInTheDocument();
   });
 
-  it("shows documentation and version in the console menu", async () => {
+  it("shows documentation resources and version in the console menu", async () => {
     await renderApp({ fullAccess: false });
 
     fireEvent.click(screen.getByRole("button", { name: "Console menu" }));
@@ -93,6 +93,14 @@ describe("App", () => {
     expect(
       await screen.findByRole("link", { name: "Documentation" }),
     ).toHaveAttribute("href", "https://www.reduct.store/docs");
+    expect(screen.getByRole("link", { name: "Guides" })).toHaveAttribute(
+      "href",
+      "https://www.reduct.store/docs/guides",
+    );
+    expect(screen.getByRole("link", { name: "CLI" })).toHaveAttribute(
+      "href",
+      "https://github.com/reductstore/reduct-cli",
+    );
     expect(
       screen.getByRole("link", { name: "Web Console vdevelopment" }),
     ).toHaveAttribute(

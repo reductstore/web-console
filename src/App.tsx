@@ -10,6 +10,7 @@ import {
   AppstoreOutlined,
   BookOutlined,
   ClockCircleOutlined,
+  CodeOutlined,
   CommentOutlined,
   DatabaseOutlined,
   GithubOutlined,
@@ -20,6 +21,7 @@ import {
   LinkedinOutlined,
   LockOutlined,
   LogoutOutlined,
+  ReadOutlined,
   RightOutlined,
   ShareAltOutlined,
   YoutubeOutlined,
@@ -232,6 +234,32 @@ export default function App(props: Readonly<Props>) {
                             target="_blank"
                           >
                             Documentation
+                          </a>
+                        ),
+                      },
+                      {
+                        key: "guides",
+                        icon: <ReadOutlined />,
+                        label: (
+                          <a
+                            href="https://www.reduct.store/docs/guides"
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            Guides
+                          </a>
+                        ),
+                      },
+                      {
+                        key: "cli",
+                        icon: <CodeOutlined />,
+                        label: (
+                          <a
+                            href="https://github.com/reductstore/reduct-cli"
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            CLI
                           </a>
                         ),
                       },
