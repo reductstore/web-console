@@ -13,6 +13,7 @@ Web console for [ReductStore](https://www.reduct.store) based on React.js and An
 - Bucket Management
 - Data Browsing
 - Token authentication
+- Collapsible sidebar navigation
 - Data Browsing
 
 ## Demo
