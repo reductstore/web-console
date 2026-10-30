@@ -100,6 +100,33 @@ describe("App", () => {
     expect(screen.getByText("Security")).toBeInTheDocument();
   });
 
+  it("highlights the Security menu item on the token routes", async () => {
+    backendAPI.isAllowed = vi.fn().mockResolvedValue(true);
+    backendAPI.me = vi.fn().mockResolvedValue({
+      name: "demo-token",
+      permissions: { fullAccess: true },
+    } as Token);
+
+    render(
+      <MemoryRouter initialEntries={["/tokens"]}>
+        <App
+          backendApi={backendAPI}
+          publicUrl="/ui"
+          apiUrl="https://example.com"
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(backendAPI.me).toHaveBeenCalled();
+    });
+
+    const selected = screen
+      .getByText("Security")
+      .closest(".ant-menu-item-selected");
+    expect(selected).not.toBeNull();
+  });
+
   it("should hide security panel", async () => {
     await renderApp({ fullAccess: false });
     expect(screen.queryByText("Security")).not.toBeInTheDocument();

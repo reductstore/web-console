@@ -160,7 +160,9 @@ export default function App(props: Readonly<Props>) {
     return items;
   };
 
-  const selectedKey = pathname === "/" ? "dashboard" : pathname.split("/")[1];
+  const pathToKey: Record<string, string> = { tokens: "security" };
+  const pathSegment = pathname === "/" ? "dashboard" : pathname.split("/")[1];
+  const selectedKey = pathToKey[pathSegment] ?? pathSegment;
 
   return (
     <ConfigProvider
