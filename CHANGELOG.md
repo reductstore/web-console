@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Redesign the web console sidebar and refresh vulnerable dependency resolutions, [PR-256](https://github.com/reductstore/web-console/pull/256)
+- Redesign the web console sidebar, [PR-256](https://github.com/reductstore/web-console/pull/256)
 
 ## 1.17.2 - 2026-09-17
 
