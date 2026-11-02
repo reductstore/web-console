@@ -215,6 +215,12 @@
   padding: 5px 12px;
 }
 
+.ConsoleDropdown .VersionMenuItem.ant-dropdown-menu-item-disabled,
+.ConsoleDropdown .VersionMenuItem.ant-dropdown-menu-item-disabled * {
+  color: #8c8c8c !important;
+  cursor: default !important;
+}
+
 .SidebarFooterBottom {
   display: flex;
   align-items: center;

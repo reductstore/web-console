@@ -158,12 +158,10 @@ describe("App", () => {
       "href",
       "https://github.com/reductstore/reduct-cli",
     );
+    expect(screen.getByText("Web Console vdevelopment")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Web Console vdevelopment" }),
-    ).toHaveAttribute(
-      "href",
-      "https://github.com/reductstore/web-console/releases/tag/vdevelopment",
-    );
+      screen.queryByRole("link", { name: "Web Console vdevelopment" }),
+    ).not.toBeInTheDocument();
   });
 
   it("collapses and expands the navigation from its footer control", async () => {
