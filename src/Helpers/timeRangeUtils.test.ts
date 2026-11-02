@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "./dayjsConfig";
 import {
   getTimeRangeFromKey,
   getDefaultTimeRange,
@@ -8,7 +8,7 @@ import {
 } from "./timeRangeUtils";
 
 describe("timeRangeUtils", () => {
-  const mockNow = dayjs("2023-10-15T12:00:00Z");
+  const mockNow = dayjs.utc("2023-10-15T12:00:00Z");
 
   describe("getTimeRangeFromKey", () => {
     it.each([
@@ -49,10 +49,10 @@ describe("timeRangeUtils", () => {
     it("should calculate today range correctly", () => {
       const result = getTimeRangeFromKey("today", mockNow);
       const expectedStart = BigInt(
-        dayjs("2023-10-15").startOf("day").valueOf() * 1000,
+        dayjs.utc("2023-10-15").startOf("day").valueOf() * 1000,
       );
       const expectedEnd = BigInt(
-        dayjs("2023-10-15").endOf("day").valueOf() * 1000,
+        dayjs.utc("2023-10-15").endOf("day").valueOf() * 1000,
       );
 
       expect(result.start).toBe(expectedStart);
@@ -61,18 +61,32 @@ describe("timeRangeUtils", () => {
 
     it("should calculate thisweek range correctly", () => {
       const result = getTimeRangeFromKey("thisweek", mockNow);
-      // Oct 15, 2023 is a Sunday, so the week starts on Oct 9 (Monday) and ends on Oct 15 (Sunday)
-      const weekStart = mockNow.isoWeekday(1); // Monday
-      const weekEnd = mockNow.isoWeekday(7); // Sunday
+      const weekStart = mockNow.isoWeekday(1);
+      const weekEnd = mockNow.isoWeekday(7);
       const expectedStart = BigInt(
-        dayjs(weekStart.format("YYYY-MM-DD")).startOf("day").valueOf() * 1000,
+        dayjs.utc(weekStart.format("YYYY-MM-DD")).startOf("day").valueOf() *
+          1000,
       );
       const expectedEnd = BigInt(
-        dayjs(weekEnd.format("YYYY-MM-DD")).endOf("day").valueOf() * 1000,
+        dayjs.utc(weekEnd.format("YYYY-MM-DD")).endOf("day").valueOf() * 1000,
       );
 
       expect(result.start).toBe(expectedStart);
       expect(result.end).toBe(expectedEnd);
+    });
+
+    it("calculates month boundaries in UTC across daylight-saving changes", () => {
+      const result = getTimeRangeFromKey(
+        "lastmonth",
+        dayjs.utc("2026-11-02T12:00:00Z"),
+      );
+
+      expect(result.start).toBe(
+        BigInt(dayjs.utc("2026-10-01").startOf("day").valueOf() * 1000),
+      );
+      expect(result.end).toBe(
+        BigInt(dayjs.utc("2026-10-31").endOf("day").valueOf() * 1000),
+      );
     });
 
     it("should throw error for unknown key", () => {

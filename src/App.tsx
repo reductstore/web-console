@@ -7,7 +7,6 @@ import "./App.css";
 import { IBackendAPI } from "./BackendAPI";
 import { AppRoutes } from "./Components/Routes";
 import {
-  AppstoreOutlined,
   BookOutlined,
   ClockCircleOutlined,
   CodeOutlined,
@@ -222,104 +221,113 @@ export default function App(props: Readonly<Props>) {
               className={`SidebarFooter ${siderCollapsed ? "SidebarFooterCollapsed" : ""}`}
             >
               {permissions && (
-                <div className="ConsoleMenu">
-                  <Dropdown
-                    classNames={{ root: "ConsoleDropdown" }}
-                    menu={{
-                      items: [
-                        {
-                          key: "token",
-                          className: "TokenMenuItem",
-                          label: (
-                            <span>{tokenName ?? "Current API token"}</span>
-                          ),
-                          disabled: true,
-                        },
-                        {
-                          key: "documentation",
-                          className: "ConsoleLinkItem",
-                          label: (
-                            <a
-                              href="https://www.reduct.store/docs"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              <BookOutlined aria-hidden />
-                              Documentation
-                            </a>
-                          ),
-                        },
-                        {
-                          key: "guides",
-                          className: "ConsoleLinkItem",
-                          label: (
-                            <a
-                              href="https://www.reduct.store/docs/guides"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              <ReadOutlined aria-hidden />
-                              Guides
-                            </a>
-                          ),
-                        },
-                        {
-                          key: "cli",
-                          className: "ConsoleLinkItem",
-                          label: (
-                            <a
-                              href="https://github.com/reductstore/reduct-cli"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              <CodeOutlined aria-hidden />
-                              CLI
-                            </a>
-                          ),
-                        },
-                        {
-                          key: "version",
-                          className: "ConsoleLinkItem",
-                          label: (
-                            <a
-                              href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              <InfoCircleOutlined aria-hidden />
-                              Web Console v{version}
-                            </a>
-                          ),
-                        },
-                        { type: "divider" },
-                        {
-                          key: "logout",
-                          icon: <LogoutOutlined />,
-                          label: <span>Sign out</span>,
-                        },
-                      ],
-                      onClick: ({ key }) => {
-                        if (key === "logout") onLogout();
-                      },
-                    }}
-                    placement="topLeft"
-                    trigger={["click"]}
+                <>
+                  <div
+                    className="TokenIdentity"
+                    title={tokenName ?? "Current API token"}
                   >
+                    {!siderCollapsed && (
+                      <span>{tokenName ?? "Current API token"}</span>
+                    )}
+                  </div>
+                  <div className="ConsoleMenu">
+                    <Dropdown
+                      classNames={{ root: "ConsoleDropdown" }}
+                      menu={{
+                        items: [
+                          {
+                            key: "documentation",
+                            className: "ConsoleLinkItem",
+                            label: (
+                              <a
+                                href="https://www.reduct.store/docs"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                <BookOutlined aria-hidden />
+                                Documentation
+                              </a>
+                            ),
+                          },
+                          {
+                            key: "guides",
+                            className: "ConsoleLinkItem",
+                            label: (
+                              <a
+                                href="https://www.reduct.store/docs/guides"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                <ReadOutlined aria-hidden />
+                                Guides
+                              </a>
+                            ),
+                          },
+                          {
+                            key: "cli",
+                            className: "ConsoleLinkItem",
+                            label: (
+                              <a
+                                href="https://github.com/reductstore/reduct-cli"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                <CodeOutlined aria-hidden />
+                                CLI
+                              </a>
+                            ),
+                          },
+                          {
+                            key: "version",
+                            className: "ConsoleLinkItem",
+                            label: (
+                              <a
+                                href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                <InfoCircleOutlined aria-hidden />
+                                Web Console v{version}
+                              </a>
+                            ),
+                          },
+                        ],
+                      }}
+                      placement="topLeft"
+                      trigger={["click"]}
+                    >
+                      <Tooltip
+                        placement="right"
+                        title={siderCollapsed ? "About" : undefined}
+                      >
+                        <Button
+                          aria-label="About menu"
+                          className="ConsoleTrigger"
+                          icon={<InfoCircleOutlined />}
+                          type="text"
+                        >
+                          {!siderCollapsed && "About"}
+                        </Button>
+                      </Tooltip>
+                    </Dropdown>
+                  </div>
+                  <div className="SignOutMenu">
                     <Tooltip
                       placement="right"
-                      title={siderCollapsed ? "Console" : undefined}
+                      title={siderCollapsed ? "Sign out" : undefined}
                     >
                       <Button
-                        aria-label="Console menu"
-                        className="ConsoleTrigger"
-                        icon={<AppstoreOutlined />}
+                        aria-label="Sign out"
+                        className="SignOutButton"
+                        icon={<LogoutOutlined />}
+                        onClick={onLogout}
                         type="text"
                       >
-                        {!siderCollapsed && "Console"}
+                        {!siderCollapsed && "Sign out"}
                       </Button>
                     </Tooltip>
-                  </Dropdown>
-                </div>
+                  </div>
+                </>
               )}
               <div className="SidebarFooterBottom">
                 {!siderCollapsed && (

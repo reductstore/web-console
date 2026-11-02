@@ -23,10 +23,10 @@ export const RANGE_MAP: Record<string, string> = {
   custom: "Custom range",
 };
 
-const getUtcDay = (date: Dayjs, type: "start" | "end") =>
-  type === "start"
-    ? dayjs(date.format("YYYY-MM-DD")).startOf("day")
-    : dayjs(date.format("YYYY-MM-DD")).endOf("day");
+const getUtcDay = (date: Dayjs, type: "start" | "end") => {
+  const utcDate = dayjs.utc(date.format("YYYY-MM-DD"));
+  return type === "start" ? utcDate.startOf("day") : utcDate.endOf("day");
+};
 
 /**
  * Calculate time range based on a preset key

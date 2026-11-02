@@ -135,11 +135,25 @@
   border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
-.ConsoleMenu {
-  padding: 4px 8px;
+.TokenIdentity {
+  overflow: hidden;
+  padding: 8px 16px 0;
+  color: var(--primary-fg);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ConsoleTrigger {
+.ConsoleMenu {
+  padding: 4px 8px 0;
+}
+
+.SignOutMenu {
+  padding: 0 8px 4px;
+}
+
+.ConsoleTrigger,
+.SignOutButton {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -151,18 +165,26 @@
 }
 
 .ConsoleTrigger:hover,
-.ConsoleTrigger:focus-visible {
+.ConsoleTrigger:focus-visible,
+.SignOutButton:hover,
+.SignOutButton:focus-visible {
   background: rgb(255 255 255 / 10%) !important;
   color: var(--primary-hover) !important;
 }
 
-.SidebarFooterCollapsed .ConsoleMenu {
+.SidebarFooterCollapsed .TokenIdentity {
+  display: none;
+}
+
+.SidebarFooterCollapsed .ConsoleMenu,
+.SidebarFooterCollapsed .SignOutMenu {
   display: flex;
   justify-content: center;
   padding: 4px 0;
 }
 
-.SidebarFooterCollapsed .ConsoleTrigger {
+.SidebarFooterCollapsed .ConsoleTrigger,
+.SidebarFooterCollapsed .SignOutButton {
   width: 34px;
   justify-content: center;
   padding-inline: 0 !important;
@@ -191,11 +213,6 @@
   align-items: center;
   gap: 8px;
   padding: 5px 12px;
-}
-
-.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled,
-.ConsoleDropdown .TokenMenuItem.ant-dropdown-menu-item-disabled * {
-  cursor: default !important;
 }
 
 .SidebarFooterBottom {

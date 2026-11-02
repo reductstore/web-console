@@ -142,10 +142,10 @@ describe("App", () => {
     expect(screen.queryByText("Lifecycles")).not.toBeInTheDocument();
   });
 
-  it("shows documentation resources and version in the console menu", async () => {
+  it("shows documentation resources and version in the About menu", async () => {
     await renderApp({ fullAccess: false });
 
-    fireEvent.click(screen.getByRole("button", { name: "Console menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "About menu" }));
 
     expect(
       await screen.findByRole("link", { name: "Documentation" }),
@@ -178,24 +178,41 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the Console name when its collapsed control is hovered", async () => {
+  it("shows the About name when its collapsed control is hovered", async () => {
     await renderApp({ fullAccess: false });
 
     fireEvent.click(
       screen.getByRole("button", { name: "Collapse navigation" }),
     );
-    fireEvent.mouseEnter(screen.getByRole("button", { name: "Console menu" }));
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "About menu" }));
 
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Console");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("About");
   });
 
-  it("shows the signed-in token name in the console menu", async () => {
+  it("shows the signed-in token and sign-out outside the About menu", async () => {
     await renderApp({ fullAccess: false });
 
-    fireEvent.click(screen.getByRole("button", { name: "Console menu" }));
+    expect(screen.getByText("demo-token")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sign out" }),
+    ).toBeInTheDocument();
 
-    expect(await screen.findByText("demo-token")).toBeInTheDocument();
-    expect(screen.getByText("Sign out")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About menu" }));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "demo-token" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Sign out" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("signs out from the direct sidebar control", async () => {
+    await renderApp({ fullAccess: false });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(backendAPI.logout).toHaveBeenCalledOnce();
   });
 
   it("shows the account social links in the footer", async () => {
