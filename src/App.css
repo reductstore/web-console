@@ -1,181 +1,263 @@
-/* --- General Colors --- */
 :root {
   --primary-bg: #231b49;
-  --primary-fg: #cccccc;
+  --primary-fg: rgb(255 255 255 / 72%);
   --primary-hover: #ffffff;
-
-  /* Input colors (Ant Design defaults) */
   --input-border: #d9d9d9;
   --input-focus: #231b49;
   --input-error: #ff4d4f;
 }
 
-/* --- Table Row Selection --- */
 .ant-table-row-selected > td {
-  background: rgba(35, 27, 73, 0.04) !important;
+  background: rgb(35 27 73 / 4%) !important;
 }
 
-/* --- Menu Styles --- */
-.ant-dropdown .ant-dropdown-menu-title-content,
-.ant-dropdown-menu-title-content {
-  color: rgba(0, 0, 0, 0.88) !important;
+.AppShell {
+  min-height: 100vh;
 }
 
-.ant-menu-submenu-popup,
-.ant-menu-submenu-popup .ant-menu,
-.ant-menu-submenu-popup .ant-menu-item,
-.ant-menu-submenu-popup.help-menu-item,
-.ant-menu-submenu-popup .help-menu-item {
-  background: var(--primary-bg) !important;
-}
-.ant-menu-submenu-popup .ant-menu-item-selected,
-.ant-menu-submenu-popup .ant-menu-item-active,
-.ant-layout-sider .ant-menu-item-active {
-  background: var(--primary-fg) !important;
-  color: var(--primary-bg) !important;
-}
-.MenuItem {
-  color: var(--primary-fg);
-  font-size: larger;
-  font-weight: bold;
-}
-
-/* --- Sider Styles --- */
 .Sider {
-  background-color: var(--primary-bg);
-  min-width: 60px;
-  max-width: 220px;
-  width: 220px;
-}
-.Sider .ant-layout-sider-children {
-  position: sticky;
+  position: sticky !important;
   top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  background: var(--primary-bg) !important;
+  box-shadow: 2px 0 12px rgb(35 27 73 / 8%);
+}
+
+.Sider .ant-layout-sider-children {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
-@media (max-width: 768px) {
-  .Sider {
-    position: fixed !important;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    width: 60px !important;
-    min-width: 60px !important;
-    max-width: 220px !important;
-    box-shadow: none;
-  }
-  .Sider.ant-layout-sider-collapsed {
-    width: 60px !important;
-    min-width: 60px !important;
-    max-width: 60px !important;
-    box-shadow: none;
-  }
-  .Sider:not(.ant-layout-sider-collapsed) {
-    width: 220px !important;
-    min-width: 220px !important;
-    max-width: 220px !important;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-  }
+.Brand {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
 }
 
-/* --- Mobile Menu Toggle --- */
-.MobileMenuToggle {
-  display: none;
-  background: none;
-  border: none;
-  width: 32px;
-  height: 32px;
+.BrandButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
   cursor: pointer;
-  margin: 0 auto 12px auto;
+}
+
+.BrandLogo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
+}
+
+.BrandName {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.BrandCollapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+.BrandCollapsed .BrandButton {
+  justify-content: center;
+  width: 28px;
+}
+
+.Navigation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.MenuItem,
+.Sider .ant-menu {
+  background: transparent !important;
+  color: var(--primary-fg);
+}
+
+.Sider .ant-menu-item,
+.Sider .ant-menu-submenu-title {
+  width: calc(100% - 16px);
+  height: 38px;
+  margin: 2px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 38px;
+}
+
+.Sider .ant-menu-inline .ant-menu-item,
+.Sider .ant-menu-inline .ant-menu-submenu-title {
+  padding-inline-start: 8px !important;
+}
+
+.Sider .ant-menu-inline-collapsed > .ant-menu-item {
+  display: flex;
   align-items: center;
   justify-content: center;
-}
-@media (max-width: 768px) {
-  .MobileMenuToggle {
-    display: flex;
-    position: absolute;
-    top: 18px;
-    right: 16px;
-    margin-top: 12px;
-    margin-bottom: 12px;
-  }
-}
-.MobileMenuIcon {
-  display: block;
-  width: 24px;
-  height: 3px;
-  background: var(--primary-fg);
-  border-radius: 2px;
-  position: absolute;
-}
-.MobileMenuIcon::before,
-.MobileMenuIcon::after {
-  content: "";
-  display: block;
-  width: 24px;
-  height: 3px;
-  background: var(--primary-fg);
-  border-radius: 2px;
-  position: absolute;
-  left: 0;
-}
-.MobileMenuIcon::before {
-  top: -8px;
-}
-.MobileMenuIcon::after {
-  top: 8px;
+  width: 34px;
+  height: 34px;
+  margin: 4px auto;
+  padding-inline: 0 !important;
+  line-height: 34px;
 }
 
-/* --- Logo --- */
-.LogoContainer {
-  padding: 16px;
-  text-align: center;
-  height: 100px;
-}
-@media (max-width: 768px) {
-  .LogoContainer {
-    padding-top: 20px;
-    width: 180px;
-  }
+.Sider .ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon {
+  margin-inline-end: 0;
 }
 
-/* --- Menu Container --- */
-.MenuContainer {
+.Sider .ant-menu-item:hover,
+.Sider .ant-menu-submenu-title:hover {
+  background: rgb(255 255 255 / 10%) !important;
+  color: var(--primary-hover) !important;
+}
+
+.Sider .ant-menu-item-selected {
+  background: transparent !important;
+  color: var(--primary-hover) !important;
+}
+
+.SidebarFooter {
   display: flex;
   flex-direction: column;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
+.TokenIdentity {
+  overflow: hidden;
+  padding: 8px 16px 0;
+  color: var(--primary-fg);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ConsoleMenu {
+  padding: 4px 8px 0;
+}
+
+.SignOutMenu {
+  padding: 0 8px 4px;
+}
+
+.ConsoleTrigger,
+.SignOutButton {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 34px;
+  padding-inline: 8px !important;
+  color: var(--primary-fg) !important;
+  text-align: left;
+}
+
+.ConsoleTrigger:hover,
+.ConsoleTrigger:focus-visible,
+.SignOutButton:hover,
+.SignOutButton:focus-visible {
+  background: rgb(255 255 255 / 10%) !important;
+  color: var(--primary-hover) !important;
+}
+
+.SidebarFooterCollapsed .TokenIdentity {
+  display: none;
+}
+
+.SidebarFooterCollapsed .ConsoleMenu,
+.SidebarFooterCollapsed .SignOutMenu {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.SidebarFooterCollapsed .ConsoleTrigger,
+.SidebarFooterCollapsed .SignOutButton {
+  width: 34px;
+  justify-content: center;
+  padding-inline: 0 !important;
+}
+
+.ConsoleDropdown .ant-dropdown-menu {
+  min-width: 220px;
+}
+
+.ConsoleDropdown .ant-dropdown-menu-item,
+.ConsoleDropdown .ant-dropdown-menu-item a {
+  overflow-wrap: anywhere;
+  color: #1f1f1f !important;
+}
+
+.ConsoleDropdown .ConsoleLinkItem {
+  padding: 0 !important;
+}
+
+.ConsoleDropdown .ConsoleLinkItem .ant-dropdown-menu-title-content {
+  width: 100%;
+}
+
+.ConsoleDropdown .ConsoleLinkItem a {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  padding: 5px 12px;
 }
 
-/* --- Divider --- */
-.Divider {
-  height: 1px;
-  background-color: var(--primary-fg);
-  opacity: 1;
-  margin: 20px 10px;
+.SidebarFooterBottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px 8px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
-/* --- Main Menu --- */
-.MainMenu {
-  flex-grow: 1;
+.Socials {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* --- Meta Info --- */
-.Meta {
+.SocialLink {
+  display: flex;
+  font-size: 18px;
   color: var(--primary-fg);
-  margin: 20px 30px 15px;
-  margin-top: auto;
 }
-.MetaItem {
-  padding: 5px 0;
-}
-.MetaItem a {
-  color: var(--primary-fg);
-  text-decoration: underline;
-}
-.MetaItem a:hover {
+
+.SocialLink:hover,
+.SocialLink:focus-visible {
   color: var(--primary-hover);
+}
+
+.CollapseToggle {
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--primary-fg) !important;
+}
+
+.CollapseToggle:hover,
+.CollapseToggle:focus-visible {
+  background: rgb(255 255 255 / 10%) !important;
+  color: var(--primary-hover) !important;
+}
+
+.SidebarFooterCollapsed .SidebarFooterBottom {
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.AppContent {
+  min-width: 0;
 }
