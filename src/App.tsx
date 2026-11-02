@@ -280,10 +280,17 @@ export default function App(props: Readonly<Props>) {
                           { type: "divider" },
                           {
                             key: "version",
-                            className: "VersionMenuItem",
-                            icon: <InfoCircleOutlined />,
-                            label: <span>Web Console v{version}</span>,
-                            disabled: true,
+                            className: "ConsoleLinkItem",
+                            label: (
+                              <a
+                                href={`https://github.com/reductstore/web-console/releases/tag/v${version}`}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                <InfoCircleOutlined aria-hidden />
+                                Web Console v{version}
+                              </a>
+                            ),
                           },
                         ],
                       }}
