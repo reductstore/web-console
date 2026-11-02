@@ -392,6 +392,38 @@ describe("Bucket::BucketSettingsForm", () => {
     );
   });
 
+  it("should reject an invalid quota size", async () => {
+    const { container } = renderForm({ showAll: true });
+    await waitForForm(container);
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(
+      screen
+        .getAllByText("FIFO")
+        .find((element) =>
+          element.classList.contains("ant-select-item-option-content"),
+        )!,
+    );
+    await waitFor(() =>
+      expect(
+        container.querySelector('input[id="bucketForm_quotaSize"]'),
+      ).toBeTruthy(),
+    );
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    fireEvent.change(quotaSizeInput, { target: { value: "1s4" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Quota size must be a whole number"),
+      ).toBeTruthy(),
+    );
+    expect(client.createBucket).not.toBeCalled();
+  });
+
   it("should keep the unit of an existing quota", async () => {
     bucket.getSettings = vi.fn().mockResolvedValue({
       maxBlockSize: 64_000_000n,

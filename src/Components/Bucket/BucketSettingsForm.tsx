@@ -301,8 +301,14 @@ class BucketSettingsForm extends React.Component<
                     quotaSizeFactor,
                     initialQuotaSize,
                   )}
+                  rules={[
+                    {
+                      pattern: /^\d+$/,
+                      message: "Quota size must be a whole number",
+                    },
+                  ]}
                 >
-                  <InputNumber controls={false} stringMode />
+                  <Input inputMode="numeric" />
                 </Form.Item>
                 {sizeSelector(quotaSizeFactor, QUOTA_SIZE_FACTORS, (value) =>
                   this.setState({ quotaSizeFactor: value }),
