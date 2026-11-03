@@ -364,6 +364,7 @@ export default function BucketList(props: Readonly<Props>) {
         title="Add a new bucket"
         open={creatingBucket}
         footer={null}
+        destroyOnHidden
         onCancel={() => setCreatingBucket(false)}
       >
         <BucketSettingsForm
@@ -388,6 +389,7 @@ export default function BucketList(props: Readonly<Props>) {
         title="Settings"
         open={isSettingsModalOpen}
         footer={null}
+        destroyOnHidden
         onCancel={() => setIsSettingsModalOpen(false)}
       >
         <BucketSettingsForm

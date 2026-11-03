@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improve the bucket quota settings form with TB support, input validation, and better UX, [PR-257](https://github.com/reductstore/web-console/pull/257)
 - Redesign the web console sidebar, [PR-256](https://github.com/reductstore/web-console/pull/256)
 
 ## 1.17.2 - 2026-09-17

@@ -63,16 +63,15 @@ describe("Bucket::BucketSettingsForm", () => {
     });
   };
 
-  it("should show default values for a new bucket", async () => {
+  it("should hide quota size for a new bucket without a quota type", async () => {
     const { container } = renderForm({ showAll: true });
     await waitForForm(container);
 
     expect(screen.getByTitle("NONE")).toBeTruthy();
 
-    const quotaSizeInput = container.querySelector(
-      'input[id="bucketForm_quotaSize"]',
-    ) as HTMLInputElement;
-    expect(quotaSizeInput?.value).toBe("0");
+    expect(
+      container.querySelector('input[id="bucketForm_quotaSize"]'),
+    ).toBeNull();
 
     const maxBlockRecordsInput = container.querySelector(
       'input[id="bucketForm_maxBlockRecords"]',
@@ -163,6 +162,25 @@ describe("Bucket::BucketSettingsForm", () => {
       quotaSize: 1000n,
       quotaType: QuotaType.FIFO,
     } as unknown as BucketSettings);
+  });
+
+  it("should show a saving status while updating bucket settings", async () => {
+    const { promise, resolve } = Promise.withResolvers<void>();
+    bucket.setSettings = vi.fn(() => promise);
+    const { container } = renderForm({
+      showAll: true,
+      bucketName: "bucket",
+    });
+    await waitForForm(container);
+
+    const submitButton = screen.getByRole("button", { name: /update/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => expect(submitButton).toHaveClass("ant-btn-loading"));
+    resolve();
+    await waitFor(() =>
+      expect(submitButton).not.toHaveClass("ant-btn-loading"),
+    );
   });
 
   it("should rename the bucket if the name is changed", async () => {
@@ -318,4 +336,125 @@ describe("Bucket::BucketSettingsForm", () => {
       expect(screen.getByTitle(quotaType)).toBeTruthy();
     },
   );
+
+  it("should default an enabled quota to one TB", async () => {
+    const { container } = renderForm({ showAll: true });
+    await waitForForm(container);
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(
+      screen
+        .getAllByText("FIFO")
+        .find((element) =>
+          element.classList.contains("ant-select-item-option-content"),
+        )!,
+    );
+
+    await waitFor(() => expect(screen.getByTitle("TB")).toBeTruthy());
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    expect(quotaSizeInput.value).toBe("1");
+  });
+
+  it("should convert the quota size from TB to bytes", async () => {
+    const { container } = renderForm({ showAll: true });
+    await waitForForm(container);
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(
+      screen
+        .getAllByText("FIFO")
+        .find((element) =>
+          element.classList.contains("ant-select-item-option-content"),
+        )!,
+    );
+
+    await waitFor(() =>
+      expect(
+        container.querySelector('input[id="bucketForm_quotaSize"]'),
+      ).toBeTruthy(),
+    );
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    fireEvent.change(quotaSizeInput, { target: { value: "2" } });
+
+    const submitButton = screen.getByRole("button", { name: /create/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => expect(client.createBucket).toBeCalled());
+    expect(client.createBucket).toBeCalledWith(
+      "new_bucket",
+      expect.objectContaining({ quotaSize: 2_000_000_000_000n }),
+    );
+  });
+
+  it("should reject an invalid quota size", async () => {
+    const { container } = renderForm({ showAll: true });
+    await waitForForm(container);
+
+    fireEvent.mouseDown(container.querySelector(".ant-select")!);
+    fireEvent.click(
+      screen
+        .getAllByText("FIFO")
+        .find((element) =>
+          element.classList.contains("ant-select-item-option-content"),
+        )!,
+    );
+    await waitFor(() =>
+      expect(
+        container.querySelector('input[id="bucketForm_quotaSize"]'),
+      ).toBeTruthy(),
+    );
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    fireEvent.change(quotaSizeInput, { target: { value: "1s4" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Quota size must be a whole number"),
+      ).toBeTruthy(),
+    );
+    expect(client.createBucket).not.toBeCalled();
+  });
+
+  it("should keep the unit of an existing quota", async () => {
+    bucket.getSettings = vi.fn().mockResolvedValue({
+      maxBlockSize: 64_000_000n,
+      maxBlockRecords: 1024,
+      quotaSize: 5_000_000_000n,
+      quotaType: QuotaType.FIFO,
+    });
+    const { container } = renderForm({ showAll: true, bucketName: "bucket" });
+    await waitForForm(container);
+
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    expect(quotaSizeInput?.value).toBe("5");
+    expect(screen.getByTitle("GB")).toBeTruthy();
+  });
+
+  it("should show an existing quota in TB", async () => {
+    bucket.getSettings = vi.fn().mockResolvedValue({
+      maxBlockSize: 64_000_000n,
+      maxBlockRecords: 1024,
+      quotaSize: 3_000_000_000_000n,
+      quotaType: QuotaType.FIFO,
+    });
+    const { container } = renderForm({ showAll: true, bucketName: "bucket" });
+    await waitForForm(container);
+
+    const quotaSizeInput = container.querySelector(
+      'input[id="bucketForm_quotaSize"]',
+    ) as HTMLInputElement;
+    expect(quotaSizeInput?.value).toBe("3");
+    expect(screen.getByTitle("TB")).toBeTruthy();
+  });
 });

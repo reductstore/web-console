@@ -209,6 +209,7 @@ export default function BucketCard(props: Readonly<Props>) {
         title="Settings"
         open={changeSettings}
         footer={null}
+        destroyOnHidden
         onCancel={() => setChangeSettings(false)}
       >
         <BucketSettingsForm

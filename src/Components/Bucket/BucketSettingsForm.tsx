@@ -32,17 +32,23 @@ interface Props {
 interface State {
   maxBlockSizeFactor: string;
   quotaSizeFactor: string;
+  quotaType: string;
+  saving: boolean;
   error?: string;
   settings?: BucketSettings;
 }
 
-const DEFAULT_FACTOR = "MB";
+const DEFAULT_BLOCK_SIZE_FACTOR = "MB";
+const DEFAULT_QUOTA_FACTOR = "TB";
 const FACTOR_MAP: Record<string, bigint> = {
   B: 1n,
   KB: 1000n,
   MB: 1000_000n,
   GB: 1000_000_000n,
+  TB: 1000_000_000_000n,
 };
+const BLOCK_SIZE_FACTORS = ["B", "KB", "MB", "GB"];
+const QUOTA_SIZE_FACTORS = [...BLOCK_SIZE_FACTORS, "TB"];
 
 /**
  * A form to create or update a bucket
@@ -54,8 +60,10 @@ class BucketSettingsForm extends React.Component<
   constructor(props: Readonly<Props & { navigate: (path: string) => void }>) {
     super(props);
     this.state = {
-      maxBlockSizeFactor: DEFAULT_FACTOR,
-      quotaSizeFactor: DEFAULT_FACTOR,
+      maxBlockSizeFactor: DEFAULT_BLOCK_SIZE_FACTOR,
+      quotaSizeFactor: DEFAULT_QUOTA_FACTOR,
+      quotaType: "NONE",
+      saving: false,
     };
     this.onFinish = this.onFinish.bind(this);
   }
@@ -87,8 +95,8 @@ class BucketSettingsForm extends React.Component<
     // @ts-ignore
     const quotaType = QuotaType[values.quotaType];
 
-    let quotaSize = undefined;
-    if (values.quotaSize) {
+    let quotaSize = 0n;
+    if (values.quotaSize && quotaType !== QuotaType.NONE) {
       quotaSize =
         BigInt(values.quotaSize) * FACTOR_MAP[this.state.quotaSizeFactor];
     }
@@ -99,8 +107,8 @@ class BucketSettingsForm extends React.Component<
       maxBlockRecords,
     };
     const { bucketName, client } = this.props;
+    this.setState({ saving: true });
     try {
-      // We create a new bucket if the bucket name wasn't set in properties
       if (bucketName === undefined) {
         await client.createBucket(values.name, settings);
       } else {
@@ -108,13 +116,16 @@ class BucketSettingsForm extends React.Component<
         await bucket.setSettings(settings);
         if (bucketName !== values.name) await bucket.rename(values.name);
       }
-      this.props.onCreated();
-      navigate(`/buckets/${values.name}`);
+      this.setState({ saving: false }, () => {
+        this.props.onCreated();
+        navigate(`/buckets/${values.name}`);
+      });
     } catch (err) {
       if (err instanceof APIError) {
-        this.setState({ error: err.message });
+        this.setState({ error: err.message, saving: false });
       } else {
         console.error("Unexpected error: ", err);
+        this.setState({ saving: false });
       }
     }
   }
@@ -134,8 +145,17 @@ class BucketSettingsForm extends React.Component<
       }
       this.setState({
         settings,
-        maxBlockSizeFactor: this.calcBestFactor(settings.maxBlockSize),
-        quotaSizeFactor: this.calcBestFactor(settings.quotaSize),
+        quotaType: settings.quotaType ? QuotaType[settings.quotaType] : "NONE",
+        maxBlockSizeFactor: this.calcBestFactor(
+          settings.maxBlockSize,
+          BLOCK_SIZE_FACTORS,
+          DEFAULT_BLOCK_SIZE_FACTOR,
+        ),
+        quotaSizeFactor: this.calcBestFactor(
+          settings.quotaSize,
+          QUOTA_SIZE_FACTORS,
+          DEFAULT_QUOTA_FACTOR,
+        ),
       });
     } catch (err) {
       if (err instanceof APIError) {
@@ -146,13 +166,17 @@ class BucketSettingsForm extends React.Component<
     }
   }
 
-  calcBestFactor(value?: bigint): string {
-    let result = DEFAULT_FACTOR;
+  calcBestFactor(
+    value: bigint | undefined,
+    factors: string[],
+    defaultFactor: string,
+  ): string {
+    let result = defaultFactor;
     if (!value) {
       return result;
     }
 
-    for (const factor in FACTOR_MAP) {
+    for (const factor of factors) {
       const divisor = FACTOR_MAP[factor];
       if ((value / divisor) * divisor == value) {
         result = factor;
@@ -165,7 +189,14 @@ class BucketSettingsForm extends React.Component<
   }
 
   render() {
-    const { error, settings, maxBlockSizeFactor, quotaSizeFactor } = this.state;
+    const {
+      error,
+      settings,
+      maxBlockSizeFactor,
+      quotaSizeFactor,
+      quotaType,
+      saving,
+    } = this.state;
     if (settings === undefined) {
       return (
         <>
@@ -185,24 +216,25 @@ class BucketSettingsForm extends React.Component<
 
     const sizeSelector = (
       initValue: string,
+      factors: string[],
       onChange?: (value: string) => void,
     ) => (
       <Select
         defaultValue={initValue}
         style={{ width: 70 }}
         onChange={onChange}
-        options={[
-          { value: "B", label: "B" },
-          { value: "KB", label: "KB" },
-          { value: "MB", label: "MB" },
-          { value: "GB", label: "GB" },
-        ]}
+        options={factors.map((factor) => ({ value: factor, label: factor }))}
       />
     );
 
     const { bucketName, showAll } = this.props;
     const initValueFromDefault = (factor: string, value?: bigint) =>
       value !== undefined ? (value / FACTOR_MAP[factor]).toString() : "";
+    const isQuotaEnabled = quotaType === "FIFO" || quotaType === "HARD";
+    const initialQuotaSize =
+      settings.quotaType === QuotaType.NONE
+        ? FACTOR_MAP[DEFAULT_QUOTA_FACTOR]
+        : settings.quotaSize;
 
     const validateBucketName = (name: string) => {
       name = name.trim();
@@ -248,11 +280,10 @@ class BucketSettingsForm extends React.Component<
           <Form.Item
             label="Quota Type"
             name="quotaType"
-            initialValue={
-              settings.quotaType ? QuotaType[settings.quotaType] : "NONE"
-            }
+            initialValue={quotaType}
           >
             <Select
+              onChange={(value) => this.setState({ quotaType: value })}
               options={[
                 { value: "NONE", label: "NONE" },
                 { value: "FIFO", label: "FIFO" },
@@ -260,23 +291,31 @@ class BucketSettingsForm extends React.Component<
               ]}
             />
           </Form.Item>
-          <Form.Item label="Quota Size">
-            <Space.Compact>
-              <Form.Item
-                noStyle
-                name="quotaSize"
-                initialValue={initValueFromDefault(
-                  quotaSizeFactor,
-                  settings.quotaSize,
+          {isQuotaEnabled && (
+            <Form.Item label="Quota Size">
+              <Space.Compact>
+                <Form.Item
+                  noStyle
+                  name="quotaSize"
+                  initialValue={initValueFromDefault(
+                    quotaSizeFactor,
+                    initialQuotaSize,
+                  )}
+                  rules={[
+                    {
+                      pattern: /^\d+$/,
+                      message: "Quota size must be a whole number",
+                    },
+                  ]}
+                >
+                  <Input inputMode="numeric" />
+                </Form.Item>
+                {sizeSelector(quotaSizeFactor, QUOTA_SIZE_FACTORS, (value) =>
+                  this.setState({ quotaSizeFactor: value }),
                 )}
-              >
-                <InputNumber controls={false} stringMode />
-              </Form.Item>
-              {sizeSelector(quotaSizeFactor, (value) =>
-                this.setState({ quotaSizeFactor: value }),
-              )}
-            </Space.Compact>
-          </Form.Item>
+              </Space.Compact>
+            </Form.Item>
+          )}
         </div>
         <Collapse
           bordered={true}
@@ -313,8 +352,10 @@ class BucketSettingsForm extends React.Component<
                           stringMode
                         />
                       </Form.Item>
-                      {sizeSelector(maxBlockSizeFactor, (value) =>
-                        this.setState({ maxBlockSizeFactor: value }),
+                      {sizeSelector(
+                        maxBlockSizeFactor,
+                        BLOCK_SIZE_FACTORS,
+                        (value) => this.setState({ maxBlockSizeFactor: value }),
                       )}
                     </Space.Compact>
                   </Form.Item>
@@ -329,6 +370,7 @@ class BucketSettingsForm extends React.Component<
             type="primary"
             htmlType="submit"
             name="submit"
+            loading={saving}
             disabled={error !== undefined || this.props.readOnly}
           >
             {bucketName ? "Update" : "Create"}
